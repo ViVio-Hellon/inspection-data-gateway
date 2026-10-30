@@ -1187,7 +1187,7 @@ def print_precheck(uf: Uf1, dist: Optional[WorkDist]) -> PrecheckResult:
 
     7 つのチェックを全部求めてから(Distortion_Check は形状を空にする)、
     定盤 → ゲージ → 歪AB → ラテラルボー → 直角度 → 外観 → 検入高さ/枚数 → 山数 の順に最初の該当を返す。
-    B2: ラテラルボーは `Sumisei.Caption <> """"`(ダブルクォート 1 文字と比べるので、ほぼ常に真)。
+    B2: ラテラルボーは Sumisei.Caption を「ダブルクォート 1 文字」と比べる(ほぼ常に真)。
     """
     z = distortion_check(uf, "Z")
     after_z = Uf1(dict(uf.text), dict(uf.visible), set(uf.ng), uf.work, uf.line_name, uf.line_no, uf.worker_day_max)
