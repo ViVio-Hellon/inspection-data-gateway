@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import re
+import sqlite3
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Sequence
 
@@ -61,6 +62,10 @@ ERR_TEXT = {
 
 class SubscriptOutOfRange(IndexError):
     """VBA の実行時エラー 9(列が見つからず添字 0 で配列を引いた、など)。"""
+
+
+class DbReadError(RuntimeError):
+    """ADO のエラー(列が無い 3265・SQL の構文エラーなど)。AccReflec の ErrHandler に入る。"""
 
 
 @dataclass(frozen=True)
@@ -491,7 +496,7 @@ class _Rs:
     def value(self, col: str) -> Optional[str]:
         """`rs.Fields(col).Value`(Variant。None = Null)。列が無ければ ADO のエラー 3265。"""
         if col not in self.data:
-            raise KeyError(f"要求された名前、または序数に対応する項目がコレクションに見つかりません。({col})")
+            raise DbReadError("要求された名前、または序数に対応する項目がコレクションに見つかりません。")
         return self.data[col]
 
     def text(self, col: str, where: str) -> str:
@@ -560,8 +565,8 @@ def acc_reflec(screen: LotScreen, *,
         _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env)
     except flow.Stop:
         raise
-    except (vbx.TypeMismatch, SubscriptOutOfRange, KeyError, datasource.DbMissing,
-            datasource.TableMissing) as e:
+    except (vbx.TypeMismatch, SubscriptOutOfRange, DbReadError, sqlite3.Error) as e:
+        # ファイルが無い(DbMissing)は VBA の End に当たるのでここでは捕まえない
         out.status = "error"
         out.messages.append(db_read_error(e))
     return out
@@ -573,7 +578,7 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
                      history_env: Optional["HistoryEnv"]) -> None:
     if "'" in screen.cb_text:
         # VBA は SQL に値をそのまま埋める(SaveLoad:120)→ 構文エラーで ErrHandler
-        raise KeyError("SQL の構文エラー(ロットNo に ' がある)")
+        raise DbReadError("クエリ式の構文エラー")
     cols, values = _select_lot(file_path, screen.cb_text)
     if values is None:
         out.status = "not_found"

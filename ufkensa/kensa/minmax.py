@@ -5,7 +5,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from . import quirks, vbx
 from .flow import WARN, Message, Stop
@@ -150,11 +150,8 @@ def min_max(state: KensaState, hooks: Hooks) -> list[Message]:
 
     aran = _numbers(uf_array(state, 1, 4, s, e))
     th = 0
-    if state.is_work("極厚"):
-        hrng = (5, 10)
-    else:
-        hrng = (5, 6)
-    if state.is_work("少枚数") and not state.is_work("極厚") and not state.is_work("薄板") and not state.is_work("厚板"):
+    hrng = (5, 10) if state.is_work("極厚") else (5, 6)
+    if state.is_work("少枚数"):                              # VBA は幅と丈で 2 回求める
         th = small_count_th(state, hooks.calculate_sheets)
     hran = _numbers(uf_array(state, *_ranges(state, hrng, s, e, th)))
     trng = (11, 14) if state.is_work("極厚") else (7, 8)
@@ -272,14 +269,13 @@ def run_min_max(state: KensaState, hooks: Hooks) -> list[Message]:
     hooks.loop_judg(state, vbx.val(state.picfm_tag))
     hooks.hiz_loop_judg(state, vbx.val(state.picfm_tag))
     try:
-        return min_max(state, hooks)
-    finally:
-        state.load = "on"
+        msgs = min_max(state, hooks)
+    except Stop:
+        state.load = "on"                                  # MinMax の Exit Sub の後も Load="on" に戻る
+        raise
+    state.load = "on"
+    return msgs
 
 
 __all__ = ["backcolor_check", "backcolor_check_tb", "ngrange_check", "uf_array", "min_max", "under_bar",
            "tb_backcolor", "tb_backcolor_clear", "op_count", "select_range", "run_min_max"]
-
-
-def _unused(_: Optional[Any] = None) -> None:     # pragma: no cover
-    return None
