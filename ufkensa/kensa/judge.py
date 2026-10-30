@@ -1348,7 +1348,7 @@ def materials_msgbox(form: Form, ord_no: str, *,
     rc = read_check or (lambda p: datasource.exists(p))
 
     def file_of(base: str) -> str:
-        return paths.join(base, "SIKAODRNOW.sqlite3")
+        return paths.join(base, paths.DB_FILES["SIKAODRNOW"][1])
 
     file_path = file_of(fpath)
     if (not rc(file_path)) or time_designation() or (not file_designation()):
