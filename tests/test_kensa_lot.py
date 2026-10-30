@@ -340,6 +340,16 @@ class AccReflecTest(_Base):
         self.assertEqual(r.status, "error")
         self.assertEqual(r.messages[-1].text, "DB読み込みエラー:\r\n型が一致しません。")
 
+    def test_quote_in_lot_and_missing_odr(self) -> None:
+        # SQL に値をそのまま埋めるので ' があると構文エラー → ErrHandler (SaveLoad:120, 564-572)
+        r = self.reflect("A'B")
+        self.assertEqual((r.status, r.messages[0].text), ("error", "DB読み込みエラー:\r\nクエリ式の構文エラー"))
+        # HistorySave の SIKAODRNOW が無い → VBA は End(DbMissing のまま上へ)
+        self.d.remove(self.d.main, "SIKAODRNOW")
+        with self.assertRaises(datasource.DbMissing):
+            lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0"), check_equipment=_ok,
+                           history_rows=_sheet(), history_env=lot.HistoryEnv(now=T_NORMAL))
+
     def test_dedupe_and_materials_order(self) -> None:
         self.assertEqual(lot.dedupe_message("a,b,a,c,b"), "a,b,c")
         self.assertEqual(lot.dedupe_message(""), "")
