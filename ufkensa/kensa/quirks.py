@@ -1,0 +1,110 @@
+"""VBA の既存不具合のスイッチ(判断事項 D3)
+
+B1〜B38 は docs/04_不明点・判断事項.md の「B. 既存の不具合」の番号。
+**既定はすべて「再現」**(VBA と同じ結果)。直すと決まったものだけ `config/quirks.json` に
+`{"B8": "fix"}` のように書く。選んでいただく画面はアーティファクト「UF検査 不具合の扱い」。
+
+コードでは次のように使う:
+
+    if quirks.reproduce("B8"):
+        d, e = e, d          # VBA と同じく D と E を入れ替えたまま判定する
+
+`reproduce()` が真なら VBA の挙動、偽なら直した挙動。どこで分岐しているかは
+`grep -n 'quirks.reproduce("B8")'` で全部見つかるようにする(番号を変数に入れない)。
+"""
+from __future__ import annotations
+
+import json
+import threading
+from pathlib import Path
+from typing import Optional
+
+from .. import config
+
+QUIRKS_FILE = config.BASE_DIR / "config" / "quirks.json"
+
+#: 番号 → 一言(画面・ログ用)。docs/04 の B 表と同じ
+TITLES: dict[str, str] = {
+    "B1": "Min/Max の小数桁が厚 74mm 超でも3桁",
+    "B2": "印刷時のラテラルボー必須チェックがほぼ常に働く",
+    "B3": "検番を取る欄が入力時(冷延欄)とクリック時(検番欄)で違う",
+    "B4": "F 位置の不良枚数を整えると E 欄に書く",
+    "B5": "2山の位置名 2-2-E と 2-1-E の食い違い",
+    "B6": "ライン切替でロットが履歴に無いと入力停止のまま戻らない",
+    "B7": "キャッシュ使用時のオーダー厚が画面の厚になる",
+    "B8": "直角度の D と E が逆",
+    "B9": "歪3項目チェックの F 行が E の定盤値を見る",
+    "B10": "ゲージ要否: C 行の文言・B 面で F 行を判定しない",
+    "B11": "包装仕様の注意文が「寸法納入」で上書き",
+    "B12": "導電率チェックの結果の文言の不一致",
+    "B13": "0.5刻み変換で .51・1.01 などが 0",
+    "B14": "校正: 1000mm 省略ボタン・ランク色",
+    "B15": "Lot情報履歴のラテラルボー等級が VC_A で上書き",
+    "B16": "履歴保存が同じロットの間の別ロット行も削除",
+    "B17": "検査データの外観結合(C 面の空白・F 面で E・BH 列)",
+    "B18": "日報の開始時刻で分が1桁だと時の列を上書き",
+    "B19": "「12時間経過」の判定が実際は1時間",
+    "B20": "測定DB の照合キーの末尾に空白",
+    "B21": "検査員照合が F 面と 13-14 列を見ない",
+    "B22": "名簿画面が Daily_Test に固定で書き戻す",
+    "B23": "上流DB の作り直し時間帯の判定が秒1桁で外れる",
+    "B24": "歪公差の最終判定に送り先コード・巾取数が入っていない",
+    "B25": "外観_H で調質を判定せず材質を2回判定",
+    "B26": "DowFlag の誤記・中耳列が等級だけの行で等級表を引かない",
+    "B27": "DIM_122_C/D・DbReturnItem・設備仕様・UF管理の列誤り",
+    "B28": "キャスク MIN 計算の行列入れ替え・全ヵ所 MIN 補正の到達しない分岐",
+    "B29": "保存用シートのキャスク行で厚が巾で上書き",
+    "B30": "H494 のフッタ機器・ログの置き場所・検査員欄",
+    "B31": "KenHBox7 の処理対象が KenHBox6",
+    "B32": "全ヵ所の対角1入力でラテラルボー値まで消える",
+    "B33": "5N を選び直さないと工場共有にコピーされない",
+    "B34": "許容/保留が1か所だけだと「許容公差外在り」が出ない",
+    "B35": "印刷のやり直しで不良要因の合計が消える",
+    "B36": "下罫線を耳歪で判定・公差外判定で厚と比較",
+    "B37": "印刷履歴の削除が4日以上前",
+    "B38": "終了時刻の日付またぎ境界が帳票ごとに違う",
+}
+
+_lock = threading.Lock()
+_cache: Optional[tuple[float, dict[str, str]]] = None
+_override: Optional[dict[str, str]] = None      # 試験から差し替える
+
+
+def _load() -> dict[str, str]:
+    global _cache
+    if _override is not None:
+        return _override
+    try:
+        mtime = QUIRKS_FILE.stat().st_mtime
+    except OSError:
+        return {}
+    with _lock:
+        if _cache and _cache[0] == mtime:
+            return _cache[1]
+        try:
+            data = json.loads(QUIRKS_FILE.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            data = {}
+        choices = {str(k).upper(): str(v).lower() for k, v in data.items() if not str(k).startswith("_")}
+        _cache = (mtime, choices)
+        return choices
+
+
+def reproduce(bug: str) -> bool:
+    """`bug`(例 "B8")を VBA どおり再現するなら真。"""
+    key = bug.upper()
+    if key not in TITLES:
+        raise KeyError(f"不具合番号 {bug} は quirks.TITLES にありません")
+    return _load().get(key, "keep") != "fix"
+
+
+def set_for_test(choices: Optional[dict[str, str]]) -> None:
+    """試験用: `{"B8": "fix"}` を当てる。None で元に戻す。"""
+    global _override
+    _override = None if choices is None else {k.upper(): v for k, v in choices.items()}
+
+
+def summary() -> dict[str, list[str]]:
+    c = _load()
+    fixed = sorted((k for k, v in c.items() if v == "fix"), key=lambda s: int(s[1:]))
+    return {"fix": fixed, "keep": [k for k in TITLES if k not in fixed]}

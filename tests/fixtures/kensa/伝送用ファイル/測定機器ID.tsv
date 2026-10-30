@@ -1,0 +1,23 @@
+ライン	機器名	ID	出力テキスト	厚下	厚上	用途	備考	更新日	番号
+Test_	M2	0100015149	10001	0	7	\N	Case "Test":   If MachinNo = "11001" Then Height_Machin = True	\N	22
+L-1	M1	0000158327	10006	0	28.00	\N	Dim L1M1 As String: L1M1 = "10000_M1" 'L-1	2025.3.17	1
+L-1	M2	不明	10001	28.01	54.00	\N	Dim L1M2 As String: L1M2 = "10001_M2"	25までのマイクロ24.99に設定　2024.8.29	2
+L-1	M3	0200015555	10003	54.01	74.00	\N	Dim L1M3 As String: L1M3 = "10003_M3"	\N	3
+L-1	N5	0100019134	10005	74.01	299.99	\N	Dim L1N5 As String: L1N5 = "10005_ﾉｷﾞｽ" '2022.05.11_交換	\N	4
+L-1	N6	0000077011	10002	300.0	599.00	\N	Dim L1N6 As String: L1N6 = "10002_ﾉｷﾞｽ" '2022.05.19_交換	\N	5
+L-1	デプス	0100011992	10004	\N	\N	\N	Case "L-1":    If MachinNo = "10004" Then Height_Machin = True	\N	6
+HVC	M1	0000098162	10001	0	28.00	\N	Dim HM1 As String:  HM1 = "10001_M1" 'HVC_M12021.07.12交換	\N	7
+HVC	M2	0000081700	10000	28.01	54.00	\N	Dim HM2 As String:  HM2 = "10000_M2"	\N	8
+HVC	M3	0000082079	10004	54.01	74.00	\N	Dim HM3 As String:  HM3 = "10004_M3"	\N	9
+HVC	M4	0000082076	10002	0	24.99	H191,H207,H272,H237,H255,H272,H323,H162,H241,H242,H289,H239,H279,H283,H301	Dim HM4 As String:  HM4 = "10002_M4"	\N	10
+HVC	N5	0000082088	10005	74.01	299.99	\N	Dim HN5 As String:  HN5 = "10005_N5"	\N	11
+HVC	デプス	0100027299	10006	\N	\N	\N	Case "HVC":    If MachinNo = "10003" Then Height_Machin = True	\N	12
+LVC	M1	0000081697	10000	0	24.99	\N	Dim LM1 As String:  LM1 = "10000_M1" 'LVC	\N	13
+LVC	M2	0000081694	10001	0	24.99	H191,H207,H272,H237,H255,H272,H323,H162,H241,H242,H289,H239,H279,H283,H301	Dim LM2 As String:  LM2 = "10001_M2"	\N	14
+LVC	デプス	0100015151	10002	\N	\N	\N	Case "LVC":    If MachinNo = "10002" Then Height_Machin = True	\N	15
+ﾊﾞﾗﾝｻｰ	M2	0000103021	10000	0	24.99	\N	Dim BM2 As String:  BM2 = "10000_M2" 'ﾊﾞﾗﾝｻｰ	\N	16
+ﾊﾞﾗﾝｻｰ	デプス	0100015132	10001	\N	\N	\N	Case "ﾊﾞﾗﾝｻｰ": If MachinNo = "10001" Then Height_Machin = True	\N	17
+トット	M1	0200029145	11001	0	24.99	\N	Dim TM1 As String:  TM1 = "11001_M1" 'ﾄｯﾄ　DT11001	\N	18
+トット	デプス	0100027303	11000	\N	\N	\N	Case "ﾄｯﾄ":    If MachinNo = "11000" Then Height_Machin = True	\N	19
+Test	デプス	0100015148	11001	\N	\N	\N	Case "Test":   If MachinNo = "11001" Then Height_Machin = True	\N	20
+Test	M1	0100015148	10000	0	500	\N	Case "Test":   If MachinNo = "11001" Then Height_Machin = True	\N	21
