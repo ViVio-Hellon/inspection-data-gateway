@@ -29,7 +29,14 @@ def run(*args: str) -> str:
     return subprocess.run(args, check=True, capture_output=True, env=ENV).stdout.decode("utf-8")
 
 
+NOT_NULL: dict[str, set[str]] = {}
+
+
 def schema(accdb: str) -> dict[str, list[tuple[str, int, int]]]:
+    """表 → (列, ADO 型, 大きさ)。必須(NOT NULL)の列は NOT_NULL に控える。
+
+    mdbtools は長さ 0 の文字列も NULL と同じに書き出す。必須の列に NULL は入らない(Access が断る)ので、
+    必須の列で値が無いものは "" に戻す(VBA が読む値と同じにするため)。"""
     out: dict[str, list[tuple[str, int, int]]] = {}
     table = None
     for line in run("mdb-schema", accdb).splitlines():
@@ -42,6 +49,8 @@ def schema(accdb: str) -> dict[str, list[tuple[str, int, int]]]:
         if m and table is not None:
             typ = m.group(2).strip()
             out[table].append((m.group(1), ADO.get(typ, 202), int(m.group(3) or 0)))
+            if "NOT NULL" in line:
+                NOT_NULL.setdefault(table, set()).add(m.group(1))
         if line.startswith(");"):
             table = None
     return out
@@ -89,6 +98,7 @@ def main() -> None:
     for t in want:
         cols = [c for c, _, _ in sch[t]]
         dates = {c for c, ado, _ in sch[t] if ado == 7}
+        texts_required = {c for c, ado, _ in sch[t] if ado in (202, 203) and c in NOT_NULL.get(t, set())}
         rows = [json.loads(l) for l in run("mdb-json", a.accdb, t).splitlines() if l.strip()]
         if t in wh:
             c, vals = wh[t]
@@ -100,6 +110,10 @@ def main() -> None:
                         r[k] = f"検査員{i:02d}" if k == "名前" else f"けんさいん{i:02d}"
                     elif k in ("NO", "バーコード", "NO加工無"):
                         r[k] = f"{9000000000000 + i}" if k != "バーコード" else f"*{9000000000000 + i}*"
+        for r in rows:
+            for c in texts_required:
+                if r.get(c) is None:
+                    r[c] = ""
         with open(out / f"{t}.tsv", "w", encoding="utf-8", newline="") as f:
             f.write("\t".join(esc(c) for c in cols) + "\r\n")
             for r in rows:

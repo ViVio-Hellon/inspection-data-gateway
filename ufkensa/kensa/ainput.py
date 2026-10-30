@@ -199,10 +199,7 @@ def input_mount_count(form: AinputForm, score: Optional[str]) -> list[Message]:
         msgs.append(Message("山数は1～" + str(MAX_MOUNT) + "で入力してください。", WARN, source="Input:415"))
         return msgs
     form.mount_count = score.lower()
-    mc2 = vbx.clng(vbx.val(form.mount_count))
     if 1 <= mc <= MAX_MOUNT:
-        form.mount_count = form.mount_count
-        _ = mc2
         show_height_controls(form)
     return msgs
 
@@ -801,7 +798,9 @@ def numeric_only(text: str) -> str:
 
 def konno_before_update(konno: str) -> str:
     """UFAinput.KONNO_BeforeUpdate (UFAinput:375-378)。1 桁なら頭に 0、0 は空。"""
-    if len(konno) == 1 and vbx.vcompare(konno, 0) != 0:
+    c1 = len(konno) == 1
+    c2 = vbx.vcompare(konno, 0) != 0          # VBA の And は両辺を評価する(空欄は U1)
+    if c1 and c2:
         konno = "0" + konno
     if _veq(konno, 0):
         konno = ""
@@ -1079,12 +1078,11 @@ def startup(temp: str, ken_m: str, history: Optional[list[list[Any]]], *, workin
         mm = uf1_minmax or {}
         for k in ("amin", "hmin", "tmin", "amax", "hmax", "tmax"):
             setattr(form, k, mm.get(k, ""))
-    elif temp == "Mitsubishi":
-        put("amin", (4, 23), "0.000"), put("hmin", (4, 25), "0.0"), put("tmin", (4, 27), "0.0")
-        put("amax", (3, 23), "0.000"), put("hmax", (3, 25), "0.0"), put("tmax", (3, 27), "0.0")
-    elif temp in ("Cask", "H494"):
-        put("amin", (4, 22), "0.000"), put("hmin", (4, 23), "0.0"), put("tmin", (4, 24), "0.0")
-        put("amax", (3, 22), "0.000"), put("hmax", (3, 23), "0.0"), put("tmax", (3, 24), "0.0")
+    elif temp in ("Mitsubishi", "Cask", "H494"):
+        cols = (23, 25, 27) if temp == "Mitsubishi" else (22, 23, 24)     # 三菱は 2024.1.11 に座標変更
+        for row, names in ((4, ("amin", "hmin", "tmin")), (3, ("amax", "hmax", "tmax"))):
+            for name, c, pattern in zip(names, cols, ("0.000", "0.0", "0.0")):
+                put(name, (row, c), pattern)
     res.form = form
     res.log = legacy_log.line_entry(lname, "*UFKen:" + "UFAinput起動" + workers)
     res.hiki = no_search(working_lot, history)

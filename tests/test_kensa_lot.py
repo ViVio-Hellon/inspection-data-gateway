@@ -248,8 +248,8 @@ class AccReflecTest(_Base):
         self.assertEqual((f["Tak"], f["Tp"], f["Tm"], f["TpK"], f["TmK"]), ("777.5", "2.5", "2.5", "780.0", "775.0"))
         self.assertIsNone(r.last_hot)
         self.assertEqual((r.taik_text, r.lateral_text, r.additional), (None, None, ""))
-        # 指示_* が Null: VBA の String 変数への代入はエラー 94 になる所
-        self.assertEqual(r.null_uses, ["SaveLoad:276 指示_直角度", "SaveLoad:277 指示_ﾗﾃﾗﾙﾎﾞｰ"])
+        # 仕掛の列はすべて必須(NOT NULL)なので空欄は "" で入っている。Null を読む所は無い
+        self.assertEqual(r.null_uses, [])
 
     def test_vc_picture_and_null_tolerance_H2500K0(self) -> None:
         r = self.reflect("H2500K0")
@@ -258,7 +258,7 @@ class AccReflecTest(_Base):
         self.assertEqual(r.additional, "対角追記公差あり")
         self.assertIsNone(r.qf)                                    # QF は設計にだけある(実績で見る)
         self.assertEqual(r.form["Ap"], "0.650")
-        self.assertEqual(r.null_uses[0], "SaveLoad:227 板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ")
+        self.assertEqual(r.null_uses, [])                          # 必須の列なので Null は無い("")
 
     def test_shiji_full_width_text(self) -> None:
         r = self.reflect("N9170B0")
