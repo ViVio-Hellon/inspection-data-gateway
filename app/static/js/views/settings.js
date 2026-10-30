@@ -77,6 +77,7 @@ function renderPaths() {
     const input = document.createElement("input");
     input.className = "input";
     input.style.width = "100%";
+    input.style.minWidth = "30em";
     input.value = p.path;
     input.disabled = !S.admin;
     input.setAttribute("aria-label", p.label + " のパス");

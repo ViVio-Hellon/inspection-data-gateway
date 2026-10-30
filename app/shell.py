@@ -99,7 +99,7 @@ def ribbon_values() -> dict[str, str]:
     from ufkensa import auth
     from ufkensa.kensa import paths, terminal
 
-    s = auth.current()
+    s = auth.ensure()
     return {
         "line": terminal.line_label(),
         "mode": paths.MODE_LABELS.get(paths.mode(), ""),

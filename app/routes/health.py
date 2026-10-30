@@ -146,8 +146,8 @@ def jobs():
     ここを読めば状態が戻せる。走っているものが無くても直近の結果を返す
     ので、「さっきの取り込みはどうなったのか」が分かる。
     """
-    from ufkensa.presenters import settings as settings_presenter
-    return jsonify(settings_presenter.jobs_dict())
+    from ufkensa.presenters import jobs_view
+    return jsonify(jobs_view.jobs_dict())
 
 
 @bp.post("/api/alive")
