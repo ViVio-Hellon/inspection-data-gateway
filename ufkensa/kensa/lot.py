@@ -96,6 +96,18 @@ def db_path(base: str, name: str) -> str:
     return paths.join(base, paths.DB_FILES[name][1] if name in paths.DB_FILES else name + ".sqlite3")
 
 
+def subpath(base: str, *parts: str) -> str:
+    """`base & "VC種類画像\" & 名前` のようなつなぎ方。区切りは base に合わせる
+    (paths.join は常に "\\" を足すので、試験の Linux のフォルダの下の階層に使えない。共通化の候補)。"""
+    sep = "/" if ("/" in base and "\\" not in base) else "\\"
+    out = base
+    for part in parts:
+        if out and not out.endswith(("\\", "/")):
+            out += sep
+        out += part
+    return out
+
+
 def _now(now: Optional[_dt.datetime]) -> _dt.datetime:
     return now if now is not None else _dt.datetime.now()
 
@@ -979,7 +991,7 @@ def vc_picture(sheet_rows: Sequence[Sequence[Any]], lot: Any, order_no: str = ""
     - 画像は `PackingPath & "VC種類画像\\" & 品名ｺｰﾄﾞ & ".JPG"`
     """
     v = VcView()
-    vc_path = paths.join(_denso_base_for_picture(), "VC種類画像")
+    vc_path = subpath(_denso_base_for_picture(), "VC種類画像")
     if len(sheet_rows) >= 2:
         body = list(sheet_rows[1:])
     else:
@@ -1039,8 +1051,8 @@ def vc_picture(sheet_rows: Sequence[Sequence[Any]], lot: Any, order_no: str = ""
 
     if a_fl or b_fl:
         v.tall_form = True
-    pic_a = paths.join(vc_path, vca)
-    pic_b = paths.join(vc_path, vcb)
+    pic_a = subpath(vc_path, vca)
+    pic_b = subpath(vc_path, vcb)
 
     def hide_all(name: str) -> None:
         v.nothing_visible = True

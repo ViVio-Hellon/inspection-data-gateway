@@ -523,7 +523,7 @@ def find_priority(s: str) -> str:
 def all_elements_same(arr: Sequence[Any]) -> bool:
     """H.AllElementsSame (H:1623-1634)。先頭要素の文字列と全部が等しいか。"""
     check = vstr(arr[0])
-    return all(veq(vstr(x) if x is None else x, check) for x in arr)
+    return all(vstr(x) == check for x in arr)
 
 
 def split_width_length(width_length: Sequence[str]) -> tuple[list[Any], list[Any]]:
@@ -1134,7 +1134,10 @@ def dbdisplay_lateral(lot: Optional[LotData], target_text: str, *, quiet: bool =
     m_atu = csng(cell(la, col_of(hf, "製造板厚")))
     m_haba = csng(cell(la, col_of(hf, "製造板幅")))
     m_take = csng(cell(la, col_of(hf, "製造板丈")))
+    for n in ("納入先名", "用途ｺｰﾄﾞ", "用途名", "ｵｰﾀﾞｰ番号"):
+        vstr(cell(la, col_of(hf, n)))
     zai = vstr(cell(la, col_of(hf, "製造材質")))
+    vstr(cell(la, col_of(hf, "製造調質")))
     if target_text == "日車":
         table = "Q_S_QA_DIM_179_日車"
     elif target_text == "白銅滑川":
@@ -1197,7 +1200,12 @@ class ReturnItemResult:
     messages: list[Message] = field(default_factory=list)
 
 
-ORANGE = 255 + 153 * 256          # RGB(255,153,0)
+def rgb(r: int, g: int, b: int) -> int:
+    """VBA `RGB(r, g, b)`。"""
+    return r + g * 256 + b * 65536
+
+
+ORANGE = rgb(255, 153, 0)
 
 
 def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: float, haba: float, take: float, *,
