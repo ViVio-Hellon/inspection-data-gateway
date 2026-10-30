@@ -57,7 +57,9 @@ class VbxTest(unittest.TestCase):
         self.assertTrue(vbx.like("ABC52S1", "*52S*"))
         self.assertFalse(vbx.like("abc", "A*"))                 # バイナリ比較
         self.assertEqual(vbx.mid("DT0001", 3, 2), "00")
-        self.assertEqual(vbx.instr("ﾗﾃﾗﾙﾎﾞｰ検査不要", "検査不要"), 8)   # ﾎﾞ は半角2文字
+        self.assertEqual(vbx.instr("ﾗﾃﾗﾙﾎﾞｰ検査不要", "検査不要"), 8)
+        self.assertEqual(vbx.instr("", ""), 0)                  # 調べる文字列が空なら 0
+        self.assertEqual(vbx.instr("ABC", ""), 1)               # 探す文字列が空なら開始位置   # ﾎﾞ は半角2文字
 
 
 class QuirksTest(unittest.TestCase):

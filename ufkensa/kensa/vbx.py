@@ -343,7 +343,9 @@ def mid(s: Any, start: int, length: Optional[int] = None) -> str:
 def instr(s: Any, sub: str, start: int = 1) -> int:
     """VBA `InStr(start, s, sub)`(バイナリ比較)。見つからなければ 0。"""
     t = "" if s is None else str(s)
+    if t == "" or start > len(t):          # 調べる文字列が空・開始位置が後ろ → 0(探す文字列が空でも)
+        return 0
     if sub == "":
-        return start if start <= len(t) + 1 else 0
+        return start
     i = t.find(sub, start - 1)
     return i + 1
