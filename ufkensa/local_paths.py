@@ -24,6 +24,16 @@ import threading
 import time
 from pathlib import Path, PureWindowsPath
 from typing import Optional
+import unicodedata
+
+_DASHES = re.compile(r"[\u2010-\u2015\u2212\uff0d\u30fc\uff70]")
+
+
+def name_key(name: str) -> str:
+    """ファイル名を比べる形: 全角・半角、大文字・小文字、空白、ハイフンの種類 を問わない(db-viewer simple_table から)。"""
+    text = unicodedata.normalize("NFKC", name or "")
+    text = _DASHES.sub("-", text)
+    return re.sub(r"\s+", "", text).casefold()
 
 UNREACHABLE_TTL_SEC = 60.0
 _lock = threading.Lock()
@@ -192,7 +202,6 @@ def _walk_dir(folder: Path) -> tuple[Optional[Path], Optional[Path], str]:
     (「(最新・移動禁止)」と「（最新・移動禁止）」は同じ)。
 
     答え: (辿り着いたフォルダ or None, 辿れた所まで, 次に無かった名前)。"""
-    from .simple_table import name_key
     folder = Path(folder)
     parts = folder.parts
     if not parts:
@@ -235,7 +244,6 @@ def diagnose(folder: Path, limit: int = 12, rows: int = 4) -> list[dict]:
     書いた場所はいつも先頭。読み替えの候補は、少しでも辿れたものを深い順に。"""
     import difflib
 
-    from .simple_table import name_key
     out = []
     for i, cand in enumerate([Path(folder), *alternatives(Path(folder))]):
         got, upto, missing = _walk_dir(cand)

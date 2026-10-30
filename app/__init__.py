@@ -26,7 +26,7 @@ from typing import Optional
 
 from flask import Flask, g, jsonify, request
 
-from ufkensa import app_config, config, db, idle_exit, modes
+from ufkensa import app_config, config, idle_exit, modes
 from ufkensa.logging_utils import get_logger
 
 
@@ -118,7 +118,8 @@ RID_HEADER = "X-Request-Id"
 
 def _start_records(app: Flask) -> None:
     """記録の置き場所(設定)を当て、古い記録を消し、起動を 1 行残す。"""
-    from ufkensa import logging_utils, shared_db, trace, user_settings
+    from ufkensa import logging_utils, trace, user_settings
+    from ufkensa.kensa import paths
     state = logging_utils.apply_settings()
     app.config["LOG_STATE"] = state
     trace.install_capture()                       # log.warning / log.exception もログに拾う
@@ -127,10 +128,7 @@ def _start_records(app: Flask) -> None:
         gone = trace.cleanup(int(keep))
     except (TypeError, ValueError):
         gone = 0
-    try:
-        db = str(shared_db.db_path()) if shared_db.is_set() else ""
-    except Exception:                                  # noqa: BLE001
-        db = ""
+    db = paths.mode()
     trace.event("app.start", f"起動しました(版 {app.config['VERSION']})",
                 level="WARN" if state["problem"] else "INFO",
                 data={"app_root": str(config.BASE_DIR), "db": db, "log_dir": state["dir"],
@@ -526,32 +524,18 @@ def _register_static_version(app: Flask) -> None:
             values["v"] = stamp
 
 
-def get_db():
-    """このリクエスト用のDB接続。`app` の外からは呼ばない。"""
-    if "db" not in g:
-        g.db = db.get_connection()
-    return g.db
-
-
 # ------------------------------------------------------------------
 # ルーティング
 # ------------------------------------------------------------------
 def _register_routes(app: Flask) -> None:
     from .routes import auth as auth_routes
-    from .routes import easy, export, files, health, pending, record, report, settings
-    from .routes import list as list_routes
+    from .routes import health, pending, settings
     from .routes import log as log_routes
 
     app.register_blueprint(health.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(auth_routes.bp)
-    app.register_blueprint(list_routes.bp)
-    app.register_blueprint(record.bp)
-    app.register_blueprint(export.bp)
-    app.register_blueprint(report.bp)
     app.register_blueprint(log_routes.bp)
-    app.register_blueprint(easy.bp)
-    app.register_blueprint(files.bp)
 
     # レールに出ているのに中身がまだ無い画面へ、「準備中」の案内を置く
     pending.register(app)

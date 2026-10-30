@@ -1,28 +1,27 @@
-"""アクセス権限 ── この端末が 編集可 か 閲覧のみ か(0.16.0。0.22.0 から設定ファイルの表)
+"""アクセス権限 ── この端末で何ができるか(判断事項 D12: python-web-tools と同じ「アクセス権限」表)
 
-Windows の**ログインID**と**PC名**を条件に、**設定ファイル**(`settings_file.py`。かんたん設定・接続先と同じ
-ファイル)の `アクセス権限` 表を引く。パスワードは要らない(ログインIDとPC名は Windows が持っている事実で、
-利用者が画面から変えられない)。
+Windows の**ログインID**と**PC名**を条件に、`アクセス権限` 表を引く(python-web-tools の `access_control` と同じ表・同じ読み方)。
 
-    管理番号  ログインID  PC名             権限      有効  備考
-    --------  ----------  ---------------  --------  ----  ----
-    1         yamada      (空)             編集可    1     山田はどの PC でも編集可
-    2         (空)        NLM-NGY-240638   編集可    1     この PC は誰でも編集可
-    3         suzuki      NLM-NGY-240638   閲覧のみ  1     書いておくだけ(編集可の行が無ければ閲覧のみ)
+    ログインID  PC名             権限                      有効
+    ----------  ---------------  ------------------------  ----
+    yamada      (空)             ufkensa:admin             1     … 山田はどの PC でも管理者
+    (空)        NLM-NGY-240638   ufkensa:calibration_skip  1     … この PC は校正をとばせる
 
-* 権限が `編集可`(all-tools と同じ書き方の `ufkensa:edit` も)の行が当てはまれば 編集可。無ければ 閲覧のみ
-* 空欄は「問わない」。**ログインIDもPC名も空の行は誰にも効かない**(全員への許可になり、権限を設ける意味が消える)
+【UF検査判定の権限コード】
+    ufkensa:admin             設定(この端末・使用パス)を変える・取り込み。VBA の隠しパスワード weekend99 の代わり
+    ufkensa:calibration_skip  校正をとばして測定できる。VBA の隠しパスワード jump(UF1:3016)の代わり
+検査そのもの(測定・判定・印刷)は権限なしでできる(VBA と同じ)。
+
+* 表は**ほかのツールと共有**。`ufkensa:` で始まらない権限は黙って読み飛ばす
+* 空欄は「問わない」。**ログインIDもPC名も空の行は誰にも効かない**
 * 大文字小文字・全角半角は区別しない(Windows の ID と PC 名がそうなので)
 * `有効` は空欄なら有効、`0` / `false` / `×` / `無効` などなら無効
-* **表に行が 1 つも無ければ、誰でも 編集可**(作ったばかりの設定ファイル。行を足すと効き始める)
+* **表に ufkensa の行が 1 つも無ければ、誰でも管理者**(入れたばかり。行を足すと効き始める)
 
-【直すとき(0.17.0)】設定 → かんたん設定 → 権限 で、**管理者パスワード**(既定 nisk。`admin_password`)で
-鍵を開けたときだけ、この表の行を足す・直す・消す。書く前に設定ファイルの控えを取り、ほかの PC が先に変えて
-いたら書かない。
+【どの表か】設定 → 使用パス の「アクセス権限マスタ」(python-web-tools の梱包資材マスタの .sqlite3)。
+空なら、この端末の設定ファイル(`settings_file`)の表を読む。
 
-【届かないとき】設定ファイルを共有フォルダに置いたとき。届かないたびに 閲覧のみ に落とすと仕事が止まるので、
-**前回読めた結果をこの PC に覚えておき**、届かないときはそれで決める(all-tools と同じ)。
-一度も読めていなければ 閲覧のみ。
+【届かないとき】前回読めた結果をこの PC に覚えておき、それで決める。一度も読めていなければ一般。
 """
 from __future__ import annotations
 
@@ -40,16 +39,20 @@ from .logging_utils import get_logger
 log = get_logger("access_rights")
 
 TABLE = "アクセス権限"
-EDIT = "編集可"
-VIEW = "閲覧のみ"
-EDIT_WORDS = {"編集可", "ufkensa:edit"}          # all-tools の書き方も読む
+PREFIX = "ufkensa:"
+ADMIN = "ufkensa:admin"
+CALIBRATION_SKIP = "ufkensa:calibration_skip"
+CODES = {ADMIN: "管理者(設定・取り込み)", CALIBRATION_SKIP: "校正をとばせる"}
+EDIT = ADMIN
+VIEW = "一般"
+EDIT_WORDS = {ADMIN}
 COL_NO, COL_LOGIN, COL_PC, COL_PERMISSION, COL_ENABLED, COL_NOTE = (
     "管理番号", "ログインID", "PC名", "権限", "有効", "備考")
 _OFF = {"0", "false", "no", "off", "×", "x", "無効", "いいえ", "n"}
 RECHECK_SEC = 300.0
 
 SOURCE_UNSET, SOURCE_MASTER, SOURCE_CACHE, SOURCE_UNREACHABLE = "unset", "master", "cache", "unreachable"
-LABEL_EDIT, LABEL_VIEW = "編集可", "閲覧のみ"
+LABEL_EDIT, LABEL_VIEW = "管理者", "一般"
 
 
 @dataclass
@@ -62,6 +65,10 @@ class Decision:
     path: str = ""
     matched: list[dict[str, Any]] = field(default_factory=list)   # この端末に当てはまった ufkensa の行
     checked_at: float = 0.0
+    codes: list[str] = field(default_factory=list)                # 当てはまった ufkensa の権限コード
+
+    def has(self, code: str) -> bool:
+        return self.edit if code == ADMIN else (code in self.codes or self.source == SOURCE_UNSET)
 
     @property
     def label(self) -> str:
@@ -109,12 +116,27 @@ def edit_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 # どのファイルか: 設定ファイル(無ければ作る)
 # ------------------------------------------------------------------
 def master_path() -> Path:
+    """読む表のファイル。使用パス「アクセス権限マスタ」があればそれ、無ければこの端末の設定ファイル。"""
+    from .kensa import paths
+    text = paths.get("access_master")
+    if text:
+        return paths.to_local(text)
     from . import settings_file
     try:
         return settings_file.ensure()
     except (sqlite3.Error, OSError) as exc:              # 届かない: 読むときに前回の結果で決める
         log.warning("設定ファイルを開けません: %s", exc)
         return settings_file.path()
+
+
+def own_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """表のうち UF検査判定の行(権限が ufkensa: で始まる)。ほかのツールの行は読み飛ばす。"""
+    return [r for r in rows if _norm(r.get(COL_PERMISSION)).startswith(PREFIX)]
+
+
+def codes_of(rows: list[dict[str, Any]], login_id: str, pc: str) -> list[str]:
+    hit = [r for r in own_rows(rows) if enabled(r.get(COL_ENABLED)) and applies(r, login_id, pc)]
+    return sorted({_norm(r.get(COL_PERMISSION)) for r in hit})
 
 
 def read_rows(path: Path) -> list[dict[str, Any]]:
@@ -173,20 +195,21 @@ def evaluate(login_id: str, pc: str) -> Decision:
             when = time.strftime("%m/%d %H:%M", time.localtime(float(cached.get("checked_at") or 0)))
             log.warning("設定ファイルのアクセス権限を読めないので前回の結果(%s)を使います: %s", when, exc)
             return Decision(bool(cached.get("edit")), SOURCE_CACHE,
-                            f"設定ファイルに届かないので、前回({when})読めた結果を使っています: {exc}",
-                            login_id, pc, str(path), list(cached.get("matched") or []), now)
+                            f"アクセス権限の表に届かないので、前回({when})読めた結果を使っています: {exc}",
+                            login_id, pc, str(path), list(cached.get("matched") or []), now,
+                            list(cached.get("codes") or []))
         log.warning("設定ファイルのアクセス権限を読めません(前回の結果も無いので閲覧のみ): %s", exc)
         return Decision(False, SOURCE_UNREACHABLE, f"設定ファイルのアクセス権限を読めないので、閲覧のみにしています: {exc}",
                         login_id, pc, str(path), [], now)
-    if not rows:
-        return Decision(True, SOURCE_UNSET, "アクセス権限の表にまだ行が無いので、誰でも編集できます"
-                        "(設定 → かんたん設定 → 権限 で行を足すと効き始めます)。", login_id, pc, str(path), [], now)
+    if not own_rows(rows):
+        return Decision(True, SOURCE_UNSET, "アクセス権限の表に UF検査判定(ufkensa:)の行がまだ無いので、誰でも管理者です"
+                        "(行を足すと効き始めます)。", login_id, pc, str(path), [], now, sorted(CODES))
     edit, hit = decide(rows, login_id, pc)
     reason = (f"アクセス権限の {len(hit)} 行が当てはまりました({EDIT})。" if edit else
               f"アクセス権限に、この ID・PC で {EDIT} の行がありません。")
     d = Decision(edit, SOURCE_MASTER, reason, login_id, pc, str(path),
                  [{k: r.get(k) for k in (COL_NO, COL_LOGIN, COL_PC, COL_PERMISSION, COL_ENABLED, COL_NOTE)}
-                  for r in hit], now)
+                  for r in hit], now, codes_of(rows, login_id, pc))
     _save_cache(d)
     return d
 

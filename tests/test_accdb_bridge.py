@@ -1,4 +1,4 @@
-"""Access 取り込み(TSV → sqlite3)の試験。基準データは tests/fixtures/realdata。"""
+"""Access 取り込み(TSV → sqlite3)の試験。基準データは tests/fixtures/kensa(受領した 品質基準.accdb ほか)。"""
 from __future__ import annotations
 
 import sqlite3
@@ -8,7 +8,7 @@ from pathlib import Path
 
 from ufkensa.accdb_bridge import importer
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures" / "realdata"
+FIXTURES = Path(__file__).resolve().parent / "fixtures" / "kensa" / "伝送用ファイル"
 
 
 class UnescapeTest(unittest.TestCase):
@@ -29,34 +29,29 @@ class ImportFixturesTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.target = Path(self.tmp.name) / "作業標準管理システム.sqlite3"
+        self.target = Path(self.tmp.name) / "伝送用ファイル.sqlite3"
 
     def test_builds_all_tables(self):
         steps = []
         result = importer.import_tsv_dir(FIXTURES, self.target,
                                          progress=lambda p, m: steps.append((p, m)))
         names = dict(result.tables)
-        self.assertEqual(names["作業標準管理"], 327)
-        self.assertEqual(names["作業標準管理_設定"], 25)
-        self.assertEqual(names["ID"], 5)
-        self.assertEqual(names["フィルタ"], 11)
-        self.assertEqual(names["タイプ"], 7)
-        self.assertEqual(names["全般設定"], 4)
-        self.assertEqual(names["フィルタ_設定"], 5)
+        self.assertEqual(names["測定機器ID"], 22)
+        self.assertEqual(names["時間用"], 4)
+        self.assertEqual(names["PkgSpecData"], 871)          # 値の中の改行を行の区切りにしない
+        self.assertEqual(names["キャスク梱包板番号"], 13)
         self.assertTrue(steps and steps[-1][0] >= 90)
         conn = sqlite3.connect(str(self.target))
         try:
-            # 型: 管理番号 は INTEGER、ほかは TEXT
-            cols = {r[1]: r[2] for r in conn.execute("PRAGMA table_info(作業標準管理)")}
+            cols = {r[1]: r[2] for r in conn.execute("PRAGMA table_info(キャスク梱包板番号)")}
             self.assertEqual(cols["管理番号"], "INTEGER")
-            self.assertEqual(cols["作業名"], "TEXT")
-            # 一意な 管理番号 には UNIQUE 索引
-            idx = conn.execute("SELECT sql FROM sqlite_master WHERE name='ix_作業標準管理_管理番号'").fetchone()[0]
+            self.assertEqual(cols["LotNo"], "TEXT")
+            self.assertEqual(cols["作業時間"], "TEXT")       # 日付は文字で持つ
+            idx = conn.execute("SELECT sql FROM sqlite_master WHERE name='ix_キャスク梱包板番号_管理番号'").fetchone()[0]
             self.assertIn("UNIQUE", idx)
-            # 値がそのまま(圧縮ユニコードの行も含む)
-            row = conn.execute("SELECT 作業名, 課長承認 FROM 作業標準管理 WHERE 管理番号=18").fetchone()
-            self.assertEqual(row[0], "ﾌｫｰｸによる分銅運搬作業 (0-2-4-1改訂)削除")
-            self.assertEqual(row[1], "未")
+            # 取り込み順(Access の返却順)のまま
+            first = conn.execute("SELECT 直, 開始 FROM 時間用 ORDER BY rowid").fetchall()
+            self.assertEqual(first, [("1", "07:00"), ("2", "15:00"), ("3", "22:50"), ("昼", "08:15")])
             self.assertEqual(conn.execute("PRAGMA journal_mode").fetchone()[0], "delete")
         finally:
             conn.close()

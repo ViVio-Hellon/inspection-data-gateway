@@ -35,10 +35,7 @@ def write(message: str, *, target_dir: Path | None = None) -> bool:
     if not user_settings.get(config.KEY_ACCESS_LOG, True):
         return False
     if target_dir is None:
-        from . import shared_db
-        if not shared_db.is_set():                 # DB を決めていなければ書く場所が無い
-            return False
-        target_dir = shared_db.server_dir()
+        return False                               # 書く場所は呼び手が決める(UF検査のログは kensa.legacy_log)
     path = Path(target_dir) / config.ACCESS_LOG_NAME
     line = "\t".join([
         now_text(), socket.gethostname(), os_info(),

@@ -223,23 +223,6 @@ class ContentsTest(_Case):
         self.assertNotIn("作業標準", [row[1] for row in self.rows(shared, settings_file.T_DBS)])
 
 
-class WebAndDistTest(_Case):
-    def test_api_and_settings_tab(self) -> None:
-        user_settings.save(config.KEY_EXPORT_FORMAT, "xlsx")
-        client = make_client()
-        page = client.get("/settings", headers=auth())
-        self.assertIn("配布設定", page.get_data(as_text=True))
-        s = client.get("/api/dist/state", headers=auth()).get_json()["dist"]
-        self.assertFalse(s["exists"])
-        r = client.post("/api/dist/export", json={"items": [config.KEY_EXPORT_FORMAT], "password": "x"}, headers=auth())
-        self.assertEqual(r.status_code, 403)
-        r = client.post("/api/dist/export", json={"items": "x", "password": "nisk"}, headers=auth())
-        self.assertEqual(r.status_code, 400)
-        r = client.post("/api/dist/export", json={"items": [config.KEY_EXPORT_FORMAT], "password": "nisk"},
-                        headers=auth())
-        self.assertEqual(r.status_code, 200, r.get_data(as_text=True))
-        self.assertTrue(r.get_json()["dist"]["exists"])
-
 
 if __name__ == "__main__":
     unittest.main()

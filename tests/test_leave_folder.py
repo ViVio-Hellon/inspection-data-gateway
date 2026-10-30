@@ -33,16 +33,10 @@ class LeaveAppFolderTest(unittest.TestCase):
         self.assertNotIn("", sys.path)
         self.assertIn(str(start_app.APP_ROOT), sys.path)
         import importlib
-        importlib.import_module("ufkensa.simple_table")                 # 後から読み込む部品も見つかる
+        importlib.import_module("ufkensa.kensa.vbx")                 # 後から読み込む部品も見つかる
 
     def test_children_tidied_on_exit(self):
-        from ufkensa.office_bridge import procs
-        with mock.patch.object(procs, "cleanup_leftovers", return_value=1) as tidy:
-            start_app.tidy_children()
-        tidy.assert_called_once()
-        with mock.patch.object(procs, "cleanup_leftovers", side_effect=OSError("x")):
-            start_app.tidy_children()                                    # 片付けられなくても終わる
-
+        start_app.tidy_children()                                        # 止めるものが無くても終わる
 
 if __name__ == "__main__":
     unittest.main()

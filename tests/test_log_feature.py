@@ -83,14 +83,6 @@ class WhySheetTest(_LogDirCase):
         self.assertIn("対策中", row)
         self.assertEqual(r.get_json()["rows"], 2)
 
-    def test_nav_badge_counts_open_errors(self):
-        self.errors()
-        why_sheet.forget_cache()
-        page = self.c.get("/settings", headers=self.h).get_data(as_text=True)
-        self.assertIn("エラー2件", page)
-        self.assertEqual(self.c.get("/api/log/summary", headers=self.h).get_json()["open_errors"], 2)
-
-
 class CaptureAndRetryTest(_LogDirCase):
     def test_warning_captured_and_thinned(self):
         trace.install_capture()

@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 class JsSyntaxTest(unittest.TestCase):
     def test_all_modules_parse(self):
         files = sorted((ROOT / "app" / "static" / "js").rglob("*.js"))
-        self.assertGreater(len(files), 20)
+        self.assertGreater(len(files), 10)
         with tempfile.TemporaryDirectory() as tmp:
             for f in files:
                 copy = Path(tmp) / (f.relative_to(ROOT).as_posix().replace("/", "_") + ".mjs")

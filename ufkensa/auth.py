@@ -26,14 +26,14 @@ from .logging_utils import get_logger
 
 log = get_logger("auth")
 
-# VBA `DEVELOPERFLAG`(Option Compare Binary = 大文字小文字を区別)
-DEVELOPER_IDS = ("Satoshi-Harada", "satoshi")
-DEVELOPER_PCS = ("NLM-NGY-221790", "PCH370")
+# db-viewer の VBA にあった開発者の特例。UF検査判定の VBA には無いので空(権限はアクセス権限の表だけで決める)
+DEVELOPER_IDS: tuple[str, ...] = ()
+DEVELOPER_PCS: tuple[str, ...] = ()
 
 EDIT_LEVEL = 5
 VIEW_LEVEL = 1
-MSG_NO_LEVEL = ("閲覧のみの権限です。直すには、設定ファイルの「アクセス権限」に、"
-                "この ID・PC で 権限 = 編集可 の行を足してもらってください。")
+MSG_NO_LEVEL = ("管理者の権限がありません。アクセス権限の表に、"
+                "この ID・PC で 権限 = ufkensa:admin の行を足してもらってください。")
 
 
 def network_id() -> str:
@@ -176,7 +176,16 @@ def level() -> int:
 
 
 def can_edit() -> bool:
+    """管理者(ufkensa:admin)か。"""
     return level() >= EDIT_LEVEL
+
+
+def has(code: str) -> bool:
+    """この人・この端末がその権限(`access_rights.CODES`)を持つか。"""
+    s = current()
+    if s is None or s.rights is None:
+        return False
+    return s.rights.has(code)
 
 
 # ------------------------------------------------------------------

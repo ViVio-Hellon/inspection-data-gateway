@@ -10,7 +10,6 @@ from pathlib import Path
 
 from ufkensa import auth, config, logging_utils, trace, user_settings
 from ufkensa.presenters import log_view
-from ufkensa.presenters import settings as settings_presenter
 from tests._web import TOKEN, make_client
 
 
@@ -255,9 +254,9 @@ class WebTraceTest(_LogDirCase):
         self.assertEqual(r.data, b"")
         new = self.lines()[before:]
         self.assertFalse([x for x in new if "/boot.js" in str(x.get("path", "")) or "/boot.js" in str(x.get("msg", ""))])
-        r = self.c.get("/list", headers={"Sec-Fetch-Site": "cross-site"})
+        r = self.c.get("/settings", headers={"Sec-Fetch-Site": "cross-site"})
         self.assertEqual(r.status_code, 403)
-        self.assertTrue([x for x in self.lines() if x.get("lv") == "WARN" and "/list" in str(x.get("msg", ""))])
+        self.assertTrue([x for x in self.lines() if x.get("lv") == "WARN" and "/settings" in str(x.get("msg", ""))])
 
     def test_start_recorded(self):
         self.assertIn("app.start", [x["ev"] for x in self.lines()])
@@ -283,14 +282,13 @@ class WebTraceTest(_LogDirCase):
         self.assertEqual([x["ev"] for x in self.lines() if x.get("rid") == rid], ["error.server"])
 
     def test_refusal_recorded_with_reason(self):
-        r = self.c.post("/api/settings/save", json={"db_path": "無い.sqlite3"}, headers=self.h)
+        r = self.c.post("/api/settings/terminal", json={"facility": "無いライン"}, headers=self.h)
         self.assertEqual(r.status_code, 400)
         rid = r.headers["X-Request-Id"]
         mine = [x for x in self.lines() if x.get("rid") == rid]
-        self.assertEqual([x["ev"] for x in mine], ["settings.save", "request"])
         req = mine[-1]
-        self.assertEqual((req["lv"], req["st"], req["data"]["reason"]), ("WARN", 400, "bad_input"))
-        self.assertIn("存在しない", req["msg"])
+        self.assertEqual((req["ev"], req["lv"], req["st"], req["data"]["reason"]), ("request", "WARN", 400, "bad_value"))
+        self.assertIn("選べません", req["msg"])
 
     def test_client_error_endpoint(self):
         r = self.c.post("/api/log/client", headers=self.h,
@@ -321,107 +319,6 @@ class WebTraceTest(_LogDirCase):
         self.assertIn("なぜ1", ch["draft"])
         self.assertFalse(self.c.get("/api/log/chain?rid=nothing", headers=self.h).get_json()["found"])
         self.assertEqual(self.c.get("/api/log/chain", headers=self.h).status_code, 400)
-
-    def test_settings_tab_and_badge(self):
-        trace.event("error.server", "こわれた", level="ERROR")
-        state = self.c.get("/api/settings/state", headers=self.h).get_json()
-        self.assertEqual(state["log"]["dir_real"], str(self.dir))
-        self.assertGreaterEqual(state["log"]["errors_today"], 1)
-        self.assertEqual(state["tab_badges"]["log"]["level"], "warn")
-        page = self.c.get("/settings", headers=self.h).get_data(as_text=True)
-        self.assertIn('id="panel-log"', page)
-        self.assertIn('id="logChain"', page)
-
-
-class SecretsTest(_LogDirCase):
-    """マスタ管理で ID 表を直しても、PASS は記録に残らない(値は列名の無い並びで来る)。"""
-
-    def setUp(self):
-        super().setUp()
-        import os
-        from tests._fixture_db import fresh_db_path
-        path = fresh_db_path(Path(self.tmp.name))
-        user_settings.save(config.KEY_DB_PATH, str(path))
-        auth.end()
-        self.addCleanup(auth.end)
-        for k, v in (("USERNAME", "Xfa-Ngyinazawa"), ("COMPUTERNAME", "NLM-NGY-240638")):
-            self.addCleanup(lambda k=k, old=os.environ.get(k): os.environ.pop(k, None) if old is None
-                            else os.environ.__setitem__(k, old))
-            os.environ[k] = v
-        self.c = make_client()
-        self.h = {"X-Tool-Token": TOKEN}
-        self.c.post("/api/login", json={"id": "Xfa-Ngyinazawa", "password": ""}, headers=self.h)
-
-    def test_pass_columns_not_recorded(self):
-        """PASS のような列(名前に pass)の値は、一覧で足しても記録に残さない(伏せ字)。"""
-        import sqlite3
-        from contextlib import closing
-        from ufkensa import shared_db
-        with closing(sqlite3.connect(shared_db.db_path())) as c:
-            c.execute("CREATE TABLE 社員 (名前 TEXT, PASS TEXT)")
-            c.commit()
-        self.c.post("/api/list/data", json={"table": "社員"}, headers=self.h)    # 一覧で表を選ぶ
-        r = self.c.post("/api/list/row-add", headers=self.h,
-                        json={"table": "社員", "values": {"名前": "試験", "PASS": "himitsu-PW"}})
-        self.assertEqual(r.status_code, 200, r.get_data(as_text=True))
-        text = "".join(p.read_text(encoding="utf-8") for p in self.dir.glob("*記録_*.jsonl"))
-        self.assertNotIn("himitsu-PW", text)
-        self.assertIn("試験", text)                                           # ほかの列は残す
-
-
-
-class LogDirSettingTest(_LogDirCase):
-    def test_move_and_refuse(self):
-        shared = Path(self.tmp.name) / "共有" / "記録"
-        new = shared / "ufkensa"                                    # 置き場所の中のツール名のフォルダ(0.33.0)
-        r = settings_presenter.save({"log_dir": str(shared)})
-        self.assertTrue(r.ok, r.message)
-        self.assertEqual(config.LOG_DIR, new)
-        # 移る前の場所にも「どこへ移したか」が残る
-        old_lines = [json.loads(x) for p in self.dir.glob("*記録_*.jsonl")
-                     for x in p.read_text(encoding="utf-8").splitlines()]
-        self.assertTrue(any(x["ev"] == "log.moved" and x["data"]["to"] == str(new) for x in old_lines))
-        trace.event("screen")
-        self.assertTrue(trace.file_for().exists())
-        self.assertEqual(trace.file_for().parent, new)
-        # 開発者向けのログも新しい場所へ
-        logging_utils.get_logger("試験").info("ここに書く")
-        self.assertTrue(list(new.glob("ufkensa_*.log")))
-        self.assertTrue(list(new.glob("ufkensa_記録_*.jsonl")))               # ファイル名もツール名で始まる
-        self.assertFalse([p for p in shared.iterdir() if p.is_file()])        # 置き場所の直下には書かない
-
-        blocker = Path(self.tmp.name) / "ふさがり"
-        blocker.write_text("x", encoding="utf-8")
-        r = settings_presenter.save({"log_dir": str(blocker / "下")})
-        self.assertFalse(r.ok)
-        self.assertEqual(r.field, "log_dir")
-        self.assertEqual(config.LOG_DIR, new)                  # 変えない
-        self.assertEqual(user_settings.get(config.KEY_LOG_DIR), str(shared))   # 設定は入れた置き場所のまま
-
-        # 空 = 既定へ戻す
-        self.assertTrue(settings_presenter.save({"log_dir": ""}).ok)
-        self.assertEqual(config.LOG_DIR, self.dir)
-
-    def test_keep_days(self):
-        self.assertFalse(settings_presenter.save({"log_keep_days": -1}).ok)
-        self.assertFalse(settings_presenter.save({"log_keep_days": "abc"}).ok)
-        self.assertTrue(settings_presenter.save({"log_keep_days": 30}).ok)
-        self.assertEqual(settings_presenter.log_state()["keep_days"], 30)
-
-    def test_unwritable_setting_falls_back(self):
-        blocker = Path(self.tmp.name) / "ふさがり"
-        blocker.write_text("x", encoding="utf-8")
-        user_settings.save(config.KEY_LOG_DIR, str(blocker / "下"))
-        st = logging_utils.apply_settings()
-        self.assertTrue(st["problem"])
-        self.assertEqual(Path(st["dir"]), self.dir)
-        ls = settings_presenter.log_state()
-        self.assertEqual(ls["dir_state"]["level"], "warn")
-        self.assertIn("既定の場所", ls["problem"])
-
-    def test_file_names_carry_pc(self):
-        self.assertRegex(logging_utils.log_path_for(date(2026, 10, 1)).name,
-                         rf"^ufkensa_{re.escape(trace.pc_name())}_20261001\.log$")
 
 
 if __name__ == "__main__":

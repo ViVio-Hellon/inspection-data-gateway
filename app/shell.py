@@ -1,8 +1,7 @@
 """画面の外枠に渡す値
 
 左のレールの並びと、テンプレートが必要とする共通の値をここで作る。
-0.18.0 から **一覧 と 設定 だけ**。マスタ管理・閲覧・出力 は同じ DB を別の画面で見せていただけなので、
-一覧に一本化した(表を選ぶ・直す・足す・列を足す・印刷・出力・プレビューは 一覧 で全部できる)。
+UF検査判定の画面の並び(docs/03_移植計画.md の機能対応表)。
 """
 from __future__ import annotations
 
@@ -25,17 +24,32 @@ class NavItem:
     ready: bool = True
 
 
-# 画面の並び。左から作業する順
+# 画面の並び。上から、ふだん使う順(A案「計測コックピット」が中心。D6)
 NAV: tuple[tuple[str, str, str, str], ...] = (
-    ("list", "一覧", "/list", "表を選んで見る・直す・印刷・出力"),
-    ("settings", "設定", "/settings", "接続先・パス・この端末"),
+    ("kensa", "検査", "/kensa", "測る・判定・Min/Max・印刷"),
+    ("cask", "キャスク", "/cask", "キャスク検査(最大700枚)"),
+    ("zenkasho", "全ヵ所・H494", "/zenkasho", "全ヵ所(一般/5N/三菱受託)・H494"),
+    ("ainput", "Aインプット", "/ainput", "梱包高さ・アイカス送信"),
+    ("calibration", "校正", "/calibration", "直尺の校正"),
+    ("quality", "品質基準", "/quality", "このロットの品質基準を見る"),
+    ("history", "履歴", "/history", "保存した検査を見る・再印刷"),
+    ("import", "取り込み", "/import", "Access・xlsm からの取り込み"),
+    ("settings", "設定", "/settings", "この端末・使用パス・権限"),
 )
 
 # もう作った画面。ここに挙がっていないものは「準備中」ページを出す
-READY_SCREENS = frozenset({"list", "settings"})
+READY_SCREENS = frozenset({"settings"})
 
 # 準備中の画面の説明。key: (作る予定, 何ができるようになるか, いま使う画面)
 PENDING_SCREENS: dict[str, tuple[str, str, str]] = {
+    "kensa": ("工程 8c", "ロット登録から測定・判定・Min/Max・印刷まで、1画面で行えるようになります(A案)。", "VBA の UF検査判定.xlsm"),
+    "cask": ("工程 8e", "キャスク検査の入力・判定・印刷・保存。", "VBA の UF検査判定.xlsm"),
+    "zenkasho": ("工程 8e", "全ヵ所検査(一般・5N・三菱受託)と H494 検査。", "VBA の UF検査判定.xlsm"),
+    "ainput": ("工程 8c", "梱包高さチェックとアイカスへの送信。", "VBA の UF検査判定.xlsm"),
+    "calibration": ("工程 8c", "直尺の校正の記録と判定。", "VBA の UF検査判定.xlsm"),
+    "quality": ("工程 8c", "ロットの品質基準(外観・歪・BH・ラテラル)の表示。", "VBA の UF検査判定.xlsm"),
+    "history": ("工程 8c", "保存した検査の一覧・復元・再印刷。", "VBA の UF検査判定.xlsm"),
+    "import": ("工程 8a", "Access(.accdb)を SQLite に取り込み、各ラインの xlsm から過去のデータを1回取り込みます。", "設定"),
 }
 
 
@@ -81,20 +95,17 @@ def home_url(mode: str = modes.DEFAULT) -> str:
 
 
 def ribbon_values() -> dict[str, str]:
-    """帯に常時出す値。利用者(この PC のログイン ID)と 権限(編集可 / 閲覧のみ。0.16.0)。"""
-    from ufkensa import shared_db
-
+    """帯に常時出す値。ライン(この端末の設備名)・モード(オンライン/オフライン)・利用者・権限。"""
     from ufkensa import auth
+    from ufkensa.kensa import paths, terminal
 
-    # 0.19.0: 接続先は DB ファイル 1 つ。帯にはそのファイル名(全体は title で)
-    path = shared_db.db_path() if shared_db.is_set() else None
     s = auth.current()
     return {
-        "db": path.name if path else "(DB を決めていません)",
-        "db_path": str(path) if path else "",
+        "line": terminal.line_label(),
+        "mode": paths.MODE_LABELS.get(paths.mode(), ""),
         "user": s.user_id if s else "",
         "level": s.label if s else "",
-        "developer": bool(s and s.developer),
+        "developer": False,
     }
 
 
@@ -105,11 +116,9 @@ def shell_context(active: str, *,
     mode = config["MODE"]
     badges = dict(badges or {})
     if "settings" not in badges:
-        # まだ「対策済」にしていないエラー(この 2 日)。押せば 設定 →「ログ」で見られる
-        from ufkensa import why_sheet
-        n = why_sheet.open_errors_cached()
-        if n:
-            badges["settings"] = (f"エラー{n}件", "todo")
+        from ufkensa.kensa import terminal
+        if not terminal.line():
+            badges["settings"] = ("ライン未設定", "todo")
     return {
         "active": active,
         "nav": nav_items(mode, badges),

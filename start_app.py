@@ -438,15 +438,9 @@ def leave_app_folder() -> None:
 
 
 def tidy_children() -> None:
-    """終わるときの片付け: プレビューで起こして残った隠れた Excel・Word を止める(0.25.0)。
-
-    今までは次の起動と stop.bat でしか片付けておらず、「終了」のあとも残ってフォルダを消せないことがあった。
-    止めるのは、このアプリが起こして記録した PID だけ(利用者が開いた Excel・Word には触らない)。"""
-    try:
-        from ufkensa.office_bridge import procs as office_procs
-        office_procs.cleanup_leftovers(log())
-    except Exception:                             # noqa: BLE001 - 片付けられなくても終わる
-        log().warning("残った Excel・Word を確かめられませんでした", exc_info=True)
+    """終わるときの片付け。UF検査判定は子プロセス(cscript・SokuteiDataTrans・Edge)を待ち切ってから返すので、
+    ここで止めるものは無い(db-viewer の Excel・Word の片付けは持ってこなかった)。"""
+    return None
 
 
 def start_bridge(mode: str, *, token: str = "", server_factory) -> int:
@@ -497,14 +491,7 @@ def _initialize(srv, *, watch_idle: bool = True) -> None:
     ここで失敗しても**サーバは落とさない**。落とすと利用者のブラウザには
     「接続できません」としか出ず、理由が伝わらない。画面に理由を出す。
     """
-    from ufkensa import shared_db
-    from ufkensa.office_bridge import procs as office_procs
-
-    # 前にプレビューで起こした隠れた Excel・Word が残っていれば止める(アプリごと止められたとき)
-    try:
-        office_procs.cleanup_leftovers(log())
-    except Exception:                             # noqa: BLE001 - 片付けられなくても起動は続ける
-        log().warning("残った Excel・Word を確かめられませんでした", exc_info=True)
+    from ufkensa.kensa import paths, terminal
 
     try:
         srv.mark_stage("アプリを準備中")
@@ -516,11 +503,11 @@ def _initialize(srv, *, watch_idle: bool = True) -> None:
             log().info("配布設定を読み込みました: %s", ", ".join(loaded.applied))
         # 接続先の自己診断。**結果はログに残す。** 読めなくても起動は止めない
         # (設定画面の「いまの状態」が同じ内容を画面にも出す)
-        info = shared_db.probe()
-        if info["exists"]:
-            log().info("業務DB: %s (%s バイト)", info["path"], f"{info['size']:,}")
-        else:
-            log().warning("業務DBが見つかりません: %s", info["path"])
+        log().info("この端末: %s / モード: %s", terminal.line_label() or "(ライン未設定)",
+                   paths.MODE_LABELS.get(paths.mode(), ""))
+        for key in ("main", "quality", "factory"):
+            r = paths.check(key)
+            (log().info if r["ok"] else log().warning)("使用パス %s: %s (%s)", key, r["path"], r["message"])
     except Exception as exc:                      # noqa: BLE001 - 画面に出して継続
         log().exception("初期化に失敗しました")
         srv.mark_error(f"初期化に失敗しました: {exc}")

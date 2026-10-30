@@ -124,11 +124,7 @@ def health():
 
 def _db_mtime() -> Optional[float]:
     """共有 DB(.sqlite3)の更新時刻。無ければ None。"""
-    try:
-        from ufkensa import shared_db
-        return shared_db.probe().get("mtime")
-    except Exception:                                  # noqa: BLE001 - 心拍は止めない
-        return None
+    return None
 
 
 def _running_note() -> Optional[dict]:
