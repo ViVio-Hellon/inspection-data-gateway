@@ -1,0 +1,23 @@
+{
+  "app_id": "nlm.uf-kensa",
+  "display_name": "UF検査判定",
+  "version": "0.37.0",
+  "monitor_level": 2,
+
+  "local_dir_name": "UFKensa",
+
+  "server": {
+    "host": "127.0.0.1",
+    "port_retry": 3,
+    "roles": {
+      "main": {
+        "port": 8800
+      }
+    }
+  },
+
+  "monitoring": {
+    "health_poll_seconds": 15,
+    "job_poll_ms": 300
+  }
+}

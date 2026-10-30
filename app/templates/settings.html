@@ -1,0 +1,938 @@
+{% extends "base.html" %}
+{% block title %}設定 — {{ display_name }}{% endblock %}
+
+{% macro checks(section) %}
+<section class="card">
+  <header>
+    <i class="ib ib--sm ib--{{ section.badge_tone }}" aria-hidden="true">{{ section.mark }}</i>
+    <h3>{{ section.title }}</h3>
+    <span class="lv lv--{{ section.level }}">{{ section.label() }}</span>
+  </header>
+  <div class="pad">
+    <dl class="checks">
+      {% for c in section.checks %}
+      <div class="check check--{{ c.level }}">
+        <dt>{{ c.label }}</dt>
+        <dd>
+          <span class="v">{{ c.value }}</span>
+          {% if c.detail %}<span class="why">{{ c.detail }}</span>{% endif %}
+        </dd>
+      </div>
+      {% endfor %}
+    </dl>
+    {% if section.action[0] %}
+    <div class="btn-row">
+      <button class="btn btn--find" type="button" data-goto="{{ section.action[1] }}">
+        <span class="gl">▸</span>{{ section.action[0] }}
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endmacro %}
+
+{% macro pathrow(id, label, value, real, browse=True) %}
+<label for="{{ id }}">{{ label }}</label>
+<span class="pathrow">
+  <input class="input" id="{{ id }}" value="{{ value }}" spellcheck="false" autocomplete="off">
+  {% if browse %}
+  <button class="btn btn--find" type="button" data-browse="{{ id }}"><span class="gl">▸</span>参照…</button>
+  {% endif %}
+</span>
+<small class="why real" id="{{ id }}Real" {% if not real %}hidden{% endif %}>→ {{ real }}</small>
+{% endmacro %}
+
+{% block content %}
+<div class="pane pane--tabbed">
+  <div class="pane__head">
+    <div>
+      <span class="eyebrow">Step 4</span>
+      <h2>設定</h2>
+    </div>
+    <div class="nextstep">
+      <button class="btn btn--find" type="button" id="refresh">
+        <span class="gl">⟳</span>状態を再確認
+      </button>
+      <p class="why">この端末の設定はすべてこの画面にあります。見る DB は「接続先」でファイル 1 つを指定します。</p>
+    </div>
+  </div>
+
+  <span class="dimline" aria-hidden="true"></span>
+
+  <div class="tabs" data-tabs="settings" id="settingsTabs">
+    <div class="tabs__bar" role="tablist" aria-label="設定の面">
+      {% for key, label in tabs %}
+      {% set badge = tab_badges.get(key) %}
+      <button class="tab" type="button" role="tab" data-key="{{ key }}"
+              {% if key == default_tab %}data-default="1"{% endif %}
+              {% if badge %}data-level="{{ badge.level }}"{% endif %}
+              id="tab-{{ key }}" aria-controls="panel-{{ key }}" aria-selected="false">
+        <span class="tab__label">{{ label }}</span>
+        <span class="tab__badge" {% if badge %}data-level="{{ badge.level }}"{% else %}hidden{% endif %}>{{ badge.text if badge else "" }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="tabs__panels">
+      <section class="tabpanel tabpanel--scroll" id="panel-status" role="tabpanel" aria-labelledby="tab-status" hidden>
+        <div class="statusgrid" id="statusGrid">
+          {% for section in view.sections %}{{ checks(section) }}{% endfor %}
+        </div>
+      </section>
+
+      {# かんたん設定(0.8.0): 決めるのは 見る DB と 列ごとの 表示・入力・印刷 だけ。中身は views/easy.js が描く #}
+      <section class="tabpanel tabpanel--scroll" id="panel-easy" role="tabpanel" aria-labelledby="tab-easy" hidden>
+        <p class="status status--ng" id="easyProblem" hidden></p>
+        <div class="pathcards" id="easyBody" hidden>
+          <section class="card">
+            <header>
+              <i class="ib ib--sm" aria-hidden="true">Ｄ</i>
+              <h3>見る DB</h3>
+              <span class="eyebrow">決めるのはこれだけ</span>
+            </header>
+            <div class="pad">
+              <p class="easydb" id="easyDb"></p>
+              <p class="why">DB を替えるときは「接続先」で選びます。全般設定・<b>_設定</b> の表は要りません。
+                どの表も 一覧 で見て直せます(一覧の上で表を選ぶ)。</p>
+              <div class="btn-row"><button class="btn btn--find" type="button" id="easyGoSource"><span class="gl">▸</span>接続先で DB を選ぶ</button></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header>
+              <i class="ib ib--sm" aria-hidden="true">保</i>
+              <h3>設定ファイル(権限・かんたん設定・接続先)</h3>
+              <span class="eyebrow">無ければ作ります</span>
+            </header>
+            <div class="pad">
+              <p class="easydb" id="sfNow"></p>
+              <p class="why" id="sfCounts" style="margin-top:0"></p>
+              <p class="why"><b>権限</b>(アクセス権限)・<b>かんたん設定</b>(列ごとの 表示・入力・印刷・クリック)・<b>接続先</b>(DB の一覧)を、
+                この 1 つの .sqlite3 に保存します。DB ファイルには何も書きません。<b>ファイル名まで</b>入れてください
+                (フォルダだけなら <code>UF検査判定設定.sqlite3</code>)。<b>無ければ作ります。</b>
+                共有フォルダのファイルにすれば、同じファイルを決めた PC どうしで同じ設定になります。
+                替えるには 編集可 の権限か、下の管理者パスワードの鍵が要ります。</p>
+              <div class="paths">
+                <label for="sfText">設定ファイル</label>
+                <span class="pathrow">
+                  <input class="input" id="sfText" spellcheck="false" autocomplete="off"
+                         placeholder="例: \\server\共有\UF検査判定\UF検査判定設定.sqlite3(空 = この PC の既定の場所)">
+                  <button class="btn btn--find" type="button" data-browse="sfText" data-browse-file="either"><span class="gl">▸</span>参照…</button>
+                </span>
+              </div>
+              <div class="btn-row" style="margin-top:8px">
+                <button class="btn btn--commit" type="button" id="sfSave">この設定ファイルにする</button>
+                <button class="btn btn--find" type="button" id="sfDefault">この PC の既定に戻す</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header>
+              <i class="ib ib--sm" aria-hidden="true">列</i>
+              <h3>列の設定</h3>
+              <span class="eyebrow" id="easyColsWhere"></span>
+            </header>
+            <div class="pad">
+              <div class="easyrow">
+                <label for="easyTable" class="why" style="margin:0">表</label>
+                <select class="input" id="easyTable" style="width:22em"></select>
+              </div>
+              <p class="why">列ごとに、<b>表示</b>(一覧に出す)・<b>入力</b>(直すときの欄)・<b>印刷</b>(一覧の 印刷・出力 に入れる)・<b>クリック</b>(マスの値を押したときに コピー / 現物を開く / プレビュー。開くもの = Excel・Word・PDF・URL)を選びます。
+                開く・プレビューの「場所」には <code>{値}</code>(押したマスの値)と <code>{列名}</code>(同じ行のほかの列)が書けます。
+                例 <code>\\server\手順書\{作業NO}_{作業名}</code> … 拡張子を書かなければ、全角・半角・大文字小文字を問わずに探します。
+                列名で覚えるので、列の並びが変わっても・列が増えても(増えた列は 表示・文字・印刷)ずれません。DB を替えれば、その DB の設定になります。</p>
+              <details class="placeguide">
+                <summary>開く・プレビューの「場所」の書き方(ファイルの名前の付け方に合わせる)</summary>
+                <p class="why">クリックを「現物を開く」か「プレビュー」にすると、場所の欄と案内が出ます。
+                  <b>▸ フォルダを選ぶ…</b> で探すフォルダを選び、列名のボタンで名前の形を作り、<b>試す</b> で本当に見つかるか確かめてから保存してください。
+                  フォルダは上の階層を 1 つ選べば、サブフォルダは自動で探します。全角・半角・大文字小文字・空白は問いません。</p>
+                <div class="tablewrap"><table class="table">
+                  <thead><tr><th>ファイルの名前の付け方</th><th>場所の書き方(ファイル名の所)</th><th>見つかる名前の例</th></tr></thead>
+                  <tbody>
+                    <tr><td>番号_名前 で決まっている</td><td><code>{作業NO}_{作業名}</code></td><td>0-1-1_ハンマーの取り扱い.xlsx</td></tr>
+                    <tr><td>番号_ のあとは人によって違う</td><td><code>{作業NO}_*</code></td><td>0-1-1_ハンマー取扱い(改定3).xls</td></tr>
+                    <tr><td>番号で始まる(区切りもまちまち)</td><td><code>{作業NO}*</code></td><td>0-1-1 ハンマー.xlsx・0-1-1ハンマー.pdf(0-1-10… も当たる → 押したときに選ぶ)</td></tr>
+                    <tr><td>番号がどこかに入っている</td><td><code>*{品番}*</code></td><td>【最新】図面_A-100_改.pdf</td></tr>
+                    <tr><td>マスの値がファイル名そのもの</td><td><code>{値}</code>(フォルダだけ選ぶ)</td><td>A-100.xlsx</td></tr>
+                  </tbody>
+                </table></div>
+                <p class="why">* は「何文字でもよい」。ファイル名の所だけに書けます。いくつも当たったときは、押したときに選ぶ窓が出ます(勝手には開きません)。</p>
+              </details>
+              <p class="status status--warn" id="easyLegacy" hidden></p>
+              <div class="tablewrap easytable">
+                <table class="table">
+                  <thead><tr><th>列</th><th>表示</th><th>入力</th><th>印刷</th><th>クリック</th></tr></thead>
+                  <tbody id="easyCols"></tbody>
+                </table>
+              </div>
+              <div class="btn-row" style="margin-top:8px">
+                <button class="btn btn--commit" type="button" id="easyColsSave">列の設定を保存</button>
+                <span class="why" id="easyColsHint" style="margin:0"></span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="easyVbaCard" hidden>
+            <header>
+              <i class="ib ib--sm ib--warn" aria-hidden="true">旧</i>
+              <h3>VBA 版の設定の表</h3>
+              <span class="eyebrow">もう使いません</span>
+            </header>
+            <div class="pad">
+              <p class="why">次の表は VBA 版の設定です。画面では使っていません(入力の種類だけ、かんたん設定の最初の値として読んでいます)。
+                「取り込んで消す」で入力の種類を かんたん設定 に保存してから、表を消します。消す前に本体の控えを取ります。</p>
+              <p class="easydb" id="easyVbaList"></p>
+              <div class="btn-row"><button class="btn btn--danger" type="button" id="easyRetire">取り込んで消す</button></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <header>
+              <i class="ib ib--sm" aria-hidden="true">権</i>
+              <h3>権限(編集可 / 閲覧のみ)</h3>
+              <span class="eyebrow">設定ファイルの「アクセス権限」</span>
+            </header>
+            <div class="pad">
+              <p class="why">パスワードは使いません。Windows の<b>ログイン ID</b>と<b>PC 名</b>で、設定ファイルの「アクセス権限」
+                (管理番号・ログインID・PC名・権限・有効・備考)を引き、権限が <b>編集可</b> の行が当てはまれば<b>編集可</b>、
+                無ければ<b>閲覧のみ</b>です。空欄は「問わない」、有効が 0 の行は効きません。
+                <b>表に行が 1 つも無いうちは誰でも 編集可</b>です(行を足すと効き始めます)。</p>
+              <div class="optgrid">
+                <span>この PC</span><b id="rightsWho"></b>
+                <span>いまの権限</span><b id="rightsNow"></b>
+                <span>理由</span><span id="rightsWhy" class="why" style="margin:0"></span>
+                <span>読んでいる所</span>
+                <span class="easyrow" style="margin:0"><span id="rightsUsing" class="why" style="margin:0"></span>
+                  <button class="btn btn--find" type="button" id="rightsRecheck">読み直す</button></span>
+              </div>
+              <p class="why" id="rightsHint"></p>
+              <div class="tablewrap" id="rightsRowsWrap" hidden>
+                <table class="table">
+                  <thead><tr><th>管理番号</th><th>ログインID</th><th>PC名</th><th>有効</th><th>備考</th></tr></thead>
+                  <tbody id="rightsRows"></tbody>
+                </table>
+              </div>
+
+              {# 0.17.0: 管理者パスワードで鍵を開けたときだけ、アクセス権限の行を直せる #}
+              <div class="accedit" id="accBox">
+                <h4 class="accedit__title">アクセス権限を直す <small class="why" style="margin:0">管理者パスワードで鍵を開けると、行を足す・直す・消すができます</small></h4>
+                <div class="easyrow" id="accLocked" style="margin:0">
+                  <label for="accPass" class="why" style="margin:0">管理者パスワード</label>
+                  <input class="input" id="accPass" type="password" autocomplete="off" style="width:14em">
+                  <button class="btn btn--commit" type="button" id="accUnlock">鍵を開ける</button>
+                </div>
+                <div class="easyrow" id="accOpen" hidden style="margin:0">
+                  <span class="status status--ok" style="margin:0">鍵が開いています(30 分さわらなければ掛かります)</span>
+                  <button class="btn btn--commit" type="button" id="accNew">＋ 行を足す</button>
+                  <button class="btn btn--find" type="button" id="accLock">鍵を掛ける</button>
+                </div>
+                <form class="accedit__form" id="accForm" hidden autocomplete="off">
+                  <div class="optgrid">
+                    <span>管理番号</span><b id="accNo">(新しい行)</b>
+                    <label for="accLogin">ログインID</label>
+                    <span class="easyrow" style="margin:0"><input class="input" id="accLogin" spellcheck="false" style="width:16em" placeholder="空 = 問わない">
+                      <button class="btn btn--find" type="button" id="accMyId">この PC の ID</button></span>
+                    <label for="accPc">PC名</label>
+                    <span class="easyrow" style="margin:0"><input class="input" id="accPc" spellcheck="false" style="width:16em" placeholder="空 = 問わない">
+                      <button class="btn btn--find" type="button" id="accMyPc">この PC</button></span>
+                    <label for="accPerm">権限</label>
+                    <span><select class="input" id="accPerm" style="width:16em"></select></span>
+                    <span>有効</span><label class="checkline" style="margin:0"><input type="checkbox" id="accOn" checked> 効かせる</label>
+                    <label for="accNote">備考</label>
+                    <input class="input" id="accNote" style="width:24em; max-width:100%">
+                  </div>
+                  <p class="why" id="accFormHint">ログインID と PC名 の両方を空にはできません(誰にも効かないため)。</p>
+                  <div class="btn-row">
+                    <button class="btn btn--commit" type="submit" id="accSave">保存</button>
+                    <button class="btn btn--find" type="button" id="accCancel">やめる</button>
+                  </div>
+                </form>
+                <div class="tablewrap" style="margin-top:8px">
+                  <table class="table">
+                    <thead><tr><th>管理番号</th><th>ログインID</th><th>PC名</th><th>権限</th><th>有効</th><th>備考</th><th></th></tr></thead>
+                    <tbody id="accRows"></tbody>
+                  </table>
+                </div>
+                <p class="why" id="accNote2"></p>
+                <details class="accedit__pw">
+                  <summary>管理者パスワードを変える(この PC だけ)</summary>
+                  <div class="optgrid" style="margin-top:6px">
+                    <label for="accPwCur">いまのパスワード</label><input class="input" id="accPwCur" type="password" autocomplete="off" style="width:14em">
+                    <label for="accPwNew">新しいパスワード</label><input class="input" id="accPwNew" type="password" autocomplete="new-password" style="width:14em">
+                    <label for="accPwNew2">もう一度</label><input class="input" id="accPwNew2" type="password" autocomplete="new-password" style="width:14em">
+                  </div>
+                  <div class="btn-row" style="margin-top:6px"><button class="btn btn--find" type="button" id="accPwChange">変える</button></div>
+                </details>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tabpanel tabpanel--scroll" id="panel-source" role="tabpanel" aria-labelledby="tab-source" hidden>
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">接</i>
+            <h3>接続先</h3>
+            <span class="eyebrow">設定ファイルの一覧から選ぶ</span>
+          </header>
+          <div class="pad">
+            <div class="paths">
+              <label for="dbSelect">見る DB</label>
+              <span class="pathrow">
+                <select class="input" id="dbSelect"></select>
+                <button class="btn" type="button" id="dbClear" title="この PC で見る DB を決めていない状態に戻す(接続先の一覧はそのまま)">選択を外す</button>
+              </span>
+              <small class="why real" id="dbPath" {% if not view.db_path %}hidden{% endif %}>→ {{ view.db_path }}</small>
+            </div>
+            <p class="why">選ぶとすぐその DB に切り替わります(上の帯の DB の名前を押しても同じ一覧が出ます)。
+              「選択を外す」で、この PC で見る DB を決めていない状態に戻せます(一覧はそのまま)。
+              一覧は設定ファイルの「接続先」です(かんたん設定 → 設定ファイル)。</p>
+            <div id="dbAddBox">
+              <h4 class="accedit__title">接続先を足す <small class="why" style="margin:0">編集可 の人だけ。足すとすぐ開きます</small></h4>
+              <div class="paths">
+                <label for="dbPathText">DB ファイル</label>
+                <span class="pathrow">
+                  <input class="input" id="dbPathText" spellcheck="false" autocomplete="off"
+                         placeholder="例: \\server\共有\作業標準DB\作業標準管理システム.sqlite3">
+                  <button class="btn btn--find" type="button" data-browse="dbPathText" data-browse-file="1"><span class="gl">▸</span>参照…</button>
+                </span>
+              </div>
+              <div class="btn-row" style="margin-top:8px">
+                <button class="btn btn--commit" type="button" id="saveSource">足して開く</button>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin-top:12px">
+          {# 接続先の登録(0.32.0)。設定ファイルの「接続先」表をそのまま見て、足す・直す・消す。
+             直せるのは 編集可 の人か、管理者パスワードで鍵を開けたとき(アクセス権限と同じ鍵) #}
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">覧</i>
+            <h3>接続先の登録</h3>
+            <span class="eyebrow" id="dbListWhere"></span>
+          </header>
+          <div class="pad">
+            <p class="why" style="margin-top:0">設定ファイルの「接続先」表そのものです。ここで直した一覧が、上の「見る DB」と帯の DB のメニューに出ます。
+              <b>消す</b>は一覧から消すだけで、DB ファイルは消しません。いま開いている DB を消すと、見る DB の選択も外れます。</p>
+            <div class="dbreg__lock" id="dbregLock" hidden>
+              <span class="why" id="dbregLockWhy"></span>
+              <span class="pathrow">
+                <input class="input" id="dbregPass" type="password" autocomplete="off" placeholder="管理者パスワード" style="max-width:14em">
+                <button class="btn" type="button" id="dbregUnlock">鍵を開ける</button>
+              </span>
+            </div>
+            <div class="tablewrap">
+              <table class="table dbreg">
+                <thead><tr><th class="t">番</th><th class="t">名前</th><th class="t">パス</th><th class="t">備考</th><th class="t">状態</th><th class="t"></th></tr></thead>
+                <tbody id="dbregRows"></tbody>
+                <tfoot id="dbregNew"></tfoot>
+              </table>
+            </div>
+            <p class="status status--ng" id="dbregWhy" hidden></p>
+          </div>
+        </section>
+        <section class="card" style="margin-top:12px">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">中</i>
+            <h3>このフォルダのファイル</h3>
+            <button class="btn btn--find" type="button" id="dbFilesReload"><span class="gl">⟳</span>見直す</button>
+          </header>
+          <div class="pad">
+            <p class="why" id="dbFilesFolder"></p>
+            <p class="why" style="margin:0">
+              <span class="lv lv--ok">開けます</span> UF検査判定の .sqlite3。「これを開く」で接続先になります。
+              <span class="lv lv--warn">変換すると開けます</span> Access のファイル。「Access 取り込み」で .sqlite3 にしてから開きます。
+            </p>
+            <p class="status" id="dbFilesNote" hidden></p>
+            <ul class="dbfiles" id="dbFiles"></ul>
+          </div>
+        </section>
+      </section>
+
+      <section class="tabpanel tabpanel--scroll" id="panel-paths" role="tabpanel" aria-labelledby="tab-paths" hidden>
+        <div class="pathcards">
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">出</i>
+            <h3>出力(一覧・閲覧の「出力」)</h3>
+            <span class="lv lv--{{ view.export_dir_state.level }}" id="exportDirState">{{ view.export_dir_state.text }}</span>
+          </header>
+          <div class="pad">
+            <p class="why">ブラウザのダウンロードは使いません。「ファイルに保存」はいつもこのフォルダに書きます。
+              ファイルが要らないときは「表をコピー」で、Excel やメールにそのまま貼り付けられます。</p>
+            <div class="paths">
+              {{ pathrow("exportDir", "保存先フォルダ", view.export_dir, view.export_dir_real) }}
+            </div>
+            <div class="optgrid">
+              <span>既定の形式</span>
+              <div class="opts" role="radiogroup" aria-label="既定の形式">
+                {% for v, label in (("csv", "CSV(カンマ区切り)"), ("tsv", "タブ区切り(.txt)"), ("xlsx", "Excel 形式(.xlsx)")) %}
+                <label class="checkline"><input type="radio" name="exportFormat" value="{{ v }}" {% if view.export_format == v %}checked{% endif %}> {{ label }}</label>
+                {% endfor %}
+              </div>
+              <label for="exportEncoding">文字コード</label>
+              <select class="input" id="exportEncoding" style="width:16em">
+                {% for v, label in state.encodings.items() %}
+                <option value="{{ v }}" {% if view.export_encoding == v %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <p class="why">CSV・タブ区切りの文字コード。Shift_JIS は日本語版 Excel でそのまま開けます。UTF-8 は機種依存文字も欠けません。
+              xlsx は Excel が無い PC でも作れます(開くのに表計算ソフトが要ります)。</p>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn btn--commit" type="button" id="saveExport">出力の設定を保存</button>
+              <button class="btn btn--find" type="button" id="openExport" {% if not view.can_open %}hidden{% endif %}>フォルダを開く</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">参</i>
+            <h3>参照ファイル(PDF・画像など)</h3>
+            <span class="lv lv--{{ view.ref_dir_state.level }}" id="refDirState">{{ view.ref_dir_state.text }}</span>
+          </header>
+          <div class="pad">
+            <p class="why">レコード画面で開く PDF・画像の置き場所。<code>_設定</code> の「参照形式」に相対パスで書いた列は、このフォルダから探します。
+              空なら DB ファイルのあるフォルダから探します。</p>
+            <div class="paths">
+              {{ pathrow("refDir", "相対パスの起点", view.ref_dir, view.ref_dir_real) }}
+            </div>
+            <dl class="checks" id="refUses">
+              {% for u in view.ref_uses %}
+              <div class="check check--info"><dt>{{ u.item }}</dt><dd><span class="v">{{ u.kind }}</span><span class="why">{{ u.where }}</span></dd></div>
+              {% else %}
+              <div class="check check--info"><dt>使っている列</dt><dd><span class="v">なし</span><span class="why">この本体の「参照形式」にファイルを開く列はありません</span></dd></div>
+              {% endfor %}
+            </dl>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn btn--commit" type="button" id="saveRef">参照の設定を保存</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">帳</i>
+            <h3>帳票・印刷</h3>
+            <span class="lv lv--{{ view.report.level }}" id="reportState">{{ "使えます" if view.report.level == "ok" else "確認" if view.report.level == "warn" else "情報" }}</span>
+          </header>
+          <div class="pad">
+            <p class="why">帳票も印刷も、Excel を使わず<b>印刷用の画面</b>(A4・余白 6mm)で出します。開いた画面で Ctrl+P を押すと印刷、
+              プリンタに「PDF に保存」を選べば PDF になります。設定することはありません。</p>
+            <dl class="checks" id="reportChecks">
+              <div class="check check--{{ view.report.level }}"><dt>全般設定「帳票」</dt>
+                <dd><span class="v">{{ view.report.setting or "(空)" }}</span><span class="why">{{ view.report.text }}</span></dd></div>
+              <div class="check check--info"><dt>一覧の「印刷」</dt>
+                <dd><span class="v">いつでも使えます</span><span class="why">見えている行・列のまま A4 横で。列が多ければ紙の幅に縮めます</span></dd></div>
+            </dl>
+          </div>
+        </section>
+        </div>
+      </section>
+
+      <section class="tabpanel tabpanel--scroll" id="panel-behavior" role="tabpanel" aria-labelledby="tab-behavior" hidden>
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">動</i>
+            <h3>動作</h3>
+            <span class="eyebrow">この端末での振る舞い</span>
+          </header>
+          <div class="pad">
+            <div class="field">
+              <label class="checkline">
+                <input type="checkbox" id="accessLog" {% if view.access_log %}checked{% endif %}>
+                Access.log(VBA と同じ TSV)を本体と同じフォルダに書く
+              </label>
+            </div>
+            <div class="field" style="margin-top:8px">
+              <label for="reloginMinutes">無操作で権限を読み直す(分)</label>
+              <input class="input" id="reloginMinutes" type="number" min="0" step="1" style="width:6em" value="{{ view.relogin_minutes }}">
+              <span class="why" style="margin:0">0 = しない(VBA と同じく、閉じるまで有効)</span>
+            </div>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn btn--commit" type="button" id="saveBehavior">動作の設定を保存</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="tabpanel tabpanel--scroll" id="panel-access" role="tabpanel" aria-labelledby="tab-access" hidden>
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">Ａ</i>
+            <h3>Access(.accdb)を .sqlite3 に変換して保存</h3>
+            <span class="eyebrow">脱 .accdb ── 変換したあとは .sqlite3 だけを使います</span>
+          </header>
+          <div class="pad">
+            <div class="paths">
+              {{ pathrow("accdbSource", "元の .accdb", view.accdb_source, "") }}
+              {{ pathrow("accdbTarget", "保存先(.sqlite3)", view.accdb_target, "") }}
+            </div>
+            <p class="why">保存先が空なら、いまの接続先フォルダに Access と同じ名前の .sqlite3 を作ります
+              (<span id="accdbTargetDefault"></span>)。同じ名前があれば <code>.bak</code> に退けてから差し替えます。
+              変換は Windows の cscript + ADODB + ACE で行うので、この PC に Access Database Engine が要ります。</p>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn btn--commit" type="button" id="runAccess">変換して保存</button>
+              <button class="btn btn--find" type="button" id="openConverted" hidden>この .sqlite3 を開く</button>
+            </div>
+            <div class="job" id="accessJob" hidden style="margin-top:12px">
+              <div class="job__head">
+                <span class="job__label" id="accessJobLabel"></span>
+                <span class="job__state st" id="accessJobState"></span>
+                <span class="num" id="accessJobPct"></span>
+              </div>
+              <div class="bar"><div class="bar__fill" id="accessJobBar"></div></div>
+              <p class="why" id="accessJobMessage"></p>
+              <p class="status" id="accessJobResult" hidden></p>
+            </div>
+          </div>
+        </section>
+        <details class="card adv" style="margin-top:12px">
+          <summary>上級: 表だけ持ってくる(いまの .sqlite3 に、Access で作った表を足す)</summary>
+          <div class="pad">
+            <div class="field" style="margin-top:12px" id="bringOpenDrop">
+              <b style="min-width:10em">Access で作った表</b>
+              <button class="btn" type="button" id="bringOpen">表を持ってくる…</button>
+              <span class="why" style="margin:0">(ファイルをここへドラッグ&ドロップしても開きます)</span>
+            </div>
+            <p class="why">
+              Access(.accdb)か、それを変換した .sqlite3 から、本体に<b>無い表だけ</b>を足します。
+              もうある表は、選んだものだけ Access の最新に入れ替えられます。
+              上の「Access から取り込む」(丸ごと差し替え)と違い、Web 版で登録した行は消えません。
+            </p>
+            </div>
+        </details>
+      </section>
+
+      <section class="tabpanel tabpanel--scroll" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+        <div class="pathcards">
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">番</i>
+            <h3>記録番号で引く</h3>
+            <span class="eyebrow">エラーが出たら</span>
+          </header>
+          <div class="pad">
+            <p class="why">画面のエラーには<b>記録番号</b>(8 桁の英数字)が出ます。ここに入れると、その操作の前後
+              ── どの画面で・誰が・何を押し・何が返り・その前に何があったか ── が一続きで出ます。
+              そこで<b>なぜなぜシート</b>(なぜ 1〜5・対策・対策の状況)を書いて残せます。</p>
+            <div class="ridrow">
+              <input class="input" id="logRid" placeholder="例: 3f9a0c12" maxlength="16" spellcheck="false" autocomplete="off">
+              <button class="btn btn--commit" type="button" id="logChainGo">前後を見る</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">ロ</i>
+            <h3>ログ</h3>
+            <span class="lv lv--info" id="logToday"></span>
+          </header>
+          <div class="pad">
+            <div class="logbar">
+              <div class="seg" role="radiogroup" aria-label="見るもの">
+                <label class="checkline"><input type="radio" name="logOnly" value="errors"> エラーだけ</label>
+                <label class="checkline"><input type="radio" name="logOnly" value="problems" checked> エラー・断り・警告</label>
+                <label class="checkline"><input type="radio" name="logOnly" value="all"> 操作も全部</label>
+              </div>
+              <select class="input" id="logPc" aria-label="PC"><option value="">どの PC も</option></select>
+              <select class="input" id="logDays" aria-label="期間">
+                <option value="1">今日</option>
+                <option value="7" selected>7 日</option>
+                <option value="30">30 日</option>
+                <option value="90">90 日</option>
+              </select>
+              <input class="input" id="logQ" type="search" placeholder="言葉で絞る(ID・画面・理由・値…)" spellcheck="false">
+              <button class="btn btn--find" type="button" id="logReload"><span class="gl">⟳</span>見直す</button>
+              <button class="btn btn--find" type="button" id="logCsv" title="いまの絞り込みのまま、ログの出力先の「書き出し」フォルダへ CSV で書きます(なぜなぜの列も入ります)">CSV に書き出す</button>
+            </div>
+            <p class="status status--ok" id="logCsvDone" hidden></p>
+            <p class="why" id="logSummary"></p>
+            <div class="tablewrap tablewrap--log" id="logWrap">
+              <table class="table logtable">
+                <thead><tr><th>時刻</th><th>出来事</th><th>画面</th><th>利用者</th><th>PC</th><th>内容</th><th>記録番号</th><th>なぜなぜ</th></tr></thead>
+                <tbody id="logRows"></tbody>
+              </table>
+            </div>
+            <p class="status" id="logEmpty" hidden></p>
+          </div>
+        </section>
+
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">置</i>
+            <h3>ログの出力先</h3>
+            <span class="lv lv--{{ view.log.dir_state.level }}" id="logDirState">{{ view.log.dir_state.text }}</span>
+          </header>
+          <div class="pad">
+            <p class="why">操作・断り・エラーを 1 行ずつ残します(パスワードは「***」にします)。
+              <b>共有フォルダにすると、どの PC で起きたことも 1 か所で引けます</b>。ファイル名に PC 名が入るので、同じファイルを取り合いません。
+              空ならこの PC の中({{ view.log.dir_default }})。
+              <b>置き場所の中に <code>ufkensa</code> フォルダを作り、その中に <code>ufkensa_</code> で始まる名前で書きます</b>
+              (ほかのツールと同じ所にしても混ざりません)。</p>
+            <div class="paths">
+              {{ pathrow("logDir", "出力先(掃き出し先)", view.log.dir, view.log.dir_real) }}
+            </div>
+            <p class="status status--warn" id="logDirProblem" {% if not view.log.problem %}hidden{% endif %}>{{ view.log.problem }}</p>
+            <div class="field" style="margin-top:8px">
+              <label for="logKeepDays">残す日数</label>
+              <input class="input" id="logKeepDays" type="number" min="0" max="3650" step="1" style="width:6em" value="{{ view.log.keep_days }}">
+              <span class="why" style="margin:0">0 = 消さない。起動したときに、<b>この PC の</b>古い記録だけ消します</span>
+            </div>
+            <p class="why" id="logFile">この PC のファイル: {{ view.log.file }}(ほかに ufkensa_{{ view.log.pc }}_日付.log = 開発者向けの詳しいログ)</p>
+            <div class="btn-row" style="margin-top:8px">
+              <button class="btn btn--commit" type="button" id="saveLog">ログの設定を保存</button>
+              <button class="btn btn--find" type="button" id="openLog" {% if not view.log.can_open %}hidden{% endif %}>フォルダを開く</button>
+            </div>
+          </div>
+        </section>
+        </div>
+      </section>
+
+      <section class="tabpanel tabpanel--scroll" id="panel-dist" role="tabpanel" aria-labelledby="tab-dist" hidden>
+        {# 配布設定(0.30.0。`ufkensa/distribution.py`、python-web-tools と同じ作り)。1 台で決めた設定を、
+           ツールのフォルダごと配った先の PC でそのまま使う。書き出す・読み込み直す・消すは管理者パスワード #}
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">配</i>
+            <h3>いま置いてある配布設定</h3>
+            <span class="st st--warn" id="distState">…</span>
+          </header>
+          <div class="pad">
+            <p class="why" id="distMeta"></p>
+            <div class="tablewrap" id="distBundleWrap" hidden>
+              <table class="table">
+                <thead><tr><th class="t">項目</th><th class="t">値</th></tr></thead>
+                <tbody id="distBundle"></tbody>
+              </table>
+            </div>
+            <p class="why">置き場所: <code id="distPath"></code>
+              ── <b>配った先に関わるものはすべてこのフォルダ</b>に入ります(設定.json・設定ファイル.json・はじめに読む.txt)。
+              <span id="distApplied"></span></p>
+          </div>
+        </section>
+
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">出</i>
+            <h3>この PC の設定を配布設定にする</h3>
+          </header>
+          <div class="pad">
+            <p class="why">
+              いまこの PC に入っている値をそのまま書き出します(前に書き出した中身は置き換えます)。
+              配った先は<b>起動したときに読み込みます</b>。無い項目・空の項目は埋め、<b>書き出し直した配布設定</b>なら、
+              前の配布のまま変えていない項目も新しい値に入れ替えます。<b>その PC で変えた設定は上書きしません</b>。
+            </p>
+            <fieldset class="distchecks" id="distItems"><legend>設定(この PC のいまの値)</legend></fieldset>
+            <fieldset class="distchecks" id="distContents"><legend>設定ファイル</legend></fieldset>
+            <div class="field distpass">
+              <label for="distPassword">管理者パスワード</label>
+              <input class="input" id="distPassword" type="password" autocomplete="off" style="max-width:16em">
+            </div>
+            <p class="status status--ng" id="distWhy" hidden></p>
+            <div class="btn-row">
+              <button class="btn btn--commit" type="button" id="distExport">配布設定を書き出す</button>
+              <button class="btn" type="button" id="distReapply">配布設定を読み込み直す</button>
+              <button class="btn btn--danger" type="button" id="distRemove">配布設定を消す</button>
+            </div>
+            <p class="why">
+              <b>設定ファイル</b>を共有フォルダに置いているなら「設定ファイルの場所」だけで足ります(みんな同じファイルを見ます)。
+              <b>この PC の中に置いているときは、配った先からは見えない</b>ので「設定ファイルの中身」を入れてください。
+              配った先は、その PC の設定ファイルがまだ無ければ、その中身で作ります。
+              「読み込み直す」は、その PC にすでにある設定も上書きします(共有フォルダの設定ファイルは上書きしません)。
+              配るときは <code>scripts\make_dist.bat</code> で配布用フォルダを作ってください(このフォルダも入ります)。
+            </p>
+          </div>
+        </section>
+      </section>
+      <section class="tabpanel tabpanel--scroll" id="panel-terminal" role="tabpanel" aria-labelledby="tab-terminal" hidden>
+        <section class="card">
+          <header>
+            <i class="ib ib--sm" aria-hidden="true">端</i>
+            <h3>この端末</h3>
+          </header>
+          <div class="pad">
+            <dl class="checks" id="terminalList">
+              <div class="check check--info"><dt>PC 名</dt><dd><span class="v">{{ view.terminal.pc_name }}</span></dd></div>
+              <div class="check check--info"><dt>ログイン ID(OS)</dt><dd><span class="v">{{ view.terminal.user }}</span></dd></div>
+              <div class="check check--info"><dt>版</dt><dd><span class="v">{{ view.terminal.version }}</span><span class="why">{{ view.terminal.app_root }}</span></dd></div>
+              <div class="check check--info"><dt>ローカル領域</dt><dd><span class="v">{{ view.terminal.local_root }}</span><span class="why">記録: {{ view.terminal.log_dir }}(設定「ログ」で変えられます) / 設定: {{ view.terminal.config_path }}</span></dd></div>
+            </dl>
+          </div>
+        </section>
+      </section>
+    </div>
+  </div>
+</div>
+
+{# Access で作った表を持ってくる(`ufkensa/table_bring.py`、python-web-tools から移植)。
+   **無い表だけ**を足す。参照のダイアログ(#browser)をこの上に重ねて開く #}
+<dialog id="bringDialog" class="browser bring">
+  <form method="dialog" class="browser__head">
+    <b>Access で作った表を持ってくる</b>
+    <button class="btn btn--danger" value="cancel">閉じる</button>
+  </form>
+  <div class="dropzone" id="bringDrop" tabindex="0">
+    <b>Access(.accdb)のファイルを、ここへドラッグ&ドロップ</b>
+    <span class="why">変換した .sqlite3 でも構いません。落とすとすぐ中を読みます。</span>
+  </div>
+  <p class="why">
+    読むのはいつも <b>.sqlite3</b> です。Access を選んだときは、Access 取り込みと同じ経路
+    (cscript → ADODB → ACE)で作業フォルダに .sqlite3 を作ってから読みます。
+  </p>
+  <p class="why">
+    <b>本体に無い表</b>は、表ごと足します(「持ってくる」)。足した表は一覧の表の選び欄に
+    「足」の印で出て、そのまま直せます。
+  </p>
+  <p class="why">
+    <b>もうある表</b>は、<b>Access の最新に入れ替え</b>られます(「入れ替える」)。
+    Access で列を足していれば、その列も足します。Access で列を消した・名前を変えたときは
+    <b>作り直し</b>ます(「作り直す」)── 今の表は「表名_作り直す前_日時」の名前で残すので、
+    中身を見比べられます。ほかの表には触りません。Web 版が書き込む表(メインテーブル・H_ 履歴)と
+    ID は入れ替えません。
+  </p>
+  <div class="paths">
+    <label for="bringPath">または場所で選ぶ</label>
+    <span class="pathrow">
+      <input class="input" id="bringPath" spellcheck="false" autocomplete="off">
+      <button class="btn btn--find" type="button" data-browse="bringPath"
+              data-browse-file="1"><span class="gl">▸</span>参照…</button>
+      <button class="btn" type="button" id="bringLook">中を見る</button>
+    </span>
+  </div>
+  <p class="why" id="bringDest" hidden></p>
+  <p class="why" id="bringConverted" hidden></p>
+  <p class="status" id="bringNote" hidden></p>
+  <div class="tablewrap tablewrap--browse" id="bringList" hidden>
+    <table class="table">
+      <thead><tr><th></th><th>表</th><th class="num">行</th><th>列・入れ替えの説明</th></tr></thead>
+      <tbody id="bringRows"></tbody>
+    </table>
+  </div>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn btn--commit" type="button" id="bringRun" disabled>選んだ表を持ってくる</button>
+    <button class="btn btn--danger" type="button" id="bringRefresh" disabled>選んだ表を入れ替える・作り直す</button>
+  </div>
+  <p class="why">
+    編集可の権限が必要です。書く前に、本体の控えを
+    この端末の <code>backup</code> フォルダへ取ります。
+  </p>
+</dialog>
+
+{# 記録番号の前後(なぜなぜ分析)。上が古い #}
+<dialog id="logChain" class="browser chain" aria-labelledby="logChainTitle">
+  <div class="browser__head">
+    <b id="logChainTitle">記録番号の前後</b>
+    <button class="btn" type="button" id="logCopyDraft">なぜなぜの下書きをコピー</button>
+    <button class="btn" type="button" id="logCopyChain">この並びをコピー</button>
+    <button class="btn" type="button" data-close>閉じる</button>
+  </div>
+  <p class="why" style="margin-top:0">同じ画面・同じ PC の前後 15 分。<b>色の付いた行</b>がその記録番号。行を開くと、送った値・断りの理由・例外の場所が見えます。</p>
+  <p class="status status--warn" id="logChainNote" hidden></p>
+  <ol class="timeline" id="logChainList"></ol>
+  <details class="draft">
+    <summary>なぜなぜの下書きを見る(コピーできないとき)</summary>
+    <textarea class="input" id="logDraft" rows="14" readonly spellcheck="false"></textarea>
+  </details>
+  <section class="whysheet" id="logSheet" hidden>
+    <h4>なぜなぜシート <span class="why" style="margin:0">記録から言えることは上の並びと下書きに。ここは人が書きます</span></h4>
+    <div class="whysheet__grid">
+      <label for="logSheetStatus">対策の状況</label>
+      <select class="input" id="logSheetStatus" style="width:10em"></select>
+      <div id="logWhys" class="whysheet__whys"></div>
+      <label for="logMeasure">対策</label>
+      <textarea class="input" id="logMeasure" rows="2" maxlength="400" placeholder="誰が・いつまでに・何をする(同じことが起きないように)"></textarea>
+      <label for="logBy">書いた人</label>
+      <input class="input" id="logBy" maxlength="40" style="width:14em" autocomplete="off">
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn--commit" type="button" id="logSheetSave">なぜなぜを残す</button>
+      <span class="why" id="logSheetNote" style="margin:0"></span>
+    </div>
+  </section>
+</dialog>
+
+<dialog id="browser" class="browser">
+  <form method="dialog" class="browser__head">
+    <b id="browseFor"></b>
+    <input class="input" id="browsePath" spellcheck="false"
+           autocomplete="off" aria-label="いま見ているフォルダ">
+    <button class="btn" type="button" id="browseGo">開く</button>
+    <button class="btn" type="button" id="browseUp">上へ</button>
+    <button class="btn btn--danger" value="cancel">閉じる</button>
+  </form>
+  <p class="status status--ng" id="browseNote" hidden></p>
+  <div class="tablewrap tablewrap--browse">
+    <table class="table"><tbody id="browseRows"></tbody></table>
+  </div>
+  <div class="btn-row" style="margin-top:8px">
+    <button class="btn btn--commit" type="button" id="browsePick">このフォルダにする</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block head %}
+<style>
+  .job__head { display:flex; align-items:baseline; gap:10px; }
+  .job__label { font-weight:700; }
+  .job__head .num { margin-left:auto; font-family:var(--mono); }
+  .bar { height:8px; background:var(--raised); border-radius:var(--pill); overflow:hidden; margin:6px 0; }
+  .bar__fill { height:100%; width:0; border-radius:var(--pill); background:var(--accent); transition:width .3s; }
+  .pathcards { display:flex; flex-direction:column; gap:12px; }
+  /* 接続先フォルダのファイル。開けるものは強調、変換すれば開けるものは注意 */
+  .dbfiles { list-style:none; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .dbfile { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:4px 12px; align-items:center;
+            padding:8px 12px; border:1px solid var(--rule); border-radius:var(--radius-xs); background:var(--surface); }
+  .dbfile--open { border-color:var(--state-ok); background:var(--ok-bg); }
+  .dbfile--convert { border-color:var(--state-warn); background:var(--warn-bg); }
+  .dbfile--other { opacity:.7; }
+  .dbfile b { overflow-wrap:anywhere; color:var(--ink); }
+  .dbfile small { grid-column:2; color:var(--muted); font-size:var(--fs-xs); }
+  .dbfile .btn { grid-row:1 / span 2; grid-column:3; }
+  .dbfile .lv { grid-row:1 / span 2; }
+  .dbfile.is-current { box-shadow:inset 0 0 0 2px var(--accent); }
+  .adv > summary { cursor:pointer; padding:10px 14px; font-weight:600; color:var(--muted); }
+  .adv[open] > summary { color:var(--ink); }
+  .optgrid { display:grid; grid-template-columns:8em 1fr; gap:8px 10px; align-items:center; margin-top:10px; font-size:var(--fs-sm); }
+  .optgrid > span, .optgrid > label { color:var(--muted); }
+  .opts { display:flex; flex-wrap:wrap; gap:4px 16px; }
+  /* かんたん設定 */
+  .easyrow { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .easyrow .input { max-width:100%; }
+  .easytable { max-height:60vh; }
+  .easytable td, .easytable th { text-align:left !important; vertical-align:middle; }
+  .easytable td.name b { color:var(--ink); overflow-wrap:anywhere; }
+  .easytable td.name small { display:block; color:var(--faint); font-family:var(--mono); font-size:var(--fs-2xs); }
+  .easytable .pick { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .easytable .pick .input { min-width:0; }
+  /* 0.25.0: クリックの列は広く。場所(パス)は欄いっぱいで、長いパスも見えるように */
+  .easytable td.click { width:52%; min-width:30em; }
+  .easytable td.click .pick { flex-direction:column; align-items:stretch; }
+  .placeguide td, .placeguide th { text-align:left !important; }
+  .placeguide summary { cursor:pointer; color:var(--accent); font-weight:600; margin:4px 0; }
+  .placehelp { display:flex; flex-direction:column; gap:4px; }
+  .placehelp__chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .placehelp .phchip { font:inherit; font-size:var(--fs-xs); padding:2px 8px; border-radius:999px; cursor:pointer;
+                     border:1px solid var(--rule); background:var(--surface); color:var(--ink); }
+  .placehelp .phchip:hover { background:var(--accent-soft); }
+  .placehelp .phchip:disabled { opacity:.5; cursor:default; }
+  .placehelp__ex { color:var(--muted); font-family:var(--mono); font-size:var(--fs-xs); overflow-wrap:anywhere; }
+  .placehelp__try { display:flex; gap:8px; align-items:flex-start; }
+  .placehelp__result { white-space:pre-wrap; font-size:var(--fs-xs); color:var(--muted); overflow-wrap:anywhere; }
+  .placehelp__result.is-ok { color:var(--ok); }
+  .placehelp__list { margin-top:4px; color:var(--ink); }
+  .placehelp__list summary { cursor:pointer; font-weight:600; }
+  .placehelp__list ol { margin:4px 0 0; padding-left:1.6em; font-family:var(--mono); }
+  .placehelp__list li.is-hit { color:var(--ok); font-weight:600; }
+  .dbreg td { vertical-align:middle; }
+  .dbreg input.input { width:100%; min-width:6em; }
+  .dbreg td.path { min-width:22em; }
+  .dbreg td.state { white-space:nowrap; font-size:var(--fs-xs); }
+  .dbreg td.state.is-missing { color:var(--state-warn); }
+  .dbreg td.state.is-current { color:var(--state-ok); font-weight:600; }
+  .dbreg td.act { white-space:nowrap; }
+  .dbreg tr.is-dirty td { background:var(--warn-bg); }
+  .dbreg__lock { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0 10px; }
+  .distchecks { border:1px solid var(--hairline); border-radius:8px; padding:8px 12px; margin:8px 0; display:grid; gap:6px; }
+  .distchecks legend { padding:0 4px; color:var(--muted); font-size:var(--fs-xs); }
+  .distchecks label { display:grid; grid-template-columns:auto minmax(10em, 18em) 1fr; gap:8px; align-items:baseline; }
+  .distchecks .v { font-family:var(--mono); font-size:var(--fs-xs); color:var(--muted); overflow-wrap:anywhere; }
+  .distchecks .here { color:var(--state-warn); font-size:var(--fs-xs); }
+  .distchecks label.is-unset { opacity:.6; }
+  .distpass { margin-top:8px; }
+  @media (max-width: 720px) { .distchecks label { grid-template-columns:auto 1fr; } .distchecks .v { grid-column:2; } }
+  .placehelp__list ul { margin:4px 0 0; padding-left:1.2em; display:grid; gap:6px; }
+  .placehelp__why { margin:4px 0; color:var(--ink); }
+  .placehelp__place { font-family:var(--mono); word-break:break-all; color:var(--muted); }
+  .placehelp__kids { font-family:var(--mono); word-break:break-all; }
+  .placehelp__result.is-warn { color:var(--warn, #b26b00); }
+  .placehelp__result.is-ng { color:var(--ng, #b4232a); }
+  .easytable td.click [data-f="place"] { width:100% !important; font-family:var(--mono); font-size:var(--fs-sm);
+                                         resize:vertical; min-height:3.2em; line-height:1.45; white-space:pre-wrap;
+                                         overflow-wrap:anywhere; }
+  .easytable tr.is-changed td { background:var(--accent-soft); }
+  .easytable tr.is-off td.name b { color:var(--faint); }
+  .accedit { margin-top:14px; padding-top:12px; border-top:1px solid var(--hairline); display:grid; gap:8px; }
+  .accedit__title { margin:0; font-size:var(--fs-sm); display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .accedit__form { padding:10px 12px; border:1px solid var(--hairline); border-radius:8px; background:var(--sunken); }
+  .accedit tr.is-mine td { font-weight:700; }
+  .accedit tr.is-off td { color:var(--faint); text-decoration:line-through; }
+  .accedit td.ops { white-space:nowrap; text-align:right; }
+  .accedit td.ops .btn { min-height:24px; padding:0 8px; font-size:var(--fs-xs); }
+  .easydb { font-family:var(--mono); font-size:var(--fs-sm); overflow-wrap:anywhere; color:var(--ink); margin:0 0 6px; }
+  /* 表を持ってくる: 落とす場所。重ねている間は色を変える */
+  .dropzone { border:2px dashed var(--rule); border-radius:var(--radius-xs);
+              padding:18px; margin:8px 0; display:flex; flex-direction:column;
+              align-items:center; gap:4px; text-align:center; }
+  .dropzone.is-over, #bringOpenDrop.is-over { border-color:var(--accent); background:var(--accent-soft); }
+  /* 記録 */
+  .ridrow { display:flex; gap:8px; flex-wrap:wrap; }
+  .ridrow .input { width:12em; font-family:var(--mono); }
+  .logbar { display:flex; gap:8px 12px; flex-wrap:wrap; align-items:center; }
+  .logbar .seg { display:flex; gap:4px 14px; flex-wrap:wrap; }
+  .logbar #logQ { flex:1; min-width:14em; }
+  .tablewrap--log { max-height:56vh; margin-top:6px; }
+  .logtable td, .logtable th { text-align:left !important; vertical-align:top; }
+  .logtable td { color:var(--ink); }
+  .logtable td.t { font-family:var(--mono); white-space:nowrap; color:var(--muted); }
+  .logtable td.msg { min-width:16em; overflow-wrap:anywhere; }
+  .logtable tr.is-error td { background:var(--warn-bg); }
+  .logtable tr.is-error td.ev { color:var(--state-error); font-weight:700; }
+  .logtable tr.is-warn td.ev { color:var(--state-warn); font-weight:700; }
+  .ridlink { font-family:var(--mono); min-height:28px; padding:2px 8px; font-size:var(--fs-sm); }
+  /* 見出し(コピー・閉じる)は動かさず、並びだけを送る */
+  .chain { width:min(980px, 94vw); }
+  .chain[open] { display:flex; flex-direction:column; overflow:hidden; }
+  .chain .timeline { flex:1 1 auto; min-height:0; overflow:auto; }
+  .timeline { list-style:none; margin:8px 0; padding:0 2px; display:flex; flex-direction:column; gap:4px; }
+  .timeline > li { border:1px solid var(--rule); border-radius:var(--radius-xs); background:var(--surface); }
+  .timeline > li.is-center { box-shadow:inset 0 0 0 2px var(--accent); background:var(--accent-soft); }
+  .timeline > li.is-error { border-color:var(--state-error); }
+  .timeline > li.is-warn { border-color:var(--state-warn); }
+  .timeline summary { cursor:pointer; padding:6px 10px; display:grid;
+                      grid-template-columns:9.5em 12em 10em minmax(0,1fr); gap:4px 10px; align-items:baseline; }
+  .timeline summary .t { font-family:var(--mono); color:var(--muted); white-space:nowrap; }
+  .timeline summary .ev { font-weight:700; }
+  .timeline summary .sc { color:var(--muted); }
+  .timeline summary .m { overflow-wrap:anywhere; }
+  .timeline pre { margin:0; padding:8px 10px; border-top:1px solid var(--rule); background:var(--sunken); color:var(--ink);
+                  font-size:var(--fs-xs); white-space:pre-wrap; overflow-wrap:anywhere; max-height:40vh; overflow:auto; }
+  .draft > summary { cursor:pointer; color:var(--muted); padding:6px 0; }
+  .whysheet { border-top:1px solid var(--rule); margin-top:10px; padding-top:8px; }
+  .whysheet h4 { margin:0 0 6px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .whysheet__grid { display:grid; grid-template-columns:8em minmax(0,1fr); gap:6px 10px; align-items:start; }
+  .whysheet__grid label { color:var(--muted); font-size:var(--fs-sm); padding-top:6px; }
+  .whysheet__whys { display:contents; }
+  .whysheet textarea { width:100%; resize:vertical; }
+  @media (max-width:560px) { .whysheet__grid { grid-template-columns:1fr; } }
+  .logtable td.sheet { white-space:nowrap; }
+  .sheetchip { display:inline-block; font-size:var(--fs-xs); padding:0 8px; border-radius:var(--pill); background:var(--warn-bg); color:var(--state-warn); }
+  .sheetchip.is-doing { background:var(--info-bg); color:var(--info-fg); }
+  .sheetchip.is-done { background:var(--ok-bg); color:var(--state-ok); }
+  .draft textarea { width:100%; font-family:var(--mono); font-size:var(--fs-xs); }
+  @media (max-width: 640px) {
+    .timeline summary { grid-template-columns:1fr; }
+  }
+  .bring { width:min(980px, 94vw); }
+  .bring #bringRows td, .bring thead th { text-align:left; }
+  .bring #bringRows td.num, .bring thead th.num { text-align:right; }
+  .bring #bringRows td:last-child { font-size:var(--fs-xs); color:var(--muted); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { start } from "{{ url_for('static', filename='js/views/settings.js') }}";
+  import { start as startEasy } from "{{ url_for('static', filename='js/views/easy.js') }}";
+  import { start as startDist } from "{{ url_for('static', filename='js/views/dist.js') }}";
+  import { start as startDbReg } from "{{ url_for('static', filename='js/views/dbreg.js') }}";
+  start({{ state | tojson }});
+  startEasy();
+  startDist();
+  startDbReg();
+</script>
+{% endblock %}
