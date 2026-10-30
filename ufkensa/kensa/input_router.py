@@ -514,10 +514,11 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
         state.ctl(st).value = vbx.cstr(vbx.val(conv(state.inp)))
 
     def block(text: str, n: int, source: str) -> Stop:
+        """MsgError(text, Lname, n) を出して値を消し Exit Sub。"""
         state.ctl(st).value = ""
         state.inp = ""
         state.flag_label = 1
-        return Stop(text, messages=msgs + [_msg_error(text, n, source)], level=WARN, source=source)
+        return Stop(text, messages=msgs, level=_msg_error(text, n, source).level, source=source)
 
     if hooks.register_check(state):
         raise block("検査員登録をして下さい", 2, "UF1:4609")
@@ -527,11 +528,11 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
         if state.work_button_tag == "jump" or state.dbflag != "":
             pass
         else:
-            hooks.proofread_load(state)
+            hooks.proofread_load(state)                       # 校正画面を開いて抜ける(MsgBox は無い)
             state.ctl(st).value = ""
             state.inp = ""
             state.flag_label = 1
-            raise Stop("未校正", messages=msgs, level=INFO, source="UF1:4625")
+            return msgs
 
     hooks.loop_text(state, st)
     hooks.posting(state)
