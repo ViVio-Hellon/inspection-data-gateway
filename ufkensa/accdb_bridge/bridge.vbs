@@ -73,6 +73,9 @@ WScript.Quit 0
 
 ' ------------------------------------------------------------------
 Function OpenConnection(path)
+  ' Same as the VBA version (SQL_addition adoConnection): the database password "nlm" is set first.
+  ' A file without a password is opened again without it. The password can be changed with the
+  ' environment variable UFKENSA_ACCDB_PASSWORD.
   Dim ext: ext = LCase(fso.GetExtensionName(path))
   Dim prov
   Select Case ext
@@ -80,9 +83,24 @@ Function OpenConnection(path)
     Case "mdb":   prov = "Microsoft.Jet.OLEDB.4.0"
     Case Else:    prov = "Microsoft.ACE.OLEDB.12.0"
   End Select
+  Dim pw: pw = CreateObject("WScript.Shell").Environment("PROCESS")("UFKENSA_ACCDB_PASSWORD")
+  If pw = "" Then pw = "nlm"
   Dim c: Set c = CreateObject("ADODB.Connection")
   c.Provider = prov
+  On Error Resume Next
+  c.Properties("Jet OLEDB:Database Password") = pw
   c.Open path
+  If Err.Number <> 0 Then
+    Err.Clear
+    Set c = CreateObject("ADODB.Connection")
+    c.Provider = prov
+    c.Open path
+  End If
+  If Err.Number <> 0 Then
+    WScript.StdErr.WriteLine "cannot open: " & path & " (" & Err.Description & ")"
+    WScript.Quit 4
+  End If
+  On Error GoTo 0
   c.CursorLocation = adUseClient
   Set OpenConnection = c
 End Function

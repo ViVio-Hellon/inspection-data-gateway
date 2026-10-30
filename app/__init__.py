@@ -529,13 +529,14 @@ def _register_static_version(app: Flask) -> None:
 # ------------------------------------------------------------------
 def _register_routes(app: Flask) -> None:
     from .routes import auth as auth_routes
-    from .routes import health, pending, settings
+    from .routes import health, importing, pending, settings
     from .routes import log as log_routes
 
     app.register_blueprint(health.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(log_routes.bp)
+    app.register_blueprint(importing.bp)
 
     # レールに出ているのに中身がまだ無い画面へ、「準備中」の案内を置く
     pending.register(app)
