@@ -1,11 +1,9 @@
 """検査画面 /kensa と /api/kensa/* の往復(app/routes/kensa.py → session.py)"""
 from __future__ import annotations
 
-import sqlite3
-from datetime import datetime
 
 from tests._web import make_client
-from tests.test_kensa_session import CARD, LOT, Clock, SessionBase
+from tests.test_kensa_session import CARD, LOT, SessionBase
 from ufkensa import user_settings
 from ufkensa.kensa import session, terminal
 

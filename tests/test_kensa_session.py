@@ -267,6 +267,24 @@ class NgTest(SessionBase):
         self.assertEqual(st.delete_p, "S1")
 
 
+class StrainFaceTest(SessionBase):
+    def test_a_b_face(self) -> None:
+        # AorB_Click: 表示中(A 面)の値を作業保存へ書き、B 面を表示へ。戻すと A 面が戻る(SaveLoad:1855-1979)
+        s = self.s
+        self.register()
+        st = s.state
+        for n, v in (("CBS1", "幅"), ("CBS2", "上"), ("ZS", "0.3")):
+            self.ok(s.set_value(n, v))
+        r = self.ok(s.set_value("AorB", ""))
+        self.assertEqual(st.strain_face, "Now_B")
+        self.assertIn("B面歪 入力画面です", [m.text for m in r.messages])   # UF1:487
+        self.assertEqual((st.strain_z["S"].value, st.strain_z["S"].tag), ("", "0.30"))
+        self.ok(s.set_value("ZS", "0.4"))
+        self.ok(s.set_value("AorB", ""))
+        self.assertEqual(st.strain_face, "Now_A")
+        self.assertEqual((st.strain_z["S"].value, st.strain_z["S"].tag), ("0.30", "0.40"))
+
+
 class CalibrationTest(SessionBase):
     calibrated = False
 

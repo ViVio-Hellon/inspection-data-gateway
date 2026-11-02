@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}履歴 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h2>履歴</h2>
+  <p class="muted">この端末で保存した検査(VBA の「保存用」・耳付は「耳用」)を見ます。左で選ぶと右に中身が出ます。</p>
+</section>
+<div style="display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:10px;align-items:start">
+  <section class="card">
+    <header><h3>保存した検査</h3><span class="lv lv--info" id="histCount"></span></header>
+    <div class="pad">
+      <div class="field">
+        <label><input type="radio" name="sheet" value="0" checked> 保存用</label>
+        <label><input type="radio" name="sheet" value="1"> 耳用(極厚)</label>
+        <input class="input" id="histFilter" placeholder="LotNo で絞る" style="flex:1">
+      </div>
+      <div class="tablewrap" style="max-height:70vh;overflow:auto">
+        <table class="table" id="histTable"><thead><tr><th>検査開始〜終了</th><th>LotNo</th><th>厚×巾×丈</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+  <section class="card">
+    <header><h3 id="histTitle">検査の中身</h3></header>
+    <div class="pad">
+      <p class="muted" id="histNone">左の一覧から選んでください。</p>
+      <div class="tablewrap"><table class="table" id="histGrid"></table></div>
+      <div class="tablewrap" style="margin-top:8px"><table class="table" id="histExtra"></table></div>
+      <dl class="kv" id="histOthers"></dl>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/history.js') }}"></script>
+{% endblock %}

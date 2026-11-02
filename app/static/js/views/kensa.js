@@ -35,6 +35,7 @@ async function op(name, body = {}, answers = {}) {
     return op(name, body, { ...answers, [q.key]: !!yes });
   }
   if (res.stop) toast(res.stop.text, "error");
+  if (res.view && res.view.report && res.view.report.report) toast(`帳票: ${res.view.report.report.html}`, "info");
   return res;
 }
 
@@ -161,12 +162,73 @@ function renderRight(v) {
   text($("workLv"), [v.header.work, v.header.yama && `${v.header.yama}山`].filter(Boolean).join(" "));
 }
 
+// Min/Max の範囲(OPS1〜6 / OPE1〜6。VBA の OptionButton)
+function renderRange(v) {
+  const r = v.range;
+  if (!r) return;
+  for (const [id, cur] of [["opsSel", r.ops], ["opeSel", r.ope]]) {
+    const sel = $(id);
+    sel.replaceChildren(new Option("-", ""),
+      ...r.labels.map((l, i) => (l ? new Option(l, String(i + 1)) : null)).filter(Boolean));
+    sel.value = cur ? String(cur) : "";
+  }
+}
+
+// 公差外の確認(UFConfi)。page 0 = 公差外(TB1 に入れて送信)、1 = 消去理由(List1)
+function renderConfi(v) {
+  const box = $("confiBox");
+  const c = v.confi;
+  box.hidden = !c;
+  if (!c) return;
+  const head = document.createElement("p");
+  head.textContent = c.page === 0 ? `検査ﾃﾞｰﾀに公差外有り！ 対象データ ${c.moto}(${c.posi}${c.n})`
+                                  : `再測定及びその他の理由 対象データ ${c.moto}(${c.posi}${c.n})`;
+  const row = document.createElement("div");
+  row.className = "btn-row";
+  const name = c.page === 0 ? (c.list2 ? "UFConfi.List2" : "UFConfi.TB1") : "UFConfi.List1";
+  row.append(...c.choices.map((ch) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn"; b.textContent = ch;
+    b.addEventListener("click", async () => {
+      if (ch === "その他" || ch === "再測定") {
+        const other = window.prompt("理由を入力してください", "");
+        if (other === null) return;
+        await op("value", { name: "UFConfi.その他", value: other });
+      }
+      op("value", { name, value: ch });
+    });
+    return b;
+  }));
+  box.replaceChildren(head, row);
+}
+
 function render(v) {
   V = v;
   renderLeft(v);
   renderGrid(v.grid);
   renderSub(v);
   renderRight(v);
+  renderRange(v);
+  renderConfi(v);
+}
+
+function buildExtras() {
+  const mm = $("mmKv").parentElement;
+  const rg = document.createElement("div");
+  rg.className = "btn-row";
+  for (const [id, label, prefix] of [["opsSel", "開始", "OPS"], ["opeSel", "終了", "OPE"]]) {
+    const lab = document.createElement("label");
+    lab.textContent = label;
+    const sel = document.createElement("select");
+    sel.className = "input"; sel.id = id;
+    sel.addEventListener("change", () => { if (sel.value) op("value", { name: prefix + sel.value, value: "True" }); });
+    lab.append(sel);
+    rg.append(lab);
+  }
+  mm.append(rg);
+  const confi = document.createElement("div");
+  confi.id = "confiBox"; confi.className = "pad"; confi.hidden = true;
+  $("checks").parentElement.before(confi);
 }
 
 function remember(line) {
@@ -186,6 +248,7 @@ function onEnter(id, fn) {
 }
 
 function init() {
+  buildExtras();
   onEnter("cardIn", (card) => op("worker", { card }));
   onEnter("lotIn", (lot) => op("lot", { lot }));
   onEnter("measIn", async (t) => { remember(t); await op("receive", { text: t }); $("measIn").focus(); });
@@ -206,6 +269,16 @@ function init() {
     const td = e.target.closest("td[data-name]");
     if (!td || !td.textContent) return;
     op("dblclick", { name: td.dataset.name });
+  });
+  $("subgrid").addEventListener("click", async (e) => {
+    // 歪・BH・不良の欄: "定盤:S" → ZS、"ゲージ:S" → GS、"BH:S" → SBH、"不良:S" → SBad
+    const td = e.target.closest("td[data-name]");
+    if (!td) return;
+    const [kind, pos] = td.dataset.name.split(":");
+    const name = { "定盤": "Z" + pos, "ゲージ": "G" + pos, "BH": pos + "BH", "不良": pos + "Bad" }[kind];
+    if (!name) return;
+    const val = window.prompt(`${kind} ${pos}`, td.textContent || "");
+    if (val !== null) op("value", { name, value: val });
   });
   api.get("/api/kensa/state").then((res) => { render(res.view); return op("start"); }).catch(toastError);
   $("measIn").focus();

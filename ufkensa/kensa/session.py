@@ -130,7 +130,9 @@ class Session:
                 workers_list.append(f"{label}: {t}" + (f"({day})" if day else ""))
         return {"workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
                 "confi": self.confi, "calibration_required": self.calibration_required,
-                "report": self.report or None, "proofread": "ok" if self._calibrated() else ""}
+                "report": self.report or None, "proofread": "ok" if self._calibrated() else "",
+                "range": {"ops": st.ops, "ope": st.ope,
+                          "labels": [st.v(f"OPS{i}").value if st.v(f"OPS{i}").visible else "" for i in range(1, 7)]}}
 
     def _view(self) -> dict[str, Any]:
         st = self.state
@@ -500,11 +502,8 @@ class Session:
         st = self.state
         st.work_button_tag = "jump" if self.calibration_skip() else ""
         st.proofread_flag = "ok" if self._calibrated() else ""
-        try:
-            self.env.messages.extend(input_router.receive(st, text, self.hooks))
-        finally:
-            if st.flag_label == 0 and st.inp_tag == "":
-                pass                                                     # VBA どおり(UserForm_Click で戻る)
+        # 入力先が決まらず抜けたとき FlagLabel=0 が残るのは VBA どおり(click("") = UserForm_Click で戻る)
+        self.env.messages.extend(input_router.receive(st, text, self.hooks))
         if self.env.proofread is not None:
             self.calibration_required = True
 
@@ -608,6 +607,21 @@ class Session:
             return
         if name[:3] in ("OPS", "OPE") and name[3:].isdigit() and 1 <= int(name[3:]) <= 6:
             minmax.select_range(st, "S" if name[:3] == "OPS" else "E", int(name[3:]))   # OPS?_Change / OPE?_Change
+            return
+        if name == "AorB":                                               # AorB_Click(A/B 面の切替)
+            if st.strain_face == "Now_A":
+                st.strain_face = "Now_B"
+                env.messages.append(Message("B面歪 入力画面です", INFO, source="UF1:487"))
+            elif st.strain_face == "Now_B":
+                st.strain_face = "Now_A"
+            r = records.reflect_strain(self.store, wiring.to_snapshot(st, self.store), vbx.right(st.strain_face, 1))
+            if r is not None:
+                wiring.apply_restore(st, r, hooks)
+            st.form_tag = "STOP"
+            for c in list(st.strain_z.values()) + list(st.strain_g.values()):   # SetSpecificTextBoxesBackColorToWhite
+                c.color = grid.COLOR_WHITE
+            hooks.hiz_loop_judg(st, 0)
+            st.form_tag = ""
             return
         if name == "DBflag":
             st.dbflag = value

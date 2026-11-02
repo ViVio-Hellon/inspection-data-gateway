@@ -529,7 +529,7 @@ def _register_static_version(app: Flask) -> None:
 # ------------------------------------------------------------------
 def _register_routes(app: Flask) -> None:
     from .routes import auth as auth_routes
-    from .routes import health, importing, pending, settings
+    from .routes import health, history, importing, pending, settings
     from .routes import log as log_routes
 
     app.register_blueprint(health.bp)
@@ -537,6 +537,7 @@ def _register_routes(app: Flask) -> None:
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(log_routes.bp)
     app.register_blueprint(importing.bp)
+    app.register_blueprint(history.bp)
     from .shell import READY_SCREENS
     if "kensa" in READY_SCREENS:                 # 結合(工程 8c)が済むまでは「準備中」の画面を出す
         from .routes import kensa
