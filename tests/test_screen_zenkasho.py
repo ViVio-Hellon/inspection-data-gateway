@@ -44,7 +44,8 @@ class ZenBase(unittest.TestCase):
         # UF1 の検査員は登録済み(Register_Check = 偽)にしておく。登録の要否そのものは RegisterCheckTest で見る
         p = mock.patch.object(zenkasho_session.ZenkashoSession, "_registered", return_value=False)
         self.registered = p.start()
-        self.addCleanup(p.stop)
+        self._reg_patch = p
+        self.addCleanup(mock.patch.stopall)
         self.ks = KensaState(line_name="LVC")
         self.s = self.new_session()
 
@@ -403,7 +404,7 @@ class RegisterCheckTest(ZenBase):
         self.assertEqual((d["view"]["open"], d["view"]["page"]), (True, "P_H494"))
 
     def test_real_register_check(self) -> None:
-        self.registered.stop()                                           # 本物: 検査員_LVC が無い → 真(Worker:456-)
+        self._reg_patch.stop()                                           # 本物: 検査員_LVC が無い → 真(Worker:456-)
         s = self.new_session()
         d = s.start("一般").to_dict()
         self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])

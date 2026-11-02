@@ -14,10 +14,12 @@
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { confirmBox, promptBox } from "../askbox.js";
+import { packDialog } from "./pack_dialog.js";
 
 const $ = (id) => document.getElementById(id);
 const POS = ["S", "U", "C", "D", "E", "F"];
 let V = null;
+const pack = packDialog({ imageUrl: "/api/kensa/pack_image", send: (name, body) => op(name, body) });
 const recent = [];
 
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -266,20 +268,11 @@ function renderOrder(v) {
   box.replaceChildren(...[side(vc.a), side(vc.b), vc.nothing ? el("p", { class: "muted", textContent: vc.nothing }) : null].filter(Boolean));
 }
 
+// 包装仕様書(UF_PackNo)。全ヵ所・キャスクと同じ窓(pack_dialog.js)。閉じたら測定値の欄へ戻る
 function renderPack(v) {
-  const p = v.pack;
-  const box = $("packBox");
-  box.hidden = !p;
-  if (!p) return;
-  text($("packLot"), p.lot);
-  $("packRows").replaceChildren(el("tr", {}, el("th", { textContent: "引当No" }), el("th", { textContent: "オーダーNo" }), el("th", { textContent: "包装仕様書No" })),
-    ...p.rows.map((r, i) => {
-      const tr = el("tr", { dataset: { row: String(i + 1) } }, el("td", { textContent: r.hiki }), el("td", { textContent: r.ord }), el("td", { textContent: r.pac }));
-      if (p.selected === i + 1) tr.dataset.sel = "1";
-      return tr;
-    }));
-  $("packLabels").replaceChildren(...["L1", "L2", "L3", "L4", "L5"].map((k) => el("li", { textContent: (p.labels || {})[k] || "" })));
-  $("packImg").src = tokenUrl(`/api/kensa/picture/pack/${encodeURIComponent(p.image)}`);
+  const was = !!(V && V.pack);
+  pack.render(v.pack);
+  if (was && !v.pack) refocus();
 }
 
 function renderLeft(v) {
@@ -402,6 +395,7 @@ const EMPTY = { lists: { visual: [], yama: [], defect: [] }, cb_choices: {}, ord
 
 function render(v) {
   v = { ...EMPTY, ...v };
+  renderPack(v);
   V = v;
   const act = document.activeElement;
   const keep = act && act.dataset && act.dataset.name && act.closest("#kensa") ? act.dataset.name : null;
@@ -416,7 +410,6 @@ function render(v) {
   renderRight(v);
   renderRange(v);
   renderConfi(v);
-  renderPack(v);
   if (keep) {                                   // 描き直しで焦点が外れないように
     const again = document.querySelector(`#kensa [data-name="${CSS.escape(keep)}"]`);
     if (again && again.tagName !== "TD") { again.dataset.sent = "1"; again.focus(); }
@@ -521,14 +514,6 @@ function init() {
   $("cleBtn").addEventListener("click", () => op("defect-clear"));
   $("orderSel").addEventListener("change", async () => { await op("order", { order: $("orderSel").value }); refocus(); });
   $("ordersBtn").addEventListener("click", () => op("orders"));
-  $("packRows").addEventListener("click", (e) => {
-    const tr = e.target.closest("tr[data-row]");
-    if (tr) op("pack-select", { row: Number(tr.dataset.row) });
-  });
-  $("packClose").addEventListener("click", async () => {
-    await op("pack-close", { checked: $("packChk").checked });
-    if ($("packBox").hidden) { $("packChk").checked = false; refocus(); }
-  });
   api.get("/api/kensa/state").then((res) => { render(res.view); return op("start"); }).catch(toastError);
   refocus();
 }

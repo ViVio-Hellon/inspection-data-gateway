@@ -613,40 +613,39 @@ class ScreenGapTest(SessionBase):
         self.assertIsNone(self.s.pack)
 
     def test_packing_dialog(self) -> None:
+        """包装仕様書の確認は packing.py(全ヵ所・キャスクと共通)を通す。"""
         pack = self.db_dir / "包装仕様書"
         pack.mkdir()
         for n in ("1P0116.JPG", "1P9999.JPG"):
             (pack / n).write_bytes(b"\xff\xd8\xff")
+        from ufkensa.kensa import quality
+        con = sqlite3.connect(self.db_dir / "梱包資材マスタ.sqlite3")             # 上部緩衝材(未受領のため空の表)
+        con.execute("CREATE TABLE 梱包保護材 (" + ",".join(f'"{c}"' for c in quality._PACK_COLS) + ")")
+        con.commit()
+        con.close()
         self.lot_ready()
         s = self.s
         p = s._view()["pack"]
-        self.assertEqual((p["no"], p["image"]), ("1P0116", "1P0116.JPG"))
+        self.assertEqual((p["tb_load"], p["picture"], p["selected"]), ("1P0116", "1P0116", 0))
         self.assertEqual(p["rows"], [{"hiki": "61021053", "ord": "54033469", "pac": "1P0116"}])
-        self.assertEqual(p["labels"]["L2"], "梱包形態:パレット")
-        self.assertEqual(p["labels"]["L4"], "特記1:標準_プロテックボード使用_個装梱包")
+        self.assertEqual(p["spec"][1], "梱包形態:パレット")
+        self.assertEqual(p["spec"][3], "特記1:標準_プロテックボード使用_個装梱包")
+        self.assertIsNotNone(s.pack_image())
         r = self.ok(s.pack_close(False))
         self.assertIn("確認後に押してください。", [m.text for m in r.messages])
         self.assertIsNotNone(s.pack)
         self.ok(s.pack_select(1))
+        self.assertEqual(s.pack.selected, 1)
         self.ok(s.pack_close(True))
         self.assertIsNone(s.pack)
 
-    def test_packing_no_check(self) -> None:
+    def test_order_list(self) -> None:
         from ufkensa.kensa import wiring
-        hist = [["ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO"], ["L1", "O1", 2, "1P0002"], ["L1", "O2", 1, "1P0001"]]
-        none = lambda h, lot, r: ""                                       # noqa: E731
-        f = lambda *names: (lambda: list(names))                          # noqa: E731
-        # 最後に一致したファイルが残る(内側の For だけ抜ける)
-        self.assertEqual(wiring.packing_no_check(hist, "L1", none, f("1P0001.JPG", "1P0002.JPG")), "1P0002")
-        self.assertEqual(wiring.packing_no_check(hist, "L1", none, f("1P0001.JPG", "a.txt")), "1P0001")
-        self.assertEqual(wiring.packing_no_check(hist, "L2", none, f("1P0001.JPG")), "")
-        self.assertEqual(wiring.packing_no_check(hist, "L1", lambda h, lot, r: "1P0122", f()), "1P0122")
-        # 新しい不具合: 先頭のファイルの「.」が 7 文字目でないと PacN(0) で実行時エラー 9
-        with self.assertRaises(IndexError):
-            wiring.packing_no_check(hist, "L1", none, f("desktop.ini", "1P0001.JPG"))
-        self.assertEqual(wiring.pack_rows(hist, "L1")[0]["hiki"], "1")   # 引当No 順
-        self.assertEqual(wiring.ord_no_open(hist, "L1"), ["O2", "O1"])
+        hist = [["ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO"], ["L1", "O1", 2, "1P0002"], ["L1", "O2", 1, "1P0001"],
+                ["L1", "", 3, "1P0003"]]
+        self.assertEqual(wiring.ord_no_open(hist, "L1"), ["O2", "O1"])  # 引当NO 順、空のオーダーは入れない
         self.assertIsNone(wiring.ord_no_open(hist, "L9"))
+        self.assertIsNone(wiring.ord_no_open(None, "L1"))
 
     # --- 検査員不一致の印(UserForm_Activate)・名簿画面の案内 --------------
     def test_name_list_flag_on_start(self) -> None:

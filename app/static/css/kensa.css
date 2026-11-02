@@ -82,18 +82,4 @@
           display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
 .notice p { margin: 0; color: var(--state-error); font-weight: 700; }
 
-/* 包装仕様書(UF_PackNo)。VBA と同じく閉じるまで前に出す */
-.packbox { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 50; }
-.packbox[hidden] { display: none; }
-.packbox__panel { background: var(--surface); border-radius: var(--radius); width: min(1500px, 96vw); height: min(900px, 92vh);
-                  display: flex; flex-direction: column; box-shadow: var(--shadow-pop, 0 10px 30px rgb(0 0 0 / 30%)); }
-.packbox__panel > header { display: flex; gap: 10px; align-items: baseline; padding: 10px 14px; }
-.packbox__body { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 10px; padding: 0 14px 14px; min-height: 0; flex: 1; }
-.packbox__side { display: flex; flex-direction: column; gap: 8px; }
-.packbox__side tr[data-row] td { cursor: pointer; }
-.packbox__side tr[data-sel="1"] td { background: var(--accent-soft); }
-.packbox__labels { max-height: none; color: var(--ink); font-size: var(--fs-sm); }
-.packbox__img { overflow: auto; background: var(--sunken); border-radius: var(--radius-xs); }
-.packbox__img img { display: block; max-width: 100%; }
-
 @media (max-width: 1280px) { .kensa { grid-template-columns: 220px minmax(0, 1fr) 230px; } }

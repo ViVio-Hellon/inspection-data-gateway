@@ -83,7 +83,7 @@ class KensaScreenTest(SessionBase):
         self.assertTrue(d["view"]["buttons"]["resize"])
         d = self.post("print-reset")
         self.assertIsNone(d["question"])
-        d = self.post("pack-close", checked=True)
+        d = self.post("pack-close", confirmed=True)
         self.assertIsNone(d["view"]["pack"])
         d = self.post("ng-delete", pos="S")
         self.assertEqual(d["question"]["key"], "ng_delete")
@@ -92,19 +92,17 @@ class KensaScreenTest(SessionBase):
 
     def test_page_has_new_parts(self) -> None:
         html = self.c.get("/kensa", headers=self.h).get_data(as_text=True)
-        for part in ("visualList", "defectList", "strainGrid", "yamaLb", "orderSel", "packBox", "holdBtn",
+        for part in ("visualList", "defectList", "strainGrid", "yamaLb", "orderSel", "pack_dialog", "holdBtn",
                      "izyouBtn", "resizeBtn", "printResetBtn", "manualIn", "byousyaChk"):
             self.assertIn(part, html)
 
     def test_picture_route(self) -> None:
         (self.db_dir / "VC種類画像").mkdir()
         (self.db_dir / "VC種類画像" / "208WRYG.JPG").write_bytes(b"\xff\xd8\xff")
-        (self.db_dir / "包装仕様書").mkdir()
-        (self.db_dir / "包装仕様書" / "1P0116.JPG").write_bytes(b"\xff\xd8\xff")
         self.assertEqual(self.c.get("/api/kensa/picture/vc/208WRYG.JPG", headers=self.h).status_code, 200)
-        self.assertEqual(self.c.get("/api/kensa/picture/pack/1P0116.JPG", headers=self.h).status_code, 200)
-        self.assertEqual(self.c.get("/api/kensa/picture/pack/無い.JPG", headers=self.h).status_code, 404)
-        self.assertEqual(self.c.get("/api/kensa/picture/other/a.JPG", headers=self.h).status_code, 404)
+        self.assertEqual(self.c.get("/api/kensa/picture/vc/無い.JPG", headers=self.h).status_code, 404)
+        self.assertEqual(self.c.get("/api/kensa/picture/pack/1P0116.JPG", headers=self.h).status_code, 404)
+        self.assertEqual(self.c.get("/api/kensa/pack_image", headers=self.h).status_code, 404)   # 出していない
         self.assertEqual(self.c.get("/api/kensa/picture/vc/a.txt", headers=self.h).status_code, 400)
 
     def test_no_line(self) -> None:

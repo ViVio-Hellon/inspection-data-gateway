@@ -3,6 +3,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kensa.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pack_dialog.css') }}">
 <div class="kensa" id="kensa">
   <!-- 左: 検査員・ロット・公差・作業選択 -->
   <div class="kensa__col">
@@ -143,21 +144,6 @@
   </div>
 </div>
 
-<!-- 包装仕様書(UF_PackNo)。VBA はモーダルで「確認」に印を付けないと閉じられない -->
-<div class="packbox" id="packBox" hidden role="dialog" aria-modal="true" aria-labelledby="packTitle">
-  <div class="packbox__panel">
-    <header><h3 id="packTitle">包装仕様書</h3><span class="muted" id="packLot"></span></header>
-    <div class="packbox__body">
-      <div class="packbox__side">
-        <table class="mgrid" id="packRows" aria-label="引当"></table>
-        <ul class="log-lines packbox__labels" id="packLabels"></ul>
-        <label class="chk"><input type="checkbox" id="packChk"> 確認</label>
-        <button class="btn btn--primary" type="button" id="packClose">閉じる</button>
-      </div>
-      <div class="packbox__img"><img id="packImg" alt="包装仕様書"></div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block scripts %}

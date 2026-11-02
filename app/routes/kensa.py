@@ -43,8 +43,8 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     # オーダーNo・包装仕様書(UF_PackNo)
     "orders": ("ord_no_open", ()),
     "order": ("select_order", ("order",)),
-    "pack-select": ("pack_select", ("row",)),
-    "pack-close": ("pack_close", ("checked",)),
+    "pack-select": ("pack_select", ("i",)),
+    "pack-close": ("pack_close", ("confirmed",)),
     # 保留・まとめて削除・廃棄フラグ・印刷履歴クリア・サイズ修正・名簿画面の案内
     "hold": ("hold", ("answers",)),
     "ng-delete": ("ng_delete", ("pos", "answers")),
@@ -54,8 +54,9 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "namelist-ack": ("name_list_ack", ()),
 }
 
-#: 画像の種類 → (使用パスの項目, その下のフォルダ)。VC 画像は SaveLoad.VC_Picture、包装仕様書は UFPack_Open
-PICTURES: dict[str, tuple[str, str]] = {"vc": ("packing", "VC種類画像"), "pack": ("quality", "包装仕様書")}
+#: 画像の種類 → (使用パスの項目, その下のフォルダ)。VC 画像は SaveLoad.VC_Picture(PackingPath\VC種類画像)。
+#: 包装仕様書は /api/kensa/pack_image(いま出している UF_PackNo の画像だけ。全ヵ所・キャスクと同じ packing.py)
+PICTURES: dict[str, tuple[str, str]] = {"vc": ("packing", "VC種類画像")}
 
 MSG_NOT_READY = "この操作はまだ結合中です(工程 8c)。いまは VBA の UF検査判定.xlsm を使ってください。"
 
@@ -96,6 +97,16 @@ def picture(kind: str, name: str):
     if not f.is_file():
         return jsonify({"error": {"code": "not_found", "message": f"画像がありません: {safe}"}}), 404
     return send_file(f, mimetype="image/jpeg", max_age=60)
+
+
+@bp.get("/api/kensa/pack_image")
+def pack_image():
+    """いま出している包装仕様書の画像(UF_PackNo.PacIM。使用パス QualityPath\\包装仕様書)。"""
+    from flask import send_file
+    f = session.get().pack_image()
+    if f is None or not f.is_file():
+        return jsonify({"error": {"code": "not_found", "message": "包装仕様書の画像がありません"}}), 404
+    return send_file(f, mimetype="image/jpeg", max_age=0)
 
 
 @bp.get("/api/kensa/state")
