@@ -66,3 +66,12 @@
   .cask__top { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .cask__scroll { height: calc(100vh - 470px); }
 }
+
+/* 上の欄は低く(表に高さを回す) */
+.cask__top .input { min-height: 0; height: 30px; padding: 3px 8px; font-size: var(--fs-sm); }
+.cask__top .card header { padding-top: 6px; padding-bottom: 2px; }
+.cask__top .req { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cask__top .kv-grid { font-size: var(--fs-xs); }
+.cask__side .input { min-height: 0; height: 32px; padding: 3px 8px; }
+.cask__top .btn { min-height: 32px; padding: 4px 10px; }
+.cask__top .req label { font-size: var(--fs-2xs); }

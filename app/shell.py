@@ -38,7 +38,7 @@ NAV: tuple[tuple[str, str, str, str], ...] = (
 )
 
 # もう作った画面。ここに挙がっていないものは「準備中」ページを出す
-READY_SCREENS = frozenset({"settings", "import", "kensa", "history", "ainput"})
+READY_SCREENS = frozenset({"settings", "import", "kensa", "history", "ainput", "calibration", "quality"})
 
 # 準備中の画面の説明。key: (作る予定, 何ができるようになるか, いま使う画面)
 PENDING_SCREENS: dict[str, tuple[str, str, str]] = {

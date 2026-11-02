@@ -222,6 +222,7 @@ class ZenkashoSession:
         self._acc: list[sh.Effects] = []
         self._msgs: list[Message] = []
         self._digest = ""
+        self._sel: dict[str, tuple[int, int]] = {}
         # 直近の操作の結果(画面に出すもの)
         self.flash = ""
         self.reports: list[dict[str, str]] = []
@@ -634,6 +635,9 @@ class ZenkashoSession:
     def _open(self, page: str, choice_input: Optional[str]) -> Optional[Question]:
         """Mitsubishi.OpenMitubisi (Mit:3-76) + UserForm_Activate。"""
         b = self.book
+        if b.active_name in SHEET_ROWS:
+            self._sel[b.active_name] = b.active_cell        # シートごとの選択(Excel はシートごとに覚えている)
+        prev = b.active_name
         self.page = page
         temp = "全数" if page == "P1" else "H494"
         res = self._call(zk.open_mitubisi, b, temp, line_name=self._line_name(), worker_text=self._worker_text(),
@@ -642,9 +646,11 @@ class ZenkashoSession:
             return res
         name = self._sheet()
         lo, hi = SHEET_ROWS[name]
-        if b.active_name != name or not (lo <= b.active_cell[0] <= hi):
-            b.active_name = name                       # シートを開いたときの選択(Excel はイベントなしで戻す)
+        if prev != name:
+            b.active_cell = self._sel.get(name) or self._first_empty(name) or (lo, 2)
+        if not (lo <= b.active_cell[0] <= hi):
             b.active_cell = self._first_empty(name) or (lo, 2)
+        b.active_name = name                           # シートを開いたときの選択(Excel はイベントなしで戻す)
         return None
 
     def _first_empty(self, name: str) -> Optional[tuple[int, int]]:

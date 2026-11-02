@@ -129,7 +129,7 @@ class Session:
             if t != "" or day != "":
                 workers_list.append(f"{label}: {t}" + (f"({day})" if day else ""))
         return {"workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
-                "confi": self.confi, "calibration_required": self.calibration_required,
+                "confi": self.confi, "calibration_required": self.calibration_required and not self._calibrated(),
                 "report": self.report or None, "proofread": "ok" if self._calibrated() else "",
                 "range": {"ops": st.ops, "ope": st.ope,
                           "labels": [st.v(f"OPS{i}").value if st.v(f"OPS{i}").visible else "" for i in range(1, 7)]}}

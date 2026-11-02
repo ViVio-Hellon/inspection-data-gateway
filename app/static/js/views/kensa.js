@@ -154,6 +154,7 @@ function renderLeft(v) {
   text($("atCount"), h.at_count);
   $("proofLv").textContent = h.proofread ? "校正済" : "未校正";
   $("proofLv").className = "lv " + (h.proofread ? "lv--ok" : "lv--ng");
+  $("calibLink").hidden = !v.calibration_required;   // 校正_Open: 校正が要るときだけ校正画面への入口を出す
   const workers = $("workers");
   workers.replaceChildren(...(v.workers || []).map((w) => { const li = document.createElement("li"); li.textContent = w; return li; }));
 }

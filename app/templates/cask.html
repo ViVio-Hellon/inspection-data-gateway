@@ -80,19 +80,6 @@
         </div>
       </section>
       <section class="card">
-        <header><h3>転送(梱包の板番号)</h3></header>
-        <div class="pad">
-          <div class="pair">
-            <label>Start板番号<input class="input" id="f_min_text" data-field="min_text" autocomplete="off" inputmode="numeric"></label>
-            <label>End板番号<input class="input" id="f_max_text" data-field="max_text" autocomplete="off" inputmode="numeric"></label>
-          </div>
-          <button class="btn btn--commit wide" type="button" id="transferBtn">決定(転送)</button>
-          <ul class="labels" id="labels"></ul>
-          <dl class="kv-grid" id="mmKv"></dl>
-          <a class="btn wide" href="/ainput" id="ainLink" hidden>Aインプットへ</a>
-        </div>
-      </section>
-      <section class="card">
         <header><h3>操作</h3></header>
         <div class="pad">
           <div class="btn-grid">
@@ -104,6 +91,19 @@
           <a class="btn wide" id="reportLink" target="_blank" rel="noopener" hidden>帳票を開く(印刷)</a>
           <p class="muted small" id="savedNote"></p>
           <div class="btn-row"><button class="btn btn--sm" type="button" id="closeBtn">閉じる(検査へ戻る)</button></div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>転送(梱包の板番号)</h3></header>
+        <div class="pad">
+          <div class="pair">
+            <label>Start板番号<input class="input" id="f_min_text" data-field="min_text" autocomplete="off" inputmode="numeric"></label>
+            <label>End板番号<input class="input" id="f_max_text" data-field="max_text" autocomplete="off" inputmode="numeric"></label>
+          </div>
+          <button class="btn btn--commit wide" type="button" id="transferBtn">決定(転送)</button>
+          <ul class="labels" id="labels"></ul>
+          <dl class="kv-grid" id="mmKv"></dl>
+          <a class="btn wide" href="/ainput" id="ainLink" hidden>Aインプットへ</a>
         </div>
       </section>
     </div>

@@ -545,6 +545,12 @@ def _register_routes(app: Flask) -> None:
     if "ainput" in READY_SCREENS:
         from .routes import ainput
         app.register_blueprint(ainput.bp)
+    if "calibration" in READY_SCREENS:
+        from .routes import calibration
+        app.register_blueprint(calibration.bp)
+    if "quality" in READY_SCREENS:
+        from .routes import quality
+        app.register_blueprint(quality.bp)
 
     # レールに出ているのに中身がまだ無い画面へ、「準備中」の案内を置く
     pending.register(app)

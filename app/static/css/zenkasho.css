@@ -55,9 +55,9 @@ body[data-zk-mode="5N"] .zk-table th.g--歪 small { color: var(--state-error); f
 .zk-table th.no { position: sticky; left: 0; background: var(--surface); z-index: 1; padding: 0 6px; color: var(--muted);
                   text-align: right; min-width: 2.4em; }
 .zk-table thead th.no { z-index: 3; }
-.zk-table td { padding: 2px 5px; text-align: right; min-width: 4.6em; height: 1.7em; white-space: nowrap;
+.zk-table td { padding: 2px 4px; text-align: right; min-width: 3.9em; height: 1.7em; white-space: nowrap;
                border-bottom: 1px solid var(--hairline); border-left: 1px solid var(--hairline); cursor: pointer; }
-.zk-table td.k-j { min-width: 1.8em; text-align: center; font-weight: 700; }
+.zk-table td.k-j { min-width: 1.5em; text-align: center; font-weight: 700; }
 .zk-table td.k-t, .zk-table td.k-l { text-align: left; min-width: 3.5em; }
 .zk-table td.k-c { color: var(--muted); }
 .zk-table td.ok { background: var(--ok-bg); color: var(--state-ok); }
@@ -83,3 +83,6 @@ body[data-zk-mode="5N"] .zk-table th.g--歪 small { color: var(--state-error); f
 .zk-pending { white-space: pre-line; font-size: var(--fs-xs); margin: 0; }
 
 @media (max-width: 1400px) { .zk__body { grid-template-columns: 210px minmax(0, 1fr) 220px; } .zk-mode { padding: 6px 14px; } }
+.zk-form .input { height: 30px; min-width: 0; width: 100%; box-sizing: border-box; }
+.zk-pair label { min-width: 0; }
+.zk-kenh .input { width: 5em; }
