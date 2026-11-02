@@ -1,0 +1,82 @@
+/* Aインプット画面(VBA の UFAinput)。左=ロットと送る値、中央=山ごとの高さと判定、右=送信の状態と結果 */
+.ain { position: relative; }
+.ain__open { max-width: 560px; }
+.ain__body { display: grid; grid-template-columns: 320px minmax(0, 1fr) 320px; gap: 10px; align-items: start; }
+.ain__body[hidden] { display: none; }
+.ain__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.ain .card .pad { gap: 6px; }
+
+.ain .kv-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: var(--fs-sm); margin: 0; }
+.ain .kv-grid dt { color: var(--muted); }
+.ain .kv-grid dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ain .inbox { display: flex; gap: 6px; align-items: center; }
+.ain .inbox .input { flex: 1; min-width: 0; }
+.ain .inbox label { color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; }
+.ain .log-lines { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); max-height: 12em; overflow: auto;
+                  margin: 0; padding: 0; list-style: none; }
+
+/* 入力欄: 見出しと欄の 2 列 */
+.ain__form { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 5px 8px; align-items: center; }
+.ain__form > label { color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; }
+.ain__form .input { min-height: 36px; padding: 4px 8px; width: 100%; min-width: 0; }
+.ain__pair { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.ain__pair .input { flex: 1; }
+.ain__pair .btn--sm { flex: none; padding: 2px 8px; }
+.ain [data-off="1"] { display: none !important; }
+.ain__warn { margin: 0; padding: 6px 8px; border-radius: var(--radius-xs); background: var(--warn-bg); color: var(--state-error);
+             font-size: var(--fs-sm); }
+
+/* 山高さ */
+.ain__mount { display: flex; gap: 8px; align-items: center; }
+.ain__mount label { color: var(--muted); font-size: var(--fs-sm); }
+.ain__mount .input { width: 6em; min-height: 36px; }
+.ain__meas { border: 2px solid var(--focus); background: var(--info-bg); border-radius: var(--radius); padding: 8px; }
+.ain__meas[data-off="1"] { display: none; }
+.ain__meas .input { width: 100%; font-family: var(--mono); }
+.ain__meas p { margin: 4px 0 0; font-size: var(--fs-sm); }
+.ain__hint { font-weight: 700; color: var(--info-fg); }
+.ain__received-ng { color: var(--state-error); }
+
+.ain__heights { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-variant-numeric: tabular-nums; }
+.ain__heights th { font-size: var(--fs-sm); color: var(--muted); font-weight: 600; text-align: right; padding: 0 8px; }
+.ain__heights th:first-child { text-align: left; }
+.ain__heights td { background: var(--sunken); padding: 5px 8px; text-align: right; font-family: var(--mono); white-space: nowrap; }
+.ain__heights td:first-child { text-align: left; font-family: var(--sans); border-radius: var(--radius-xs) 0 0 var(--radius-xs); }
+.ain__heights td:last-child { border-radius: 0 var(--radius-xs) var(--radius-xs) 0; width: 2.5em; }
+.ain__heights tr[data-next="1"] td { background: var(--accent-soft); box-shadow: inset 0 2px 0 var(--focus), inset 0 -2px 0 var(--focus); }
+.ain__heights tr[data-out="1"] td { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.ain__heights tr[data-worst="1"] td:first-child::after { content: " ← いちばん外れ"; font-size: var(--fs-xs); }
+.ain__heights td.val { font-size: var(--fs-lg); min-width: 6em; }
+.ain__heights tfoot td { background: transparent; border-top: 1px solid var(--rule); font-weight: 700; }
+.ain__heights .x { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: var(--fs-md); padding: 0 4px; }
+.ain__heights .x:hover { color: var(--state-error); }
+
+.ain__checkmsg { margin: 0; font-family: var(--mono); font-size: var(--fs-sm); }
+.ain__checkmsg[data-ng="1"] { color: var(--state-error); font-weight: 700; }
+.ain__extras { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-sm); }
+.ain__extras b { font-family: var(--mono); font-weight: 600; margin-left: 4px; }
+.ain__red { border-color: var(--state-error); }
+
+.ain__press { display: flex; flex-direction: column; gap: 4px; }
+.ain__pressbtn { min-height: 56px; font-size: var(--fs-lg); font-weight: 700; }
+.ain__press small { color: var(--muted); text-align: center; }
+
+/* 送信 */
+.ain__steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-sm); }
+.ain__steps li { display: flex; gap: 6px; align-items: center; padding: 3px 6px; border-radius: var(--radius-xs); background: var(--sunken); }
+.ain__steps li::before { display: inline-block; width: 1.3em; text-align: center; font-weight: 700; content: "・"; color: var(--muted); }
+.ain__steps li[data-state="ok"]::before { content: "✓"; color: var(--state-ok); }
+.ain__steps li[data-state="ng"] { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.ain__steps li[data-state="ng"]::before { content: "✕"; color: var(--state-error); }
+.ain__steps li[data-state="warn"]::before { content: "!"; color: var(--state-warn); }
+.ain__steps li[data-state="warn"] { color: var(--state-warn); }
+.ain__steps li[data-state="wait"]::before { content: "?"; color: var(--state-info); }
+.ain__steps li[data-state="skip"]::before { content: "－"; color: var(--muted); }
+.ain__steps li small { margin-left: auto; color: var(--muted); }
+.ain__result { margin: 0; white-space: pre-wrap; font-size: var(--fs-sm); }
+.ain__result[data-state="ok"] { color: var(--state-ok); font-weight: 700; }
+.ain__result[data-state="ng"] { color: var(--state-error); font-weight: 700; }
+.ain__codes dt { font-family: var(--mono); color: var(--ink); }
+.ain__codes dd { font-family: var(--sans); color: var(--muted); }
+
+@media (max-width: 1400px) { .ain__body { grid-template-columns: 290px minmax(0, 1fr) 280px; } }

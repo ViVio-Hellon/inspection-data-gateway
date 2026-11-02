@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from . import datasource, legacy_log, lines, paths, vbx
+from . import datasource, legacy_log, lines, paths, quirks, vbx
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .workers import AinputValues, DailyContext, WorkerRegistry, daily_report, workers_text
 
@@ -779,7 +779,11 @@ def inter_rupt_text(wait_ms: int = 0, *, sleep: Callable[[float], None] = time.s
         sleep(wait_ms / 1000.0)
     p = legacy_log.local_path(paths.join(_tools_dir(), RESULT_FILE))
     if not p.is_file():
-        return ResultCheck(True, missing=True)
+        if quirks.reproduce("B65"):                    # VBA: ReadCheck が False なら Exit Sub → 成功扱いで先へ
+            return ResultCheck(True, missing=True)
+        return ResultCheck(False, missing=True,
+                           messages=[Message(RESULT_FILE + " がありません。送信の結果を確かめられません。"
+                                             + "\r\n" + "担当者に連絡して下さい。", WARN, source="Input:1427")])
     line = _last_line(p.read_bytes())
     if line == SUCCESS_TEXT:
         sleep(1.0)
@@ -1121,6 +1125,16 @@ def _in_1_to_9(v: str) -> bool:
     return vbx.vcompare(v, 1) >= 0 and vbx.vcompare(v, 9) <= 0
 
 
+def ngflag_sticks() -> bool:
+    """UFAinput.Ngflag は一度 "stop" になると、フォームを開き直すまで戻らない(Worker:922 だけが "" にする。
+    Daily_Report4_Execution は呼び出し元なし)。そのため送信に一度失敗すると、次からは送信アプリを起動した直後の
+    `If Ngflag = "stop"`(UFAinput:1067)で止まり、result.txt の確認と日報が行われない。
+
+    B82。既定は VBA どおり再現(開き直すと解ける)。直すと、送信を始めるたびに前の失敗の Ngflag を見ない。
+    """
+    return quirks.reproduce("B82")
+
+
 def _lock(form: AinputForm) -> None:
     form.tag = ""
     form.locked = True
@@ -1219,6 +1233,7 @@ def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], ans
         res.messages += res.launch.messages
         if not res.launch.ok:
             form.ng_flag = "stop"
+        if not res.launch.ok or (form.ng_flag == "stop" and ngflag_sticks()):   # 前の失敗の Ngflag でも止まる(UFAinput:1067)
             form.tag = ""
             res.stage = "stopped"
             return res
@@ -1235,6 +1250,8 @@ def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], ans
             res.daily_writes = daily_report(4, daily)
         res.messages.append(Message("", INFO, sound=DONE_SOUND, source="UFAinput:1086"))
         form.konno = ""                 # 旧 K_Height 欄は消すが、山高さ(動的ラベル)は消さない(VBA どおり)
+        if not quirks.reproduce("B64"):
+            clear_all_k_height(form)
         res.stage = "sent"
     else:
         if form.mount_count != "":
