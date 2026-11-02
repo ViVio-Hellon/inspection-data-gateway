@@ -14,9 +14,10 @@ VBA の行番号は `vba_src/【UFKen_11】QP_DB.bas`(QP)、`【UFKen_11】Quali
 【U1(数と数にならない文字列の比較)】
 VBA の `Kousa(1,4) = 0`(中耳列が "" や "6㎜以下,…")、`JoinQuality(i, 番号) = NewArray(a)`(見出し行
 "管理番号" と Long)、`UF1.MG = 0`(空のテキストボックス)は、毎日動いている経路で必ず通る。
-エラー 13 になるなら本番が動かないので、**エラーにならず「等しくない」**とみなして実装した
-(`STRING_VS_NUMBER_RAISES = False`)。実機確認 U1 でエラーと分かったら True にする。
-大小比較は Variant の規則(数 < 文字列)に合わせた。
+比較は `vbx.compare_typed`(VBA の比較演算子の表)に両側の宣言の型を渡して行う。表では「数値型 と
+数にならない文字列の Variant」は型エラー 13 だが、上の経路ではエラー 13 になるなら本番が動かないので、
+**エラーにせず Variant の規則(数 < 文字列。= は偽)**で比べる(`STRING_VS_NUMBER_RAISES = False`)。
+実機確認 U1 でエラーと分かったら True にする(grid.VARIANT_STRING_GT_NUMBER と同じ考え方)。
 """
 from __future__ import annotations
 
@@ -105,24 +106,27 @@ def cbool(v: Any) -> bool:
     return vbx.cdbl(s) != 0
 
 
-def veq(a: Any, b: Any) -> bool:
-    """Variant の `=`。数と数にならない文字列は U1 の扱い(既定は「等しくない」)。"""
+NUM, STR, VAR = vbx.NUM, vbx.STR, vbx.VAR
+
+
+def vcmp(a: Any, b: Any, a_type: str = VAR, b_type: str = VAR) -> int:
+    """VBA の比較(両側の宣言の型つき。`vbx.compare_typed`)。
+
+    数値型と「数にならない文字列の Variant」(VBA の表では型エラー 13)だけは U1 の扱いにする:
+    `STRING_VS_NUMBER_RAISES` が偽(既定)なら Variant の規則(数 < 文字列)で比べてエラーにしない。
+    """
     try:
-        return vbx.vcompare(a, b) == 0
+        return vbx.compare_typed(a, b, a_type, b_type)
     except vbx.TypeMismatch:
         if STRING_VS_NUMBER_RAISES:
             raise
-        return False
+        a_num = a_type == NUM or (a_type == VAR and isinstance(a, (int, float)) and not isinstance(a, bool))
+        return -1 if a_num else 1
 
 
-def vcmp(a: Any, b: Any) -> int:
-    """Variant の大小。数と数にならない文字列は U1 の扱い(既定は Variant の規則: 数 < 文字列)。"""
-    try:
-        return vbx.vcompare(a, b)
-    except vbx.TypeMismatch:
-        if STRING_VS_NUMBER_RAISES:
-            raise
-        return -1 if isinstance(a, (int, float)) else 1
+def veq(a: Any, b: Any, a_type: str = VAR, b_type: str = VAR) -> bool:
+    """VBA の `=`(型つき。U1 は vcmp と同じ)。"""
+    return vcmp(a, b, a_type, b_type) == 0
 
 
 def isnum(v: Any) -> bool:
@@ -699,7 +703,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     for r in aq:
         for cm in new_array:
             if cm != 0:
-                if veq(cell(r, C["管理番号"]), cm):
+                if veq(cell(r, C["管理番号"]), cm, VAR, NUM):
                     filled = [vstr(cell(r, C[k])) != "" for k in (
                         "納入先", "納入先コード", "取引先", "取引先コード", "送り先", "送り先コード", "巾取数幅分割数のこと")]
                     if any(filled):
@@ -713,7 +717,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     kousa: list[list[Any]] = [[None] * 9 for _ in new_array]
     for a, no in enumerate(new_array):
         for r in aq:
-            if veq(cell(r, C["管理番号"]), no):
+            if veq(cell(r, C["管理番号"]), no, VAR, NUM):
                 kousa[a][K_GAUGE] = cell(r, C["1m当たり平坦度上限"])
                 kousa[a][K_HA] = cell(r, hit_haba[0])
                 kousa[a][K_TA] = cell(r, hit_take[0])
@@ -727,7 +731,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     # 「重複可」のコメントを重ねる(QP:401-426)
     if len(kousa) >= 2:
         for k in kousa:
-            if not veq(k[K_FLAG], "") and vbx.instr(vstr(k[K_FLAG]), "重複可") > 0:
+            if not veq(k[K_FLAG], "", VAR, STR) and vbx.instr(vstr(k[K_FLAG]), "重複可") > 0:
                 if vbx.instr(vstr(kousa[0][K_COMMENT]), vstr(k[K_COMMENT])) == 0:
                     kousa[0][K_COMMENT] = vstr(kousa[0][K_COMMENT]) + VBCRLF + vstr(k[K_COMMENT])
 
@@ -743,11 +747,11 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     goto = ""
     table_n = table_m = ""
     v4 = k0[K_NAKA]
-    if veq(v4, "不問") or veq(v4, "不問とする。"):
+    if veq(v4, "不問", VAR, STR) or veq(v4, "不問とする。", VAR, STR):
         goto = "SkipNoQuestionsAsked"
-    elif veq(v4, 0) or veq(v4, "無き事"):
+    elif veq(v4, 0, VAR, NUM) or veq(v4, "無き事", VAR, STR):
         goto = "SkipEndA"
-    elif veq(v4, ""):
+    elif veq(v4, "", VAR, STR):
         goto = "SkipT"
     else:
         tmp = vstr(v4)
@@ -823,7 +827,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
                 goto = "SkipT"
 
     if goto in ("SkipT", "SkipNoQuestionsAsked"):
-        if veq(k0[K_HA], "フラットネス品質等級") or veq(k0[K_TA], "フラットネス品質等級"):
+        if veq(k0[K_HA], "フラットネス品質等級", VAR, STR) or veq(k0[K_TA], "フラットネス品質等級", VAR, STR):
             sori = "ソリ3級" if flat == 3 else "ソリ4級"
             search_s = "Q-E-001_品質規格:等級3" if flat == 3 else "Q-E-001_品質規格:等級4"
             f, rws = _table(db, sori)
@@ -920,17 +924,17 @@ def _dbqp_end(res: QpResult, naka_sika: str, mimi_sika: str, execution: str, upd
               grade: str, delivery: str) -> QpResult:
     """DBQP の skipEnd(QP:769-800)。"不問" を消し、SIKALOT の指示値で補い、UF品質基準 に書く値を作る。"""
     k0 = res.kousa[0]
-    if veq(k0[K_GAUGE], "不問とする。"):
+    if veq(k0[K_GAUGE], "不問とする。", VAR, STR):
         k0[K_GAUGE] = ""
-    if veq(k0[K_NAKA], "不問とする。"):
+    if veq(k0[K_NAKA], "不問とする。", VAR, STR):
         k0[K_NAKA] = ""
-    if veq(k0[K_NAKA], "不問"):
+    if veq(k0[K_NAKA], "不問", VAR, STR):
         k0[K_NAKA] = ""
-    if veq(k0[K_MIMI], "不問"):
+    if veq(k0[K_MIMI], "不問", VAR, STR):
         k0[K_MIMI] = ""
-    if veq(k0[K_NAKA], "") and naka_sika != "":
+    if veq(k0[K_NAKA], "", VAR, STR) and naka_sika != "":
         k0[K_NAKA] = naka_sika
-    if veq(k0[K_MIMI], "") and mimi_sika != "":
+    if veq(k0[K_MIMI], "", VAR, STR) and mimi_sika != "":
         k0[K_MIMI] = mimi_sika
     if execution != "":
         return res
@@ -1060,7 +1064,7 @@ def form_reflect_dist(kousa: list[list[Any]], *, quality_visible: bool, mitsubis
                 s = vbx.fmt(x, "0.0")
             else:
                 s = vstr(x) if keep_text else ""
-            return "" if veq(s, 0) else s
+            return "" if veq(s, 0, VAR, NUM) else s      # `UF1.MG = 0`(TextBox の Value は Variant)
 
         v["MG"] = num_or(k[K_GAUGE], False)
         v["HaHiz"] = num_or(k[K_HA], True)
@@ -1175,7 +1179,7 @@ def _hit_rows(rows: Sequence[Sequence[Any]], c_no: int, numbers: Sequence[int]) 
     for no in numbers:
         h: list[Any] = [None] * width
         for r in rows:
-            if veq(cell(r, c_no), no):
+            if veq(cell(r, c_no), no, VAR, NUM):
                 h = list(r)
         hit.append(h)
     return hit
@@ -1294,12 +1298,12 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     hit = _hit_rows(ta, C["管理番号"], matching)
     items = ""
     for h in hit:
-        if veq(cell(h, C["フリー反り"]), "要"):
+        if veq(cell(h, C["フリー反り"]), "要", VAR, STR):
             items += ",フリー反り"
             u["HURIS"] = cell(h, C["公差"])
-        if veq(cell(h, C["ラテラルボー"]), "要"):
+        if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
             items += ",ラテラルボー"
-        if veq(cell(h, C["直角度"]), "要"):
+        if veq(cell(h, C["直角度"]), "要", VAR, STR):
             items += ",直角度"
     out.items = items
     kousa1 = cell(hit[0], C["公差"])
@@ -1313,10 +1317,10 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
             if not vbx.like(additional, "*ﾗﾃﾗﾙﾎﾞ-追記公差あり*"):
                 if isnum(kousa1):
                     u["LateralText"] = vbx.fmt(kousa1, "0.0")
-                elif veq(kousa1, "別表B"):
+                elif veq(kousa1, "別表B", VAR, STR):
                     u["LateralText"] = lateral("日車")
                     u["LateralText.BackColor"] = ORANGE
-                elif veq(kousa1, "別表A"):
+                elif veq(kousa1, "別表A", VAR, STR):
                     u["LateralText"] = lateral("白銅滑川")
                     u["LateralText.BackColor"] = ORANGE
         if vbx.instr(items, "フリー反り") > 0:
@@ -1342,9 +1346,9 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
             out.cells[(1, 15)] = nou + zai
             if isnum(kousa1):
                 out.cells[(1, 13)] = vbx.fmt(kousa1, "0.0")
-            elif veq(kousa1, "別表B"):
+            elif veq(kousa1, "別表B", VAR, STR):
                 out.cells[(1, 13)] = lateral("日車")
-            elif veq(kousa1, "別表A"):
+            elif veq(kousa1, "別表A", VAR, STR):
                 out.cells[(1, 13)] = lateral("白銅滑川")
         if vbx.instr(items, "フリー反り") > 0:
             out.cells[(6, 29)] = "ﾌﾘｰｿﾘ"
@@ -1650,7 +1654,7 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
     clean = ord_no.replace("'", "")
     a: Optional[Sequence[Any]] = None
     for row in hist:
-        if veq(cell(row, names["ｵｰﾀﾞｰNo"]), clean):
+        if veq(cell(row, names["ｵｰﾀﾞｰNo"]), clean, VAR, STR):
             a = row
             break
     if a is None:

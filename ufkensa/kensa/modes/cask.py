@@ -259,7 +259,8 @@ def start_tb_after_update(book: Book, text: str) -> Effects:
         if atu == "":
             atu = "0"
         try:
-            big = vbx.vcompare(atu, 100) >= 0
+            # `Dim ATU As String: If ATU >= 100`。文字列の変数と数の定数は文字列を数に直して比べる扱い(VAR)にした(要確認)
+            big = vbx.compare_typed(atu, 100, vbx.VAR, vbx.NUM) >= 0
         except vbx.TypeMismatch:
             raise flow.Stop("実行時エラー '13':" + "\r\n\r\n" + "型が一致しません。", source="UFCask:750")
         if big:
@@ -293,7 +294,7 @@ def proofreading_search(book: Book, to_time: str, to_tyo: str) -> None:
     q = book.extra["品証検証"]
     for i in range(5, 99):
         if vbx.left(sh.cell_str(q.get(i, 11)), 10) == to_time:
-            if vbx.veq(q.get(i, 2) if q.get(i, 2) is not None else "", to_tyo):
+            if vbx.compare_typed(q.get(i, 2), to_tyo, vbx.VAR, vbx.STR) == 0:
                 book.cask.convex_1000 = sh.cell_str(q.get(i, 3))
                 if book.cask.kname == "":
                     book.cask.kname = sh.cell_str(q.get(i, 10))
@@ -667,9 +668,9 @@ def combo_change(book: Book, *, fullwidth_fields_readable: bool = False, null_ra
             val = lambda name: vbx.val(_nn(fv(name), null_raises))  # noqa: E731
             book.write(ws, 3, 2, vbx.fmt(val("製造板厚"), "0.000"))
             b3 = ws.get(3, 2)
-            if vbx.vcompare(100.0, b3 if b3 is not None else 0.0) > 0:
+            if vbx.compare_typed(100.0, b3, vbx.NUM, vbx.VAR) > 0:
                 count_select(book, 3)
-            elif vbx.vcompare(100.0, b3 if b3 is not None else 0.0) <= 0:
+            elif vbx.compare_typed(100.0, b3, vbx.NUM, vbx.VAR) <= 0:
                 count_select(book, 4)
             book.write(ws, 3, 4, vbx.fmt(val("製造板幅"), "0.0"))
             book.write(ws, 3, 6, vbx.fmt(val("製造板丈"), "0.0"))

@@ -155,25 +155,21 @@ def val_cell(v: Any) -> float:
 
 
 def eq_single(v: Any, s: float) -> bool:
-    """`Cells(..) = 単精度の変数`。VBA は Single と Double を比べるとき Double を Single の精度に丸める
+    """`Cells(..) = 単精度の変数`(Variant と数値型)。VBA は Single と Double を比べるとき Double を Single の精度に丸める
     (全ヵ所作業中保存の W3 = 10.51200008392334 が B7 = 10.512 と一致して書かれている実例と合う)。
 
-    空セルは 0、数にならない文字列は型エラー 13(vbx.vcompare に従う。U1)。
+    空セルは 0、数にならない文字列は型エラー 13(`vbx.compare_typed` の表どおり)。
     """
     if isinstance(v, ExcelError):
         raise type_mismatch("エラー値の比較")
     if isinstance(v, datetime):
         return False
-    if v is None:
-        return vbx.single(0.0) == vbx.single(s)
-    if isinstance(v, (int, float)) and not isinstance(v, bool):
-        return vbx.single(float(v)) == vbx.single(s)
     try:
-        if vbx.vcompare(v, float(s)) != 0 and not isinstance(v, str):
-            return False
+        vbx.compare_typed(v, float(s), vbx.VAR, vbx.NUM)
     except vbx.TypeMismatch as e:
         raise type_mismatch(str(e)) from e
-    return vbx.single(vbx.cdbl(v)) == vbx.single(s) if isinstance(v, str) else False
+    x = 0.0 if v is None else (vbx.cdbl(v) if isinstance(v, str) else float(v))
+    return vbx.single(x) == vbx.single(s)
 
 
 _FMT_DATE_TOKENS = re.compile(r"yyyy|mm|dd|hh|h|nn|ss")
@@ -680,6 +676,7 @@ class MitForm:
     h494_method: str = ""        # op1〜3 の Caption
     kenh: dict = field(default_factory=lambda: {i: "" for i in range(1, 8)})   # KenHBox1〜7
     takasa_formula: str = ""     # 高さ計算式.Caption
+    yama_index: Any = None       # YamaLB.ListIndex(0〜5 = 1〜6 山、6 = 枚数)
     cnt: str = "0"
     undo_count: str = "0"
     tag: str = ""

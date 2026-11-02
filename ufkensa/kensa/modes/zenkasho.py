@@ -274,13 +274,13 @@ def forn_select(book: Book) -> None:
     ad3 = ws.get(3, 30)
     if not sh.blank(ad3):
         if vbx.right(sh.cell_str(ad3), 1) == "枚":
-            f.kenh["yama_index"] = "枚数"
+            f.yama_index = 6
             if not sh.blank(ws.get(3, 2)):
                 book.fx.calls.append(Call("DrawListBoxContent", (sh.val_cell(ws.get(3, 2)),)))
             f.kenh[7] = extract_before(sh.cell_str(ad3), "枚")
     ad2 = ws.get(2, 30)
     if not sh.blank(ad2):
-        f.kenh["yama_index"] = vbx.clng(vbx.val(vbx.left(sh.cell_str(ad2), 1)) - 1)
+        f.yama_index = vbx.clng(vbx.val(vbx.left(sh.cell_str(ad2), 1)) - 1)
     if not sh.blank(ws.get(3, 2)):
         book.fx.calls.append(Call("DrawListBoxContent", (sh.val_cell(ws.get(3, 2)),)))
     if not sh.blank(ad2):
@@ -385,8 +385,7 @@ def mlp_click(book: Book) -> Effects:
         return fx
     book.activate_sheet(name)
     ws = book.ws(name)
-    m = sh.weight_message(ws.get(3, 2) if ws.get(3, 2) is not None else "", ws.get(3, 4) if ws.get(3, 4) is not None else "",
-                          ws.get(3, 6) if ws.get(3, 6) is not None else "")
+    m = sh.weight_message(sh.val_cell(ws.get(3, 2)), sh.val_cell(ws.get(3, 4)), sh.val_cell(ws.get(3, 6)))
     if m is None:
         return fx
     fx.messages.append(m)
@@ -417,8 +416,7 @@ def weight_click(book: Book) -> Effects:
     if name in book.sheets:
         book.activate_sheet(name)
     ws = book.ws(name)
-    g = lambda r, c: "" if ws.get(r, c) is None else ws.get(r, c)  # noqa: E731
-    m = sh.weight_message(g(3, 2), g(3, 4), g(3, 6))
+    m = sh.weight_message(sh.val_cell(ws.get(3, 2)), sh.val_cell(ws.get(3, 4)), sh.val_cell(ws.get(3, 6)))
     if m:
         fx.messages.append(m)
     return fx
@@ -527,7 +525,7 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
                 else:
                     v = _need(lateralbow_j, "lateralbow_j")(*args)
                 book.write(zs, 1, 13, vbx.fmt(v, "0.0"))
-                if vbx.vcompare(zs.get(1, 13) if zs.get(1, 13) is not None else 0.0, 0) == 0:
+                if vbx.compare_typed(zs.get(1, 13), 0, vbx.VAR, vbx.NUM) == 0:
                     book.write(zs, 1, 13, "")
             if late_flag:
                 book.write(zs, 1, 12, "追記")
@@ -569,13 +567,8 @@ def _need(fn: Optional[Callable], name: str) -> Callable:
 
 
 def _case_eq(v: Any, lit: str) -> bool:
-    """`Select Case セル: Case "4"`(数のセルと数の文字列は数で比べる)。"""
-    if v is None:
-        return lit == ""
-    try:
-        return vbx.vcompare(v, lit) == 0
-    except vbx.TypeMismatch:
-        raise sh.type_mismatch("Select Case")
+    """`Select Case セル: Case "4"`(Variant と文字列の定数 → 文字で比べる。数のセルは CStr して比べる)。"""
+    return vbx.compare_typed(v, lit, vbx.VAR, vbx.STR) == 0
 
 
 def _csng(v: Any, null_raises: bool) -> float:
@@ -778,10 +771,13 @@ def zen_transfer(book: Book) -> None:
     cp = _copy_sheet(zen)
     n = zen.last_row(2)
     book.add_sheet(cp)
-    for i in range(2, 9):
-        v = cp.get(i, 19)
+    for i in range(2, 9):                      # 数字変換(Mit:661-672)。列削除後の S 列は空なので実際は何もしない
         for num, mark in ((1, "①"), (2, "②"), (3, "③"), (4, "④")):
-            if sh.eq_single(v, float(num)) if isinstance(v, (int, float)) else (v is not None and vbx.veq(v, num)):
+            try:
+                hit = vbx.compare_typed(cp.get(i, 19), num, vbx.VAR, vbx.NUM) == 0
+            except vbx.TypeMismatch as e:
+                raise sh.type_mismatch(str(e)) from e
+            if hit:
                 cp.set(i, 19, mark)
                 break
     kiki_tensou(book, zen, 3, 29, atu, haba, sh.cell_str(zen.get(4, 8)))
@@ -1051,7 +1047,6 @@ def zen_save(book: Book, temp: str = ZEN) -> Optional[SavePlan]:
                 plan.error = "連番をこれ以上付けることが出来ません。"
                 raise flow.Stop(plan.error, source="Mit:586", messages=list(fx.messages))
         plan.steps.append(SaveStep("save", p, password=ck._password(lot, today), readonly=True))
-    s.visible = s.visible
     file_n = temp + "_履歴\\"
     hist = paths.get("history")
     if f.line_name in FIVE_LINES:
@@ -1061,6 +1056,7 @@ def zen_save(book: Book, temp: str = ZEN) -> Optional[SavePlan]:
     else:
         srv = ""
     if f.inflag == "flagon":
+        plan.steps.append(SaveStep("mkdir", srv))
         plan.error = "実行時エラー '76': パスが見つかりません。(NewFileName(" + set_path + "\\))"
         raise flow.Stop(plan.error, source="Mit:613", messages=list(fx.messages))
     _new_file_copy(plan, saved, srv)
@@ -1145,7 +1141,7 @@ def _defect_print(book: Book, kname: str, lot_box: str) -> None:
         fx.calls.append(Call("AddWS/Pesute", ("不良要因印刷原紙", dname)))
     else:
         b1 = book.extra[dname].get(1, 2) if dname in book.extra else None
-        if not vbx.veq(sh.cell_str(b1), lot_box):
+        if vbx.compare_typed(b1, lot_box, vbx.VAR, vbx.STR) != 0:
             book.add_sheet(sh.Sheet(dname))
             fx.calls.append(Call("AddWS/Pesute", ("不良要因印刷原紙", dname)))
     fx.calls.append(Call("不良要因印刷範囲", (kname,)))

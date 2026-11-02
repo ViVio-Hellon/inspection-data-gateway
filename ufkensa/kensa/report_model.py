@@ -35,7 +35,7 @@ from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
 from . import flow, quirks, vbx
 from .flow import Message, Question, Stop
-from .records import (FACES, KensaSnapshot, end_time_register, uf_array, uf_tag_array, vb_cdate,
+from .records import (FACES, KensaSnapshot, cmp_str_num, end_time_register, uf_array, uf_tag_array, vb_cdate,
                       vb_cstr_date, vb_format_date, vb_isdate, variant_eq)
 from .store import (GridSheet, LocalStore, PRINT_HISTORY, Value, cell_text, col_index, col_letter, excel_value,
                     line_sheet)
@@ -760,7 +760,7 @@ def convert_numbers_to_string(sh: GridSheet) -> None:
         if is_target(v):
             out[j] = conv(v)
             flag2 = True
-        if vbx.vcompare(v, 0) == 0:               # 文字列(囲み数字など)なら型エラー(U1)
+        if vbx.compare_typed(v, 0, vbx.VAR, vbx.NUM) == 0:   # 数にならない文字列なら型エラー 13
             out[j] = ""
     if flag2:
         for j, v in enumerate(out):
@@ -1006,7 +1006,7 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
                     names[key] = len(names) + 1
     if names:
         sh.put(9, 2, "_".join(cell_text(k[1]) for k in names))
-    loaded = snap.data_loading == "Load" or variant_eq(wt.get(1, 1), "履歴呼び出し")
+    loaded = snap.data_loading == "Load" or variant_eq(wt.get(1, 1), "履歴呼び出し", vbx.STR)
     if not loaded:
         if cell_text(sh.get(9, 2)) == "":
             msgs.append(Message("検査員が空白です。WorkerTime上に履歴がない可能性有。 担当者に連絡してください。",
@@ -1032,7 +1032,7 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
     else:
         sh.number_format(12, 7, 16, 10, "0.000_);[赤](0.00)")
     h494 = snap.youto == "H494"
-    hab_lt = vbx.vcompare(snap.hab, 300.0) < 0                   # And は両辺を評価する(Hab が空なら型エラー)
+    hab_lt = vbx.compare_typed(snap.hab, 300.0, vbx.VAR, vbx.NUM) < 0   # And は両辺を評価(Hab が空なら型エラー)
     hab_val = vbx.val(snap.hab)
     if h494 and hab_lt:                                          # Print:632-639
         if 1.0 <= hab_val <= 299.0:
@@ -1170,7 +1170,7 @@ def _print_borders(sh: XSheet, n: str, snap: KensaSnapshot, env: PrintEnv) -> No
             sh.put(bottom_row + i, 2, v)
 
     def yama_is(k: int) -> bool:
-        return vbx.vcompare(snap.yama, k) == 0
+        return cmp_str_num(snap.yama, k) == 0
 
     if n == "厚板":
         clea(20, 2, 10)

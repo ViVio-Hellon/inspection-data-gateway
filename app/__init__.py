@@ -537,6 +537,10 @@ def _register_routes(app: Flask) -> None:
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(log_routes.bp)
     app.register_blueprint(importing.bp)
+    from .shell import READY_SCREENS
+    if "kensa" in READY_SCREENS:                 # 結合(工程 8c)が済むまでは「準備中」の画面を出す
+        from .routes import kensa
+        app.register_blueprint(kensa.bp)
 
     # レールに出ているのに中身がまだ無い画面へ、「準備中」の案内を置く
     pending.register(app)

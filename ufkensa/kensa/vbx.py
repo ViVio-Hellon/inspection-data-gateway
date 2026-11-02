@@ -370,6 +370,7 @@ def compare_typed(a: Any, b: Any, a_type: str = VAR, b_type: str = VAR) -> int:
     - String と String                        → 文字で比べる(バイナリ)
     - 数値型 と 数になる Variant              → 数で比べる
     - 数値型 と 数にならない文字列の Variant  → **型エラー 13**
+    - String と 数値型                        → 文字を数に直して比べる(数にならなければ型エラー 13)
     - String と(Null 以外の)Variant          → 文字で比べる(Variant の数は CStr して比べる)
     - Empty と 数値型 / String                → 0 / "" として比べる
     - Variant(数) と Variant(文字列)        → **数のほうが小さい**(エラーにしない)
@@ -403,8 +404,13 @@ def compare_typed(a: Any, b: Any, a_type: str = VAR, b_type: str = VAR) -> int:
     if kb == "empty":
         b, kb = (0, NUM) if ka in (NUM, "vnum") else ("", STR)
 
-    if ka == STR and b_type == STR or (ka == STR and kb == STR):
+    if ka == STR and kb == STR:
         return cmp(str(a), str(b))
+    if (ka == STR and kb == NUM) or (ka == NUM and kb == STR):   # String と数値型 → 文字を数に直して比べる
+        s = a if ka == STR else b
+        if not is_numeric(s):
+            raise TypeMismatch(f"{a!r} と {b!r} の比較(String と数値型。数にならない文字列)")
+        return cmp(num(a), num(b))
     if ka == STR or kb == STR:                     # String と Variant → 文字で比べる
         sa = str(a) if ka in (STR, "vstr") else cstr(a)
         sb = str(b) if kb in (STR, "vstr") else cstr(b)

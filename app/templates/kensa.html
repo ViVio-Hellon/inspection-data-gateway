@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}検査 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kensa.css') }}">
+<div class="kensa" id="kensa">
+  <!-- 左: 検査員・ロット・公差・作業選択 -->
+  <div class="kensa__col">
+    <section class="card">
+      <header><h3>検査員</h3><span class="lv" id="proofLv"></span></header>
+      <div class="pad">
+        <div class="inbox"><label for="cardIn">カード</label><input class="input" id="cardIn" inputmode="numeric" autocomplete="off" placeholder="社員カード(13桁)"></div>
+        <ul class="log-lines" id="workers"></ul>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>ロット</h3></header>
+      <div class="pad">
+        <div class="inbox"><label for="lotIn">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
+        <dl class="kv-grid" id="lotKv"></dl>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>公差</h3></header>
+      <div class="pad"><dl class="kv-grid" id="tolKv"></dl><p class="muted" id="tolNote"></p></div>
+    </section>
+    <section class="card">
+      <header><h3>作業選択</h3></header>
+      <div class="pad">
+        <div class="works" id="works"></div>
+        <div class="inbox" id="yamaBox" hidden><label for="yamaSel">山数</label><select class="input" id="yamaSel"></select></div>
+        <div class="btn-row"><button class="btn" type="button" id="atBtn" hidden></button><button class="btn" type="button" id="inspeBtn" hidden></button></div>
+        <p class="muted" id="atCount"></p>
+      </div>
+    </section>
+  </div>
+
+  <!-- 中央: 測定グリッド -->
+  <div class="kensa__col kensa__center">
+    <section class="card">
+      <header><h3>測定</h3><span class="lv lv--info" id="workLv"></span></header>
+      <div class="pad" style="overflow-x:auto">
+        <table class="mgrid" id="mgrid" aria-label="測定値"></table>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>歪・BH・不良・検入高さ</h3><span class="lv lv--info" id="faceLv"></span></header>
+      <div class="pad" style="overflow-x:auto"><table class="mgrid" id="subgrid" aria-label="歪ほか"></table></div>
+    </section>
+    <div class="blind" id="blind" hidden></div>
+  </div>
+
+  <!-- 右: 次に測る・チェック・操作 -->
+  <div class="kensa__col">
+    <div class="next" id="nextBox"><small>次に測る</small><b id="nextName">-</b><small id="nextHint"></small></div>
+    <section class="card">
+      <header><h3>測定値の入力</h3></header>
+      <div class="pad">
+        <div class="inbox"><input class="input" id="measIn" autocomplete="off" placeholder="測定器から自動で入ります" aria-label="測定値(伝送文字列)"></div>
+        <p class="muted">測定器のボタンを押すと、次に測る欄へ入ります。手で入れるときは欄を押してから値を入れて Enter。</p>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>印刷前チェック</h3></header>
+      <div class="pad"><ul class="checks-list" id="checks"><li data-ok="">まだ確かめていません</li></ul></div>
+    </section>
+    <section class="card">
+      <header><h3>Min / Max</h3></header>
+      <div class="pad"><dl class="kv-grid" id="mmKv"></dl></div>
+    </section>
+    <section class="card">
+      <header><h3>操作</h3></header>
+      <div class="pad">
+        <div class="btn-row">
+          <button class="btn" type="button" id="mmBtn">Min/Max</button>
+          <a class="btn" href="/ainput" id="ainBtn">Aインプット</a>
+          <button class="btn btn--primary" type="button" id="printBtn">印刷・保存</button>
+          <button class="btn" type="button" id="newBtn">新規検査</button>
+        </div>
+        <ul class="log-lines" id="recent"></ul>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/kensa.js') }}"></script>
+{% endblock %}

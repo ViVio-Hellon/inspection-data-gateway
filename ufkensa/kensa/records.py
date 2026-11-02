@@ -265,20 +265,19 @@ def vb_format_date(v: Any, pattern: str) -> str:
     return "".join(out)
 
 
-def variant_eq(a: Value, b: Value) -> bool:
-    """セルの値どうし(Variant どうし)の `=`。数と文字列は等しくない(数 < 文字列)。Empty は 0 / ""。"""
-    if a is None and b is None:
-        return True
-    if a is None:
-        a = 0.0 if isinstance(b, (int, float)) else ""
-    if b is None:
-        b = 0.0 if isinstance(a, (int, float)) else ""
-    an, bn = isinstance(a, (int, float)), isinstance(b, (int, float))
-    if an and bn:
-        return float(a) == float(b)  # type: ignore[arg-type]
-    if an or bn:
-        return False
-    return str(a) == str(b)
+def variant_eq(a: Value, b: Value, b_type: str = vbx.VAR) -> bool:
+    """セルの値(Variant)と b の `=`(vbx.compare_typed)。b が String 型の変数・文字列定数なら b_type=STR
+    (そのときは文字で比べる。数のセルは CStr する)。Variant どうしなら数と文字列は等しくない。"""
+    return vbx.compare_typed(a, b, vbx.VAR, b_type) == 0
+
+
+def cmp_str_num(a: Any, b: Any) -> int:
+    """String 型(Caption・Text)と数値の定数の比較(`.DiagS = 0`・`Select Case Yama.Text … Case 4`)。
+
+    VBA は String を数に直して比べる(直せなければ型エラー 13)。compare_typed(STR, NUM) は文字で比べてしまうので、
+    中身が同じになる VAR(文字列) と NUM の比較で行う(共通部品への依頼を最終報告に記載)。
+    """
+    return vbx.compare_typed(a, b, vbx.VAR, vbx.NUM)
 
 
 def _vsplit(text: Any, sep: str) -> list[str]:
@@ -595,7 +594,7 @@ def posting(store: LocalStore, snap: KensaSnapshot, need_right: Optional[bool]) 
     last_col = 29
     if snap.kind in ("厚板", "薄板", "少枚数", "極厚", "スラブ"):
         sh.write(1, last_col, snap.kind)
-    thin = variant_eq(sh.get(1, last_col), "薄板")
+    thin = variant_eq(sh.get(1, last_col), "薄板", vbx.STR)
     if thin and snap.at_butt_visible:
         sh.write(1, last_col + 1, vbx.mid(snap.at_count, 1, 4))
     if thin and snap.inspe_butt_visible:
@@ -752,7 +751,7 @@ def _fmt_val(v: Value, pattern: str) -> str:
 
 def _is_zero_caption(text: str) -> bool:
     """`UF1("S1") = 0`(Caption の文字列を数にして比べる。数にならなければ型エラー)。"""
-    return vbx.vcompare(text, 0) == 0
+    return cmp_str_num(text, 0) == 0
 
 
 def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str = "",
@@ -839,7 +838,7 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
     out.set("ResizText", out.tags["ReSize"])
 
     h494 = cell_text(k[18]) == "H494"
-    hab_lt = vbx.vcompare(k[2] if k[2] is not None else 0, 300.0) < 0
+    hab_lt = vbx.compare_typed(k[2], 300.0, vbx.VAR, vbx.NUM) < 0
     hab_v = vbx.val(cell_text(k[2]))
     for i in range(1, 21):
         for fi, f in enumerate(FACES):
@@ -931,9 +930,9 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
     if hit is None:
         return out
     vc = hit[17]
-    if vbx.vcompare(vc if vc is not None else 0, 0) == 0:
+    if vbx.compare_typed(vc, 0, vbx.VAR, vbx.NUM) == 0:
         out.calls.append(("VC_Clear",))
-    if vbx.vcompare(vc if vc is not None else 0, 1) == 0:
+    if vbx.compare_typed(vc, 1, vbx.VAR, vbx.NUM) == 0:
         out.calls.append(("VC_Picture",))
     out.calls.append(("InitialSetting", "サイズ保存", "UFsizeWidth<>0 のとき"))
     wt = line_sheet(WORKER_TIME, lname)
@@ -983,7 +982,7 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
     rows = sh.read_range(2, 1, lr, lc)
     key_col = 1 if (temp_date != "" and not mimi) else 2
     key = temp_date if (temp_date != "" and not mimi) else hist_lot
-    hit = next((r for r in rows if variant_eq(r[key_col - 1], key)), None)
+    hit = next((r for r in rows if variant_eq(r[key_col - 1], key, vbx.STR)), None)
     if hit is None:
         out.found = False
         out.values = {}
@@ -1053,7 +1052,7 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
 
 def _history_load_normal(out: FormRestore, c, cur: Mapping[str, str], aorb: str) -> None:
     v = out.values
-    if variant_eq(c(84), "〆"):
+    if variant_eq(c(84), "〆", vbx.STR):
         for f in FACES:
             v[f"LG{f}"] = "ﾌﾘｰｿﾘ"
     tai = []

@@ -1,0 +1,47 @@
+/* 検査画面(A案「計測コックピット」)。左=ロット・公差、中央=測定グリッド、右=次に測る・チェック・操作 */
+.kensa { display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 10px; align-items: start; }
+.kensa__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.kensa .card .pad { gap: 6px; }
+
+.kv-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: var(--fs-sm); }
+.kv-grid dt { color: var(--muted); }
+.kv-grid dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.inbox { display: flex; gap: 6px; align-items: center; }
+.inbox .input { flex: 1; font-family: var(--mono); }
+.inbox label { color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; }
+
+/* 測定グリッド */
+.mgrid { width: 100%; border-collapse: separate; border-spacing: 3px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.mgrid th { font-family: var(--sans); font-size: var(--fs-sm); color: var(--muted); font-weight: 600; text-align: center; }
+.mgrid th.rowh { text-align: left; white-space: nowrap; }
+.mgrid td { background: var(--sunken); border-radius: var(--radius-xs); text-align: right; padding: 4px 6px;
+            min-width: 4.5em; height: 1.9em; cursor: pointer; border: 2px solid transparent; }
+.mgrid td[data-color="OK"] { background: var(--ok-bg); color: var(--state-ok); }
+.mgrid td[data-color="NG"] { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.mgrid td[data-color="YELLOW"] { background: #fff3a6; color: #5a4a00; outline: 2px solid var(--focus); }
+.mgrid td[data-border="RED"] { border-color: var(--state-error); }
+.mgrid td[data-underline="1"] { text-decoration: underline; }
+.mgrid td[data-hidden="1"] { visibility: hidden; cursor: default; }
+.mgrid td.sub { cursor: default; font-size: var(--fs-sm); }
+.mgrid tr.sep td, .mgrid tr.sep th { padding-top: 8px; }
+
+.next { border: 2px solid var(--focus); background: var(--info-bg); border-radius: var(--radius); padding: 10px; text-align: center; }
+.next b { display: block; font-size: var(--fs-xl); }
+.next small { color: var(--muted); }
+
+.checks-list { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); display: flex; flex-direction: column; gap: 2px; }
+.checks-list li::before { display: inline-block; width: 1.3em; font-weight: 700; }
+.checks-list li[data-ok="1"]::before { content: "✓"; color: var(--state-ok); }
+.checks-list li[data-ok="0"]::before { content: "✕"; color: var(--state-error); }
+.checks-list li[data-ok=""]::before { content: "・"; color: var(--muted); }
+
+.log-lines { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); max-height: 9em; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.works { display: flex; flex-wrap: wrap; gap: 4px; }
+.works .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.blind { position: absolute; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center;
+         color: #fff; font-size: var(--fs-lg); border-radius: var(--radius); }
+.kensa__center { position: relative; }
+
+@media (max-width: 1280px) { .kensa { grid-template-columns: 220px minmax(0, 1fr) 230px; } }

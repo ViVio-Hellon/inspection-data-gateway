@@ -8,7 +8,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from ufkensa.kensa import quirks, records as rc, store as st
+from ufkensa.kensa import quirks, records as rc, store as st, vbx
 from ufkensa.kensa.flow import Stop
 
 
@@ -116,7 +116,7 @@ class MainDataSaveTest(Base):
         self.assertEqual(row[0], "Test")
         self.assertEqual(row[1], "2024/11/02 05:29～2024/11/02 08:55")
         self.assertEqual(row[73], "1.5")                      # CStr(1.5)
-        self.assertEqual(row[27], "")                         # 空は ""
+        self.assertEqual(row[28], "")                         # U巾1(空)は ""
 
     def test_kind_frequency(self) -> None:
         for kind, expect in (("薄板", "L:3"), ("少枚数", "H:少枚数"), ("スラブ", "ｽﾗﾌﾞ"), ("", "ｽﾗﾌﾞ")):
@@ -400,7 +400,11 @@ class DateTest(unittest.TestCase):
     def test_variant_eq(self) -> None:
         self.assertTrue(rc.variant_eq(None, ""))
         self.assertTrue(rc.variant_eq(None, 0.0))
-        self.assertFalse(rc.variant_eq(50.0, "50"))               # 数と文字列は等しくない
+        self.assertFalse(rc.variant_eq(50.0, "50"))               # Variant どうし: 数と文字列は等しくない
+        self.assertTrue(rc.variant_eq(50.0, "50", vbx.STR))       # String と Variant: CStr して比べる
+        self.assertEqual(rc.cmp_str_num("0.000", 0), 0)           # Caption と 0: 数で比べる
+        with self.assertRaises(vbx.TypeMismatch):
+            rc.cmp_str_num("", 4)
         self.assertTrue(rc.variant_eq("a", "a"))
 
 

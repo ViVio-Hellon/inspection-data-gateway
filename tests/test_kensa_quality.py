@@ -256,11 +256,34 @@ class SmallFunctionsTest(unittest.TestCase):
         self.assertEqual(q.narrow("ひらがな漢字"), "ひらがな漢字")
 
     def test_variant_compare_u1(self) -> None:
-        self.assertFalse(q.veq("", 0))                # U1: エラーにせず「等しくない」
-        self.assertFalse(q.veq("6㎜以下,フラットネス4級", 0))
-        self.assertTrue(q.veq("0.0", 0))
-        self.assertTrue(q.veq(None, 0))
-        self.assertTrue(q.veq("13", 13))
+        V, N, S = q.VAR, q.NUM, q.STR
+        self.assertFalse(q.veq("", 0, V, N))          # 表では型エラー 13。U1: エラーにせず「等しくない」
+        self.assertFalse(q.veq("6㎜以下,フラットネス4級", 0, V, N))
+        self.assertEqual(q.vcmp("abc", 300.0, V, N), 1)             # 数 < 文字列
+        self.assertTrue(q.veq("0.0", 0, V, N))
+        self.assertTrue(q.veq(None, 0, V, N))                       # Empty = 0
+        self.assertTrue(q.veq("13", 13, V, N))                      # 数になる Variant は数で
+        self.assertFalse(q.veq("13", 13, V, V))                     # Variant どうし: 数 < 文字列
+        self.assertTrue(q.veq(12345.0, "12345", V, S))              # String と Variant は文字で(CStr)
+        self.assertFalse(q.veq(0, "", V, S))                        # Kousa(1,4)=0(SkipEndA)と "" → "0" ≠ ""
+        q.STRING_VS_NUMBER_RAISES = True
+        try:
+            with self.assertRaises(vbx.TypeMismatch):
+                q.veq("", 0, V, N)
+        finally:
+            q.STRING_VS_NUMBER_RAISES = False
+
+    def test_u1_strict_table_breaks_main_paths(self) -> None:
+        # 表どおり(型エラー 13)にすると、毎日通る経路が止まる: DBQP の `Kousa(1,4) = 0`(QP:462)、
+        # 外観_H の見出し行 "管理番号" = Long(QDB:331)。U1 で「エラーにしない」を既定にした根拠
+        q.STRING_VS_NUMBER_RAISES = True
+        try:
+            with self.assertRaises(vbx.TypeMismatch):
+                q.dbqp("H6083T1", "H", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", q.read_lot("H6083T1"))
+            with self.assertRaises(vbx.TypeMismatch):
+                qv.display_appearance_h(q.read_lot("H8401Z0"), qv.QualityForm())
+        finally:
+            q.STRING_VS_NUMBER_RAISES = False
 
     @unittest.skip("U1 実機確認待ち")
     def test_u1_string_vs_number(self) -> None:

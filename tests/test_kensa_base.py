@@ -61,6 +61,9 @@ class VbxTest(unittest.TestCase):
         self.assertEqual(vbx.compare_typed("10", 9.0, S, V), -1)  # String と Variant: 文字で比べる("10" < "9")
         self.assertEqual(vbx.compare_typed("3", 2, V, N), 1)    # 数になる Variant と数値型: 数で比べる
         self.assertEqual(vbx.compare_typed(None, 0, V, N), 0)   # Empty は 0
+        self.assertEqual(vbx.compare_typed("10", 9, S, N), 1)   # String と数値型: 数に直す(.DiagS = 0 など)
+        with self.assertRaises(vbx.TypeMismatch):
+            vbx.compare_typed("", 0, S, N)
 
     def test_like_mid_instr(self) -> None:
         self.assertTrue(vbx.like("ABC52S1", "*52S*"))

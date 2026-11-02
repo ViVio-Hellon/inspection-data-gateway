@@ -14,7 +14,7 @@ from typing import Any, Optional, Sequence
 
 from . import datasource, quirks, vbx
 from .flow import ERROR, Message
-from .quality import (LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
+from .quality import (NUM, STR, VAR, LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
                       csng, find_indices, loop_array, rgb, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
 
 VBCRLF = "\r\n"
@@ -91,7 +91,7 @@ def _set(form: QualityForm, name: str, value: Any) -> None:
 
 def _zero_clear(form: QualityForm, name: str) -> None:
     """`If UF品質基準.X = 0 Then UF品質基準.X = ""`(テキストボックスの文字と 0 の比較)。"""
-    if veq(getattr(form, name), 0):
+    if veq(getattr(form, name), 0, VAR, NUM):
         setattr(form, name, "")
 
 
@@ -155,7 +155,7 @@ def uf_db_display(form: QualityForm, temp_arr: Optional[list[list[Any]]], tab_ca
     if not temp_arr:
         return
     for row in temp_arr:
-        if veq(tab_caption, vstr(row[0])):
+        if veq(tab_caption, row[0], STR, VAR):
             form.AbnoLabel = vstr(row[0])
             form.gradeTB = vstr(row[-1])
             form.AbnoTB = vstr(row[1])
@@ -243,7 +243,7 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
 
     for no in matching:
         for row in join_quality:
-            if veq(cell(row, R["管理番号"]), no):
+            if veq(cell(row, R["管理番号"]), no, VAR, NUM):    # 見出し行 "管理番号" と Long も比べる(U1)
                 arry_l[-1][0] = "管理番号"
                 arry_l[-1][1] = no
                 for item in arry_l:
@@ -292,10 +292,10 @@ def kijun_hanei(form: QualityForm, temp: str, arr: list[list[Any]]) -> None:
     """QDB.基準反映 (QDB:676-698)。押したボタンの異常名の列で、1列目が O/S/K/A の行を表示する。"""
     form.SelectO = form.SelectS = form.SelectK = form.SelectA = ""
     for i, name in enumerate(arr[0]):
-        if veq(name, temp):
+        if veq(name, temp, VAR, STR):
             for a in range(1, len(arr)):
                 for key in ("O", "S", "K", "A"):
-                    if veq(arr[a][0], key):
+                    if veq(arr[a][0], key, VAR, STR):
                         setattr(form, "Select" + key, vstr(arr[a][i]))
             break
 
@@ -573,7 +573,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
                     hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
                     if vbx.like(vstr(cell(r, C["材質"])), "*" + zai + "*"):
                         if lo <= m_atu and hi >= m_atu:
-                            if veq(cell(r, C["納入フラグ"]), "白銅") and vbx.like(nou, "*ﾊｸﾄﾞｳ*"):
+                            if veq(cell(r, C["納入フラグ"]), "白銅", VAR, STR) and vbx.like(nou, "*ﾊｸﾄﾞｳ*"):
                                 arr_h[n] = list(r)
                                 n += 1
                                 form.MG1 = vbx.fmt(cell(r, C["1m当たり平坦度上限"]), "0.0")
@@ -586,7 +586,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
                         hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
                         if vbx.like(vstr(cell(r, C["材質"])), "*" + zai + "*"):
                             if lo <= m_atu and hi >= m_atu:
-                                if not veq(cell(r, C["納入フラグ"]), "白銅"):
+                                if not veq(cell(r, C["納入フラグ"]), "白銅", VAR, STR):
                                     arr_h[n] = list(r)
                                     n += 1
                                     form.MG1 = vbx.fmt(cell(r, C["1m当たり平坦度上限"]), "0.0")
@@ -625,10 +625,10 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
             pat = cell(r, C["パターン"])
             hit = False
             if vstr(pat) != "":
-                if veq(pat, 1):
-                    hit = vcmp(cell(r, C["オーダー板幅"]), o_haba) >= 0
-                elif veq(pat, 2):
-                    hit = vcmp(cell(r, C["オーダー板幅"]), o_haba) <= 0
+                if veq(pat, 1, VAR, NUM):
+                    hit = vcmp(cell(r, C["オーダー板幅"]), o_haba, VAR, NUM) >= 0
+                elif veq(pat, 2, VAR, NUM):
+                    hit = vcmp(cell(r, C["オーダー板幅"]), o_haba, VAR, NUM) <= 0
             else:
                 hit = True
             if hit:
