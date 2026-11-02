@@ -8,7 +8,7 @@
     stop     … 止めた理由。状態は保ったまま(D10)
 */
 
-import { api } from "../api.js";
+import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { confirmBox } from "../askbox.js";
 
@@ -26,7 +26,10 @@ async function op(name, body = {}, answers = {}) {
     toastError(e);
     return null;
   }
-  for (const m of res.messages || []) toast(m.text, LEVEL_KIND[m.level] || "info");
+  for (const m of res.messages || []) {
+    if (m.sound) play(m.sound);
+    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");     // 音だけの知らせはトーストを出さない
+  }
   if (res.view) render(res.view);
   if (res.question) {
     const q = res.question;
@@ -37,6 +40,14 @@ async function op(name, body = {}, answers = {}) {
   if (res.stop) toast(res.stop.text, "error");
   if (res.view && res.view.report && res.view.report.report) toast(`帳票: ${res.view.report.report.html}`, "info");
   return res;
+}
+
+/** VBA の音声(C:\VBAWAV)。無ければ鳴らないだけ(VBA と同じ)。 */
+function play(name) {
+  try {
+    const a = new Audio(tokenUrl(`/api/kensa/sound/${encodeURIComponent(name)}`));
+    a.play().catch(() => {});
+  } catch (e) { /* 鳴らせなくても検査は止めない */ }
 }
 
 function text(el, t) { el.textContent = t ?? ""; }

@@ -1,6 +1,8 @@
 """検査画面 /kensa と /api/kensa/* の往復(app/routes/kensa.py → session.py)"""
 from __future__ import annotations
 
+import unittest
+
 
 from tests._web import make_client
 from tests.test_kensa_session import CARD, LOT, SessionBase
@@ -63,3 +65,20 @@ class KensaScreenTest(SessionBase):
     def test_unknown_op(self) -> None:
         r = self.c.post("/api/kensa/nothing", json={}, headers=self.h)
         self.assertEqual(r.status_code, 404)
+
+
+class SoundTest(unittest.TestCase):
+    def test_sound_route(self):
+        import tempfile
+        from pathlib import Path
+        from tests._web import make_client
+        from ufkensa.kensa import paths
+        d = Path(tempfile.mkdtemp())
+        (d / "完了.wav").write_bytes(b"RIFF0000WAVE")
+        paths.set_path("wav", str(d) + "/")
+        self.addCleanup(paths.reset_path, "wav")
+        c = make_client()
+        h = {"X-Tool-Token": c.application.config["TOKEN"]}
+        self.assertEqual(c.get("/api/kensa/sound/完了.wav", headers=h).status_code, 200)
+        self.assertEqual(c.get("/api/kensa/sound/無い.wav", headers=h).status_code, 404)
+        self.assertEqual(c.get("/api/kensa/sound/..%2Fx.txt", headers=h).status_code, 400)
