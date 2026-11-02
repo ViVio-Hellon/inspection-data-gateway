@@ -39,7 +39,7 @@ _APP = "<APP>"   # オフラインの既定 = アプリのフォルダ(VBA の T
 
 ITEMS: tuple[PathItem, ...] = (
     PathItem("main", "仕掛台帳", "MainPath", r"\\nlmsrvngy03\Read\【New】仕掛\台帳" "\\", _APP,
-             "SIKALOTNOW / SIKAHIKINOW / SIKAODRNOW(上流が毎時作り直す)"),
+             "SIKALOT / SIKAHIKI / SIKAODR.sqlite3(上流が毎時作り直す)"),
     PathItem("next", "仕掛の控え", "NextPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\仕掛" "\\", _APP,
              "上流の作り直し中(PLEASE WAIT.txt・毎時 59:46〜00:45)に読む控え"),
