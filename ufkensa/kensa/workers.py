@@ -748,11 +748,15 @@ def _daily_a1(now: datetime, ctx: DailyContext) -> str:
     """日報の A1「日付_直」(Worker:724-725, 783)。
 
     B70: VBA は日付を YeaDayrCheck("hh:mm")、直を TimeCheck("hh:mm:ss") で出すので、7:00:01〜7:00:59 は
-    「前日_1直」になる。直すと両方 "hh:mm" で比べる(7:00 台の 1 分間は「前日_3直」。C1 の検査員=T3 と揃う)。
+    「前日_1直」になる。直すと両方 "hh:mm:ss" で比べる(7:00:01〜7:00:59 は「当日_1直」。2026-11-02 の回答)。
     """
-    day = yea_dayr_check(hhmm(now), now=now, facility=ctx.facility, shifts=ctx.shifts)
-    shift_time = hhmmss(now) if quirks.reproduce("B70") else hhmm(now)
-    return day + "_" + time_check(shift_time, facility=ctx.facility, shifts=ctx.shifts)
+    if quirks.reproduce("B70"):
+        day = yea_dayr_check(hhmm(now), now=now, facility=ctx.facility, shifts=ctx.shifts)
+        return day + "_" + time_check(hhmmss(now), facility=ctx.facility, shifts=ctx.shifts)
+    # 直した側(2026-11-02 の回答): 7:00 ちょうどから「当日_1直」。日付も直も "hh:mm:ss" で比べる
+    t = hhmmss(now)
+    return (yea_dayr_check(t, now=now, facility=ctx.facility, shifts=ctx.shifts) + "_"
+            + time_check(t, facility=ctx.facility, shifts=ctx.shifts))
 
 
 def daily_create(ctx: DailyContext) -> DailyCreateResult:

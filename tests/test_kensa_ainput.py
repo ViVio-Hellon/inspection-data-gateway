@@ -195,9 +195,12 @@ class HeightCheckTest(unittest.TestCase):
     def test_blank_remain(self) -> None:
         hc(1.5, 2.0, 20, 10, form=AinputForm(remain=""))
 
-    def test_blank_remain_raises_by_policy(self) -> None:
-        with self.assertRaises(vbx.TypeMismatch):
+    def test_blank_remain_stops(self) -> None:
+        """出荷ストアが空なら止めて知らせる(旧版は型エラー 13。2026-11-02 の回答)。"""
+        from ufkensa.kensa.flow import Stop
+        with self.assertRaises(Stop) as cm:
             hc(1.5, 2.0, 20, 10, form=AinputForm(remain=""))
+        self.assertIn("出荷/ストアが空", cm.exception.text)
 
     def test_vc_conv_db(self) -> None:
         kensa_fixture.use_offline()

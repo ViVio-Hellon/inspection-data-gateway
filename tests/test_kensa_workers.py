@@ -326,9 +326,8 @@ class DailyTest(unittest.TestCase):
         c = ctx(at(7, 0, 30))
         c.facility = "L-1"
         w = workers.daily_report(1, c)
-        self.assertIn(CellWrite(1, 1, "2026.10.29_3直"), w)                          # 日付・直とも hh:mm
-        self.assertIn(CellWrite(1, 3, "鈴木"), w)                                     # C1(T3)と揃う
-        c = ctx(at(7, 0, 30), cells={(1, 1): "2026.10.29_3直"})
+        self.assertIn(CellWrite(1, 1, "2026.10.30_1直"), w)                          # 7:00 ちょうどから当日_1直(回答)
+        c = ctx(at(7, 0, 30), cells={(1, 1): "2026.10.30_1直"})
         c.facility = "L-1"
         self.assertFalse(workers.daily_create(c).recreate)
         c = ctx(at(7, 1, 0))

@@ -373,12 +373,16 @@ def height_check(atu1: float, atu2: float, hei: float, mai: int, order_no: str, 
     - NG: 実測 > 最大の理論値 かつ 差(小数 2 桁に四捨五入)> 3/4×最大厚 → [許容値ｵｰﾊﾞｰ]
           実測 < 最小の理論値 かつ 差 > 1/3×最小厚 → [枚数不足(?)]。差がちょうどなら合格。
       NG のときは山高さを消し、Tag を "" にする(form を書き換える)。
-    - VBA の Or は両辺を評価するので、VC の条件の `Remain = 1` は毎回評価する(出荷ストアが空なら型エラー 13)
+    - 出荷ストアが空なら(旧版は型エラー 13)止めて知らせる(2026-11-02 の回答)
     - メッセージの文言だけは現行版(「*推定枚数:」「 *入力枚数:」)のまま。旧版は「*測定高さから計算した枚数:」「 *入力枚数」
     """
     res = HeightCheckResult(False)
     if history_rows is None:
         return res
+    if str(form.remain).strip() == "":
+        # 旧版は出荷ストアが空だと型エラー 13 で止まる。2026-11-02 の回答: 止めて知らせる
+        raise Stop("出荷/ストアが空です。0(出荷)か 1(ストア)を入れてから梱包高さを確かめてください",
+                   level=WARN, source="Input.Height_Check")
     atu1, atu2, hei = _single(atu1), _single(atu2), _single(hei)
     mai = vbx.clng(mai)
     x = None
