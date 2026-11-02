@@ -85,6 +85,13 @@ def ensure_isolated() -> list[str]:
         distribution.DIR = _escape("dist") / "配布設定"
         moved.append("distribution.DIR")
 
+    # 不具合の扱い(config/quirks.json): 本番は「直す」を選んだものがあるが、試験は既定(VBA どおり再現)で書いてある。
+    # 「直す」側は各試験が quirks.set_for_test で当てる
+    from ufkensa.kensa import quirks
+    if _under(quirks.QUIRKS_FILE, repo):
+        quirks.QUIRKS_FILE = _escape("quirks") / "quirks.json"
+        moved.append("quirks.QUIRKS_FILE")
+
     # Access.log: 本体と同じフォルダ(試験ではリポジトリ直下)に書いてしまうので止める
     from ufkensa import user_settings
     user_settings.save(config.KEY_ACCESS_LOG, False)
