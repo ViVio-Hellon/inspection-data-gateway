@@ -51,7 +51,7 @@ class Base(unittest.TestCase):
         self.dir = Path(tempfile.mkdtemp())
         self.store = st.LocalStore(self.dir / "local.sqlite3")
         quirks.set_for_test(None)
-        self.store.add_sheet("WorkerTime_Test").write(3, 1, "河合栄二")
+        self.store.add_sheet("WorkerTime_Test").write(3, 1, "検査員01")
         self.env = rm.PrintEnv(now=NOW, start1="7:00", end3="6:50")
 
     def tearDown(self) -> None:
@@ -77,7 +77,7 @@ class PrintTransferTest(Base):
         self.assertEqual(rep.text("G2"), "426.0")                  # 検入高さの合計(Single)
         self.assertEqual(rep.text("H2"), "2山")
         self.assertEqual(rep.text("B4"), "Test")
-        self.assertEqual(rep.text("B9"), "河合栄二")
+        self.assertEqual(rep.text("B9"), "検査員01")
         self.assertEqual(rep.text("L6"), "0.0")                    # 対角公差が空でも 0.0
         self.assertEqual(rep.text("C12"), "A:△ｶﾐｺﾐ跡\nB:△ｽﾘｷｽﾞ")
         self.assertEqual(rep.text("E12"), "A:丈上0.20\n")          # "_" を消し、B は "__" → ""
@@ -85,7 +85,7 @@ class PrintTransferTest(Base):
         self.assertEqual(rep.text("I18"), "差")
         self.assertEqual(rep.page["print_area"], "$B$1:$L$24")
         self.assertEqual(rep.page["zoom"], 115)
-        self.assertEqual(rep.page["header_right"], "H7372A0 河合栄二")
+        self.assertEqual(rep.page["header_right"], "H7372A0 検査員01")
         self.assertEqual(rep.page["footer_right"], " 2024/11/02  5:29～2024/11/02  8:55 印刷")
         self.assertEqual(res.end_time, "2024/11/02 8:55:03")
         self.assertEqual(self.store.sheet("WorkerTime_Test").get(1, 3), "2024/11/02 8:55:03")

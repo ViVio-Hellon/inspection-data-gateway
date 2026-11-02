@@ -16,7 +16,7 @@ def make_snap(**kw) -> rc.KensaSnapshot:
     s = rc.KensaSnapshot(line_name="Test", lot="H7372A0", atu="50.000", hab="1528.0", tak="3053.0", am="0.500",
                          ap="0.500", hm="3.0", hp="3.0", tm="3.0", tp="3.0", amk="49.500", apk="50.500",
                          hmk="1525.0", hpk="1531.0", tmk="3050.0", tpk="3056.0", zai="F52S", tyu="5",
-                         youto="H207", kind="厚板", atsuita_caption="H", t1="佐藤_河合栄二", worker_shift="1",
+                         youto="H207", kind="厚板", atsuita_caption="H", t1="佐藤_検査員01", worker_shift="1",
                          start_time="2024/11/02 05:29:10", end_time="2024/11/02 08:55:00", resize_tag="無")
     for f in "SUCDE":
         s.measure[f] = ["49.776", "49.807", "49.896", "49.793", "1528.6", "1528.5", "3053.9", "3054.0", "3414.8",
@@ -100,7 +100,7 @@ class MainDataSaveTest(Base):
         self.assertEqual(sh.get(2, 22), "A:丈_上_0.20")       # 歪は A:/B: で上書き
         self.assertEqual(sh.get(2, 23), "A:__0.00")
         self.assertEqual(sh.get(2, 72), 1.5)                  # ラテラルボー(Variant)は数
-        self.assertEqual(sh.get(2, 77), "河合栄二")           # T1 の末尾
+        self.assertEqual(sh.get(2, 77), "検査員01")           # T1 の末尾
         self.assertEqual(sh.get(2, 78), "無")
         self.assertEqual(sh.get(2, 83), "H")                  # 厚板 → 厚板.Caption
         self.assertEqual(sh.get(2, 84), "〆")                 # LGS = ﾌﾘｰｿﾘ
@@ -297,7 +297,7 @@ class HistoryTest(Base):
         view = rc.kanri_view(self.store, 0, lots, "H7372A0")
         self.assertEqual(view.messages[0].text, "同LotNoあり、作業時間を選択してください")
         self.assertEqual(view.new_cb, ["2024/11/02 05:29～2024/11/02 08:55", "2024/11/03 05:00～2024/11/02 08:55"])
-        self.assertEqual(view.values["Worker"], "河合栄二")
+        self.assertEqual(view.values["Worker"], "検査員01")
         self.assertEqual(view.values["SZH"], "A:丈_上_0.20")    # "," が無ければ A: のまま(UF管理:236)
         self.assertEqual(view.values["Count"], "作業数2件")
         self.assertEqual(rc.kanri_select_time(self.store, "2024/11/03 05:00～2024/11/02 08:55", "H7372A0"), 1)

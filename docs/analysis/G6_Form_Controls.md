@@ -482,7 +482,7 @@
 | 3 Frame10 | DBflag | TextBox |  | ○ |  |  |
 | 3 Frame10 | Label58 | Label | 引当情報書込み | ○ |  |  |
 | 3 Frame10 | Label44 | Label | DBflag:日稲鯖優先ﾌﾗｸﾞ | ○ |  |  |
-| 3 Frame10 | TextBox2 | TextBox | 値=#L1528.2  dt10000+0000014.988M  #l3055.2  S553440110587 | ○ |  |  |
+| 3 Frame10 | TextBox2 | TextBox | 値=#L1528.2  dt10000+0000014.988M  #l3055.2  <社員カード番号> | ○ |  |  |
 | 1 MP1 | Test2 | Page/Form | (タブ表示名)Test1 | × |  |  |
 | 2 Test2 | Label8 | Label | Load | ○ |  |  |
 | 2 Test2 | Label11 | Label | "STOP" 判定音.msgbox停止　ｲﾆｼｬﾗｲｽﾞでStop　Load_OPでSTOP | ○ |  |  |
