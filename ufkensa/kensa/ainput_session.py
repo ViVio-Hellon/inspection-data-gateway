@@ -193,7 +193,7 @@ class AinputSession:
         self.form = f
         hiki = res.hiki
         self.hiki_rows = list(hiki.rows) if hiki is not None and hiki.rows is not None else []
-        self.hiki_list = ainput.sort_hiki([ainput._nz(r[0] if r else None) for r in self.hiki_rows])
+        self.hiki_list = ainput.sort_hiki([ainput.nz(r[0] if r else None) for r in self.hiki_rows])
         self.adjust_label, self.adjust_no, self.adjust_visible = "調整No", "", True
         self.material_flag = self.ex_material_flag = "1"
         self.check = None
@@ -592,7 +592,7 @@ class AinputSession:
                      "result_text": last.result_text, "result_missing": last.result_missing,
                      "ng_flag": f.ng_flag, "current": ainput.host_data_confi(),
                      "codes": [{"code": c, "text": ainput.host_con(c)} for c in RESULT_CODES],
-                     "sender": paths.join(ainput._tools_dir(), ainput.SENDER_DIR, ainput.SENDER_EXE),
+                     "sender": paths.join(ainput.tools_dir(), ainput.SENDER_DIR, ainput.SENDER_EXE),
                      "history": self.sends},
         })
         return out

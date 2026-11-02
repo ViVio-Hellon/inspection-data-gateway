@@ -53,7 +53,7 @@ def _hist(row: list[Any], col: int) -> Any:
     return _cell(row[col - 1]) if col - 1 < len(row) else None
 
 
-def _nz(v: Any) -> str:
+def nz(v: Any) -> str:
     """Input.Nz (Input:587-589)。Null → ""、ほかは CStr。"""
     if v is None:
         return ""
@@ -398,11 +398,11 @@ def height_check(atu1: float, atu2: float, hei: float, mai: int, order_no: str, 
         not_store = vbx.vcompare(form.remain, 1) != 0
         high = form.youto in HIGH_PRECISION
         if not_store or high:
-            if _nz(_hist(x, 19)) != "":
-                vca, m = vc(_nz(_hist(x, 19)))
+            if nz(_hist(x, 19)) != "":
+                vca, m = vc(nz(_hist(x, 19)))
                 res.messages += m
-            if _nz(_hist(x, 20)) != "":
-                vcb, m = vc(_nz(_hist(x, 20)))
+            if nz(_hist(x, 20)) != "":
+                vcb, m = vc(nz(_hist(x, 20)))
                 res.messages += m
             v1 = _single(vca + vcb)
             vcs = _single(v1 * vbx.val(mai))
@@ -641,7 +641,7 @@ def save_ainput_csv(form: AinputForm, lot: str, ken: str, *, now: datetime) -> s
     raise Stop("連番をこれ以上付けることが出来ません。", source="Input:929")
 
 
-def _tools_dir() -> str:
+def tools_dir() -> str:
     """測定データ電子化のフォルダ。VBA は送信アプリと result.txt を `C:\\Tools\\測定データ電子化\\` の直書きで見る。
 
     使用パス nis が空(オフラインの既定)のときは、VBA と同じくオンラインの既定値を使う。
@@ -705,7 +705,7 @@ def host_data_confi() -> str:
 
     VBA は C:\\Tools\\測定データ電子化\\hostsend.txt を UTF-8 として読む(書くときは ANSI)。無ければ ""。
     """
-    p = legacy_log.local_path(paths.join(_tools_dir(), HOSTSEND + ".txt"))
+    p = legacy_log.local_path(paths.join(tools_dir(), HOSTSEND + ".txt"))
     if not p.is_file():
         return ""
     try:
@@ -737,7 +737,7 @@ class LaunchResult:
 
 def app_activation(launcher: Optional[Callable[[Path], bool]] = None) -> LaunchResult:
     """Input.App_Activation (Input:1475-1487)。送信アプリを起動する。無い・失敗なら Ngflag="stop"(ok=False)。"""
-    text = paths.join(_tools_dir(), SENDER_DIR, SENDER_EXE)
+    text = paths.join(tools_dir(), SENDER_DIR, SENDER_EXE)
     p = legacy_log.local_path(text)
     if not p.is_file():
         return LaunchResult(False, False, [Message(text + "を開くことができません。" + "\r\n" + "担当者に連絡してください",
@@ -777,7 +777,7 @@ def inter_rupt_text(wait_ms: int = 0, *, sleep: Callable[[float], None] = time.s
             sleep(1.0)
     else:
         sleep(wait_ms / 1000.0)
-    p = legacy_log.local_path(paths.join(_tools_dir(), RESULT_FILE))
+    p = legacy_log.local_path(paths.join(tools_dir(), RESULT_FILE))
     if not p.is_file():
         if quirks.reproduce("B65"):                    # VBA: ReadCheck が False なら Exit Sub → 成功扱いで先へ
             return ResultCheck(True, missing=True)
@@ -977,14 +977,14 @@ def hiki_no_change(selected: Optional[str], hiki_rows: list[list[Any]], *, db_fl
         return out
     row = None
     for r in hiki_rows:
-        if _nz(r[0] if r else None) == selected:
+        if nz(r[0] if r else None) == selected:
             row = r
             break
     if row is None:
         return out
 
     def c(i: int) -> str:
-        return _nz(row[i - 1] if i - 1 < len(row) else None)
+        return nz(row[i - 1] if i - 1 < len(row) else None)
     out.order_no = c(2)
     if db_flag == "true":
         out.lot, out.ken_no = c(3), c(4)
@@ -1034,14 +1034,14 @@ def startup(temp: str, ken_m: str, history: Optional[list[list[Any]]], *, workin
     form = AinputForm(line_name=lname, uf1_line=uf1_line)
     if match is not None:
         form.lot = working_lot
-        form.ken_no = _nz(_hist(match, 7))
-        form.zai = _nz(_hist(match, 8))
-        form.tyo = _nz(_hist(match, 9))
+        form.ken_no = nz(_hist(match, 7))
+        form.zai = nz(_hist(match, 8))
+        form.tyo = nz(_hist(match, 9))
         form.atu = vbx.fmt(_hist(match, 4), "0.000")
         form.haba = vbx.fmt(_hist(match, 5), "0.0")
         form.take = vbx.fmt(_hist(match, 6), "0.0")
         form.ken_law = ken_m
-        form.youto = _nz(_hist(match, 10))
+        form.youto = nz(_hist(match, 10))
     else:
         if temp != "UF1":
             return res
