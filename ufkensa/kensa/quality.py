@@ -294,7 +294,8 @@ def check_thickness(row: Sequence[Any], c1: int, c2: int, c3: int, order: float,
     """QP.CheckThickness (QP:928-945)。下・上・値列の3つとも "" なら真。それ以外は 下 <= x <= 上。
 
     下・上は Single(`Val` を Single に入れる)、x は `Val(Single の引数)`(有効 7 桁)。
-    same_precision: 下・上も `Val` のまま(Double)で比べる(B71 を直した場合に DbReturnItem が使う)。
+    same_precision: 下・上も `Val` のまま(Double)で比べる(B71 を直した場合。呼び出し側で
+    `not quirks.reproduce("B71")` を渡す)。
     """
     # VBA の And は短絡しないので3列とも必ず読む(値列が無い表でも添字エラー 9。QP:930-932)
     v1, v2, v3 = cell(row, c1), cell(row, c2), cell(row, c3)
@@ -316,10 +317,18 @@ def check_width(row: Sequence[Any], c1: int, c2: int, c3: int, order: float, *,
     return check_thickness(row, c1, c2, c3, order, is_single=is_single, same_precision=same_precision)
 
 
-def check_within(row: Sequence[Any], c1: int, c2: int, order: float, *, is_single: bool = True) -> bool:
-    """QP.CheckWithin (QP:966-972)。空の確認なしで 下 <= x <= 上(両方空なら 0..0)。"""
-    lower = vbx.single(vbx.val(cell(row, c1)))
-    upper = vbx.single(vbx.val(cell(row, c2)))
+def check_within(row: Sequence[Any], c1: int, c2: int, order: float, *, is_single: bool = True,
+                 same_precision: bool = False) -> bool:
+    """QP.CheckWithin (QP:966-972)。空の確認なしで 下 <= x <= 上(両方空なら 0..0)。
+
+    same_precision: 下・上も `Val` のまま(Double)で比べる(B71 を直した場合)。
+    """
+    if same_precision:
+        lower = vbx.val(cell(row, c1))
+        upper = vbx.val(cell(row, c2))
+    else:
+        lower = vbx.single(vbx.val(cell(row, c1)))
+        upper = vbx.single(vbx.val(cell(row, c2)))
     x = _order_val(order, is_single)
     return lower <= x and upper >= x
 
@@ -680,6 +689,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     search_s = ""
 
     matching: list[int] = []
+    same = not quirks.reproduce("B71")
     for r in aq:
         c = [False] * 16
         c[1] = check_condition(r, C["用途コード"], youto)
@@ -687,9 +697,10 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
         c[3] = c[2] & check_condition(r, C["オーダー材質"], o_zai)
         c[4] = c[3] & check_condition(r, C["製造調質"], m_tyo)
         c[5] = c[4] & check_condition(r, C["オーダー調質"], o_tyo)
-        c[6] = c[5] & check_thickness(r, C["板厚下"], C["板厚上"], C["オーダー板厚"], o_atu)
-        c[7] = c[6] & check_width(r, C["板幅下"], C["板幅上"], C["オーダー板幅"], o_haba)
-        c[8] = c[7] & check_width(r, C["板丈下"], C["板丈上"], C["オーダー板丈"], o_take)
+        # B71(QP:313-315): 下・上を Single に入れて Val(オーダー寸法) の Double と比べる。直すと同じ精度
+        c[6] = c[5] & check_thickness(r, C["板厚下"], C["板厚上"], C["オーダー板厚"], o_atu, same_precision=same)
+        c[7] = c[6] & check_width(r, C["板幅下"], C["板幅上"], C["オーダー板幅"], o_haba, same_precision=same)
+        c[8] = c[7] & check_width(r, C["板丈下"], C["板丈上"], C["オーダー板丈"], o_take, same_precision=same)
         c[9] = c[8] & check_condition(r, C["納入先"], delivery)
         c[10] = c[9] & check_condition(r, C["納入先コード"], nou_code)
         c[11] = c[10] & check_condition(r, C["取引先"], good)
@@ -1175,10 +1186,11 @@ def dbdisplay_lateral(lot: Optional[LotData], target_text: str, *, quiet: bool =
             raise VbaRuntimeError(13, "UBound(Empty)")
         return 0.0
     matching: list[int] = []
+    same = not quirks.reproduce("B71")          # B71(QDB:1637-1638): 直すと下・上も Double で比べる
     for r in aq:
         c1 = check_condition(r, c_zai, zai)
-        c2 = c1 & check_thickness(r, c_lo, c_hi, c_atu, m_atu)
-        c3 = c2 & check_width(r, c_wlo, c_whi, c_w, m_haba)
+        c2 = c1 & check_thickness(r, c_lo, c_hi, c_atu, m_atu, same_precision=same)
+        c3 = c2 & check_width(r, c_wlo, c_whi, c_w, m_haba, same_precision=same)
         if c1 and c2 and c3:
             matching.append(clng(cell(r, c_no)))
     if not matching:
@@ -1256,7 +1268,7 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     matching: list[int] = []
     c = [False] * 9
     # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
-    # 直した場合は同じ精度(Double)で比べる。ラテフリ直角(この関数)だけ直す
+    # 直した場合は同じ精度(Double)で比べる(QP:1263-1265)
     same = not quirks.reproduce("B71")
     for r in ta:
         c = [False] * 9
@@ -1324,12 +1336,22 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
             items += ",直角度"
     out.items = items
     kousa1 = cell(hit[0], C["公差"])
-    # B72: ラテラルボーの公差も HitArry(1)(最初に一致した行)から取る。直した場合はラテラルボーが「要」の最初の行
+    # B72: ラテラルボーの公差も HitArry(1)(最初に一致した行)から取る(UF1.LateralText QP:1355-1362、
+    # UFMitsubishi のシート QP:1425-1430)。直した場合はラテラルボーが「要」の最初の行
     kousa_l = kousa1
     if not quirks.reproduce("B72"):
         for h in hit:
             if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
                 kousa_l = cell(h, C["公差"])
+                break
+
+    # B72: フリー反りの公差(HizCome.Tag・HURIS。QP:1394-1395・1407)も HitArry(1) から取る。直した場合は
+    # フリー反りが「要」の最初の行(ループ中の UF1.HURIS = HitArry(i)(QP:1337)は VBA のまま)
+    kousa_f = kousa1
+    if not quirks.reproduce("B72"):
+        for h in hit:
+            if veq(cell(h, C["フリー反り"]), "要", VAR, STR):
+                kousa_f = cell(h, C["公差"])
                 break
 
     def lateral(text: str) -> str:
@@ -1348,14 +1370,14 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
                     u["LateralText"] = lateral("白銅滑川")
                     u["LateralText.BackColor"] = ORANGE
         if vbx.instr(items, "フリー反り") > 0:
-            tag = vstr(kousa1) + "mm以下"
+            tag = vstr(kousa_f) + "mm以下"
             u["HizCome.Tag"] = tag
             u["flatnesText.BackColor"] = ORANGE
             u["flatnesText"] = "ﾌﾘｰｿﾘ要"
             for lg in ("LGS", "LGU", "LGC", "LGD", "LGE", "LGF"):
                 u[lg + ".Caption"] = "ﾌﾘｰｿﾘ"
             out.cb_add_atu = atu
-            u["HURIS"] = kousa1
+            u["HURIS"] = kousa_f
             u["HizCome.Caption"] = "ﾌﾘｰ反り" + tag
     if mitsubishi_visible:
         if not zenkasho_sheet:
@@ -1709,6 +1731,7 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
             # `m_PackQuality() As Variant`(動的配列)に Empty を入れると型エラー
             raise vbx.TypeMismatch("梱包保護材が 0 件(動的配列に Empty を代入)")
         _pack_cache.store(path, (C, rows))
+    same = not quirks.reproduce("B71")          # B71(QP:1764-1766): 直すと下・上も Double で比べる
     for r in rows:
         is_bikou = vstr(cell(r, C["備考"])) == "当板用"
         if is_bikou != check_bikou:
@@ -1717,9 +1740,9 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
         c2 = c1 & check_condition(r, C["材質"], zai)
         c3 = c2 & check_condition(r, C["調質"], tyo)
         c4 = c3 & check_condition(r, C["用途コード"], you)
-        c5 = c4 & check_thickness(r, C["板厚下"], C["板厚上"], C["板厚"], atu)
-        c6 = c5 & check_width(r, C["板幅下"], C["板幅上"], C["板幅"], hab)
-        c7 = c6 & check_width(r, C["板丈下"], C["板丈上"], C["板丈"], tak)
+        c5 = c4 & check_thickness(r, C["板厚下"], C["板厚上"], C["板厚"], atu, same_precision=same)
+        c6 = c5 & check_width(r, C["板幅下"], C["板幅上"], C["板幅"], hab, same_precision=same)
+        c7 = c6 & check_width(r, C["板丈下"], C["板丈上"], C["板丈"], tak, same_precision=same)
         if c7:
             return vstr(cell(r, C["使用保護材"]))
     return "一致なし"
@@ -1794,13 +1817,14 @@ def check_equipment_db(line: str, zai: str, atu: float, haba: float, take: float
         return "可"
     matching: list[int] = []
     c = [False] * 6
+    same = not quirks.reproduce("B71")          # B71(QP:2140-2143): 直すと MIN・MAX も Double で比べる
     for r in rows:
         c = [False] * 6
         c[1] = check_condition(r, C["製造材質"], zai)
-        c[2] = c[1] & check_within(r, C["オーダー厚MIN"], C["オーダー厚MAX"], atu)
-        c[3] = c[2] & check_within(r, C["オーダー幅MIN"], C["オーダー幅MAX"], haba)
-        c[4] = c[3] & check_within(r, C["オーダー丈MIN"], C["オーダー丈MAX"], take)
-        c[5] = c[4] & check_within(r, C["単重MIN"], C["単重MAX"], wei)
+        c[2] = c[1] & check_within(r, C["オーダー厚MIN"], C["オーダー厚MAX"], atu, same_precision=same)
+        c[3] = c[2] & check_within(r, C["オーダー幅MIN"], C["オーダー幅MAX"], haba, same_precision=same)
+        c[4] = c[3] & check_within(r, C["オーダー丈MIN"], C["オーダー丈MAX"], take, same_precision=same)
+        c[5] = c[4] & check_within(r, C["単重MIN"], C["単重MAX"], wei, same_precision=same)
         if all(c[1:6]):
             matching.append(clng(cell(r, C["管理番号"])))
     if not matching:

@@ -225,6 +225,7 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
     join_arr = [list(fq2)] + aq2
 
     matching: list[int] = []
+    same = not quirks.reproduce("B71")          # B71(QDB:300-302): 直すと下・上も Double で比べる
     for r in aq:
         c1 = check_condition(r, R["材質"], zai)
         if quirks.reproduce("B25"):
@@ -232,9 +233,9 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
         else:
             # 直す: 調質で照合する(表に調質の列が無ければ条件なし。いまの別表2 には列が無い)
             c2 = c1 & (check_condition(r, R["調質"], tyo) if R["調質"] else True)
-        c3 = c2 & check_thickness(r, R["板厚下"], R["板厚上"], R["厚"], m_atu)
-        c4 = c3 & check_width(r, R["板幅下"], R["板幅上"], R["幅"], o_haba)
-        c5 = c4 & check_width(r, R["板丈下"], R["板丈上"], R["丈"], o_take)
+        c3 = c2 & check_thickness(r, R["板厚下"], R["板厚上"], R["厚"], m_atu, same_precision=same)
+        c4 = c3 & check_width(r, R["板幅下"], R["板幅上"], R["幅"], o_haba, same_precision=same)
+        c5 = c4 & check_width(r, R["板丈下"], R["板丈上"], R["丈"], o_take, same_precision=same)
         c6 = c5 & check_condition(r, R["納入先"], nou)
         if c1 and c2 and c3 and c4 and c5 and c6:
             matching.append(clng(cell(r, R["管理番号"])))
@@ -618,17 +619,25 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
                 continue
             if not vbx.like(nou, "*" + vstr(cell(r, C["納入先名"])) + "*"):
                 continue
-            lo = vbx.single(vbx.val(cell(r, C["板厚下"])))
-            hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
+            # B71(QDB:1245-1247): 板厚下・上は Single、Val(オーダー厚) は Double。直すと下・上も Double
+            if quirks.reproduce("B71"):
+                lo = vbx.single(vbx.val(cell(r, C["板厚下"])))
+                hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
+            else:
+                lo = vbx.val(cell(r, C["板厚下"]))
+                hi = vbx.val(cell(r, C["板厚上"]))
             if not (lo <= vbx.val_single(o_atu) and hi >= vbx.val_single(o_atu)):
                 continue
+            # B71(QDB:1251・1257): DB の幅(文字列 → Double)と Single のオーダー幅を比べる。
+            # 直すとオーダー幅も Val(Single)(有効 7 桁の Double)にして同じ精度で比べる
+            w = o_haba if quirks.reproduce("B71") else vbx.val_single(o_haba)
             pat = cell(r, C["パターン"])
             hit = False
             if vstr(pat) != "":
                 if veq(pat, 1, VAR, NUM):
-                    hit = vcmp(cell(r, C["オーダー板幅"]), o_haba, VAR, NUM) >= 0
+                    hit = vcmp(cell(r, C["オーダー板幅"]), w, VAR, NUM) >= 0
                 elif veq(pat, 2, VAR, NUM):
-                    hit = vcmp(cell(r, C["オーダー板幅"]), o_haba, VAR, NUM) <= 0
+                    hit = vcmp(cell(r, C["オーダー板幅"]), w, VAR, NUM) <= 0
             else:
                 hit = True
             if hit:

@@ -1036,3 +1036,111 @@ class FixBranchTest(unittest.TestCase):
         # 等級 3/4 は変わらない
         r = q.dbqp("L1099R0", "H", "x", "x", q.read_lot("L1099R0"))
         self.assertEqual(r.messages, [])
+
+
+# ------------------------------------------------------------------
+# B71・B72 を同じ種類の箇所すべてに広げた分(直した側と再現側)
+# ------------------------------------------------------------------
+class FixB71WideTest(_DbCopy):
+    """B71: 下限・上限を Single に入れて Double(Val(Single) など)と比べ、境界ちょうどが外れる。"""
+
+    def test_check_within_param(self) -> None:
+        row = ["2.1", "2.1"]
+        self.assertFalse(q.check_within(row, 1, 2, 2.1))                       # Single(2.1) > 2.1(QP:967-970)
+        self.assertTrue(q.check_within(row, 1, 2, 2.1, same_precision=True))
+
+    def test_dbqp_thickness(self) -> None:
+        # QP:313: 管理番号6 の板厚を 85.3–85.3、オーダー厚 85.3 → 再現は 6 が外れて [105] だけ
+        self.sql("品質基準", 'UPDATE "平坦度一覧QP追加" SET "板厚下"=?, "板厚上"=? WHERE "管理番号"=?', "85.3", "85.3", "6")
+        lot = lot_with("H6083T1", {"ｵｰﾀﾞｰ板厚": "85.3"})
+        r = q.dbqp("H6083T1", "H6X1922", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot)
+        self.assertEqual([x[q.K_NO] for x in r.kousa], ["105"])
+        quirks.set_for_test({"B71": "fix"})
+        r = q.dbqp("H6083T1", "H6X1922", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot)
+        self.assertEqual([x[q.K_NO] for x in r.kousa], ["6", "105"])
+
+    def test_dbdisplay_lateral(self) -> None:
+        # QDB:1637-1638: DIM_179_日車 の NP56 行は 厚 6.51–245・幅 450.1–9999。境界ちょうどで再現は一致なし → 0
+        for change in ({"製造板厚": "6.51"}, {"製造板幅": "450.1"}):
+            lot = lot_with("H9022K1", change)
+            quirks.set_for_test(None)
+            self.assertEqual(q.dbdisplay_lateral(lot, "日車"), 0.0)
+            quirks.set_for_test({"B71": "fix"})
+            self.assertEqual(q.dbdisplay_lateral(lot, "日車"), 3.0)              # 丈 2703 → (2300,3050] → 3
+
+    def test_check_equipment_db(self) -> None:
+        # QP:2140-2143: 管理番号2(LVC)の単重MIN を 30.1 → 単重 30.1 は再現で「単重 範囲外」
+        self.sql("伝送用ファイル", 'UPDATE "設備仕様" SET "単重MIN"=? WHERE "管理番号"=?', "30.1", "2")
+        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30.1), "単重 範囲外")
+        quirks.set_for_test({"B71": "fix"})
+        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30.1), "可")
+        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30.09), "単重 範囲外")   # 外は外のまま
+
+    def test_appearance_h_124(self) -> None:
+        # QDB:300: 別表2 の 15・21 は 板厚 10.01–30。製造厚 10.01 は再現で両方外れ(グレードなし)
+        lot = lot_with("H8401Z0", {"製造板厚": "10.01"})
+        self.assertIsNone(qv.display_appearance_h(lot, qv.QualityForm()).grade_array)
+        quirks.set_for_test({"B71": "fix"})
+        r = qv.display_appearance_h(lot, qv.QualityForm())
+        self.assertEqual([g[2] for g in r.grade_array], ["4", "4", "4", "3", "3", "3"])   # 後の 21 が残る
+
+    def test_122_C_thickness(self) -> None:
+        # QDB:1245-1247: DIM_122_C の C211 ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ 行(3.2–3.2、5/5)。オーダー厚 3.2 は再現で外れる
+        lot = lot_with("H6540C0", {"用途ｺｰﾄﾞ": "C211", "納入先名": "ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "ｵｰﾀﾞｰ板厚": "3.2"})
+        f = qv.display_distortion(lot, qv.QualityForm()).form
+        self.assertEqual((f.HaHiz1, f.TaHiz1), ("", ""))
+        quirks.set_for_test({"B71": "fix"})
+        f = qv.display_distortion(lot, qv.QualityForm()).form
+        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Noun_BackColor), ("5.0", "5.0", qv.O_YELLOW))
+
+    def test_122_C_width_pattern(self) -> None:
+        # QDB:1257: K126 ｽ-ﾊﾟ-ｽﾀ- のパターン2 行(オーダー板幅 740.1 <= 幅 で 4/4)。幅 740.1 は Single(740.1) < 740.1 で外れる
+        lot = lot_with("H6540C0", {"製造材質": "52S", "用途ｺｰﾄﾞ": "K126", "納入先名": "ｶ)ｽ-ﾊﾟ-ｽﾀ-", "ｵｰﾀﾞｰ板厚": "6",
+                                   "ｵｰﾀﾞｰ板幅": "740.1"})
+        self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "")
+        quirks.set_for_test({"B71": "fix"})
+        self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "4.0")
+        # パターン1(740 >= 幅)はちょうど 740 で今までどおり 2/2
+        lot = lot_with("H6540C0", {"製造材質": "52S", "用途ｺｰﾄﾞ": "K126", "納入先名": "ｶ)ｽ-ﾊﾟ-ｽﾀ-", "ｵｰﾀﾞｰ板厚": "6",
+                                   "ｵｰﾀﾞｰ板幅": "740"})
+        self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "2.0")
+
+
+class FixB71MaterialsTest(MaterialsUpperPartTest):
+    """QP:1764-1766: 梱包保護材の 板厚下 0.6 と 厚 0.6。"""
+
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+        super().tearDown()
+
+    def test_match(self) -> None:          # 親の試験は繰り返さない
+        with sqlite3.connect(self.db) as c:
+            c.execute('UPDATE 梱包保護材 SET "板厚下"=? WHERE "管理番号"=?', ("0.6", "1"))
+        c.close()
+        h = hist([None, "12345", "L1", 0.6, 1000.0, 2000.0, "H", "F52S", "H34", "H197", "", "1P0104"])
+        self.assertEqual(q.materials_upper_part("12345", h, db=self.db), "アングル")    # 再現: 1 が外れて 2
+        quirks.set_for_test({"B71": "fix"})
+        self.assertEqual(q.materials_upper_part("12345", h, db=self.db), "ザラ板")
+
+    def test_target_list(self) -> None:
+        pass
+
+
+class FixB72WideTest(_DbCopy):
+    def test_free_sori_tolerance_from_free_row(self) -> None:
+        # ｽﾐﾄﾓ R115: 一致 [9(直角度・公差 1), 10]。10 をフリー反り「要」・公差 30 にする
+        # 再現: HizCome.Tag・HURIS は HitArry(1)(行 9)の 1(QP:1395・1407)。直す: フリー反りが「要」の行 10 の 30
+        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "フリー反り"=?, "公差"=? WHERE "管理番号"=?', "要", "30", "10")
+        args = ("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
+        r = q.db_return_item(*args)
+        self.assertEqual(r.items, ",直角度,フリー反り,ラテラルボー")
+        self.assertEqual((r.uf1["HizCome.Tag"], r.uf1["HURIS"], r.uf1["HizCome.Caption"]),
+                         ("1mm以下", "1", "ﾌﾘｰ反り1mm以下"))
+        quirks.set_for_test({"B72": "fix"})
+        r = q.db_return_item(*args)
+        self.assertEqual((r.uf1["HizCome.Tag"], r.uf1["HURIS"], r.uf1["HizCome.Caption"]),
+                         ("30mm以下", "30", "ﾌﾘｰ反り30mm以下"))
+        # UFMitsubishi 表示中は HizCome を書かず、ループ中の HURIS(要の行。QP:1337)のまま
+        r = q.db_return_item(*args, mitsubishi_visible=True, work_flag="P1")
+        self.assertEqual(r.uf1["HURIS"], "30")
+        self.assertEqual(r.cells[(1, 13)], "30.0")                             # ラテラル公差も行 10(既存の B72)
