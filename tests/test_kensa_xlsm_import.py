@@ -77,3 +77,16 @@ class XlsmImportTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChecksXlsxPhoneticTest(unittest.TestCase):
+    """checks.read_xlsx_sheet(空冷時間チェックリスト等)もふりがなを読まない。"""
+
+    def test_no_phonetic(self):
+        from ufkensa.kensa import checks
+        with tempfile.TemporaryDirectory() as d:
+            book = make_book(Path(d) / "x.xlsx")
+            cells = checks.read_xlsx_sheet(book, "校正記録")
+            self.assertEqual(cells[(2, 4)], "1直")
+            self.assertEqual(cells[(2, 6)], "検査員A")
+            self.assertEqual(checks.read_xlsx_sheet(book, "保存用")[(1, 1)], "検査開始終了")

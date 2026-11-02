@@ -1304,6 +1304,12 @@ def _col_no(ref: str) -> int:
     return n
 
 
+def _si_text(si) -> str:
+    """文字列 1 つの本文。ふりがな(rPh)は読まない(xlsm_import.si_text と同じ)。"""
+    from .xlsm_import import si_text
+    return si_text(si)
+
+
 def read_xlsx_sheet(path: Path, sheet_name: str) -> Optional[dict[tuple[int, int], object]]:
     """xlsx の 1 シートを {(行, 列): 値} で読む(標準ライブラリだけ)。シートが無ければ None。
 
@@ -1332,7 +1338,7 @@ def read_xlsx_sheet(path: Path, sheet_name: str) -> Optional[dict[tuple[int, int
         if "xl/sharedStrings.xml" in z.namelist():
             ss = ET.fromstring(z.read("xl/sharedStrings.xml"))
             for si in ss.iter(f"{{{_NS['m']}}}si"):
-                shared.append("".join(t.text or "" for t in si.iter(f"{{{_NS['m']}}}t")))
+                shared.append(_si_text(si))
         sh = ET.fromstring(z.read(target))
         cells: dict[tuple[int, int], object] = {}
         for c in sh.iter(f"{{{_NS['m']}}}c"):
@@ -1345,7 +1351,7 @@ def read_xlsx_sheet(path: Path, sheet_name: str) -> Optional[dict[tuple[int, int
             v = c.find(f"{{{_NS['m']}}}v")
             if t == "inlineStr":
                 is_ = c.find(f"{{{_NS['m']}}}is")
-                cells[key] = "".join(x.text or "" for x in is_.iter(f"{{{_NS['m']}}}t")) if is_ is not None else ""
+                cells[key] = _si_text(is_) if is_ is not None else ""
             elif v is None or v.text is None:
                 continue
             elif t == "s":
