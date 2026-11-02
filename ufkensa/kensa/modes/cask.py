@@ -55,14 +55,15 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
     TR, TC = r, c
     if ws.name == CASK and 7 <= TR <= 706:
         cask = book.cask
-        if 2 <= TC <= 8:                      # Case 7 は Case 2 To 8 に先に当たる(到達しない)
+        if TC == 7 and cask.count_st == "3":
+            # 決定 D14(W18): 3 点のときは厚3 の判定の後を「最後の厚の後」として扱う(4 点の厚4 の後と同じ)。
+            # VBA は Case 2 To 8 で保護した H 列へ移り、毎行セルを押し直す必要があった。
+            _after_last_thickness(book, TR)
+        elif 2 <= TC <= 8:                    # Case 7 は Case 2 To 8 に先に当たる(到達しない)
             book.resume(lambda: book.activate(TR, TC + 1))
         elif TC == 9:
             if cask.count_st == "4":
-                if cask.inspection == "OFF":
-                    book.resume(lambda: book.activate(TR + 1, 2))
-                elif cask.inspection == "ON":
-                    book.resume(lambda: book.activate(TR, 11))
+                _after_last_thickness(book, TR)
         elif 11 <= TC <= 18:
             book.resume(lambda: book.activate(TR, TC + 1))
         elif TC == 19:
@@ -91,6 +92,14 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
         book.resume(lambda: sh.taikaku(book, TR, TC), "対角")
         book.events_enabled = True
         book.resume(lambda: sh.koshagai_kensaku(book, TR, TC), "公差外検索")
+
+
+def _after_last_thickness(book: Book, TR: int) -> None:
+    """最後の厚の後の入力先(KySh Case 9)。巾丈測定 OFF なら次の行の厚1、ON なら幅1。"""
+    if book.cask.inspection == "OFF":
+        book.resume(lambda: book.activate(TR + 1, 2))
+    elif book.cask.inspection == "ON":
+        book.resume(lambda: book.activate(TR, 11))
 
 
 def write_header(book: Book) -> None:
@@ -407,6 +416,10 @@ def _vstr(v: Any) -> str:
     return vbx.cstr(v)
 
 
+#: B83 を直すときの列の並び(VBA の [3] = スタートNo、[4] = エンドNo に合う並び)
+_NAMED_ORDER = ("管理番号", "LotNo", "検査No", "スタートNo", "エンドNo", "作業時間")
+
+
 def get_cask_data(book: Book, lot: str, ken: str) -> Optional[list[list[Any]]]:
     """Cask.GetCaskData + GetRecordsSQL (Cask:2251-2349)。`SELECT * … ORDER BY スタートNo` を 2 次元配列で。0 件・エラーは None。
 
@@ -419,6 +432,10 @@ def get_cask_data(book: Book, lot: str, ken: str) -> Optional[list[list[Any]]]:
                                f'AND "検査No" = ? COLLATE NOCASE ORDER BY "スタートNo"', (lot, ken))
             cols = [d[0] for d in cur.description]
             rows = [[_variant(cols[i], v) for i, v in enumerate(r)] for r in cur.fetchall()]
+            if not quirks.reproduce("B83") and set(_NAMED_ORDER) <= set(cols):
+                # 直した挙動: VBA が決め打ちしている位置(3 = スタートNo、4 = エンドNo)に列名で並べ直す
+                idx = [cols.index(n) for n in _NAMED_ORDER]
+                rows = [[row[i] for i in idx] for row in rows]
     except (datasource.DbMissing, sqlite3.Error) as e:
         book.fx.msg("GetRecordsSQL エラー：" + "\r\n" + str(e), flow.ERROR, "Cask:2346")
         return None

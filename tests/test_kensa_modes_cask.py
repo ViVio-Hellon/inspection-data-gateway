@@ -53,9 +53,20 @@ class CaskSheetTest(unittest.TestCase):
         self.assertEqual(fx.logs[1].path.split("\\")[-1], "LVC_Log")
         b.user_edit(7, 4, "DT10002+0000035.599M")
         self.assertEqual(ws.get(7, 5), "×")
-        # 3 点のとき厚3 の判定の後は H 列(狭めた列)へ移る(KySh Case 2 To 8)
+        # 決定 D14(W18): 3 点のとき厚3 の後は、巾丈測定 OFF なら次の行の厚1(VBA は保護した H 列へ移っていた)
+        b.cask.inspection = "OFF"
         b.user_edit(7, 6, "DT10002+0000036.000M")
-        self.assertEqual(b.active_cell, (7, 8))
+        self.assertEqual(b.active_cell, (8, 2))
+        # 巾丈測定 ON なら幅1
+        b.cask.inspection = "ON"
+        b.user_edit(8, 6, "DT10002+0000036.000M")
+        self.assertEqual(b.active_cell, (8, 11))
+
+    def test_four_points_after_thickness4(self) -> None:
+        b = cask_book(count_st="4")
+        b.cask.inspection = "OFF"
+        b.user_edit(7, 8, "DT10002+0000036.000M")
+        self.assertEqual(b.active_cell, (8, 2))
 
     def test_manual_thickness_is_erased(self) -> None:   # Cask:63-66 厚欄の手入力は消す
         b = cask_book()
@@ -232,6 +243,10 @@ class PackDbTest(unittest.TestCase):
         b = self.form("1", "1")
         cask.add_cask_labels(b, "H473C51", "H451076")
         self.assertEqual(b.cask.labels[0], "No1:22～2026/02/24 8:58:42")
+        quirks.set_for_test({"B83": "fix"})                   # 直すと列名で読む → スタートNo～エンドNo
+        cask.add_cask_labels(b, "H473C51", "H451076")
+        self.assertRegex(b.cask.labels[0], r"^No1:\d+～\d+$")
+        quirks.set_for_test(None)
         ws = b.ws(sh.CASK)
         ws.set(47, 2, 36.0)                                  # A47 = 41
         self.assertFalse(cask.check_cask_end_no(b, "H473C51", "H451076"))

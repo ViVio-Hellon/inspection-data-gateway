@@ -111,16 +111,22 @@ def read_lot(lot_no: str, *, dbflag: str = "", facility: str = "", ken_no: str =
     r = lotmod.arrbox("SIKALOTNOW", lot_no, "Record", dbflag)
     lv.messages += f.messages + r.messages
     lv.data = quality.LotData(f.value, r.value)
-    lv.ken_no = ken_no
-    if lv.ken_no == "":
-        # LSelect と同じ: SIKAHIKINOW の 検査番号、無ければ SIKALOTNOW の 検査番号(FormRelat / layout.lselect)
-        hf = lotmod.arrbox("SIKAHIKINOW", "", "Fields", dbflag)
-        hr = lotmod.arrbox("SIKAHIKINOW", lot_no, "Record", dbflag)
-        if hr.value and hf.value:
-            lv.ken_no = _s(quality.cell(hr.value[0], quality.col_of(hf.value, "検査番号")))
-        elif lv.data.records and lv.data.fields:
-            lv.ken_no = lv.data.value("検査番号")
+    lv.ken_no = ken_no or ken_no_of(lot_no, lv.data, dbflag)
     return lv
+
+
+def ken_no_of(lot_no: str, data: "quality.LotData", dbflag: str = "") -> str:
+    """ロットの検番。LSelect と同じ: SIKAHIKINOW の 検査番号、無ければ SIKALOTNOW の 検査番号(FormRelat / layout.lselect)。
+
+    検査画面のロット登録でも、歪公差(DistArray)をこの検番で引く(決定 D15 / W16)。
+    """
+    hf = lotmod.arrbox("SIKAHIKINOW", "", "Fields", dbflag)
+    hr = lotmod.arrbox("SIKAHIKINOW", lot_no, "Record", dbflag)
+    if hr.value and hf.value:
+        return _s(quality.cell(hr.value[0], quality.col_of(hf.value, "検査番号")))
+    if data is not None and data.records and data.fields:
+        return _s(data.value("検査番号"))
+    return ""
 
 
 def allocations(store: LocalStore, lv: LotView) -> tuple[str, list[list[Any]]]:

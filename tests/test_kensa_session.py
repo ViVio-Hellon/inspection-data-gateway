@@ -369,3 +369,38 @@ class HistoryRestoreTest(SessionBase):
         self.ok(self.s.start())
         r = self.s.history_restore(99)
         self.assertIsNotNone(r.stop)
+
+
+class SameToleranceAsQualityScreenTest(SessionBase):
+    """決定 D15(W16): ロット登録の歪公差(DistArray)も、品質基準画面と同じくロットの検番で引く。"""
+
+    def test_register_uses_lot_ken_no(self) -> None:
+        from ufkensa.kensa import quality
+        from ufkensa.kensa.quality_session import ken_no_of
+        seen = []
+        real = quality.dist_array
+
+        def spy(lot_no, ken_no, *a, **k):
+            seen.append((lot_no, ken_no))
+            return real(lot_no, ken_no, *a, **k)
+
+        with mock.patch.object(quality, "dist_array", spy):
+            self.register()
+        self.assertTrue(seen)
+        lot_data = quality.LotData(*[None] * 2)
+        self.assertEqual(seen[0], (LOT, ken_no_of(LOT, lot_data)))
+        self.assertNotEqual(seen[0][1], "")
+
+    def test_ken_no_changes_the_table(self) -> None:
+        # 検番 K のロット: 検番なしだと設備ｺｰｽ(厚板QP)で引いていた → 検番で薄板QP
+        from ufkensa.kensa import lot as lotmod, quality
+        from ufkensa.kensa.quality_session import ken_no_of
+        lot = "N7180C0"
+        data = quality.LotData(lotmod.arrbox("SIKALOTNOW", "板", "Fields", "").value,
+                               lotmod.arrbox("SIKALOTNOW", lot, "Record", "").value)
+        ken = ken_no_of(lot, data)
+        self.assertTrue(ken.startswith("K"))
+        old = quality.dist_array(lot, "", quality.hiki_arr_create(lot), data).kousa
+        new = quality.dist_array(lot, ken, quality.hiki_arr_create(lot), data).kousa
+        self.assertEqual(old[0][6], "厚板QP")
+        self.assertEqual(new[0][6], "薄板QP")

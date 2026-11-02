@@ -358,7 +358,11 @@ class Session:
                                    hooks.arrbox(st, "SIKALOTNOW.accdb", st.lot, "Record"))
         qp = None
         try:
-            qp = quality.dist_array(st.lot, st.ken_no_caption, quality.hiki_arr_create(st.lot), lot_data)
+            # 決定 D15(W16): VBA はここで検番がまだ空(LSelect が後で入れる)のまま引いていた。
+            # 品質基準画面と同じく、ロットの検番で引く。
+            from .quality_session import ken_no_of
+            ken = st.ken_no_caption or ken_no_of(st.lot, lot_data, st.dbflag)
+            qp = quality.dist_array(st.lot, ken, quality.hiki_arr_create(st.lot), lot_data)
             env.messages.extend(qp.messages)
             for k, v in qp.uf1.items():
                 wiring.put(st, k, v)
