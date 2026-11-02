@@ -23,6 +23,12 @@ NAMES = ("品質基準", "伝送用ファイル", "SIKALOTNOW", "SIKAHIKINOW", "
 _built: Optional[Path] = None
 
 
+def file_name(name: str) -> str:
+    """基準データの DB 名 → ファイル名(仕掛は SIKALOT.sqlite3 など。paths.DB_FILES と同じ)。"""
+    f = paths.DB_FILES.get(name, ("", ""))[1]
+    return f if f and "\\" not in f else f"{name}.sqlite3"
+
+
 def build() -> Path:
     """基準データの .sqlite3 を作る(1 回だけ)。置いたフォルダを返す。"""
     global _built
@@ -30,7 +36,7 @@ def build() -> Path:
         return _built
     out = Path(tempfile.mkdtemp(prefix="ufkensa_kensa_db_"))
     for name in NAMES:
-        importer.import_tsv_dir(FIXTURES / name, out / f"{name}.sqlite3")
+        importer.import_tsv_dir(FIXTURES / name, out / file_name(name))
     _built = out
     return out
 

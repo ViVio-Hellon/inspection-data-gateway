@@ -5,7 +5,7 @@
 
 - 取り込むと、表の行の順は Access の返却順のまま入る(VBA の「最初に一致した行」を同じにするため)
 - 書き切ってから差し替える(`<名前>.sqlite3.tmp` → 前のものは `.bak` に退ける)。読みかけの PC に書きかけを見せない
-- 仕掛(SIKA*NOW)は上流が毎時作り直す。上流が .sqlite3 を出すようになるまでは、ここで取り込み直す
+- 仕掛(SIKALOT / SIKAHIKI / SIKAODR)は上流が SQLite で毎時作り直すので、ここでは取り込まない
 """
 from __future__ import annotations
 
@@ -21,7 +21,8 @@ from . import paths
 log = get_logger("kensa.importing")
 
 #: 取り込む DB(VBA が読み書きしていた Access)。梱包検査ﾃﾞｰﾀ は後日受領(04 の資料)
-TARGETS: tuple[str, ...] = ("SIKALOTNOW", "SIKAHIKINOW", "SIKAODRNOW", "SIKACOMP", "SIKATWOYEAR", "品質基準", "伝送用ファイル",
+#: 仕掛の SIKALOT / SIKAHIKI / SIKAODR は上流が SQLite で作るので取り込まない
+TARGETS: tuple[str, ...] = ("SIKACOMP", "SIKATWOYEAR", "品質基準", "伝送用ファイル",
                             "梱包検査ﾃﾞｰﾀ")
 
 

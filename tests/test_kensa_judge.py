@@ -570,7 +570,7 @@ class PackagingTest(QuirkCase):
         con.execute("INSERT INTO 注意_包装仕様 (包装仕様NO, 形状, コメント) VALUES ('ZZ', '板', '別の仕様')")
         con.commit()
         con.close()
-        con = sqlite3.connect(self.tmp / "SIKAODRNOW.sqlite3")
+        con = sqlite3.connect(self.tmp / "SIKAODR.sqlite3")
         con.execute('CREATE TABLE 仕掛 ("受注番号","包装仕様NO","用途ｺｰﾄﾞ","受注材質","受注調質","納入先名称","取引先名称")')
         con.execute("INSERT INTO 仕掛 VALUES ('ORD1','P1','R115','52S','H34','ﾆｯｼｬ','ﾄﾘ')")
         con.commit()
@@ -669,7 +669,7 @@ class PackagingTest(QuirkCase):
         self.assertEqual((out.msg_errors, out.sounds), ([], []))
 
     def test_materials_db_missing(self) -> None:
-        os.remove(self.tmp / "SIKAODRNOW.sqlite3")
+        os.remove(self.tmp / "SIKAODR.sqlite3")
         out = self.msgbox(flag=True)
         # オフラインでは MainPath = NextPath なので Case FPath = NextPath で止まる
         self.assertEqual([m.text for m in out.messages], ["日稲:SIKAODRNOW.accdbがありません_MaterialsMsgBox"])

@@ -75,9 +75,10 @@ BY_KEY = {i.key: i for i in ITEMS}
 
 #: DB ファイル(D4: すべて SQLite)。場所 → ファイル名
 DB_FILES = {
-    "SIKALOTNOW": ("main", "SIKALOTNOW.sqlite3"),
-    "SIKAHIKINOW": ("main", "SIKAHIKINOW.sqlite3"),
-    "SIKAODRNOW": ("main", "SIKAODRNOW.sqlite3"),
+    # 仕掛の3つは上流が SQLite で作る(VBA の SIKALOTNOW.accdb → SIKALOT.sqlite3 など)。列名は同じ
+    "SIKALOTNOW": ("main", "SIKALOT.sqlite3"),
+    "SIKAHIKINOW": ("main", "SIKAHIKI.sqlite3"),
+    "SIKAODRNOW": ("main", "SIKAODR.sqlite3"),
     "SIKACOMP": ("next", "SIKACOMP.sqlite3"),
     "SIKATWOYEAR": ("next", "SIKATWOYEAR.sqlite3"),     # 仕掛_完了2年(Input:293。VBA は NextPath から読む)
     "品質基準": ("quality", "品質基準.sqlite3"),

@@ -579,7 +579,7 @@ class AtuOpSelectRealHooksTest(unittest.TestCase):
 
     def test_missing_both(self) -> None:
         from datetime import datetime
-        (self.folder / "SIKAHIKINOW.sqlite3").unlink()
+        (self.folder / "SIKAHIKI.sqlite3").unlink()
         s, texts = self.run_atu(datetime(2026, 11, 2, 10, 30, 0))
         # 列名の Arrbox(6221)が「…_ReadCheck_Arrbox」、行は自前の判定で「…_ReadCheckAtu_OPselect」→ Exit Sub
         self.assertEqual(texts, ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox",

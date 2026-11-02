@@ -36,9 +36,9 @@ class _Dirs:
         src = kensa_fixture.build()
         for name in ("SIKALOTNOW", "SIKAHIKINOW", "SIKAODRNOW"):
             if main:
-                shutil.copy2(src / f"{name}.sqlite3", self.main)
+                shutil.copy2(src / kensa_fixture.file_name(name), self.main)
             if nxt:
-                shutil.copy2(src / f"{name}.sqlite3", self.next)
+                shutil.copy2(src / kensa_fixture.file_name(name), self.next)
         shutil.copy2(src / "伝送用ファイル.sqlite3", self.main)
         paths.set_mode(paths.OFFLINE)
         user_settings.save(paths.KEY_PATHS, {paths.OFFLINE: {
@@ -49,10 +49,10 @@ class _Dirs:
         (self.main / lot.PLEASE_WAIT).write_text("x")
 
     def remove(self, where: Path, name: str) -> None:
-        (where / f"{name}.sqlite3").unlink()
+        (where / kensa_fixture.file_name(name)).unlink()
 
     def delete_lot(self, where: Path, name: str, lot_no: str) -> None:
-        with sqlite3.connect(where / f"{name}.sqlite3") as c:
+        with sqlite3.connect(where / kensa_fixture.file_name(name)) as c:
             c.execute('DELETE FROM "仕掛" WHERE "ﾛｯﾄ番号" = ?', (lot_no,))
 
     def cleanup(self) -> None:
@@ -109,7 +109,7 @@ class FileDesignationTest(_Base):
         self.assertEqual(logs, [lot.LogLine("PLEASE WAIT.txt_ﾁｪｯｸ*在る", "", paths.get("next"))])
 
     def test_read_check(self) -> None:
-        self.assertTrue(lot.read_check(str(self.d.main / "SIKALOTNOW.sqlite3"), 1))
+        self.assertTrue(lot.read_check(str(self.d.main / "SIKALOT.sqlite3"), 1))
         self.assertFalse(lot.read_check(str(self.d.main / "無い.sqlite3"), 1))
         self.assertFalse(lot.read_check(str(self.d.main), 1))        # フォルダはファイルではない
         self.assertTrue(lot.read_check(str(self.d.main), 2))
@@ -281,7 +281,7 @@ class AccReflecTest(_Base):
 
     def test_all_108_lots(self) -> None:
         # 実データ: 見つかるのは ﾛｯﾄ番号 が一致し ｵｰﾀﾞｰ板丈 が Null でも '0' でもない行があるロット。採用は先頭行
-        with sqlite3.connect(self.d.main / "SIKALOTNOW.sqlite3") as c:
+        with sqlite3.connect(self.d.main / "SIKALOT.sqlite3") as c:
             rows = c.execute('SELECT rowid, "ﾛｯﾄ番号", "ｵｰﾀﾞｰ板丈", "製造板厚", "BOX実績_板厚", "設計_設備ｺｰｽ" '
                              'FROM "仕掛" ORDER BY rowid').fetchall()
         lots = sorted({r[1] for r in rows})
@@ -481,7 +481,7 @@ class HistorySaveTest(_Base):
         self.assertEqual(len(res.new_rows), 3)
 
     def test_odr_empty_is_type_mismatch(self) -> None:
-        with sqlite3.connect(self.d.main / "SIKAODRNOW.sqlite3") as c:
+        with sqlite3.connect(self.d.main / "SIKAODR.sqlite3") as c:
             c.execute('DELETE FROM "仕掛"')
         with self.assertRaises(vbx.TypeMismatch) as cm:
             lot.history_save(self.ph(), _sheet(_hrow("H2500K0")), lot.HistoryEnv(now=T_NORMAL))

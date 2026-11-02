@@ -53,7 +53,7 @@ class _DbCopy(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def sql(self, db: str, stmt: str, *args: Any) -> None:
-        path = self.tmp / f"{db}.sqlite3"
+        path = self.tmp / kensa_fixture.file_name(db)
         before = path.stat().st_mtime_ns
         with sqlite3.connect(path) as c:
             c.execute(stmt, args)
@@ -63,7 +63,7 @@ class _DbCopy(unittest.TestCase):
 
     def move_to_end(self, db: str, table: str, col: str, value: str) -> None:
         """その行を取り出して末尾に入れ直す(取り込み順 = rowid が最後になる)。"""
-        path = self.tmp / f"{db}.sqlite3"
+        path = self.tmp / kensa_fixture.file_name(db)
         with sqlite3.connect(path) as c:
             rows = c.execute(f'SELECT * FROM "{table}" WHERE "{col}" = ?', (value,)).fetchall()
             c.execute(f'DELETE FROM "{table}" WHERE "{col}" = ?', (value,))
