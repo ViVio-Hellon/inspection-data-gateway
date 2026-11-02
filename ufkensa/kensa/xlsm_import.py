@@ -2,7 +2,7 @@
 
 ラインPCには追加ライブラリを入れないので、xlsm(zip + XML)を標準ライブラリだけで読む。
 
-- 取り込むシート: 保存用・耳用・Lot情報履歴・印刷履歴管理・校正記録・Accesslog と、
+- 取り込むシート: 保存用・耳用・Lot情報履歴・印刷履歴管理・校正記録・品証検証・Accesslog と、
   ライン名の付くシート(作業保存_<L>・WorkerTime_<L>・検査員_<L>・Daily_<L>・異常ロット用_<L>・不良要因印刷_<L>・
   印刷用_<L>・梱包枚数計算_<L>)、特殊検査の作業中保存
 - 値はセルの値をそのまま(文字は文字、数は数)。**日付・時刻の書式のセルは VBA の CStr(Date) と同じ文字**
@@ -25,7 +25,7 @@ NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
       "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
       "rel": "http://schemas.openxmlformats.org/package/2006/relationships"}
 
-FIXED_SHEETS = ("保存用", "耳用", "Lot情報履歴", "印刷履歴管理", "校正記録", "Accesslog",
+FIXED_SHEETS = ("保存用", "耳用", "Lot情報履歴", "印刷履歴管理", "校正記録", "品証検証", "Accesslog",
                 "全ヵ所作業中保存", "H494作業中保存", "ｷｬｽｸ作業中保存")
 LINE_PREFIXES = ("作業保存_", "WorkerTime_", "検査員_", "Daily_", "異常ロット用_", "不良要因印刷_", "印刷用_",
                  "梱包枚数計算_")

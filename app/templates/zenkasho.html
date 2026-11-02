@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}全ヵ所・H494 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/zenkasho.css') }}">
+<div class="zk" id="zk">
+  <!-- 上: 作業の切替(選んだものを常に見せる)と、止まっているときの帯 -->
+  <div class="zk__top">
+    <div class="zk-modes" id="modes" role="tablist" aria-label="作業選択"></div>
+    <span class="zk-line" id="lineName"></span>
+    <p class="zk-notice" id="notice" hidden></p>
+  </div>
+  <div class="zk-stopped" id="stopped" hidden role="alert">
+    <span>自動判定が止まっています(VBA の EnableEvents = False)。入力しても判定されません。</span>
+    <button class="btn btn--run" type="button" id="resumeBtn2">処理再開</button>
+  </div>
+
+  <div class="zk__body">
+    <!-- 左: ロット・検査員・MINMAX と検査法・検入高さ・シート発行(VBA のフォーム) -->
+    <div class="zk__col">
+      <section class="card">
+        <header><h3>ロット</h3><span class="lv lv--ng" id="h494Badge" hidden>幅300未満(H494)</span></header>
+        <div class="pad zk-form">
+          <label>LotNo<input class="input" id="fLot" maxlength="7" autocomplete="off" placeholder="7桁"></label>
+          <label>検査番号<input class="input" id="fKenNo" autocomplete="off"></label>
+          <label>用途ｺｰﾄﾞ<input class="input" id="fYouto" autocomplete="off"></label>
+          <label>検査員名<input class="input" id="fKname" autocomplete="off"></label>
+          <button class="btn" type="button" id="weightBtn" title="重量からゲージの要否を出す(Frame4 のクリック)">重量の確認</button>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>MIN / MAX と転送</h3></header>
+        <div class="pad zk-form">
+          <div class="zk-pair">
+            <label>Start板番号<input class="input" id="fMin" inputmode="numeric" autocomplete="off"></label>
+            <label>End板番号<input class="input" id="fMax" inputmode="numeric" autocomplete="off"></label>
+          </div>
+          <div class="zk-seg" id="methods" role="radiogroup" aria-label="検査法"></div>
+          <button class="btn btn--run" type="button" id="transferBtn">決定(最大最少 → Aインプット)</button>
+          <a class="btn btn--nav" id="ainputLink" href="/ainput" hidden>Aインプットへ</a>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>検入高さ</h3></header>
+        <div class="pad zk-form">
+          <div class="zk-seg" id="yama" role="radiogroup" aria-label="山数選択"></div>
+          <div class="zk-kenh" id="kenh"></div>
+          <p class="muted zk-formula" id="formula"></p>
+          <button class="btn btn--commit" type="button" id="heightBtn">高さを記録(AD1:AD3)</button>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>シート</h3></header>
+        <div class="pad">
+          <div class="btn-row">
+            <button class="btn btn--danger" type="button" id="newBtn">ｼｰﾄ発行(新規)</button>
+            <button class="btn" type="button" id="resumeBtn">処理再開</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 中央: シートの上部(公差など)と測定の表 -->
+    <div class="zk__col zk__center">
+      <section class="card">
+        <div class="pad"><dl class="zk-head" id="head"></dl></div>
+      </section>
+      <section class="card zk-tablecard">
+        <div class="zk-tablewrap" id="tableWrap">
+          <table class="zk-table" id="sheet" aria-label="測定値"></table>
+        </div>
+      </section>
+      <div class="zk-flash" id="flash" hidden></div>
+    </div>
+
+    <!-- 右: 次に測る欄・入力・操作 -->
+    <div class="zk__col">
+      <div class="next" id="nextBox"><small>次に入力する欄</small><b id="nextName">-</b><small id="nextHint"></small></div>
+      <section class="card">
+        <header><h3>測定値の入力</h3></header>
+        <div class="pad">
+          <input class="input zk-meas" id="measIn" autocomplete="off" placeholder="測定器から自動で入ります" aria-label="測定値(伝送文字列)">
+          <p class="muted">表のセルを押すと、そこが入力先になります。手で入れるときは値を打って Enter。</p>
+          <div class="btn-row">
+            <button class="btn" type="button" id="eraseBtn">この欄を消す</button>
+            <button class="btn" type="button" id="emptyBtn">厚の空き欄へ</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>印刷・保存</h3></header>
+        <div class="pad">
+          <div class="btn-row" id="prints"></div>
+          <ul class="zk-files" id="reports"></ul>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>記録</h3></header>
+        <div class="pad">
+          <ul class="log-lines" id="recent"></ul>
+          <p class="muted zk-pending" id="pending"></p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/zenkasho.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}キャスク検査 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/kensa.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cask.css') }}">
+<div class="cask" id="cask">
+  <!-- 上: ロット・寸法と公差・測定点数・ゼロ校正・対角公差と入力必須欄 -->
+  <div class="cask__top">
+    <section class="card">
+      <header><h3>ロット</h3><span class="lv" id="lineLv"></span></header>
+      <div class="pad">
+        <div class="inbox"><label for="lotIn">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
+        <div class="inbox"><label for="f_ken_no">検査番号</label><input class="input" id="f_ken_no" data-field="ken_no" autocomplete="off"></div>
+        <dl class="kv-grid" id="lotKv"></dl>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>寸法・公差</h3></header>
+      <div class="pad">
+        <table class="tol" id="tolTable" aria-label="寸法と公差"></table>
+        <p class="muted small">欄を押してから値を入れて Enter(ロットが読めないとき)</p>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>測定点数</h3></header>
+      <div class="pad">
+        <div class="count"><b id="countSt">-</b><small>点</small></div>
+        <p class="muted small">厚 100mm 未満は 3 点、100mm 以上は 4 点</p>
+        <div class="btn-row"><button class="btn" type="button" id="inspBtn">巾丈測定</button><span class="lv" id="inspLv">OFF</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>ゼロ校正</h3><span class="lv" id="zeroLv"></span></header>
+      <div class="pad">
+        <div class="inbox"><input class="input" id="zeroIn" autocomplete="off" placeholder="ゼロ点を測ると入ります" aria-label="ゼロ校正(伝送文字列)"></div>
+        <dl class="kv-grid" id="zeroKv"></dl>
+        <div class="btn-row"><button class="btn btn--sm" type="button" id="proofBtn">校正読み込み</button></div>
+      </div>
+    </section>
+    <section class="card">
+      <header><h3>入力必須欄</h3></header>
+      <div class="pad req">
+        <label>対角公差<input class="input" id="f_tai" data-field="tai" autocomplete="off" placeholder="空なら判定しません"></label>
+        <label>検査員名<input class="input" id="f_kname" data-field="kname" autocomplete="off"></label>
+        <label>ﾗｲﾝ.ｺﾝﾍﾞｯｸｽNO<input class="input" id="f_cno" data-field="cno" autocomplete="off"></label>
+        <label>ﾗｲﾝ ﾏｲｸﾛNO<input class="input" id="f_mno" data-field="mno" autocomplete="off"></label>
+        <label>シリアルNO<input class="input" id="f_seri_no" data-field="seri_no" autocomplete="off"></label>
+      </div>
+    </section>
+  </div>
+
+  <!-- 中央: 700 枚の表 / 右: 次に測る・入力・操作 -->
+  <div class="cask__main">
+    <section class="card cask__sheet">
+      <header><h3>キャスク検査</h3><span class="lv lv--info" id="rowsLv"></span></header>
+      <div class="cask__scroll" id="scroll">
+        <table class="cgrid" id="caskGrid" aria-label="キャスク検査の測定値"></table>
+      </div>
+      <div class="closed" id="closed" hidden>
+        <p id="closedText">キャスク検査を開いています…</p>
+        <div class="btn-row"><button class="btn btn--commit" type="button" id="openBtn">開く</button><a class="btn" href="/kensa">検査画面へ</a></div>
+      </div>
+    </section>
+
+    <div class="cask__side">
+      <div class="banner" id="eventsBanner" hidden>
+        <b>自動判定が止まっています</b>
+        <small>数でない文字が入ったため(VBA の EnableEvents)。「処理再開」で戻ります。</small>
+        <button class="btn btn--commit" type="button" id="resumeBtn">処理再開</button>
+      </div>
+      <div class="next" id="nextBox"><small>次に入力するセル</small><b id="nextName">-</b><small id="nextHint"></small></div>
+      <div class="flash" id="flash" hidden><span id="flashMark"></span><small id="flashText"></small></div>
+      <section class="card">
+        <header><h3>測定値の入力</h3></header>
+        <div class="pad">
+          <div class="inbox"><input class="input" id="measIn" autocomplete="off" placeholder="測定器から自動で入ります" aria-label="測定値(伝送文字列)"></div>
+          <p class="muted small">表のセルを押すとそのセルへ入ります。外観などは文字を入れて Enter。</p>
+          <ul class="log-lines" id="recent"></ul>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>転送(梱包の板番号)</h3></header>
+        <div class="pad">
+          <div class="pair">
+            <label>Start板番号<input class="input" id="f_min_text" data-field="min_text" autocomplete="off" inputmode="numeric"></label>
+            <label>End板番号<input class="input" id="f_max_text" data-field="max_text" autocomplete="off" inputmode="numeric"></label>
+          </div>
+          <button class="btn btn--commit wide" type="button" id="transferBtn">決定(転送)</button>
+          <ul class="labels" id="labels"></ul>
+          <dl class="kv-grid" id="mmKv"></dl>
+          <a class="btn wide" href="/ainput" id="ainLink" hidden>Aインプットへ</a>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>操作</h3></header>
+        <div class="pad">
+          <div class="btn-grid">
+            <button class="btn btn--commit" type="button" id="printBtn">印刷</button>
+            <button class="btn" type="button" id="saveBtn">ｻｰﾊﾞｰ保存</button>
+            <button class="btn" type="button" id="backBtn">Back space</button>
+            <button class="btn" type="button" id="newBtn">ｷｬｽｸ用ｼｰﾄ発行</button>
+          </div>
+          <a class="btn wide" id="reportLink" target="_blank" rel="noopener" hidden>帳票を開く(印刷)</a>
+          <p class="muted small" id="savedNote"></p>
+          <div class="btn-row"><button class="btn btn--sm" type="button" id="closeBtn">閉じる(検査へ戻る)</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/cask.js') }}"></script>
+{% endblock %}
