@@ -951,7 +951,7 @@ def pdf_folders(line: str, now: datetime) -> list[str]:
 
 
 # ------------------------------------------------------------------
-# オーダーNo・包装仕様(OrdNoOpen / OrdNoCB_Change / PackingNoCheck / UF_PackNo)
+# オーダーNo(OrdNoOpen / OrdNoCB_Change)。包装仕様書の確認(PackingNoCheck / UF_PackNo)は packing.py
 # ------------------------------------------------------------------
 def _hist_cols(hist: Sequence[Sequence[Any]], names: Sequence[str]) -> dict[str, int]:
     """Lot情報履歴 の 1 行目から列番号(1 始まり。無ければ 0 = VBA の未代入の Long)。同名なら後の列。"""
@@ -977,15 +977,6 @@ def _lot_eq(v: Any, lot: str) -> bool:
         return False
 
 
-def _hiki_key(v: Any) -> tuple[int, Any]:
-    """merge_sort2(引当No)の比較。Variant の数は文字より小さい(安定な並べ替え)。"""
-    if v is None:
-        return (0, 0.0)
-    if isinstance(v, (int, float)) and not isinstance(v, bool):
-        return (0, float(v))
-    return (1, str(v))
-
-
 def _lot_hits(hist: Sequence[Sequence[Any]], lot: str, cols: dict[str, int], take: Sequence[str]) -> list[list[Any]]:
     """`For i = LBound(Hist, 1) To UBound(Hist, 1)`(見出し行も対象)でロットが一致する行の、指定の列。"""
     if not hist:
@@ -1006,7 +997,8 @@ def ord_no_open(hist: Optional[Sequence[Sequence[Any]]], lot: str) -> Optional[l
     rows = _lot_hits(hist, lot, cols, ("ｵｰﾀﾞｰNo", "包装仕様NO", "引当NO"))
     if not rows:
         return None
-    rows.sort(key=lambda r: _hiki_key(r[2]))
+    from .packing import merge_sort2
+    rows = merge_sort2(rows, 3)                                        # 補助.merge_sort2(引当NO)
     return [cell_text(r[0]) for r in rows if cell_text(r[0]) != ""]
 
 
@@ -1068,104 +1060,6 @@ def _pkg_spec(n: str) -> Optional[tuple[list[str], Optional[list[list[str]]]]]:
     if fields is None:
         return None
     return fields, rec
-
-
-def pack_folder() -> str:
-    """包装仕様書の画像の置き場所(`QualityPath & "包装仕様書"`。FormRelat:6714 / OutTolerance:524)。"""
-    return paths.join(paths.get("quality"), "包装仕様書")
-
-
-def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot: str,
-                     gaichu: Callable[[Sequence[Sequence[Any]], str, int], str],
-                     folder_files: Callable[[], Sequence[str]]) -> str:
-    """FormRelat.PackingNoCheck (FormRelat:6619-6760)。ロットの包装仕様書No のうち、画像フォルダにあるもの。
-
-    - 外注条件(QP.GaichuPackingNo)に当たればその No
-    - フォルダの各ファイル: 「.」が 7 文字目なら左 6 文字、それ以外はファイル名のまま。ロットの包装仕様NO の
-      どれかと一致したらそれ(**最後に一致したファイル**が残る。VBA は内側の For だけを抜ける)
-    - `folder_files()` はフォルダの並び順のファイル名。フォルダが無いと VBA は実行時エラー 76(呼び手へ OSError)
-    - VBA はデバッグ用の配列 PacN(1 To ファイル数) に入れていて、最初のファイルの「.」が 7 文字目でないと
-      PacN(0) で実行時エラー 9(IndexError)
-    """
-    if hist is None or lot == "":
-        return ""
-    cols = _hist_cols(hist, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO", "材質", "調質", "ｺｰｽ", "厚", "用途ｺｰﾄﾞ"))
-    g = gaichu(hist, lot, cols["ﾛｯﾄNo"])
-    if g != "":
-        return g
-    rows = _lot_hits(hist, lot, cols, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "包装仕様NO", "引当NO"))
-    if not rows:
-        return ""
-    files = list(folder_files())
-    found = ""
-    int_no = 0
-    for name in files:
-        pos_ext = name.rfind(".") + 1                      # InStrRev(名前, ".")
-        if pos_ext == 7:
-            int_no += 1
-            stem = vbx.left(name, 6)
-        else:
-            stem = name
-        if not 1 <= int_no <= len(files):                  # PacN(intNo) = …(ReDim PacN(1 To FileInt))
-            raise IndexError("実行時エラー '9': インデックスが有効範囲にありません。(PackingNoCheck の PacN)")
-        for r in rows:
-            try:
-                if vbx.compare_typed(r[2], stem, vbx.VAR, vbx.STR) == 0:
-                    found = stem
-                    break
-            except vbx.TypeMismatch:
-                pass
-    return found
-
-
-def list_pack_folder() -> list[str]:
-    """`fso.GetFolder(包装仕様書).Files` の並び(名前順とする。NTFS の並び)。無ければ OSError(実行時エラー 76)。"""
-    folder = paths.to_local(pack_folder())
-    if not folder.is_dir():
-        raise FileNotFoundError("実行時エラー '76': パスが見つかりません。" + str(folder))
-    return sorted((f.name for f in folder.iterdir() if f.is_file()), key=lambda n: n.upper())
-
-
-def pack_rows(hist: Optional[Sequence[Sequence[Any]]], lot: str) -> list[dict[str, str]]:
-    """UF_PackNo.UserForm_Activate (UF_PackNo:118-186)。引当No・オーダーNo・包装仕様書No(最大 5 行、引当No 順)。
-
-    VBA は配列を 5 行で作り、6 行目以降は On Error Resume Next で入らない(= 一致した先頭 5 行を並べ替える)。
-    """
-    if hist is None or lot == "":
-        return []
-    cols = _hist_cols(hist, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO"))
-    rows = _lot_hits(hist, lot, cols, ("ｵｰﾀﾞｰNo", "包装仕様NO", "引当NO"))[:5]
-    rows.sort(key=lambda r: _hiki_key(r[2]))
-    return [{"hiki": cell_text(r[2]), "ord": cell_text(r[0]), "pac": cell_text(r[1])} for r in rows]
-
-
-def pack_select(n: str) -> Optional[dict[str, str]]:
-    """FormRelat.PackSelect (FormRelat:6826-6873)。UF_PackNo の L1〜L5(包装仕様書No・梱包形態・梱包指定・特記1・2)。
-
-    伝送用ファイルが無い・列名が読めないときは None(L1〜L5 は空のまま)。一致するレコードが無いと VBA は
-    `Temp(1, …)` で実行時エラー(IndexError)。
-    """
-    spec = _pkg_spec(n)
-    if spec is None:
-        return None
-    fields, rec = spec
-    if rec is None:
-        raise IndexError("実行時エラー '13': 型が一致しません。(PackSelect: 包装仕様書№ " + n + " が PkgSpecData に無い)")
-    col = lambda name: rec[0][max(datasource.column_index(fields, name), 0)]   # noqa: E731
-    return {"L1": n, "L2": "梱包形態:" + col("梱包形態"), "L3": "梱包指定:" + col("梱包指定別"),
-            "L4": "特記1:" + col("タイトル"), "L5": "特記2:" + col("用途名")}
-
-
-def upper_part_messages(hist: Optional[Sequence[Sequence[Any]]], ord_no: str) -> list[Message]:
-    """UF_PackNo / JPGLoad の上部緩衝材の表示(MaterialsUpperPart の MsgBox。UF_PackNo:175-183)。"""
-    out: list[Message] = []
-    r1 = quality.materials_upper_part(ord_no, hist, False)
-    r2 = quality.materials_upper_part(ord_no, hist, True)
-    if r1 != "" and r1 != "一致なし":
-        out.append(Message(r1, INFO, source="UF_PackNo:179"))
-    if r1 == "アングル" and r2 != "" and r2 != "一致なし":
-        out.append(Message(r2, INFO, source="UF_PackNo:182"))
-    return out
 
 
 __all__ = ["SCALAR", "TAG_SCALAR", "put", "get", "all_controls", "to_uf1", "to_judge_form", "apply_judge",

@@ -248,9 +248,8 @@ class ConnectTest(ZenBase):
     """
 
     def new_session(self) -> zenkasho_session.ZenkashoSession:
-        self.ks = KensaState(line_name="LVC", lot="AAA0001")
-        return zenkasho_session.ZenkashoSession(self.store, now=self.clock, kensa_state=lambda: self.ks,
-                                                write_logs=False)
+        self.ks.lot = "AAA0001"
+        return super().new_session()
 
     def pack_folder(self, *names: str) -> Path:
         f = paths.to_local(packing.folder_path())
