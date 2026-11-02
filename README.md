@@ -42,6 +42,7 @@ Access からの取り込みには Microsoft Access Database Engine(ACE OLE DB 1
 | [docs/05_AccessDB調査.md](docs/05_AccessDB調査.md) | 受領した Access 5 ファイルの表・列と VBA の参照の突き合わせ |
 | [docs/06_意図した差異.md](docs/06_意図した差異.md) | VBA と意図して変えたところ |
 | [docs/07_ログ.md](docs/07_ログ.md) | ログの置き場所・名前・記録する内容 |
+| [docs/08_使い方.md](docs/08_使い方.md) | 切り替えの手順(入れる・設定・取り込み)と毎日の操作、困ったとき |
 | [tools/vba_verify/](tools/vba_verify/) | 実機確認マクロ(U1〜U12。Excel で1回動かして結果を送ってもらう) |
 | [docs/analysis/](docs/analysis/) | モジュール群ごとの詳細な解析レポート(行番号つき) |
 | [docs/foundation/](docs/foundation/) | 基盤の規約(複製元) |
