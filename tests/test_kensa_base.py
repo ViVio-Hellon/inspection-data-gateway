@@ -91,8 +91,9 @@ class QuirksTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             quirks.reproduce("B99")
 
-    def test_38_items(self) -> None:
-        self.assertEqual(len(quirks.TITLES), 38)
+    def test_81_items(self) -> None:
+        self.assertEqual(len(quirks.TITLES), 81)
+        self.assertEqual(list(quirks.TITLES), [f"B{i}" for i in range(1, 82)])
 
 
 class AdoFilterTest(unittest.TestCase):
