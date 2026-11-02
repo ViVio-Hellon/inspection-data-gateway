@@ -237,20 +237,16 @@ class PackDbTest(unittest.TestCase):
         self.assertEqual(self.rows("H473C51"), [(1, 10, 1)])  # スタートNo=1 なら他は削除
         self.assertEqual(len(self.rows("RX092D0")), 3)        # 他のロットはそのまま
 
-    def test_column_order_quirk(self) -> None:
-        # SELECT * の列順で [3],[4] を読む。受領 DB は LotNo,検査No,スタートNo,エンドNo,作業時間,管理番号 の順なので
-        # [3]=エンドNo、[4]=作業時間 になる(新しく見つけた不具合。VBA どおり)
+    def test_column_order_d18(self) -> None:
+        # 決定 D18: 列名で読む → 梱包範囲は「No1:スタートNo～エンドNo」(VBA は位置で読み、1列ずれていた)
         b = self.form("1", "1")
         cask.add_cask_labels(b, "H473C51", "H451076")
-        self.assertEqual(b.cask.labels[0], "No1:22～2026/02/24 8:58:42")
-        quirks.set_for_test({"B83": "fix"})                   # 直すと列名で読む → スタートNo～エンドNo
-        cask.add_cask_labels(b, "H473C51", "H451076")
-        self.assertRegex(b.cask.labels[0], r"^No1:\d+～\d+$")
-        quirks.set_for_test(None)
+        self.assertEqual(b.cask.labels, ["No1:1～22", "No2:23～29", "No3:30～33", "No4:34～38", "No5:39～41"])
         ws = b.ws(sh.CASK)
-        ws.set(47, 2, 36.0)                                  # A47 = 41
+        ws.set(47, 2, 36.0)                                  # A47 = 41 = DB の最後のエンドNo
+        self.assertTrue(cask.check_cask_end_no(b, "H473C51", "H451076"))
+        ws.set(48, 2, 36.0)                                  # A48 = 42 → 合わない
         self.assertFalse(cask.check_cask_end_no(b, "H473C51", "H451076"))
-        self.assertIn("DB エンドNo（最終）：46077", b.fx.messages[-1].text)   # CLng(日時) = シリアル値
         b2 = self.form("1", "1")
         self.assertFalse(cask.check_cask_end_no(b2, "NOLOT", "X"))
         self.assertTrue(b2.fx.messages[-1].text.startswith("DBにデータが見つかりません。"))
@@ -314,7 +310,7 @@ class SaveTest(unittest.TestCase):
         self.assertTrue(copies[1].endswith("【梱包】キャスク\\2026.10\\20261030_H3084S0.xlsx"))
         hin = plan.sheets["品証ｺﾋﾟ-用"]
         self.assertEqual((hin["D1"], hin["E1"], hin["E2"], hin["M1"]), ("板番号", "厚1", 36.1, "対角線差"))
-        self.assertEqual(hin["B12"], "梱包No1:3～2026/06/09 10:37:37")
+        self.assertEqual(hin["B12"], "梱包No1:1～3")          # 決定 D18
         self.assertNotIn("キャスク保存", b.extra)
 
     def test_required_fields(self) -> None:
@@ -337,14 +333,17 @@ class SaveTest(unittest.TestCase):
         b = cask_book()
         f = b.cask
         f.lot_box, f.ken_no, f.kname, f.cno, f.mno, f.seri_no = "H3084S0", "H651019", "検査員01", "C1", "M1", "S9"
-        b.ws(sh.CASK).set(21, 2, 36.0)                      # A21 = 15(DB の最後の [4] は日時なので一致しない)
+        b.ws(sh.CASK).set(22, 2, 36.0)                      # A22 = 16、DB の最後のエンドNo は 15 → 一致しない
         res = cask.print_and_save(b)
         self.assertNotIsInstance(res, flow.Question)
         self.assertTrue(res.messages[-1].text.startswith("エンドNoが一致しません。"))
         self.assertEqual(f.tag, "off")
+        b.ws(sh.CASK).set(22, 2, None)                      # A21 = 15 で一致(決定 D18)→ 印刷するか聞く
+        b.ws(sh.CASK).set(21, 2, 36.0)
+        self.assertIsInstance(cask.print_and_save(b), flow.Question)
         job = cask.print_setup(b)
         self.assertIn("*厚公差：35.600～36.400", job.right_header)
-        self.assertTrue(job.left_footer.startswith('&"Meiryo UI"&10梱包No1_3～2026/06/09 10:37:37'))
+        self.assertTrue(job.left_footer.startswith('&"Meiryo UI"&10梱包No1_1～3'))
         self.assertEqual(job.print_area, "$A$6:$AB$21")
 
 

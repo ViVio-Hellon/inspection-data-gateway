@@ -416,15 +416,15 @@ def _vstr(v: Any) -> str:
     return vbx.cstr(v)
 
 
-#: B83 を直すときの列の並び(VBA の [3] = スタートNo、[4] = エンドNo に合う並び)
+#: 決定 D18 の列の並び(VBA の [3] = スタートNo、[4] = エンドNo に合う並び)
 _NAMED_ORDER = ("管理番号", "LotNo", "検査No", "スタートNo", "エンドNo", "作業時間")
 
 
 def get_cask_data(book: Book, lot: str, ken: str) -> Optional[list[list[Any]]]:
     """Cask.GetCaskData + GetRecordsSQL (Cask:2251-2349)。`SELECT * … ORDER BY スタートNo` を 2 次元配列で。0 件・エラーは None。
 
-    配列の列は **表の列の並び**(VBA は 3 = スタートNo、4 = エンドNo と決めて読む。受領 DB では
-    LotNo, 検査No, スタートNo, エンドNo, 作業時間, 管理番号 の順なので 3 = エンドNo、4 = 作業時間 になる)。
+    VBA は 3 = スタートNo、4 = エンドNo と位置で決めて読む。受領 DB の並び(LotNo, 検査No, スタートNo, エンドNo,
+    作業時間, 管理番号)だと1列ずれるので、決定 D18 で列名で並べ直す(梱包範囲は「No1:スタートNo～エンドNo」)。
     """
     try:
         with datasource.open_ro(_db_path("伝送用ファイル")) as conn:
@@ -432,8 +432,8 @@ def get_cask_data(book: Book, lot: str, ken: str) -> Optional[list[list[Any]]]:
                                f'AND "検査No" = ? COLLATE NOCASE ORDER BY "スタートNo"', (lot, ken))
             cols = [d[0] for d in cur.description]
             rows = [[_variant(cols[i], v) for i, v in enumerate(r)] for r in cur.fetchall()]
-            if not quirks.reproduce("B83") and set(_NAMED_ORDER) <= set(cols):
-                # 直した挙動: VBA が決め打ちしている位置(3 = スタートNo、4 = エンドNo)に列名で並べ直す
+            if set(_NAMED_ORDER) <= set(cols):
+                # 決定 D18: 列名で読む。VBA が決め打ちしている位置(3 = スタートNo、4 = エンドNo)に並べ直す
                 idx = [cols.index(n) for n in _NAMED_ORDER]
                 rows = [[row[i] for i in idx] for row in rows]
     except (datasource.DbMissing, sqlite3.Error) as e:
