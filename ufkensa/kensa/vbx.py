@@ -27,6 +27,16 @@ from typing import Any, Optional, Union
 Number = Union[int, float]
 
 
+#: U1(実機確認待ち)の扱いを 1 か所で決めるスイッチ。対象は「コントロールの値・Variant・String の
+#: **数にならない文字列(空文字を含む)** と数との比較」(例 `UF1.Yama = 3` の Yama が ""、`Select Case Rig` の
+#: Rig が "S"、`.ZS = 0` の ZS が "")。
+#:   False(既定)… エラーにしない。Variant の規則どおり「数 < 文字列」で比べる(= は偽)。
+#:                 本番で動いている箇所が多数ある(空欄のまま数と比べても止まっていない)ため、こちらを既定にした
+#:   True       … VBA の比較演算子の表どおり型エラー 13(`TypeMismatch`)
+#: 見る所: grid.variant_cmp、quality.vcmp、checks._num_eq / _case_between(`u1_compare` を通す)。
+U1_TEXT_VS_NUMBER_RAISES = False
+
+
 class TypeMismatch(ValueError):
     """VBA の実行時エラー 13(型が一致しません)。呼び手が VBA の On Error に合わせて扱う。"""
 
@@ -281,6 +291,21 @@ def vcompare(a: Any, b: Any) -> int:
 
 def veq(a: Any, b: Any) -> bool:
     return vcompare(a, b) == 0
+
+
+def u1_compare(a: Any, b: Any, raises: Optional[bool] = None) -> int:
+    """`vcompare` に U1 の扱いを足したもの。数と「数にならない文字列」の比較は
+    `U1_TEXT_VS_NUMBER_RAISES`(`raises` で上書き可)が偽なら「数 < 文字列」、真なら `TypeMismatch`。"""
+    try:
+        return vcompare(a, b)
+    except TypeMismatch:
+        if U1_TEXT_VS_NUMBER_RAISES if raises is None else raises:
+            raise
+        if _is_num(a) and isinstance(b, str):
+            return -1
+        if isinstance(a, str) and _is_num(b):
+            return 1
+        raise
 
 
 def text_eq(a: Any, b: Any) -> bool:

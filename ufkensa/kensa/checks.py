@@ -13,8 +13,8 @@ dataclass で返す。画面へ反映するのは呼び手(Web 側)の仕事。
 
 【U1(数にならない文字列と数の比較)】
 `Select Case Rig` の `Case 2, 4, …`(Rig が "" や "S")と `.ZS = 0`(ZS が空)は、
-`vbx.vcompare` の規則(型エラー13 = `vbx.TypeMismatch`)で比べる。比べる所は `_num_eq` 1 か所に集めた。
-実機で「エラーにならない」と分かったら `_num_eq` だけを直す。
+`vbx.u1_compare`(U1 のスイッチ `vbx.U1_TEXT_VS_NUMBER_RAISES`。既定はエラーにせず「数 < 文字列」= 一致しない、
+真なら型エラー13 = `vbx.TypeMismatch`)で比べる。比べる所は `_num_eq` / `_case_between` に集めた。
 """
 from __future__ import annotations
 
@@ -104,9 +104,9 @@ def _cell_text(v: object) -> str:
 def _num_eq(text: object, n: float) -> bool:
     """VBA の `文字列 = 数のリテラル`(TextBox の値・String 変数と数)。
 
-    数にならない文字列(空文字を含む)は `vbx.TypeMismatch`(実行時エラー13。U1 実機確認待ち)。
+    数にならない文字列(空文字を含む)は U1 のスイッチに従う(既定は一致しない。真なら `vbx.TypeMismatch`)。
     """
-    return vbx.vcompare("" if text is None else str(text), n) == 0
+    return vbx.u1_compare("" if text is None else str(text), n) == 0
 
 
 def _case_in(text: str, values: Iterable[float]) -> bool:
@@ -120,7 +120,7 @@ def _case_in(text: str, values: Iterable[float]) -> bool:
 def _case_between(text: str, lo: float, hi: float) -> bool:
     """`Case lo To hi`。"""
     s = "" if text is None else str(text)
-    return vbx.vcompare(s, lo) >= 0 and vbx.vcompare(s, hi) <= 0
+    return vbx.u1_compare(s, lo) >= 0 and vbx.u1_compare(s, hi) <= 0
 
 
 _LOG_FOLDERS = {"L-1": "L-1", "LVC": "LVC", "HVC": "HVC", "ﾊﾞﾗﾝｻｰ": "バランサー", "ﾄｯﾄ": "トット", "Test": "Test"}

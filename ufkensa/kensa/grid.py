@@ -62,10 +62,16 @@ BORDER_RED = "RED"       # RGB(255,0,0)
 BORDER_BLACK = "BLACK"   # RGB(0,0,0)
 
 #: U1(実機確認待ち): Variant の文字列(コントロールの値・遅延束縛の .Caption)と数値の比較。
-#: True = 数にならない文字列は「数より大きい」として比べる(エラーにしない)。
-#: 本番で 厚板 の MinMax(S〜E)が動いていること(U5・D5 は空のまま UnderBar で数値と比べている)からこちらを既定にした。
-#: False にすると vbx.vcompare と同じく TypeMismatch(実行時エラー13)にする。
-VARIANT_STRING_GT_NUMBER = True
+#: 扱いは `vbx.U1_TEXT_VS_NUMBER_RAISES` 1 か所で決める(既定: 数にならない文字列は「数より大きい」でエラーにしない。
+#: 本番で 厚板 の MinMax(S〜E)が動いていること ── U5・D5 は空のまま UnderBar で数値と比べている)。
+#: ここは個別に上書きするときだけ使う(None = vbx に従う、True = エラーにしない、False = TypeMismatch)。
+VARIANT_STRING_GT_NUMBER: Optional[bool] = None
+
+
+def _string_gt_number() -> bool:
+    if VARIANT_STRING_GT_NUMBER is None:
+        return not vbx.U1_TEXT_VS_NUMBER_RAISES
+    return VARIANT_STRING_GT_NUMBER
 
 
 # ------------------------------------------------------------------
@@ -381,10 +387,10 @@ class KensaState:
 def variant_cmp(a: Any, b: Any) -> int:
     """Variant(文字列)と数値の比較。VBA の `UF1.Hab < 300#`・`UF1.Yama = 3`・`UF1("S1").Caption = Min` に当たる。
 
-    数にできる文字列は数で比べる。できない文字列(空文字を含む)は `VARIANT_STRING_GT_NUMBER` が真なら
-    「文字列のほうが大きい」(U1 実機確認待ち)、偽なら vbx.vcompare と同じく TypeMismatch。
+    数にできる文字列は数で比べる。できない文字列(空文字を含む)は U1 のスイッチ(`vbx.U1_TEXT_VS_NUMBER_RAISES`)が
+    偽なら「文字列のほうが大きい」(U1 実機確認待ち)、真なら vbx.vcompare と同じく TypeMismatch。
     """
-    if VARIANT_STRING_GT_NUMBER:
+    if _string_gt_number():
         num_a = isinstance(a, (int, float)) and not isinstance(a, bool)
         num_b = isinstance(b, (int, float)) and not isinstance(b, bool)
         if num_a and isinstance(b, str) and not vbx.is_numeric(b):

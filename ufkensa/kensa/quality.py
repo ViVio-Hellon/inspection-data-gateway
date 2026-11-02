@@ -16,8 +16,8 @@ VBA の `Kousa(1,4) = 0`(中耳列が "" や "6㎜以下,…")、`JoinQuality(i,
 "管理番号" と Long)、`UF1.MG = 0`(空のテキストボックス)は、毎日動いている経路で必ず通る。
 比較は `vbx.compare_typed`(VBA の比較演算子の表)に両側の宣言の型を渡して行う。表では「数値型 と
 数にならない文字列の Variant」は型エラー 13 だが、上の経路ではエラー 13 になるなら本番が動かないので、
-**エラーにせず Variant の規則(数 < 文字列。= は偽)**で比べる(`STRING_VS_NUMBER_RAISES = False`)。
-実機確認 U1 でエラーと分かったら True にする(grid.VARIANT_STRING_GT_NUMBER と同じ考え方)。
+**エラーにせず Variant の規則(数 < 文字列。= は偽)**で比べる(`vbx.U1_TEXT_VS_NUMBER_RAISES = False`)。
+実機確認 U1 でエラーと分かったら vbx のスイッチを True にする(grid・checks も同じスイッチを見る)。
 """
 from __future__ import annotations
 
@@ -32,8 +32,9 @@ from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
 
-#: U1 の扱い(上の説明)。True にすると数と数にならない文字列の比較で TypeMismatch を投げる
-STRING_VS_NUMBER_RAISES = False
+#: U1 の扱い(上の説明)。`vbx.U1_TEXT_VS_NUMBER_RAISES` 1 か所で決める。ここは個別に上書きするときだけ
+#: (None = vbx に従う、True = 数と数にならない文字列の比較で TypeMismatch、False = 数 < 文字列)
+STRING_VS_NUMBER_RAISES: Optional[bool] = None
 
 Row = list
 Rows = list
@@ -118,7 +119,8 @@ def vcmp(a: Any, b: Any, a_type: str = VAR, b_type: str = VAR) -> int:
     try:
         return vbx.compare_typed(a, b, a_type, b_type)
     except vbx.TypeMismatch:
-        if STRING_VS_NUMBER_RAISES:
+        raises = vbx.U1_TEXT_VS_NUMBER_RAISES if STRING_VS_NUMBER_RAISES is None else STRING_VS_NUMBER_RAISES
+        if raises:
             raise
         a_num = a_type == NUM or (a_type == VAR and isinstance(a, (int, float)) and not isinstance(a, bool))
         return -1 if a_num else 1

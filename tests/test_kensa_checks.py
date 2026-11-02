@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import tempfile
 import unittest
 import zipfile
@@ -14,6 +15,17 @@ from ufkensa.kensa import checks, quirks, vbx
 from ufkensa.kensa.checks import Uf1, WorkDist
 
 ZERO_DIST = {f"{k}{p}": "0.00" for k in ("Z", "G") for p in "SUCDEF"}
+
+
+@contextlib.contextmanager
+def u1(raises: bool):
+    """U1 のスイッチ(vbx.U1_TEXT_VS_NUMBER_RAISES)を一時的に切り替える。"""
+    old = vbx.U1_TEXT_VS_NUMBER_RAISES
+    vbx.U1_TEXT_VS_NUMBER_RAISES = raises
+    try:
+        yield
+    finally:
+        vbx.U1_TEXT_VS_NUMBER_RAISES = old
 
 
 def make_uf(**kw) -> Uf1:
@@ -177,18 +189,22 @@ class OutToleranceTest(unittest.TestCase):
         with self.assertRaises(checks.VbaRuntimeError):            # Split("") → Worker(-1)
             checks.out_tolerance(uf)
 
-    @unittest.skip("U1 実機確認待ち: Rig が \"\" や \"S\" のとき Select Case Rig が型エラーになるか")
     def test_lateral_and_distortion(self) -> None:
-        uf = make_uf(text={"INP.Tag": "LateralS", "LateralS": "2.5"}, visible={"LateralS": True}, ng={"LateralS"})
-        self.assertEqual([(r.posi, r.n) for r in checks.out_tolerance(uf)], [("S", 96)])
-        uf = make_uf(text={"INP.Tag": "ZS", "ZS": "3.00"}, ng={"ZS"})
-        self.assertEqual([(r.posi, r.n) for r in checks.out_tolerance(uf)], [("S", 98)])
+        # U1: Rig が "" や "S" のとき `Select Case Rig` の `Case 2, 4, …`。既定(エラーにしない)では一致しないだけ
+        with u1(False):
+            uf = make_uf(text={"INP.Tag": "LateralS", "LateralS": "2.5"}, visible={"LateralS": True}, ng={"LateralS"})
+            self.assertEqual([(r.posi, r.n) for r in checks.out_tolerance(uf)], [("S", 96)])
+            uf = make_uf(text={"INP.Tag": "ZS", "ZS": "3.00"}, ng={"ZS"})
+            self.assertEqual([(r.posi, r.n) for r in checks.out_tolerance(uf)], [("S", 98)])
 
-    def test_lateral_currently_raises(self) -> None:
-        # いまの vbx の規則(U1 未確認)では "" と 2 の比較は型エラー13
+    def test_lateral_u1_switch(self) -> None:
+        # U1 のスイッチ: 真なら "" と 2 の比較は型エラー13、偽ならエラーにせず進む
         uf = make_uf(text={"INP.Tag": "LateralS"}, visible={"LateralS": True}, ng={"LateralS"})
-        with self.assertRaises(vbx.TypeMismatch):
-            checks.out_tolerance(uf)
+        with u1(True):
+            with self.assertRaises(vbx.TypeMismatch):
+                checks.out_tolerance(uf)
+        with u1(False):
+            self.assertEqual([(r.posi, r.n) for r in checks.out_tolerance(uf)], [("S", 96)])
 
 
 class ConfiTest(unittest.TestCase):
@@ -466,10 +482,15 @@ class DistortionTest(QuirkCase):
         uf = make_uf(text={"GC": "1.00", "flatnesText": "その他"})
         self.assertEqual(checks.distortion_check(uf, "G").text, "")
 
-    @unittest.skip("U1 実機確認待ち: ZS が空のとき `.ZS = 0` が型エラーになるか")
     def test_empty_value(self) -> None:
+        # U1: ZS が空のとき `.ZS = 0`(O:2003)。既定(エラーにしない)は「数 < 文字列」で 0 と一致しない
+        # → CBS1 は消されず、形状あり・上下と値が空・値が 0 でない で「定盤:S」(O:2030-2036)
         uf = make_uf(text={"ZS": "", "CBS1": "幅"})
-        self.assertEqual(checks.distortion_check(uf, "Z").text, "")
+        with u1(False):
+            self.assertEqual(checks.distortion_check(uf, "Z").text, "定盤:S")
+        with u1(True):
+            with self.assertRaises(vbx.TypeMismatch):
+                checks.distortion_check(uf, "Z")
 
     def test_single_unit(self) -> None:
         uf = make_uf(text={"ZS": "0", "CBS1": "幅"})
