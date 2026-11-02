@@ -207,3 +207,47 @@ def check_mode(mode: str, lv: int, click_type: str = "ButtonClick") -> tuple[str
     if mode == "修正" and click_type == "DblClick":
         return "参照", ""
     return "", MSG_NO_LEVEL
+
+
+# ------------------------------------------------------------------
+# マスタ編集の認証(python-web-tools と同じ考え方)。2026-11-02 の決め:
+# マスタ管理・保守の画面は誰でも開けるが、編集は「管理者パスワード」と「アクセス権限の管理者」の両方が要る。
+# パスワードを入れるとこのアプリを閉じるまで(または lock_master まで)編集できる。
+# ------------------------------------------------------------------
+_master_unlocked = False
+
+
+def unlock_master(password: str) -> tuple[bool, str]:
+    """管理者パスワードで「マスタ編集」を開ける。(できたか, 断った理由)。"""
+    global _master_unlocked
+    from . import admin_password
+    if not can_edit():
+        return False, "この端末・この人にアクセス権限の「管理者」がありません(設定 → 権限 で確かめてください)"
+    if not admin_password.verify(str(password or "")):
+        return False, "管理者パスワードが違います"
+    _master_unlocked = True
+    log.info("マスタ編集の認証を通りました: %s", network_id())
+    return True, ""
+
+
+def lock_master() -> None:
+    global _master_unlocked
+    _master_unlocked = False
+
+
+def master_unlocked() -> bool:
+    return _master_unlocked
+
+
+def master_edit_ok() -> bool:
+    """マスタ・保守の編集をしてよいか(パスワードを通した かつ 管理者の権限がある)。"""
+    return _master_unlocked and can_edit()
+
+
+def master_edit_reason() -> str:
+    """編集できない理由(できるなら "")。画面にそのまま出す。"""
+    if not can_edit():
+        return "編集には、アクセス権限の「管理者」が要ります"
+    if not _master_unlocked:
+        return "編集するには、管理者パスワードを入れてください"
+    return ""
