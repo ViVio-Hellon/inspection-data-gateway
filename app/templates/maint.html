@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}保守 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/maint.css') }}">
+<!--
+  保守画面(管理者だけ)。VBA の Test フォームは移植しない(D9)が、業務で要る 2 つをここに置く。
+  左 = 歪公差チェック(品質基準の表を変えたあとの確認。Test.CommandButton34)。結果の表が大きいので幅を取る。
+  右 = 表引きの単発チェック(ソリ公差・設備仕様)と、端末設定のセット(初期設定.AIM / HVC / DelSet)。
+  判断・書式はサーバ(ufkensa/kensa/maint.py)。ここは描いて送るだけ。
+-->
+<div class="maint" id="maint">
+  <p class="maint__deny card" id="mDeny" hidden>管理者の権限がありません。この画面は管理者だけが使えます。</p>
+
+  <div class="maint__main">
+    <section class="card maint__dist">
+      <header><h3>歪公差チェック</h3><span class="lv lv--info">品質基準の表を変えたときの確認・読むだけ</span></header>
+      <div class="pad">
+        <div class="maint__dbs">
+          <div class="field">
+            <label>いまの品質基準</label>
+            <code class="maint__path" id="mCurDb">-</code>
+          </div>
+          <form class="field" id="mAltForm" autocomplete="off">
+            <label for="mAlt">比べる品質基準</label>
+            <input class="input maint__altin" id="mAlt" placeholder="(任意)変更後の 品質基準.sqlite3 のパス">
+            <button class="btn" type="button" id="mBrowse">参照…</button>
+            <button class="btn" type="button" id="mAltClear">外す</button>
+          </form>
+          <div class="maint__browser card" id="mBrowser" hidden>
+            <div class="maint__bhead"><code id="mBPath"></code><button class="btn btn--sm" type="button" id="mBClose">閉じる</button></div>
+            <ul class="maint__blist" id="mBList"></ul>
+          </div>
+        </div>
+
+        <div class="maint__runs">
+          <form class="field" id="mOne" autocomplete="off">
+            <label for="mLot">ロットNo</label>
+            <input class="input maint__lot" id="mLot" maxlength="20" placeholder="例 H9022K1">
+            <button class="btn btn--find" type="submit">1ロット引く</button>
+          </form>
+          <form class="field" id="mAll" autocomplete="off">
+            <label for="mPrefix">仕掛の全ロット</label>
+            <input class="input maint__lot" id="mPrefix" maxlength="20" placeholder="ロットNo の頭(任意)">
+            <label class="maint__ck"><input type="checkbox" id="mPlate" checked> 板のみ</label>
+            <button class="btn btn--run" type="submit">まとめて引く</button>
+            <label class="maint__ck"><input type="checkbox" id="mOnlyDiff"> 違いのあるロットだけ表示</label>
+          </form>
+        </div>
+
+        <div class="maint__summary" id="mSummary"></div>
+        <div class="tablewrap maint__result" id="mResult">
+          <p class="muted">ロットNo を入れて「1ロット引く」、または「まとめて引く」を押してください。VBA の Test フォーム(歪公差)と同じ 8 項目を同じ書式で出します。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="maint__side">
+    <section class="card">
+      <header><h3>ソリ公差(ソリ4級)</h3></header>
+      <div class="pad">
+        <form class="field" id="mSori" autocomplete="off">
+          <label for="mSAtu">厚</label><input class="input input--num maint__num" id="mSAtu">
+          <label for="mSHaba">幅</label><input class="input input--num maint__num" id="mSHaba">
+          <label for="mSTake">丈</label><input class="input input--num maint__num" id="mSTake">
+          <button class="btn btn--find" type="submit">引く</button>
+        </form>
+        <dl class="maint__kv" id="mSoriOut"></dl>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><h3>設備仕様(伝送用ファイル)</h3></header>
+      <div class="pad">
+        <form class="maint__eq" id="mEq" autocomplete="off">
+          <label for="mELine">設備名</label><select class="input" id="mELine"></select>
+          <label for="mEZai">製造材質</label><input class="input maint__num" id="mEZai" placeholder="例 5NB">
+          <label for="mEAtu">厚</label><input class="input input--num maint__num" id="mEAtu">
+          <label for="mEHaba">幅</label><input class="input input--num maint__num" id="mEHaba">
+          <label for="mETake">丈</label><input class="input input--num maint__num" id="mETake">
+          <label for="mEWei">単重</label><input class="input input--num maint__num" id="mEWei">
+          <span></span><button class="btn btn--find" type="submit">確かめる</button>
+        </form>
+        <dl class="maint__kv" id="mEqOut"></dl>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><h3>端末設定のセット</h3><span class="lv" id="mTermLv"></span></header>
+      <div class="pad">
+        <p class="muted maint__small">VBA のレジストリ「起動設定」(初期設定.AIM / HVC / DelSet)に当たります。</p>
+        <dl class="maint__kv" id="mTerm"></dl>
+        <div class="btn-row maint__presets" id="mPresets"></div>
+        <div class="btn-row">
+          <button class="btn btn--danger" type="button" id="mClear">端末設定を消す</button>
+          <a class="btn" href="/settings?tab=terminal" id="mToSettings">設定「この端末」を開く</a>
+        </div>
+        <p class="muted maint__small">消すと、次に検査画面を開いたとき VBA の初期設定(SF3)と同じく「この端末」の設定を求めます。</p>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/maint.js') }}"></script>
+{% endblock %}
