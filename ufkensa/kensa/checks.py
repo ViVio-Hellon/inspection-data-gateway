@@ -28,7 +28,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
 from . import datasource, paths, quirks, vbx
-from .flow import ERROR, INFO, WARN, Message
+from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
 # 色(VBA の RGB 値)
@@ -1437,8 +1437,8 @@ def selection_input(selected_value: str, te_name: str, te_value: str, code_row: 
     コードが見つからない・欄名が S〜F でないときは、VBA は b_Arr の添字エラー(9)で止まる
     (`itti = 0` のやり直し処理には届かない)。
     B45: 複数選択(「汚_12 TP」など。一覧は複数選択できる)だと最後の "_" の後("12 TP")で探すので
-    添字エラー(9)、または最後の項目の列だけに書く。直すと、空白で区切った項目ごとに同じ枚数を書く
-    (TP は 22 列目、ｽﾎﾟｯﾄ処理 は C11)。
+    添字エラー(9)、または最後の項目の列だけに書く。直すと、複数選んだときは何も書かずに
+    「1つずつ選んで」と知らせる(入力は1項目ずつ。同じ枚数を各項目に書くのは誤り)。
     """
     if selected_value == "":
         return None
@@ -1451,23 +1451,9 @@ def selection_input(selected_value: str, te_name: str, te_value: str, code_row: 
         return SelectionWrite(tuple(cells))
     a = {"S": 1, "U": 2, "C": 3, "D": 4, "E": 5, "F": 6}.get(vbx.left(te_name, 1), 0)
     codes = [_cell_text(v) for v in code_row]
-    if not quirks.reproduce("B45"):
-        # 直した側: GetSelectedItems は項目を " " でつなぐので、項目ごとに書く
-        for piece in selected_value.split(" "):
-            if piece == "":
-                continue
-            if piece == SPOT:
-                cells.append((11, 3, te_value + "枚"))
-                continue
-            if piece == "TP":
-                col = 22
-            else:
-                code = piece.split("_")[-1]
-                col = codes.index(code) + 1 if code in codes else 0
-            if a == 0 or col == 0:
-                raise VbaRuntimeError(9, "インデックスが有効範囲にありません(不良要因の列・行)")
-            cells.append((2 + a, 2 + col, te_value))
-        return SelectionWrite(tuple(cells))
+    if not quirks.reproduce("B45") and " " in selected_value.strip():
+        # 直した側(2026-11-02 の回答「1項目ずつしか入力しない」): 複数選んだときは書かずに知らせる
+        raise Stop("不良要因は1つずつ選んでから枚数を入れてください", level=WARN, source="SelectionInput(B45)")
     parts = selected_value.split("_")
     code = parts[-1] if parts else ""
     itti = 0

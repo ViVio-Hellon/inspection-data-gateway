@@ -760,17 +760,17 @@ class FixedQuirksTest(QuirkCase):
         w = checks.selection_input("汚_12 ﾌｸﾚ_01", "SBad", "2", codes, None, "LOT")
         self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 3, "2")))
         self.fix("B45")
-        w = checks.selection_input("汚_12 TP", "SBad", "1", codes, None, "LOT")
-        self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 6, "1"), (3, 24, "1")))     # F 列(12)と X 列(TP)
-        w = checks.selection_input("汚_12 ﾌｸﾚ_01", "UBad", "2", codes, None, "LOT")
-        self.assertEqual(w.cells, ((1, 2, "LOT"), (4, 6, "2"), (4, 3, "2")))
-        w = checks.selection_input("汚_12 " + checks.SPOT, "SBad", "3", codes, None, "LOT")
-        self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 6, "3"), (11, 3, "3枚")))
+        # 直した側: 入力は1項目ずつ(2026-11-02 の回答)。複数選んだら書かずに知らせる
+        from ufkensa.kensa.flow import Stop
+        for sel in ("汚_12 TP", "汚_12 ﾌｸﾚ_01", "汚_12 " + checks.SPOT):
+            with self.assertRaises(Stop) as cm:
+                checks.selection_input(sel, "SBad", "1", codes, None, "LOT")
+            self.assertIn("1つずつ", cm.exception.text)
         # 1 件だけは今までどおり
         self.assertEqual(checks.selection_input("汚_12", "UBad", "3", codes, None, "L").cells[-1], (4, 6, "3"))
         self.assertEqual(checks.selection_input("TP", "FBad", "1", codes, None, "L").cells[-1], (8, 24, "1"))
         with self.assertRaises(checks.VbaRuntimeError):              # 無いコードは今までどおり添字エラー
-            checks.selection_input("汚_99 TP", "SBad", "1", codes, None, "L")
+            checks.selection_input("汚_99", "SBad", "1", codes, None, "L")
 
     def test_b46_zf_clears_cbf1(self) -> None:
         uf = make_uf(text={"CBF1": "幅", "CBF2": "上"})
