@@ -93,3 +93,18 @@ def view():
                         "messages": [m.to_dict() for m in kv.messages]})
     finally:
         s.close()
+
+
+@bp.post("/api/history/restore")
+def restore():
+    """選んだ検査を検査画面に戻す(UF管理 の読み込み)。戻したら画面は /kensa へ移る。"""
+    from ufkensa.kensa import session
+    body = request.get_json(silent=True) or {}
+    try:
+        row = int(body.get("row", 0))
+    except (TypeError, ValueError):
+        row = 0
+    s = session.get()
+    with trace.timed("history.restore", "履歴を検査画面へ戻す", expected=(Exception,), row=row):
+        res = s.history_restore(row, bool(body.get("mimi")))
+    return jsonify(res.to_dict())

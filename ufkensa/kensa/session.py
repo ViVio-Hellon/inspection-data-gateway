@@ -1020,6 +1020,31 @@ class Session:
     # ------------------------------------------------------------------
     # 新規検査
     # ------------------------------------------------------------------
+    def history_restore(self, row: int, mimi: bool = False) -> Result:
+        """UF管理 の読み込み(CommandButton1_Click → HistoryLoad。UF管理:620-635)。
+
+        履歴画面で選んだ保存用(耳用)の行を検査画面に戻す。別のロットを検査中なら VBA と同じく止める
+        (「別Lotデータがあります、新規登録処理を行ってください」)。
+        """
+        return self._run(self._history_restore, row, mimi)
+
+    def _history_restore(self, row: int, mimi: bool) -> None:
+        if not self.started:
+            self._start()
+        st, hooks = self.state, self.hooks
+        assert hooks is not None
+        lots = records.kanri_lots(self.store, mimi=mimi)
+        if not 2 <= row < len(lots) + 2:
+            raise Stop("その行はありません", source="UF管理")
+        sheet = self.store.sheet(MIMI if mimi else HOZON)
+        lot, when = lots[row - 2], records.cell_text(sheet.get(row, 1))
+        r = records.kanri_load(self.store, lot, when, uf1_visible=True, uf1_lot=st.lot, mimi=mimi,
+                               lname=st.lname, aorb=st.strain_face)
+        hooks.env.messages.extend(r.messages)
+        if not r.found:
+            raise Stop(r.messages[-1].text if r.messages else "該当する履歴がありません", source="UF管理:622")
+        wiring.apply_restore(st, r, hooks)
+
     def new_inspection(self, answers: Optional[dict[str, bool]] = None) -> Result:
         return self._run(self._new_inspection, answers or {})
 

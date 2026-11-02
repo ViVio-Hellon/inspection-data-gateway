@@ -8,6 +8,7 @@ import { toast, toastError } from "../toast.js";
 const $ = (id) => document.getElementById(id);
 let rows = [];
 let mimi = "0";
+let current = 0;
 
 function td(text, tag = "td") {
   const c = document.createElement(tag);
@@ -42,6 +43,8 @@ async function show(row) {
     for (const m of v.messages || []) toast(m.text, m.level || "info");
     $("histTitle").textContent = `検査の中身: ${v.lot}`;
     $("histNone").hidden = true;
+    current = row;
+    $("histRestore").hidden = false;
     const head = document.createElement("tr");
     head.append(td("", "th"), ...v.faces.map((f) => td(f, "th")));
     $("histGrid").replaceChildren(head, ...v.grid.map((r) => {
@@ -67,4 +70,15 @@ for (const r of document.querySelectorAll('input[name="sheet"]')) {
   r.addEventListener("change", () => { mimi = r.value; load().catch(toastError); });
 }
 $("histFilter").addEventListener("input", renderList);
+$("histRestore").addEventListener("click", async () => {
+  if (!current) return;
+  try {
+    const r = await api.post("/api/history/restore", { row: current, mimi: mimi === "1" });
+    for (const m of r.messages || []) if (m.text) toast(m.text, m.level || "info");
+    if (r.stop) { toast(r.stop.text, "error"); return; }
+    location.href = "/kensa";
+  } catch (e) {
+    toastError(e);
+  }
+});
 load().catch(toastError);

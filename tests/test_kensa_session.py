@@ -334,3 +334,38 @@ class NoLineTest(SessionBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HistoryRestoreTest(SessionBase):
+    """履歴画面からの読み込み(UF管理 → HistoryLoad)。印刷・保存したロットを新規検査のあと戻す。"""
+
+    def test_restore_after_new(self) -> None:
+        s = self.s
+        self.register()
+        self.fill("DT")
+        self.fill("#L")
+        self.strain_visual_height()
+        self.ok(s.min_max())
+        self.ok(s.print_check())
+        self.ok(s.print_commit({"print": True}))
+        self.ok(s.new_inspection({"new": True}))
+        self.assertEqual((s.state.lot, s.state.cells["S1"].value), ("", ""))
+        self.assertEqual(records.kanri_lots(self.store), [LOT])
+        r = self.ok(s.history_restore(2))                                  # 保存用の 2 行目を戻す
+        st = s.state
+        self.assertEqual(st.cells["S1"].value, "15.012")
+        self.assertEqual(st.cells["C5"].value, "1252.3")
+
+    def test_other_lot_is_refused(self) -> None:
+        sh = self.store.ensure_sheet(store.HOZON)
+        sh.set(2, 1, "2026/11/01 09:00～2026/11/01 09:30")
+        sh.set(2, 2, "ZZZZZZ1")
+        self.register()                                                   # 検査中のロットがある
+        r = self.s.history_restore(2)
+        self.assertIsNotNone(r.stop)
+        self.assertIn("別Lotデータがあります", r.stop.text)
+
+    def test_bad_row(self) -> None:
+        self.ok(self.s.start())
+        r = self.s.history_restore(99)
+        self.assertIsNotNone(r.stop)
