@@ -485,11 +485,18 @@ def apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks")
         put(state, k + ".BackColor", col)
     if "YamaLB" in r.list_index:
         state.v("YamaLB").tag = str(r.list_index["YamaLB"])
-    if r.option in grid.WORKS:
-        state.work = r.option
     hooks.env.messages.extend(r.messages)
+    # 作業選択は Atu_OPselect(全部 False にする)の後で `UF1.厚板 = True` など(SaveLoad:2839-2867)。
+    # OptionButton を True にすると Click イベント(厚板_Click → LSelect …)が走る。シートに記録が無ければ選ばない
+    ws = line_sheet(records.WORK_SAVE, state.lname)
+    at_sl = cell_text(hooks.store.sheet(ws).get(1, 29)) if hooks.store.exists(ws) else ""
     for call in r.calls:
         hooks.restore_call(state, call)
+        if call[0] == "Atu_OPselect" and at_sl in grid.WORKS and r.option == at_sl:
+            try:
+                layout.select_work(state, at_sl, hooks, hooks.env.messages)
+            except layout.VBA_ERRORS:
+                state.work = at_sl
 
 
 # ------------------------------------------------------------------
