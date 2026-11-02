@@ -342,6 +342,11 @@ def start(mode: str, *, open_browser: bool = True) -> int:
         launch_guard.remove_lock(mode)
         launch_guard.release_app_lock()
         log().info("終了しました: mode=%s", mode)
+        try:
+            from ufkensa import app_config, trace
+            trace.event("app.stop", f"終了しました(版 {app_config.version()})", data={"mode": mode})
+        except Exception:                         # noqa: BLE001 - 記録のせいで終了を止めない
+            pass
 
 
 # 本体を組み立てられなかったとき、画面からの問い合わせがこの秒数来なければ終わる。

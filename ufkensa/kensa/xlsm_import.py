@@ -149,7 +149,17 @@ class ImportReport:
 
 
 def import_book(path: Path, store: Optional[LocalStore] = None) -> ImportReport:
+    from .. import trace
     store = store or LocalStore()
+    trace.note_used(path, "xlsm")
+    with trace.timed("import.xlsm", "xlsm を取り込む", source=str(path), target=str(store.path)) as info:
+        rep = _import(path, store)
+        info["sheets"] = len(rep.sheets)
+        info["cells"] = sum(n for _, n in rep.sheets)
+    return rep
+
+
+def _import(path: Path, store: LocalStore) -> ImportReport:
     book = open_book(path)
     rep = ImportReport()
     for name in book.sheets:

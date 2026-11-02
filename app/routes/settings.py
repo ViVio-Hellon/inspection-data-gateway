@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, render_template, request
 
-from ufkensa import access_rights, auth
+from ufkensa import access_rights, auth, config, logging_utils, trace, user_settings
 from ufkensa.kensa import paths, quirks, terminal
 from ufkensa.logging_utils import get_logger
 from ufkensa.presenters import fs_browse
@@ -58,6 +58,25 @@ def _state() -> dict:
             "known": [{"code": k, "label": v} for k, v in access_rights.CODES.items()],
         },
         "quirks": {"fix": quirks.summary()["fix"], "titles": quirks.TITLES},
+        "log": _log_state(),
+    }
+
+
+def _log_state() -> dict:
+    """ログ(all-tools と同じ決まり): <出力パス>\\ufkensa\\ufkensa_<PC>_日付.log と ufkensa_記録_<PC>_日付.jsonl。"""
+    requested = str(user_settings.get(config.KEY_LOG_DIR, "") or "")
+    problems = []
+    try:
+        problems = [{"t": r.get("t", "")[:19].replace("T", " "), "lv": r.get("lv", ""), "ev": r.get("ev", ""),
+                     "msg": str(r.get("msg", ""))[:200], "proc": r.get("proc", ""), "ms": r.get("ms")}
+                    for r in trace.read(7, only_problems=True, limit=30)]
+    except Exception:                                  # noqa: BLE001 - 読めなくても設定画面は出す
+        pass
+    return {
+        "dir": str(config.LOG_DIR), "default": str(config.DEFAULT_LOG_DIR), "requested": requested,
+        "problem": logging_utils.probe_writable(config.LOG_DIR),
+        "keep_days": int(user_settings.get(config.KEY_LOG_KEEP_DAYS, config.DEFAULT_LOG_KEEP_DAYS) or 0),
+        "tool_id": config.TOOL_LOG_NAME, "pc": trace.pc_name(), "problems": problems,
     }
 
 
@@ -134,3 +153,28 @@ def fs_list():
     """サーバ側のフォルダを一覧する(「参照…」)。"""
     view = fs_browse.browse(request.args.get("path", ""), access=request.args.get("access") == "1")
     return jsonify(fs_browse.to_dict(view))
+
+
+@bp.post("/api/settings/log")
+def save_log():
+    """ログの出力パスと残す日数。出力パスの下に ufkensa フォルダを作って書く(直下には置かない)。"""
+    if not auth.can_edit():
+        return _err("not_admin", MSG_ADMIN, 403)
+    body = request.get_json(silent=True) or {}
+    if "keep_days" in body:
+        try:
+            days = int(body["keep_days"])
+        except (TypeError, ValueError):
+            return _err("bad_value", "残す日数は 0 以上の数で入れてください(0 = 消さない)")
+        if days < 0:
+            return _err("bad_value", "残す日数は 0 以上の数で入れてください(0 = 消さない)")
+        user_settings.save(config.KEY_LOG_KEEP_DAYS, days)
+    if "dir" in body:
+        text = str(body.get("dir") or "").strip().strip('"')
+        target = logging_utils.resolve_log_dir(text)
+        why = logging_utils.set_log_dir(target)
+        if why:
+            return _err("not_writable", f"そのフォルダに書けません: {target}({why})。今までの置き場所のままです。")
+        user_settings.save(config.KEY_LOG_DIR, text)
+        trace.event("settings.log", f"ログの置き場所を {target} にしました")
+    return jsonify(_state())

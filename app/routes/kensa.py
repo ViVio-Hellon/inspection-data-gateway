@@ -58,8 +58,11 @@ def operate(op: str):
     body = request.get_json(silent=True) or {}
     kwargs = {n: body[n] for n in names if n in body}
     s = session.get()
+    from ufkensa import trace
     try:
-        result = getattr(s, method)(**kwargs)
+        with trace.timed(f"kensa.{op}", f"検査画面: {op}", expected=(Stop, NotImplementedError),
+                         lot=s.state.lot or None):
+            result = getattr(s, method)(**kwargs)
     except NotImplementedError:
         return jsonify({"error": {"code": "not_ready", "message": MSG_NOT_READY}}), 501
     except Stop as e:                                   # 念のため: セッションが Result に包まずに投げたとき

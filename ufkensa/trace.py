@@ -182,6 +182,103 @@ def sent_body() -> Any:
         return None
 
 
+# ------------------------------------------------------------------
+# 処理の開始・終了と処理時間(ログの決まり 3)・エラー時の詳細(ログの決まり 2)
+# ------------------------------------------------------------------
+import contextvars
+import threading as _threading
+import time as _time
+from collections import deque
+from contextlib import contextmanager
+
+#: 処理時間 → 残す重さ。通常 INFO、3 秒以上 / 10 秒以上 / 30 秒以上 は WARN(区切りを label に)
+SLOW_STEPS: tuple[tuple[float, str], ...] = ((30.0, "30秒以上"), (10.0, "10秒以上"), (3.0, "3秒以上"))
+#: 終わらない処理の見張り。この秒数を過ぎるたびに「まだ終わっていません」を残す(10分以上の不具合を見つける)
+STILL_RUNNING_AT: tuple[float, ...] = (30.0, 60.0, 120.0, 300.0, 600.0, 1200.0, 1800.0)
+
+_procs: contextvars.ContextVar[tuple[str, ...]] = contextvars.ContextVar("ufkensa_procs", default=())
+_used: deque = deque(maxlen=12)                 # 最近使ったファイル・DB(エラーのときに残す)
+_recent: deque = deque(maxlen=15)               # 直前の出来事(エラーのときに残す)
+
+
+def note_used(path: Any, what: str = "") -> None:
+    """使ったファイル・DB を覚える(エラーが起きたら「使っていたもの」として残す)。"""
+    try:
+        item = f"{what}:{clean_path(str(path))}" if what else clean_path(str(path))
+        if not _used or _used[-1] != item:
+            _used.append(item)
+    except Exception:                                  # noqa: BLE001
+        pass
+
+
+def slow_label(sec: float) -> str:
+    for limit, label in SLOW_STEPS:
+        if sec >= limit:
+            return label
+    return ""
+
+
+def _text_log(level: str, fmt: str, *args: Any) -> None:
+    """テキストのログ(ufkensa_<PC>_日付.log)にも 1 行。記録(jsonl)へは戻さない(no_trace)。"""
+    try:
+        import logging
+        getattr(logging.getLogger("ufkensa.proc"), level)(fmt, *args, extra={"no_trace": True})
+    except Exception:                                  # noqa: BLE001
+        pass
+
+
+@contextmanager
+def timed(name: str, msg: str = "", *, expected: tuple[type, ...] = (), **data: Any):
+    """処理の開始と終了をセットで残す。処理時間で INFO / WARN、例外なら ERROR(詳細つき)を残して投げ直す。
+
+        with trace.timed("db.read", "品質基準 を読む", path=p, table="ソリ3級") as info:
+            ...
+            info["rows"] = len(rows)      # 終わりの行に足したい値
+    """
+    stack = _procs.get() + (name,)
+    token = _procs.set(stack)
+    info: dict[str, Any] = dict(data)
+    t0 = _time.perf_counter()
+    event("proc.start", msg or name, proc=name, data=info or None)
+    done = _threading.Event()
+
+    def watch(i: int = 0) -> None:
+        if i >= len(STILL_RUNNING_AT) or done.is_set():
+            return
+        wait = STILL_RUNNING_AT[i] - (STILL_RUNNING_AT[i - 1] if i else 0)
+        if done.wait(wait):
+            return
+        event("proc.slow", f"{msg or name}: まだ終わっていません({STILL_RUNNING_AT[i]:.0f}秒経過)",
+              level="WARN", proc=name, ms=round((_time.perf_counter() - t0) * 1000))
+        watch(i + 1)
+
+    watcher = _threading.Thread(target=watch, daemon=True, name=f"timed-{name}")
+    watcher.start()
+    try:
+        yield info
+    except expected as exc:                          # 業務上の中断(VBA の MsgError・End に当たる)。エラーではない
+        ms = round((_time.perf_counter() - t0) * 1000)
+        event("proc.end", f"{msg or name}: 中断しました({exc})", level="WARN", proc=name, ms=ms,
+              stopped=type(exc).__name__, data=info or None)
+        _text_log("warning", "処理 %s を中断しました(%d ms): %s", name, ms, exc)
+        raise
+    except Exception as exc:
+        ms = round((_time.perf_counter() - t0) * 1000)
+        event("proc.error", f"{msg or name}: {exc}", level="ERROR", proc=name, ms=ms, exc=exc, data=info or None)
+        _text_log("error", "処理 %s が失敗しました(%d ms): %s", name, ms, exc)
+        raise
+    else:
+        ms = round((_time.perf_counter() - t0) * 1000)
+        label = slow_label(ms / 1000)
+        event("proc.end", f"{msg or name}" + (f"({label})" if label else ""), level="WARN" if label else "INFO",
+              proc=name, ms=ms, slow=label or None, data=info or None)
+        _text_log("warning" if label else "info", "処理 %s: %d ms%s %s", name, ms, f"({label})" if label else "",
+                  summarize(info) if info else "")
+    finally:
+        done.set()
+        _procs.reset(token)
+
+
 def _context() -> dict[str, Any]:
     """いまの要求(あれば)とログインから分かること。"""
     out: dict[str, Any] = {}
@@ -227,10 +324,19 @@ def event(ev: str, msg: str = "", *, level: str = "INFO", data: Any = None,
             rec["msg"] = summarize(str(msg))
         if data is not None:
             rec["data"] = summarize(data)
+        procs = _procs.get()
+        if procs and "proc" not in rec:
+            rec["proc"] = procs[-1]
+        if exc is not None or level == "ERROR":
+            # エラーのときに必ず残すもの: 実行していた処理・使っていたファイル/DB・直前の処理状況
+            rec["procs"] = list(procs)
+            rec["used"] = list(_used)
+            rec["recent"] = list(_recent)
         if exc is not None:
             rec["exc"] = {"type": type(exc).__name__, "msg": summarize(str(exc)),
                           "tb": traceback.format_exception(type(exc), exc, exc.__traceback__)[-30:]}
         line = json.dumps(rec, ensure_ascii=False, default=str)
+        _recent.append(f'{rec["t"][11:19]} {ev} {str(rec.get("msg", ""))[:80]}')
         _maybe_retry()
         path = file_for()
         with _lock:

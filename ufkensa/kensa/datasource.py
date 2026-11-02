@@ -77,16 +77,28 @@ def _q(name: str) -> str:
 
 
 def read_table(conn: sqlite3.Connection, table: str) -> tuple[list[str], list[list[str]]]:
-    """表を取り込み順で全部読む(列名, 行)。"""
-    try:
-        cur = conn.execute(f"SELECT * FROM {_q(table)} ORDER BY rowid")
-    except sqlite3.OperationalError as e:
-        if "no such table" in str(e):
-            raise TableMissing(f"表 {table} がありません") from e
-        raise
-    cols = [d[0] for d in cur.description]
-    rows = [[as_text(v) for v in r] for r in cur.fetchall()]
+    """表を取り込み順で全部読む(列名, 行)。読込先・件数・処理時間をログに残す(ログの決まり)。"""
+    from .. import trace
+    path = _db_path(conn)
+    trace.note_used(path, "read")
+    with trace.timed("db.read", f"{table} を読む", path=path, table=table) as info:
+        try:
+            cur = conn.execute(f"SELECT * FROM {_q(table)} ORDER BY rowid")
+        except sqlite3.OperationalError as e:
+            if "no such table" in str(e):
+                raise TableMissing(f"表 {table} がありません") from e
+            raise
+        cols = [d[0] for d in cur.description]
+        rows = [[as_text(v) for v in r] for r in cur.fetchall()]
+        info["rows"] = len(rows)
     return cols, rows
+
+
+def _db_path(conn: sqlite3.Connection) -> str:
+    try:
+        return str(conn.execute("PRAGMA database_list").fetchone()[2])
+    except sqlite3.Error:
+        return ""
 
 
 def _filtered(cols: list[str], rows: list[list[str]], expr: str) -> list[list[str]]:

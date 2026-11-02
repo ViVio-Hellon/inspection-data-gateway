@@ -150,11 +150,35 @@ function renderQuirks() {
   }));
 }
 
+function renderLog() {
+  const L = S.log;
+  $("logNames").textContent = `${L.tool_id}_${L.pc}_日付.log と ${L.tool_id}_記録_${L.pc}_日付.jsonl`;
+  $("logLv").textContent = L.problem ? "書けません" : "書けます";
+  $("logLv").className = "lv " + (L.problem ? "lv--ng" : "lv--ok");
+  const kvEl = $("logKv");
+  kvEl.replaceChildren();
+  for (const [k, v] of [["いまの置き場所", L.dir], ["この端末のローカル", L.default], ["書けない理由", L.problem || "-"]]) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    kvEl.append(dt, dd);
+  }
+  if (document.activeElement !== $("logDir")) $("logDir").value = L.requested;
+  if (document.activeElement !== $("logKeep")) $("logKeep").value = L.keep_days;
+  $("logDir").disabled = $("logKeep").disabled = $("saveLog").disabled = !S.admin;
+  $("logCount").textContent = `${L.problems.length} 件`;
+  $("logTable").tBodies[0].replaceChildren(...L.problems.map((p) => {
+    const tr = document.createElement("tr");
+    tr.append(cell(p.t, "mono"), cell(p.lv), cell(p.proc || p.ev), cell(p.msg), cell(p.ms == null ? "" : `${p.ms} ms`, "mono"));
+    return tr;
+  }));
+}
+
 function render() {
   renderTerminal();
   renderPaths();
   renderRights();
   renderQuirks();
+  renderLog();
   const root = $("settingsTabs");
   const badges = {};
   if (S.terminal.unset) badges.terminal = { text: "未設定", level: "ng" };
@@ -222,6 +246,15 @@ function init() {
   $("pathsModePick").addEventListener("change", () => { viewMode = $("pathsModePick").value; renderPaths(); });
   $("checkAll").addEventListener("click", () => {
     for (const tr of $("pathsTable").tBodies[0].rows) checkOne(tr.dataset.key, tr.querySelector(".path-status"));
+  });
+  $("saveLog").addEventListener("click", async () => {
+    try {
+      S = await api.post("/api/settings/log", { dir: $("logDir").value, keep_days: $("logKeep").value });
+      render();
+      toast("ログの設定を保存しました", "success");
+    } catch (e) {
+      toastError(e);
+    }
   });
   $("reloadRights").addEventListener("click", async () => {
     try {

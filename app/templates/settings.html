@@ -18,6 +18,9 @@
     <button class="tab" type="button" role="tab" data-key="rights" id="tab-rights" aria-controls="panel-rights" aria-selected="false">
       <span class="tab__label">権限</span><span class="tab__badge" hidden></span>
     </button>
+    <button class="tab" type="button" role="tab" data-key="log" id="tab-log" aria-controls="panel-log" aria-selected="false">
+      <span class="tab__label">ログ</span><span class="tab__badge" hidden></span>
+    </button>
     <button class="tab" type="button" role="tab" data-key="quirks" id="tab-quirks" aria-controls="panel-quirks" aria-selected="false">
       <span class="tab__label">不具合の扱い</span><span class="tab__badge" hidden></span>
     </button>
@@ -82,6 +85,29 @@
           <p class="muted">アクセス権限の表(梱包資材総合ツールと共通)の「権限」列に書きます。検査そのものは権限なしでできます。</p>
           <div class="tablewrap"><table class="table" id="codesTable"><thead><tr><th>権限</th><th>できること</th><th>この端末</th></tr></thead><tbody></tbody></table></div>
           <p class="muted" id="rightsTable"></p>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+      <section class="card">
+        <header><h3>ログの置き場所</h3><span class="lv" id="logLv"></span></header>
+        <div class="pad">
+          <p class="muted">出力パスの下に <code>ufkensa</code> フォルダを作り、その中に <code id="logNames"></code> を書きます(ほかの業務ツールと同じ決まり)。決めていない・届かないときは、この端末のローカルに同じ形で書きます。</p>
+          <dl class="kv" id="logKv"></dl>
+          <div class="field">
+            <label for="logDir">出力パス</label>
+            <input class="input" id="logDir" style="min-width:30em" placeholder="空ならこの端末のローカル(logs)">
+            <label for="logKeep">残す日数</label>
+            <input class="input input--num" id="logKeep" style="width:6em">
+            <button class="btn btn--primary" type="button" id="saveLog">保存</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>最近の警告・エラー(7日)</h3><span class="lv lv--info" id="logCount"></span></header>
+        <div class="pad">
+          <div class="tablewrap"><table class="table" id="logTable"><thead><tr><th>日時</th><th>重さ</th><th>処理</th><th>内容</th><th>時間</th></tr></thead><tbody></tbody></table></div>
         </div>
       </section>
     </section>

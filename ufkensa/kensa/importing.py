@@ -70,8 +70,14 @@ def run(name: str, source: str = "", progress: Optional[Callable[[int, str], Non
         raise KeyError(f"{name} は取り込む DB の一覧にありません")
     src = paths.to_local(source or default_source(name))
     dst = paths.to_local(paths.db_file(name))
-    log.info("取り込み: %s → %s", src, dst)
-    return importer.import_accdb(src, dst, progress=progress)
+    from .. import trace
+    trace.note_used(src, "accdb")
+    trace.note_used(dst, "save")
+    with trace.timed("import.accdb", f"{name} を取り込む", source=str(src), target=str(dst)) as info:
+        res = importer.import_accdb(src, dst, progress=progress)
+        info["tables"] = len(res.tables)
+        info["rows"] = sum(n for _, n in res.tables)
+    return res
 
 
 def can_run_here() -> tuple[bool, str]:
