@@ -15,6 +15,7 @@ from app import shell
 from tests._web import make_client
 from tests.test_kensa_session import CARD, SessionBase
 import functools
+import shutil
 
 from ufkensa.kensa import cask_session, packing, paths, store, vbx, wiring
 from ufkensa.kensa.grid import KensaState
@@ -240,6 +241,7 @@ class CaskScreenTest(SessionBase):
         self.assertEqual(self.c.get("/api/cask/pack_image", headers=self.h).status_code, 404)
 
     def test_packing_folder_missing(self) -> None:
+        shutil.rmtree(paths.to_local(packing.folder_path()), ignore_errors=True)
         self.lot_readable()
         self.post("open")
         d = self.post("lot", lot="RX021T0")

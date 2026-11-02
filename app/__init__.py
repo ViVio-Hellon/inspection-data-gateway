@@ -554,6 +554,9 @@ def _register_routes(app: Flask) -> None:
     if "cask" in READY_SCREENS:
         from .routes import cask
         app.register_blueprint(cask.bp)
+    if "meibo" in READY_SCREENS:
+        from .routes import meibo
+        app.register_blueprint(meibo.bp)
     if "zenkasho" in READY_SCREENS:
         from .routes import zenkasho
         app.register_blueprint(zenkasho.bp)

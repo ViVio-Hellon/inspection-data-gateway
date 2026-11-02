@@ -53,6 +53,9 @@ class SessionBase(unittest.TestCase):
         con.execute("INSERT INTO 注意_包装仕様 (包装仕様NO, 形状, コメント) VALUES ('ZZ', '板', '別の仕様')")
         con.commit()
         con.close()
+        # 包装仕様書のフォルダ(無い・空だと実行時エラー 76 / 9 でロット登録が止まる。VBA どおり)
+        (self.db_dir / "包装仕様書").mkdir(exist_ok=True)
+        (self.db_dir / "包装仕様書" / "0P0000.JPG").write_bytes(b"\xff\xd8\xff")
         paths.set_path("local_history", str(self.tmp / "検査履歴"))
         terminal.set_facility("HVC")
         p = mock.patch.object(paths, "app_dir", return_value=str(self.tmp) + "/")
@@ -605,17 +608,21 @@ class ScreenGapTest(SessionBase):
         self.assertEqual(o["comment"], "標準_プロテックボード使用_個装梱包")
 
     def test_packing_missing_folder_is_runtime_error(self) -> None:
-        """新しい不具合: 包装仕様書のフォルダが無いと PackingNoCheck が実行時エラー 76(VBA はロット登録が途中で止まる)。"""
+        """新しい不具合: 包装仕様書のフォルダが無いと PackingNoCheck が実行時エラー 76。VBA と同じくロット登録はそこで止まる。"""
+        shutil.rmtree(self.db_dir / "包装仕様書")
         self.ok(self.s.start())
         self.ok(self.s.register_worker(CARD, {"worker_register": True}))
         r = self.ok(self.s.register_lot(LOT, {"lot_register": True}))
         self.assertTrue(any("'76'" in m.text for m in r.messages))
         self.assertIsNone(self.s.pack)
+        with mock.patch("ufkensa.kensa.quality.dist_array") as da:            # 止まるので DistArray は通らない
+            self.ok(self.s.register_lot(LOT, {"lot_register": True, "lot_split": False, "lot_recent": True}))
+            da.assert_not_called()
 
     def test_packing_dialog(self) -> None:
         """包装仕様書の確認は packing.py(全ヵ所・キャスクと共通)を通す。"""
         pack = self.db_dir / "包装仕様書"
-        pack.mkdir()
+        pack.mkdir(exist_ok=True)
         for n in ("1P0116.JPG", "1P9999.JPG"):
             (pack / n).write_bytes(b"\xff\xd8\xff")
         from ufkensa.kensa import quality

@@ -381,7 +381,8 @@ class Session:
         self._acc_reflec()
         # CheckAndUpdateButtonColor は view が印刷履歴から毎回決める(印刷 / 再印刷・印刷履歴クリア)
         self._ord_no_open()                                              # UF1:4518
-        self._packing_open()                                             # UF1:4519-4520
+        if not self._packing_open():                                     # UF1:4519-4520
+            return None                                                  # 実行時エラーで VBA はここで止まる
         # DistArray → OpForcedSelection → FormReflectDist
         lot_data = quality.LotData(hooks.arrbox(st, "SIKALOTNOW.accdb", "板", "Fields"),
                                    hooks.arrbox(st, "SIKALOTNOW.accdb", st.lot, "Record"))
@@ -1123,12 +1124,12 @@ class Session:
         except (lotmod.SubscriptOutOfRange, judge.VbaError, vbx.TypeMismatch) as e:
             env.messages.append(Message(str(e), ERROR, source="Judg.MaterialsMsgBox"))
 
-    def _packing_open(self) -> None:
+    def _packing_open(self) -> bool:
         """FormRelat.PackingNoCheck → OutTolerance.UFPack_Open(UF1:4519-4520)。`packing.py`(全ヵ所・キャスクと共通)。
 
         画像(使用パス「品証やり取り」\\包装仕様書\\<No>.JPG)があるときだけ UF_PackNo を出す。VBA はモーダルで、
-        「確認」に印を付けないと閉じられない。実行時エラー(76 / 9)は VBA ではロット登録がここで止まるが、
-        通常検査ではエラーを知らせて続ける(DistArray 以降の公差の表示を残すため。最終報告の不明点)。
+        「確認」に印を付けないと閉じられない。実行時エラー(76 / 9)は VBA と同じくロット登録をここで止める
+        (偽を返す。DistArray 以降は通らない。全ヵ所の画面と同じ扱い)。
         """
         st, env = self.state, self._env()
         self.pack = None
@@ -1141,13 +1142,14 @@ class Session:
             env.messages.extend(msgs)
             env.messages.append(Message(f"実行時エラー '{e.number}': {e.description}", ERROR,
                                         source="FormRelat.PackingNoCheck"))
-            return
+            return False
         except (datasource.DbMissing, datasource.TableMissing, quality.VbaRuntimeError, vbx.TypeMismatch) as e:
             env.messages.extend(msgs)
             env.messages.append(Message(str(e), ERROR, source="FormRelat.PackingNoCheck"))
-            return
+            return False
         env.messages.extend(msgs)
         self.pack = form
+        return True
 
     def pack_select(self, i: int) -> Result:
         return self._run(self._pack_select, i, posting=False)

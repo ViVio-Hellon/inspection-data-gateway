@@ -33,12 +33,13 @@ NAV: tuple[tuple[str, str, str, str], ...] = (
     ("calibration", "校正", "/calibration", "直尺の校正"),
     ("quality", "品質基準", "/quality", "このロットの品質基準を見る"),
     ("history", "履歴", "/history", "保存した検査を見る・再印刷"),
+    ("meibo", "名簿・日報", "/meibo", "検査員の不一致・梱包枚数・日報の修正"),
     ("import", "取り込み", "/import", "Access・xlsm からの取り込み"),
     ("settings", "設定", "/settings", "この端末・使用パス・権限"),
 )
 
 # もう作った画面。ここに挙がっていないものは「準備中」ページを出す
-READY_SCREENS = frozenset({"settings", "import", "kensa", "history", "ainput", "calibration", "quality", "zenkasho", "cask"})
+READY_SCREENS = frozenset({"settings", "import", "kensa", "history", "ainput", "calibration", "quality", "zenkasho", "cask", "meibo"})
 
 # 準備中の画面の説明。key: (作る予定, 何ができるようになるか, いま使う画面)
 PENDING_SCREENS: dict[str, tuple[str, str, str]] = {
