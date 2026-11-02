@@ -677,6 +677,27 @@ class RealHooks(Hooks):
         self.env.messages.extend(r.messages)
         return r.value
 
+    def atu_hiki_records(self, state: KensaState, lot: str) -> tuple[bool, Optional[list[Any]]]:
+        """Atu_OPselect の SIKAHIKINOW (FormRelat:6227-6247)。切替の条件は Arrbox と同じ(lot.arrbox を参照)。
+
+        ログ(TimeDesignation / FileDesignation の WriteLog)は arrbox と同じく書かない。
+        """
+        target = "SIKAHIKINOW"
+        main, nxt = paths.get("main"), paths.get("next")
+        fpath = main if state.dbflag == "" else nxt
+        file_path = lotmod.db_path(fpath, target)
+        if fpath == main:
+            # VBA の Or は短絡しない(3 つとも評価する)
+            c1 = lotmod.read_check(file_path, 1) is False
+            c2 = lotmod.time_designation(self.env.now(), [])
+            c3 = lotmod.file_designation([]) is False
+            if c1 or c2 or c3:
+                file_path = lotmod.db_path(nxt, target)
+                if lotmod.read_check(file_path, 1) is False:
+                    return False, None
+        flt = "[ﾛｯﾄ番号]='" + lot + "'"
+        return True, datasource.get_records(file_path, lotmod.TABLE, flt)
+
     # --- 値を返さないもの ---------------------------------------------
     def loop_text(self, state: KensaState, st: str) -> None:
         """FormRelat.LoopText (FormRelat:278-302)。異常値除去 → 機器 → 判定 → 時刻 → 桁 → 入力済みの印。"""
@@ -896,7 +917,8 @@ class RealHooks(Hooks):
         safe = layout.VBA_ERRORS
         try:
             if name == "Atu_OPselect":
-                layout.atu_opselect(state, vbx.single(args[0]), self, msgs=self.env.messages)
+                # SaveLoad:2839 `Atu_OPselect(val(…))`: ATU As Double。Single に入れない
+                layout.atu_opselect(state, args[0], self, msgs=self.env.messages)
             elif name == "LSelect":
                 layout.lselect(state, args[0], self, msgs=self.env.messages)
             elif name == "LSelectLateral":
@@ -910,10 +932,10 @@ class RealHooks(Hooks):
             elif name == "SlabSet":
                 layout.slab_set(state, self)
             elif name == "SmallNumberCount判定":
-                if state.atu != "":
-                    th = grid.small_count_th(state, self.calculate_sheets)
-                    if state.work_caption.get("厚板") == "H" and state.is_work("少枚数"):
-                        self.small_number_count(state, th)
+                # SaveLoad:2914-2927。ATU が空なら th = 0(呼ぶか否かは ATU に関係しない)
+                th = grid.small_count_th(state, self.calculate_sheets)
+                if state.work_caption.get("厚板") == "H" and state.is_work("少枚数"):
+                    self.small_number_count(state, th)
             elif name == "DrawListBoxContent":
                 # YamaLB.ListIndex を入れると YamaLB_Click が走る(Load_Text。SaveLoad:2830-2836)
                 idx = state.v("YamaLB").tag

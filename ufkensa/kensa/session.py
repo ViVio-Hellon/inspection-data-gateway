@@ -232,16 +232,19 @@ class Session:
                 if opt == "Maru" and terminal.line_no() in terminal.MARU_NUMBERS:
                     maru = terminal.MARU_NUMBERS.index(terminal.line_no()) + 1
                 layout.line_auto_selection(st, "", hooks, maru)
-            if st.sika_set_atu == 0 and st.lot != "":
+            # UF1:110 の SikaSetAtu は UF1 の Private 変数で、SaveLoad の Public SikaSetAtu(state.sika_set_atu)とは別。
+            # Initialize で書いた値は LSelect / CBAdd 側には届かない(フォームを開いた直後は 0)
+            uf1_sika_set_atu = 0.0
+            if st.lot != "":
                 try:
                     all_ = lotmod.sika_atu_create(st.lot)
                 except Exception:                                       # noqa: BLE001 - SikaAtuCreate の End
                     all_ = None
                 if all_:
-                    st.sika_set_atu = vbx.single(vbx.val(all_[0]))
-            if st.sika_set_atu != 0:                                    # UF1:253-261 歪コンボ
+                    uf1_sika_set_atu = vbx.single(vbx.val(all_[0]))
+            if uf1_sika_set_atu != 0:                                   # UF1:253-261 歪コンボ
                 if st.blindfold_tag != "Set":
-                    hooks.cb_add(st, st.sika_set_atu)
+                    hooks.cb_add(st, uf1_sika_set_atu)
                 else:
                     st.blindfold_tag = ""
             else:
@@ -446,7 +449,7 @@ class Session:
             env.messages.append(Message(str(e), ERROR, source="SaveLoad.VC_Picture"))
         if st.atu != "":
             w = quality.weight(vbx.val(st.atu), vbx.val(st.hab), vbx.val(st.tak))
-            layout.atu_opselect(st, vbx.single(vbx.val(st.atu)), hooks, w, env.messages)
+            layout.atu_opselect(st, vbx.val(st.atu), hooks, w, env.messages)   # SaveLoad:384 val(…) は Double
         temp_e = r.temp_e
         uf = wiring.to_uf1(st)
         if checks.conductiv_check(uf):

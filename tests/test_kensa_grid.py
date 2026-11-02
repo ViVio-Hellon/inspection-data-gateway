@@ -55,6 +55,14 @@ class FakeHooks(grid.Hooks):
             return (self.fields or {}).get(target)
         return self.records.get(target)
 
+    #: Atu_OPselect の SIKAHIKINOW が MainPath・NextPath とも無い(False)を試すとき
+    hiki_path_ok = True
+
+    def atu_hiki_records(self, state, lot):
+        if self.records is None:
+            return super().atu_hiki_records(state, lot)
+        return self.hiki_path_ok, self.records.get("SIKAHIKINOW.accdb")
+
     def loop_text(self, state, st):
         self.calls.append(("loop_text", st))
 

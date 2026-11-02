@@ -692,7 +692,8 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                 if r != "":
                     ken_no = r
         else:
-            result_t = hooks.is_over_12_hours(state)
+            r12 = safe(hooks.is_over_12_hours, state)            # エラーなら代入ごと飛ばされ False(2640)
+            result_t = bool(r12) if r12 is not None else False
             hi_acc = safe(hooks.arrbox, state, "SIKALOTNOW.accdb", "板", "Fields")
             if hi_acc is not None:
                 cours = _field_no(hi_acc, "設計_設備ｺｰｽ")
@@ -968,7 +969,10 @@ def _lc_and_visual(state: KensaState) -> None:
 def _thin_body(state: KensaState, hooks: Hooks, *, set_diag: bool) -> None:
     """LSelect の薄板の山数別の表示(FormRelat:3193-3247 / 住精 3372-3419)。set_diag は住精側(対角も触る)。"""
     if state.yama == "4":
-        six_display(state, "on", hooks)
+        try:                                           # AtCountSelect のエラーは LSelect の Resume Next で次の文へ
+            six_display(state, "on", hooks)
+        except VBA_ERRORS:
+            pass
     elif state.yama == "3":
         _cells(state, range(1, 11), FIVE, True, True)
         if set_diag:
@@ -1000,7 +1004,9 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
 
     `Select Case NewAtu` の範囲は VBA のまま(境界の隙間 6〜6.001・29.9〜30・199.9〜200・200〜200.1・299〜300 では消えない)。
     エラー処理は無い(DB の値が数にならない等は例外がそのまま上がる)。
-    SIKAHIKINOW は VBA では GetRecordsArr を直接(Arrbox と同じ MainPath/NextPath 切替)。ここでは hooks.arrbox で読む。
+    SIKAHIKINOW の行は Arrbox を通さず GetRecordsArr を直接読む(`hooks.atu_hiki_records`)。MainPath・NextPath とも
+    無ければ「日稲:SIKAHIKINOW.accdbがありません_ReadCheckAtu_OPselect」(IsOver12Hours に関係なく出す)、Comment を消して
+    リセットの前に抜ける(FormRelat:6233-6242)。
     """
     msgs = msgs if msgs is not None else []
     ken_no = ""
@@ -1018,7 +1024,13 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
         atu = new_atu
         fields = hooks.arrbox(state, "SIKAHIKINOW.accdb", "", "Fields")
         no2 = _field_no(fields, "検査番号")
-        ken_acc = hooks.arrbox(state, "SIKAHIKINOW.accdb", state.lot, "Record")
+        # FormRelat:6227-6247: Arrbox を通さず、自前で MainPath/NextPath を選んで GetRecordsArr(Filter は Lot が空でも付く)
+        found, ken_acc = hooks.atu_hiki_records(state, state.lot)
+        if not found:
+            msgs.append(Message("日稲:" + "SIKAHIKINOW.accdb" + "がありません" + "_ReadCheckAtu_OPselect", ERROR,
+                                source="FormRelat:6238"))
+            state.comment = ""
+            return                                          # Exit Sub(SkipA のリセットは走らない)
         if ken_acc is not None:
             v = _cell1(ken_acc, no2)
             ken_no = vbx.left(v, 1)

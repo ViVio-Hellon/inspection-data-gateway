@@ -164,6 +164,32 @@ class LSelectTest(QuirkCase):
         layout.lselect(s, "厚板", h, skip_db_check=True)
         self.assertEqual(caps(s, "LZS"), ["幅ｹﾞｰｼﾞ"])
 
+    def test_is_over_12_hours_error(self) -> None:
+        # FormRelat:2640 `ResultT = IsOver12Hours`: IsOver12Hours の CDate がエラー(Worker:342)でも
+        # On Error Resume Next で ResultT = False のまま続く → ロットが無ければ MsgBox(2665)
+        class H(type(fake_db())):
+            def is_over_12_hours(self, state):
+                raise vbx.TypeMismatch("CDate")
+        h = H(records={"SIKAHIKINOW.accdb": None, "SIKALOTNOW.accdb": None},
+              fields={"SIKAHIKINOW.accdb": HIKI_FIELDS, "SIKALOTNOW.accdb": LOT_FIELDS})
+        s = KensaState(lot="LOT0001", work="厚板", load="on")
+        msgs = []
+        layout.lselect(s, "厚板", h, skip_db_check=True, msgs=msgs)
+        self.assertEqual([m.text for m in msgs], ["SIKALOTNOWに該当ロットがありませんLSelect"])
+        self.assertEqual(caps(s, "S", "U"), ["S", "S1"])
+
+    def test_four_yama_at_count_error_resumes(self) -> None:
+        # 4 山: Six_Display("on") → AtCountSelect(4) の KenAcc(1, 0) が添字エラー(FormRelat:1985、検査番号の列が無い)。
+        # エラーは LSelect の On Error Resume Next で受け、続き(対角・ゲージ)は実行される(3195-3196 の次から)
+        h = FakeHooks(records={"SIKAHIKINOW.accdb": [["LOT0001", ""]], "SIKALOTNOW.accdb": [["L6X0001", "LOT0001", "2",
+                                                                                          "HOT", "HOT CM1"]]},
+                      fields={"SIKAHIKINOW.accdb": ["ﾛｯﾄ番号", "x"], "SIKALOTNOW.accdb": LOT_FIELDS})
+        s = KensaState(lot="LOT0001", work="薄板", yama="4", at_butt_caption="厚2ヵ所")
+        layout.lselect(s, "薄板", h, skip_db_check=True)
+        self.assertTrue(s.cells["F1"].visible)
+        self.assertEqual(caps(s, "LZS"), ["定盤"])
+        self.assertTrue(s.ctl("L9").visible)
+
     def test_thin_at_butt_reshown(self) -> None:
         # 6mm 超(AtuFlag=False)で AtButt を消しても、直後の LineSkip: で検番が T 以外なら表示に戻る
         s = KensaState(lot="LOT0001", work="薄板", yama="1")
@@ -381,6 +407,22 @@ class AtuOpSelectTest(unittest.TestCase):
         layout.atu_opselect(s, 3.0, h, 0.0, msgs)
         self.assertIn("データ上にまだ検査番号がありません", msgs[0].text)
 
+    def test_hiki_missing_exits_before_reset(self) -> None:
+        # FormRelat:6233-6242: SIKAHIKINOW が MainPath・NextPath とも無い → MsgBox、Comment="" で Exit Sub。
+        # SkipA のリセット(作業選択の解除・ボタン非表示・行 11〜14 の非表示)は走らない
+        s = KensaState(lot="LOT0001", work="厚板", at_butt_visible=True, ken_no_caption="前")
+        s.cells["S11"].visible = True
+        h = fake_db(ken="L6X0001", atu="6")
+        h.hiki_path_ok = False
+        msgs = []
+        layout.atu_opselect(s, 6.5, h, 0.0, msgs)
+        self.assertEqual([m.text for m in msgs], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheckAtu_OPselect"])
+        self.assertEqual(msgs[0].level, "error")
+        self.assertEqual(s.comment, "")                      # "ｵｰﾀﾞｰ厚参照_6.000" を消す
+        self.assertEqual((s.work, s.at_butt_visible, s.ken_no_caption), ("厚板", True, "前"))
+        self.assertTrue(s.cells["S11"].visible)
+        self.assertTrue(all(s.work_visible[w] for w in grid.WORKS))
+
     def test_zero_skips_db_and_resets(self) -> None:
         s = KensaState(work="薄板", comment="x", at_butt_visible=True)
         for n in ("S11", "S5"):
@@ -390,6 +432,29 @@ class AtuOpSelectTest(unittest.TestCase):
         self.assertTrue(s.cells["S5"].visible)
         self.assertFalse(s.cells["S11"].visible)
         self.assertTrue(s.cells["F10"].visible)
+
+
+class AtuOpSelectFixtureTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        kensa_fixture.use_offline()
+
+    def test_empty_lot_uses_lot_filter_for_hiki(self) -> None:
+        # Lot が空: SIKALOTNOW は Arrbox(…, "") で絞り込み無し → 先頭行 RX021T0(ｵｰﾀﾞｰ板厚 25, 検査番号 T6X1913)。
+        # SIKAHIKINOW は GetRecordsArr(…, "[ﾛｯﾄ番号]=''")(FormRelat:6246-6247)で 0 件 → LotAcc の検査番号(6255-6258)。
+        # Arrbox(…, "") で読むと SIKAHIKINOW の先頭行 N6X1699 になってしまう
+        s = KensaState(lot="")
+        msgs = []
+        layout.atu_opselect(s, 3.0, grid.Hooks(), 0.0, msgs)
+        self.assertEqual(s.ken_no_caption, "T6X1913")
+        self.assertEqual(s.work_caption["薄板"], "T")
+        self.assertEqual([w for w in grid.WORKS if s.work_visible[w]], ["薄板"])
+        self.assertEqual(s.comment, "ｵｰﾀﾞｰ厚参照_25.000")
+
+    def test_hiki_found(self) -> None:
+        s = KensaState(lot="H7485T0")
+        layout.atu_opselect(s, 3.0, grid.Hooks(), 0.0, [])
+        self.assertEqual(s.ken_no_caption, "H6X1879")
 
 
 class EventsTest(QuirkCase):
@@ -486,3 +551,108 @@ class EventsTest(QuirkCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AtuOpSelectRealHooksTest(unittest.TestCase):
+    """wiring.RealHooks で SIKAHIKINOW が無いとき(FormRelat:6222-6242)。"""
+
+    def setUp(self) -> None:
+        import tempfile
+        from pathlib import Path
+        self.tmp = Path(tempfile.mkdtemp(prefix="ufkensa_atuop_"))
+        folder = kensa_fixture.copy_to(self.tmp / "db")
+        kensa_fixture.use_offline(folder)
+        self.folder = folder
+
+    def tearDown(self) -> None:
+        import shutil
+        kensa_fixture.use_offline()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def run_atu(self, now):
+        from ufkensa.kensa import wiring
+        from ufkensa.kensa.store import LocalStore
+        env = wiring.Env(store=LocalStore(self.tmp / "local.sqlite3"), now=lambda: now, write_logs=False)
+        s = KensaState(lot="H7485T0", work="厚板", at_butt_visible=True)
+        layout.atu_opselect(s, 3.0, wiring.RealHooks(env), 0.0, env.messages)
+        return s, [m.text for m in env.messages]
+
+    def test_missing_both(self) -> None:
+        from datetime import datetime
+        (self.folder / "SIKAHIKINOW.sqlite3").unlink()
+        s, texts = self.run_atu(datetime(2026, 11, 2, 10, 30, 0))
+        # 列名の Arrbox(6221)が「…_ReadCheck_Arrbox」、行は自前の判定で「…_ReadCheckAtu_OPselect」→ Exit Sub
+        self.assertEqual(texts, ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox",
+                                 "日稲:SIKAHIKINOW.accdbがありません_ReadCheckAtu_OPselect"])
+        self.assertEqual((s.comment, s.work, s.at_butt_visible), ("", "厚板", True))
+
+    def test_found_in_time_window(self) -> None:
+        from datetime import datetime
+        # 時刻窓(xx:59:50)でも NextPath(同じフォルダ)にあれば読む
+        s, texts = self.run_atu(datetime(2026, 11, 2, 10, 59, 50))
+        self.assertEqual(texts, [])
+        self.assertEqual((s.ken_no_caption, s.work), ("H6X1879", ""))
+
+
+class SmallNumberCountRestoreTest(unittest.TestCase):
+    """Load_Text の「少枚数の枚数」(SaveLoad:2914-2927)。"""
+
+    def run_call(self, atu: str):
+        import tempfile
+        from pathlib import Path
+        from ufkensa.kensa import wiring
+        from ufkensa.kensa.store import LocalStore
+
+        class Hooks(wiring.RealHooks):
+            def __init__(self, env):
+                super().__init__(env)
+                self.got = []
+
+            def calculate_sheets(self, state, atu):
+                return vbx.single(3.0)
+
+            def small_number_count(self, state, th):
+                self.got.append(th)
+
+        env = wiring.Env(store=LocalStore(Path(tempfile.mkdtemp(prefix="ufkensa_snc_")) / "l.sqlite3"),
+                         write_logs=False)
+        h = Hooks(env)
+        s = KensaState(atu=atu, work="少枚数")
+        s.work_caption["厚板"] = "H"
+        h.restore_call(s, ("SmallNumberCount判定", ""))
+        return h.got
+
+    def test_atu_blank_still_calls(self) -> None:
+        # SaveLoad:2925-2927: `If Kno = "H" And flag Then Call SmallNumberCount(th)` は If UF1.ATU <> "" の外。
+        # ATU が空なら th = 0 のまま呼ぶ
+        self.assertEqual(self.run_call(""), [0])
+
+    def test_atu_set(self) -> None:
+        self.assertEqual(self.run_call("3"), [3])
+
+
+class AtuOpSelectRestoreTest(unittest.TestCase):
+    """Load_Text の `Call Atu_OPselect(val(sh.Cells(1, 2)))`(SaveLoad:2839)。引数は Double のまま渡る。"""
+
+    def test_double_argument(self) -> None:
+        import tempfile
+        from pathlib import Path
+        from ufkensa.kensa import wiring
+        from ufkensa.kensa.store import LocalStore
+        fake = fake_db(ken="L6X0001", atu="6.6")
+
+        class Hooks(wiring.RealHooks):
+            def arrbox(self, state, target, sql_filter="", use="Record"):
+                return fake.arrbox(state, target, sql_filter, use)
+
+            def atu_hiki_records(self, state, lot):
+                return fake.atu_hiki_records(state, lot)
+
+        env = wiring.Env(store=LocalStore(Path(tempfile.mkdtemp(prefix="ufkensa_atur_")) / "l.sqlite3"),
+                         write_logs=False)
+        s = KensaState(lot="LOT0001")
+        Hooks(env).restore_call(s, ("Atu_OPselect", vbx.val("6.6")))
+        # FormRelat:6214: val(ATU)=6.6 と val(NewAtu)=CDbl("6.6") は等しい → Comment は書かない。
+        # Single に入れてから渡すと 6.59999990463257 になり「ｵｰﾀﾞｰ厚参照_6.600」が出てしまう
+        self.assertEqual(s.comment, "")
+        self.assertEqual(s.ken_no_caption, "L6X0001")

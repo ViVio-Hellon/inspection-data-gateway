@@ -570,6 +570,25 @@ class Hooks:
             return datasource.get_fields(path, "仕掛", "")
         return datasource.get_records(path, "仕掛", flt)
 
+    def atu_hiki_records(self, state: KensaState, lot: str) -> tuple[bool, Optional[list[Any]]]:
+        """Atu_OPselect の SIKAHIKINOW の読み (FormRelat:6227-6247)。Arrbox を通さず GetRecordsArr を直接呼ぶ。
+
+        DBflag が空なら MainPath、MainPath が読めなければ(ReadCheck・TimeDesignation・FileDesignation)NextPath。
+        NextPath も無いときは (False, None)(呼び手が「日稲:…がありません_ReadCheckAtu_OPselect」で抜ける)。
+        Filter は Lot が空でも `[ﾛｯﾄ番号]=''`(Arrbox の「空なら絞り込み無し」とは違う)。
+        既定は ReadCheck だけを見る簡易版(時刻窓・PLEASE WAIT は wiring.RealHooks)。
+        """
+        from . import ado_filter, datasource, paths
+        main, nxt = paths.db_file("SIKAHIKINOW"), paths.db_file("SIKAHIKINOW", base_key="next")
+        path = main if state.dbflag == "" else nxt
+        if state.dbflag == "" and not datasource.exists(main):
+            path = nxt
+            if not datasource.exists(nxt):
+                return False, None
+        if not datasource.exists(path):
+            return True, None
+        return True, datasource.get_records(path, "仕掛", "[ﾛｯﾄ番号]='" + ado_filter.quote(lot) + "'")
+
     # --- 値を返さないもの ---------------------------------------------
     def loop_text(self, state: KensaState, st: str) -> None:
         """FormRelat.LoopText(st)(異常値除去→機器判定→TextJudg→TimeRecord→NumDig→CheckLabelsByCategory)。"""
