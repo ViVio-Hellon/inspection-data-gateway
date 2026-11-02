@@ -12,6 +12,7 @@
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { confirmBox, promptBox } from "../askbox.js";
+import { packDialog } from "./pack_dialog.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -19,6 +20,7 @@ const recent = [];
 let V = null;
 let lastActive = "";
 let flashTimer = 0;
+let pack = null;            // 包装仕様書の窓(UF_PackNo)
 
 async function op(name, body = {}, answers = {}) {
   let res;
@@ -182,13 +184,14 @@ function renderTable(v) {
 }
 
 function renderFlash(v) {
-  if (!v.flash) return;
+  if (!v.flash && !v.diag) return;
   const f = $("flash");
-  f.textContent = v.flash === "OK" ? "○" : "×";
-  f.dataset.kind = v.flash;
+  // UF対角(H494 の対角): VBA は絵を 2 秒出す(UFOK/UFNG は閉じる)
+  f.textContent = v.diag ? "対角" : (v.flash === "OK" ? "○" : "×");
+  f.dataset.kind = v.diag ? "diag" : v.flash;
   f.hidden = false;
   clearTimeout(flashTimer);
-  flashTimer = setTimeout(() => { f.hidden = true; }, 700);
+  flashTimer = setTimeout(() => { f.hidden = true; }, v.diag ? 2000 : 700);
 }
 
 // --- 右: 次に入力する欄・操作 --------------------------------------------
@@ -228,6 +231,7 @@ function render(v) {
   renderTable(v);
   renderRight(v);
   renderFlash(v);
+  if (pack) pack.render(v.pack);
 }
 
 function remember(line) {
@@ -237,6 +241,7 @@ function remember(line) {
 }
 
 function init() {
+  pack = packDialog({ imageUrl: "/api/zenkasho/pack_image", send: (name, body) => op(name, body) });
   $("modes").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-mode]");
     if (b && b.getAttribute("aria-selected") !== "true") op("choose", { mode: b.dataset.mode });

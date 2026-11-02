@@ -437,7 +437,7 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
                  re_diagonal: Optional[Callable[[float, float], float]] = None,
                  lateralbow_j: Optional[Callable[[float, float, float], float]] = None,
                  re_lateralbow: Optional[Callable[[float, float, float], float]] = None,
-                 null_raises: bool = False, lot_info_found: bool = True) -> Effects:
+                 null_raises: bool = False, lot_info_found: Union[bool, Callable[[], bool]] = True) -> Effects:
     """UFMitsubishi.ComboBox1_Change (UFMit:596-875)。SIKALOTNOW `仕掛` から寸法・公差・対角公差 S1・ラテラル公差 M1。
 
     - 公差: オーダー公差の±どちらかが 0 なら製造公差(`cask.tolerance_pair`)
@@ -445,7 +445,8 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
       指示_直角度があれば最優先(R1 = "追記")。**それ以外の等級では S1 を消さない**(前ロットの値が残る)
     - ラテラル M1: 指示_ﾗﾃﾗﾙﾎﾞｰ 優先、"3" → ReLateralbow、それ以外 → Lateralbow_J、0 なら ""
     - その後の Lot情報履歴・品証DB(DistArray / FormReflectDist)・包装仕様書は別担当: `Effects.calls` に積む。
-      `lot_info_found=False`(Lot情報履歴に無い)なら VBA と同じく EnableEvents が False のまま終わる
+      `lot_info_found=False`(Lot情報履歴に無い)なら VBA と同じく EnableEvents が False のまま終わる。
+      関数を渡すと HistorySave を積んだ**後で**呼ぶ(VBA の順: HistorySave → GetLotInfo。UFMit:804-809)
     """
     fx = book.fx
     f = book.mit
@@ -542,7 +543,8 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
                 act.set_formula(r, c, formula)
             return fx                                   # EnableEvents は False のまま(VBA どおり)
         fx.calls.append(Call("HistorySave", (past,)))
-        if not lot_info_found:
+        found = lot_info_found() if callable(lot_info_found) else lot_info_found
+        if not found:
             return fx
         fx.calls.append(Call("GetLotInfo/DbReturnItem", ("Lot情報履歴", f.lot_box)))
         if f.lot_box != "":

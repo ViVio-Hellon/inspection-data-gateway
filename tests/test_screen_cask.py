@@ -14,7 +14,9 @@ from unittest import mock
 from app import shell
 from tests._web import make_client
 from tests.test_kensa_session import CARD, SessionBase
-from ufkensa.kensa import cask_session, store
+import functools
+
+from ufkensa.kensa import cask_session, packing, paths, store, vbx, wiring
 from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import cask as caskmod
 from ufkensa.kensa.modes import sheet as sh
@@ -200,6 +202,59 @@ class CaskScreenTest(SessionBase):
         # 同じ日にもう一度保存すると連番(.002)
         d = self.post("save")
         self.assertTrue(any(".002_" in p for p in d["view"]["saved"]["files"]), d["view"]["saved"])
+
+    # --- 包装仕様書(PackingNoCheck / UFPack_Open。UFCask:538) ------------------------------
+    def lot_readable(self) -> None:
+        """U4 を読める側にして(全角の欄名を幅を揃えて読む)、ロットを読み込めるようにする。"""
+        p = mock.patch.object(caskmod, "combo_change",
+                              functools.partial(caskmod.combo_change, fullwidth_fields_readable=True))
+        p.start()
+        self.addCleanup(p.stop)
+
+    def pack_folder(self, *names: str) -> None:
+        f = paths.to_local(packing.folder_path())
+        f.mkdir(parents=True, exist_ok=True)
+        for n in names:
+            (f / n).write_bytes(b"\xff\xd8\xff\xe0")
+
+    def test_packing_dialog(self) -> None:
+        self.lot_readable()
+        self.pack_folder("1P1216.JPG")
+        self.post("open")
+        d = self.post("lot", lot="rx021t0")
+        rows = [r for r in (wiring.sheet_rows(self.store, store.LOT_HISTORY) or [])[1:] if r[2] == "RX021T0"]
+        self.assertEqual(len(rows), 2)                                                 # HistorySave(UFCask:535)
+        p = d["view"]["pack"]
+        self.assertEqual((p["picture"], p["caption"]), ("1P1216", "RX021T0"))
+        self.assertEqual([r["hiki"] for r in p["rows"]], ["61029052", "61029053"])
+        r = self.c.get("/api/cask/pack_image", headers=self.h)
+        self.assertEqual((r.status_code, r.mimetype), (200, "image/jpeg"))
+        r.close()
+        d = self.post("pack-select", i=2)
+        self.assertEqual(d["view"]["pack"]["selected"], 2)
+        d = self.post("pack-close", confirmed=False)
+        self.assertIn(packing.NEED_CONFIRM, self.texts(d))
+        self.assertIsNotNone(d["view"]["pack"])
+        d = self.post("pack-close", confirmed=True)
+        self.assertIsNone(d["view"]["pack"])
+        self.assertEqual(self.c.get("/api/cask/pack_image", headers=self.h).status_code, 404)
+
+    def test_packing_folder_missing(self) -> None:
+        self.lot_readable()
+        self.post("open")
+        d = self.post("lot", lot="RX021T0")
+        # fso.GetFolder の実行時エラー 76 → ErrHandler_ComboChange(UFCask:554)
+        self.assertIn("DB読み込みエラー:\r\nパスが見つかりません。", self.texts(d))
+        self.assertIsNone(d["view"]["pack"])
+
+    def test_packing_skipped_after_history_error(self) -> None:
+        self.lot_readable()
+        self.post("open")
+        with mock.patch("ufkensa.kensa.lot.history_save", side_effect=vbx.TypeMismatch("x")):
+            d = self.post("lot", lot="RX021T0")
+        errs = [t for t in self.texts(d) if t.startswith("DB読み込みエラー:")]
+        self.assertEqual(len(errs), 1)                                                 # PackingNoCheck まで進まない
+        self.assertNotIn("パスが見つかりません。", errs[0])
 
     def test_bad_requests(self) -> None:
         self.assertEqual(self.c.post("/api/cask/nothing", json={}, headers=self.h).status_code, 404)

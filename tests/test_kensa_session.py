@@ -404,3 +404,255 @@ class SameToleranceAsQualityScreenTest(SessionBase):
         new = quality.dist_array(lot, ken, quality.hiki_arr_create(lot), data).kousa
         self.assertEqual(old[0][6], "厚板QP")
         self.assertEqual(new[0][6], "薄板QP")
+
+
+class ScreenGapTest(SessionBase):
+    """画面に足りなかった操作(外観・不良要因・歪コンボ・検入高さ・保留・まとめて削除・廃棄フラグ・印刷履歴クリア・
+    サイズ修正・強制描写・オーダー・包装仕様書・VC 画像・検査員不一致)。期待値は VBA を手で追った結果。"""
+
+    def lot_ready(self) -> None:
+        self.register()
+
+    # --- 外観(UF1.LC?_Click → LcColor。OutTolerance:1628-1704)-----------
+    def test_visual_lc(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        names = s.visual_lists.visual
+        self.assertEqual(names[0], "")                                    # 先頭は空白行(Visual_Add)
+        r = self.ok(s.visual(1, [1, 2]))
+        self.assertEqual(st.v("S_UpVisual").value, names[1] + " " + names[2])   # 複数はスペースでつなぐ
+        self.assertEqual(st.visual[1].color, "CYAN")
+        self.ok(s.visual(8, [3]))                                         # LC8 = U 下面。n=7 で全部白に戻してから
+        self.assertEqual(st.v("U_UnderVisual").value, names[3])
+        self.assertEqual(st.visual[1].color, "WHITE")
+        self.ok(s.visual(1, []))                                          # 選択なし → 空にする
+        self.assertEqual(st.v("S_UpVisual").value, "")
+        self.ok(s.visual(1, [0]))                                         # 空白行だけ → ""(GetSelectedItems)
+        self.assertEqual(st.v("S_UpVisual").value, "")
+        self.ok(s.visual_clear(1))
+        self.assertEqual(st.visual[1].color, "WHITE")
+        self.assertIn("visual_caps", r.view)
+        self.assertIsNotNone(s.visual(99, []).stop)
+
+    # --- 不良要因(TeColor・ListReflect・SelectionInput・Cle)------------
+    def test_defect_reflect(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        defect = s.visual_lists.defect
+        self.assertEqual(defect[0], ("フクレ", "01"))                      # 原紙 C2/C9
+        self.assertEqual(defect[-1], ("ｽﾎﾟｯﾄ処理", ""))
+        r = self.ok(s.defect_reflect([]))
+        self.assertIn("不良要因が選択されていません", [m.text for m in r.messages])
+        r = self.ok(s.defect_reflect([0]))
+        self.assertIn("枚数入力がありません", [m.text for m in r.messages])
+        self.ok(s.set_value("UBad", "3"))                                  # MouseDown → TeColor(UBad を水色)
+        self.assertEqual((st.bad["U"].color, st.bad["S"].color), ("CYAN", "WHITE"))
+        self.ok(s.defect_reflect([0]))
+        sh = self.store.sheet("不良要因印刷_HVC")
+        self.assertEqual(sh.get(1, 2), LOT)
+        self.assertEqual(sh.get(4, 3), 3)                                 # U の行(4)、コード 01 の列(C)。Excel で数に
+        self.assertEqual(st.bad["U"].value, "")                           # リセット
+        self.assertEqual(st.bad["U"].color, "WHITE")
+        # 51 枚は分けて入力(スポット処理は除く)
+        self.ok(s.set_value("SBad", "51"))
+        r = self.ok(s.defect_reflect([0]))
+        self.assertIn("すみません、50枚以上は分けて入力してください", [m.text for m in r.messages])
+        self.ok(s.defect_reflect([len(defect) - 1]))                      # ｽﾎﾟｯﾄ処理 → C11
+        self.assertEqual(sh.get(11, 3), "51枚")
+        # 水色の欄が無い(反映でリセットされた後)まま反映 → UF1("") の実行時エラー
+        st.bad["S"].value = "2"
+        self.assertIsNotNone(s.defect_reflect([0]).stop)
+        self.ok(s.defect_clear())                                         # Cle_Click: C3:X8・C10:X10・C11
+        self.assertIsNone(sh.get(4, 3))
+        self.assertIsNone(sh.get(11, 3))
+        self.assertEqual(sh.get(1, 2), LOT)                               # B 列は残す
+
+    def test_defect_tp_with_other_is_error(self) -> None:
+        """B45: 不良要因と TP を同時に選ぶと添字エラー9(SelectionInput)。"""
+        self.lot_ready()
+        s = self.s
+        tp = [i for i, (n, _) in enumerate(s.visual_lists.defect) if n == "TP"][0]
+        self.ok(s.set_value("SBad", "1"))
+        self.assertIn("インデックス", s.defect_reflect([0, tp]).stop.text)
+
+    # --- 歪コンボの選択肢(CBAdd / CB_UpDownAdd / CBG_UpDownAdd)-----------
+    def test_cb_choices(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        v = s._view()
+        self.assertEqual(v["cb_choices"]["S"]["1"], ["幅", "丈"])          # 厚 15(6.00 超)は 幅/丈 だけ
+        self.assertEqual(v["cb_choices"]["S"]["3"], ["幅", "丈"])
+        s.hooks.cb_add(st, 6.0)                                           # 6.00 ちょうどは 耳/中 も
+        self.assertEqual(s._view()["cb_choices"]["S"]["1"], ["幅", "丈", "耳", "中"])
+        st.v("LGF").value = "ﾌﾘｰｿﾘ"
+        s.hooks.cb_add(st, 6.0)
+        self.assertEqual(s._view()["cb_choices"]["U"]["3"], ["上", "下"])
+        self.ok(s.set_value("CBS1", "中"))
+        self.ok(s.set_value("CBS3", "幅"))
+        v = s._view()
+        self.assertEqual(v["cb_choices"]["S"]["2"], ["Ⅰ型", "Ⅱ型", "Ⅲ型"])
+        self.assertEqual(v["cb_choices"]["S"]["4"], ["上", "下"])
+        self.assertEqual(v["cb_choices"]["U"]["2"], [])
+
+    # --- 検入高さの山数(YamaLB_Click → DrawListBoxContent)----------------
+    def test_yama_lb(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        self.ok(s.yama_lb("2"))
+        self.assertEqual([st.ken_h[i].visible for i in range(1, 8)], [True, True, False, False, False, False, False])
+        self.assertEqual((st.v("HL1").value, st.v("HL2").value), ("2-2", "2-1"))
+        self.ok(s.set_value("KenHBox1", "150"))
+        self.assertEqual(st.v("高さ計算式").value, "(150.0÷15)=10")
+        self.ok(s.yama_lb("枚数"))
+        self.assertTrue(st.ken_h[7].visible and st.v("KenCount").visible)
+        self.assertFalse(st.ken_h[1].visible)
+        self.assertEqual(st.v("高さ計算式").value, "(150.0÷15)=10")       # CalculateSheets は KenHBox1〜6 の値で
+        self.assertIsNotNone(s.yama_lb("8").stop)
+
+    # --- 保留(CommandButton18)・まとめて削除(NG?_DblClick)------------------
+    def test_hold(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        st.inp_tag = ""
+        r = self.ok(s.hold())
+        self.assertIn("保留の根拠位置をクリックしてください。", [m.text for m in r.messages])
+        st.inp_tag = "LateralU"
+        r = s.hold()
+        self.assertEqual(r.question.text, st.header("U") + "で保留処理を行いますか？")
+        self.ok(s.hold({"hold": False}))
+        self.assertEqual(st.ng["U"].value, "")
+        self.ok(s.hold({"hold": True}))
+        self.assertEqual(st.ng["U"].value, "保留")
+
+    def test_ng_delete(self) -> None:
+        self.lot_ready()
+        s = self.s
+        r = s.ng_delete("C")
+        self.assertEqual(r.question.text, "まとめて削除しますか?")
+        self.ok(s.ng_delete("C", {"ng_delete": True}))
+        self.assertEqual((s.confi["page"], s.confi["posi"], s.confi["n"], s.confi["moto"]), (1, "C", 0, "C板1枚"))
+
+    # --- 廃棄フラグ(IzyouFl_Click)・印刷履歴クリア(PrintBreset_Click)--------
+    def test_izyou(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        self.ok(s.izyou())                                                # シートが無ければ何もしない
+        sh = self.store.add_sheet("異常ロット用_HVC")
+        sh.write(1, 1, LOT)
+        self.assertEqual(s.izyou().question.text, "異常内容印刷フラグが立っています,取り消しますか？")
+        self.assertTrue(s._view()["buttons"]["izyou"])
+        self.assertEqual(s.izyou({"izyou": True}).question.text, "本当に取り消しますか？")
+        self.ok(s.izyou({"izyou": True, "izyou_sure": False}))
+        self.assertTrue(self.store.exists("異常ロット用_HVC"))
+        self.ok(s.izyou({"izyou": True, "izyou_sure": True}))
+        self.assertFalse(self.store.exists("異常ロット用_HVC"))
+        self.assertEqual(st.v("IzyouFl").color, "BUTTON")
+
+    def test_print_reset(self) -> None:
+        from ufkensa.kensa import report_model
+        self.lot_ready()
+        s = self.s
+        self.ok(s.print_reset())                                          # 印刷前は何もしない
+        self.assertEqual(s._view()["buttons"]["print"], "印刷")
+        report_model.set_printed(self.store, LOT, "HVC", self.clock.t)
+        v = s._view()["buttons"]
+        self.assertEqual((v["print"], v["print_reset"]), ("再印刷", True))
+        q = s.print_reset().question
+        self.assertEqual(q.text, "このロットの印刷履歴を消しますか？\r\n消せば印刷実行時にもう一度保存処理されます。")
+        r = self.ok(s.print_reset({"print_reset": False}))
+        self.assertIn("履歴削除処理を中断しました。", [m.text for m in r.messages])
+        r = self.ok(s.print_reset({"print_reset": True}))
+        self.assertIn("履歴を削除しました。", [m.text for m in r.messages])
+        self.assertFalse(report_model.is_printed(self.store, LOT))
+
+    # --- サイズ修正(ReSize_Click・Ap_Change → Form_Formula)・強制描写 -------
+    def test_resize(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        self.assertIsNotNone(s.set_value("Ap", "0.5").stop)               # Locked
+        self.assertEqual(s.resize().question.text, "Size、公差の編集を行いますか？")
+        self.ok(s.resize({"resize": True}))
+        self.assertEqual(st.resize_tag, "有")
+        self.ok(s.set_value("Ap", "0.5"))
+        self.assertEqual(st.apk, "15.500")                                # 15.000 + 0.5(Format "0.000")
+        self.ok(s.set_value("Hm", "x"))                                   # 数でなければ空(Hm_Change)
+        self.assertEqual((st.hm, st.hmk), ("", "1250.0"))                 # 空なら下限は計算し直さない
+        self.ok(s.set_value("TAIK", "3"))
+        self.assertEqual(st.v("TaikText").value, "")                      # Taik_Change
+
+    def test_byousya(self) -> None:
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        self.ok(s.set_value("Byousya", "True"))
+        self.assertTrue(st.byousya)
+        self.assertEqual(st.work, "")                                     # 作業選択を全部外す
+
+    # --- オーダーNo・包装仕様書・VC 画像 ------------------------------------
+    def test_order_and_vc(self) -> None:
+        vc_dir = self.db_dir / "VC種類画像"
+        vc_dir.mkdir()
+        (vc_dir / "208WRYG.JPG").write_bytes(b"\xff\xd8\xff")
+        self.lot_ready()
+        s = self.s
+        v = s._view()
+        self.assertEqual(v["order"]["list"], ["54033469"])                # OrdNoOpen
+        self.assertTrue(v["vc"]["a"]["visible"] and v["vc"]["b"]["visible"])   # VC=1、A/B とも 208WRYG
+        self.assertEqual(v["vc"]["a"]["image"], "208WRYG.JPG")
+        self.assertTrue(v["vc"]["a"]["label"].startswith("A面:"))
+        self.ok(s.select_order("54033469"))                               # OrdNoCB_Change
+        o = s._view()["order"]
+        self.assertEqual((o["no"], o["form"]), ("1P0116", "パレット"))
+        self.assertEqual(o["comment"], "標準_プロテックボード使用_個装梱包")
+
+    def test_packing_missing_folder_is_runtime_error(self) -> None:
+        """新しい不具合: 包装仕様書のフォルダが無いと PackingNoCheck が実行時エラー 76(VBA はロット登録が途中で止まる)。"""
+        self.ok(self.s.start())
+        self.ok(self.s.register_worker(CARD, {"worker_register": True}))
+        r = self.ok(self.s.register_lot(LOT, {"lot_register": True}))
+        self.assertTrue(any("'76'" in m.text for m in r.messages))
+        self.assertIsNone(self.s.pack)
+
+    def test_packing_dialog(self) -> None:
+        pack = self.db_dir / "包装仕様書"
+        pack.mkdir()
+        for n in ("1P0116.JPG", "1P9999.JPG"):
+            (pack / n).write_bytes(b"\xff\xd8\xff")
+        self.lot_ready()
+        s = self.s
+        p = s._view()["pack"]
+        self.assertEqual((p["no"], p["image"]), ("1P0116", "1P0116.JPG"))
+        self.assertEqual(p["rows"], [{"hiki": "61021053", "ord": "54033469", "pac": "1P0116"}])
+        self.assertEqual(p["labels"]["L2"], "梱包形態:パレット")
+        self.assertEqual(p["labels"]["L4"], "特記1:標準_プロテックボード使用_個装梱包")
+        r = self.ok(s.pack_close(False))
+        self.assertIn("確認後に押してください。", [m.text for m in r.messages])
+        self.assertIsNotNone(s.pack)
+        self.ok(s.pack_select(1))
+        self.ok(s.pack_close(True))
+        self.assertIsNone(s.pack)
+
+    def test_packing_no_check(self) -> None:
+        from ufkensa.kensa import wiring
+        hist = [["ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO"], ["L1", "O1", 2, "1P0002"], ["L1", "O2", 1, "1P0001"]]
+        none = lambda h, lot, r: ""                                       # noqa: E731
+        f = lambda *names: (lambda: list(names))                          # noqa: E731
+        # 最後に一致したファイルが残る(内側の For だけ抜ける)
+        self.assertEqual(wiring.packing_no_check(hist, "L1", none, f("1P0001.JPG", "1P0002.JPG")), "1P0002")
+        self.assertEqual(wiring.packing_no_check(hist, "L1", none, f("1P0001.JPG", "a.txt")), "1P0001")
+        self.assertEqual(wiring.packing_no_check(hist, "L2", none, f("1P0001.JPG")), "")
+        self.assertEqual(wiring.packing_no_check(hist, "L1", lambda h, lot, r: "1P0122", f()), "1P0122")
+        # 新しい不具合: 先頭のファイルの「.」が 7 文字目でないと PacN(0) で実行時エラー 9
+        with self.assertRaises(IndexError):
+            wiring.packing_no_check(hist, "L1", none, f("desktop.ini", "1P0001.JPG"))
+        self.assertEqual(wiring.pack_rows(hist, "L1")[0]["hiki"], "1")   # 引当No 順
+        self.assertEqual(wiring.ord_no_open(hist, "L1"), ["O2", "O1"])
+        self.assertIsNone(wiring.ord_no_open(hist, "L9"))
+
+    # --- 検査員不一致の印(UserForm_Activate)・名簿画面の案内 --------------
+    def test_name_list_flag_on_start(self) -> None:
+        sh = self.store.add_sheet("WorkerTime_HVC")
+        sh.write(1, 18, "OUT")
+        r = self.ok(self.s.start())
+        self.assertIn("Excelを閉じても解除はできません\r\n隠蔽工作Log出力", [m.text for m in r.messages])
+        self.assertEqual(r.view["name_list"], 1)
+        self.assertIsNone(self.ok(self.s.name_list_ack()).view["name_list"])

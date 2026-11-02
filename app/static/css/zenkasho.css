@@ -72,6 +72,7 @@ body[data-zk-mode="5N"] .zk-table th.g--歪 small { color: var(--state-error); f
             font-size: 180px; font-weight: 900; pointer-events: none; }
 .zk-flash[data-kind="OK"] { color: color-mix(in srgb, var(--state-ok) 70%, transparent); }
 .zk-flash[data-kind="NG"] { color: color-mix(in srgb, var(--state-error) 70%, transparent); }
+.zk-flash[data-kind="diag"] { color: color-mix(in srgb, var(--accent) 70%, transparent); font-size: 140px; }
 .zk-flash[hidden] { display: none; }
 
 .next { border: 2px solid var(--focus); background: var(--info-bg); border-radius: var(--radius); padding: 10px; text-align: center; }

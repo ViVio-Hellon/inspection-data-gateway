@@ -25,6 +25,11 @@
     resume()               CommandButton8「処理再開」(EnableEvents を戻す)
     proofread()            CommandButton15「校正読み込み」
     close()                UserForm_QueryClose(×)
+    pack_select(i)         包装仕様書の窓(UF_PackNo)の引当の行をクリック(LabelCls → JPGLoad)
+    pack_close(confirmed)  UF_PackNo の「閉じる」(CommandButton2。確認の印が要る)
+
+ComboBox1_Change の続き: HistorySave(Lot情報履歴)→ PackingNoCheck / UFPack_Open(`packing`。包装仕様書の画像と
+引当の一覧をモーダルで出す)。どちらかで実行時エラーになれば「DB読み込みエラー:」(ErrHandler_ComboChange)。
 
 印刷(PrintJob)は D8 でブラウザで開く HTML(report_html.render)。保存(SavePlan)は D7 で xlsx の代わりに
 シートごとの PDF(Edge。Windows 以外は HTML)+ CSV。
@@ -43,7 +48,7 @@ from typing import Any, Callable, Optional, Union
 
 from .. import trace
 from ..logging_utils import get_logger
-from . import datasource, legacy_log, lot as lotmod, paths, report_html, terminal, vbx, wiring, workers
+from . import datasource, legacy_log, lot as lotmod, packing, paths, quality, report_html, terminal, vbx, wiring, workers
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .modes import cask
 from .modes import sheet as sh
@@ -272,6 +277,8 @@ class CaskSession:
         self.report: Optional[dict[str, Any]] = None     # 印刷した帳票
         self.saved: Optional[dict[str, Any]] = None      # 保存したファイル
         self.ainput = False                              # 転送で Ainput_Startup("Cask", "L2") が呼ばれた
+        self.pack: Optional[packing.PackForm] = None     # 包装仕様書の窓(閉じるまで残る。モーダル)
+        self._lot_error = False                          # この操作の ComboBox1_Change がエラー処理へ落ちた
         self._env: Optional[wiring.Env] = None
 
     # ------------------------------------------------------------------
@@ -372,6 +379,7 @@ class CaskSession:
         with self._lock:
             book = self._ensure_book()
             book.begin()
+            self._lot_error = False
             extra: list[Message] = []
             q: Optional[Question] = None
             stop: Optional[Stop] = None
@@ -449,9 +457,36 @@ class CaskSession:
         if c.name == "Ainput_Startup":
             self.ainput = True
             return []
-        # PackingNoCheck/UFPack_Open(包装仕様書の画像)は未移植。VisibleSheets/HiddenSheets は画面に無い
+        if c.name == "PackingNoCheck/UFPack_Open":
+            return self._packing(str(c.args[0]))
+        # VisibleSheets → HiddenSheets(UFCask.Initialize)はシートの表示だけ。キャスク系のシートは直後の
+        # UserForm_Activate(UFCask:784-790)で表示に戻るので、業務の結果は変わらない(Effects をまとめて後で
+        # 実行するここで行うと Activate の後に隠してしまうので行わない)
         log.info("キャスク: 呼び出しを省いた %s %s", c.name, c.args)
         return []
+
+    def _packing(self, lot_no: str) -> list[Message]:
+        """`If Not PackingNoCheck(Me.LotBox) = "" Then Call UFPack_Open(…)`(UFCask:538)。
+
+        HistorySave が実行時エラーでエラー処理へ落ちたときは、VBA と同じく ここまで来ない。
+        実行時エラー(包装仕様書のフォルダが無い = 76 など)は「DB読み込みエラー:」(UFCask:554)。
+        """
+        if self._lot_error:
+            return []
+        msgs: list[Message] = []
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
+        try:
+            with trace.timed("cask.packing", "包装仕様書の確認(PackingNoCheck)", lot=lot_no,
+                             expected=(packing.PackingError,)):
+                n = packing.packing_no_check(hist, lot_no, messages=msgs)
+                form = packing.pack_open(n, lot_no, hist, messages=msgs) if n != "" else None
+        except (packing.PackingError, quality.VbaRuntimeError, vbx.TypeMismatch) as e:
+            desc = e.description if isinstance(e, packing.PackingError) else str(e)
+            msgs.append(Message("DB読み込みエラー:" + "\r\n" + desc, ERROR, source="UFCask:554"))
+            return msgs
+        if form is not None:
+            self.pack = form
+        return msgs
 
     def _registered(self, uf1: Any) -> bool:
         """Worker.Register_Check(UF1 の検査員)。True = 登録が要る。"""
@@ -534,11 +569,13 @@ class CaskSession:
                     partial = getattr(e, "partial", None)
                     if partial is not None:
                         self._apply_history(partial)
+                    self._lot_error = True
                     msgs.append(Message("DB読み込みエラー:" + "\r\n" + str(e), ERROR, source="UFCask:554"))
                     return msgs
                 info["rows"] = self._apply_history(res)
                 msgs.extend(res.messages)
         except datasource.DbMissing as e:
+            self._lot_error = True
             msgs.append(Message("DB読み込みエラー:" + "\r\n" + str(e), ERROR, source="UFCask:554"))
         return msgs
 
@@ -821,6 +858,37 @@ class CaskSession:
                                                                    shifts=env.shift_times()),
                                  workers.time_check(workers.hhmmss(now), facility=fac, shifts=env.shift_times()))
 
+    def pack_select(self, i: Any) -> Result:
+        return self._run(self._pack_select, i)
+
+    def _pack_select(self, i: Any) -> None:
+        """UF_PackNo の引当の行をクリック(LabelCls → Loop_Label → JPGLoad)。"""
+        if self.pack is None:
+            raise Stop("包装仕様書の画面は開いていません", level=WARN, source="cask_session")
+        try:
+            n = int(i)
+        except (TypeError, ValueError):
+            raise Stop("行の番号が正しくありません", level=WARN, source="cask_session") from None
+        msgs: list[Message] = []
+        packing.pack_select(self.pack, n, wiring.sheet_rows(self.store, LOT_HISTORY), messages=msgs)
+        self.book.fx.messages.extend(msgs)
+
+    def pack_close(self, confirmed: Any = False) -> Result:
+        return self._run(self._pack_close, bool(confirmed))
+
+    def _pack_close(self, confirmed: bool) -> None:
+        """UF_PackNo.CommandButton2_Click(「確認」が無いと「確認後に押してください。」で閉じない)。"""
+        m = packing.pack_close(confirmed)
+        if m is not None:
+            self.book.fx.messages.append(m)
+            return
+        self.pack = None
+
+    def pack_image(self) -> Optional[Path]:
+        """いま出している包装仕様書の画像(使用パスの QualityPath\\包装仕様書)。"""
+        with self._lock:
+            return packing.picture_file(self.pack.picture) if self.pack is not None else None
+
     def close(self) -> Result:
         return self._run(self._close)
 
@@ -919,6 +987,7 @@ class CaskSession:
             "saved": self.saved,
             "ainput": self.ainput,
             "focus": "zero" if f.visible and (f.micro == "" or f.convex == "") else "meas",
+            "pack": self.pack.to_dict() if self.pack is not None else None,
         }
 
 

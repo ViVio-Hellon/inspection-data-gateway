@@ -24,12 +24,27 @@
     new_sheet(answers)         CommandButton1 / ws_out「ｼｰﾄ発行」
     resume()                   CommandButton16 / 21「処理再開」(EnableEvents = True)
     next_empty()               SB_SpinDown(MoveTg: 厚の最初の空き欄へ)
+    pack_select(i)             包装仕様書の窓(UF_PackNo)の引当の行をクリック(LabelCls → JPGLoad)
+    pack_close(confirmed)      UF_PackNo の「閉じる」(CommandButton2。確認の印が要る)
 
 **Effects の後始末**: 音(音楽合格 → chime2.wav など)・ログ(WriteLog)・UFOK/UFNG(画面の大きな ○/×)・
 印刷(PrintJob → 帳票の HTML。D8 でブラウザから印刷)・保存(SavePlan → D7 で xlsx の代わりに HTML/PDF + CSV)・
 `保存用` への履歴行。他モジュールの呼び出し(`Effects.calls`)は、部品が積んだその場で処理する
 (DrawListBoxContent・DistArray/FormReflectDist・LogOut など。VBA と同じ順番で効くように)。
 つないでいない呼び出しは view の `pending` に名前を出す。
+
+**つないだ呼び出し**(部品の `Effects.calls` → ここ):
+    HistorySave                 SaveLoad.HistorySave → `lot.history_save`(Lot情報履歴へ。通常検査・キャスクと同じ)
+    GetLotInfo/DbReturnItem     AccHIki.GetLotInfo(`lot.get_lot_info`。無ければ ComboBox1_Change を抜ける)→
+                                QP.DbReturnItem(`quality.db_return_item`。表示中はシートの O1/M1/AC6 へ)
+    DistArray/FormReflectDist   表示中は 全ヵ所検査 の M5/O5。開く途中は UF1 の欄にしか書かないので書かない(pending)
+    PackingNoCheck/UFPack_Open  `packing`(包装仕様書の画像と引当の一覧。モーダル。`pack_select` / `pack_close`)
+    AddWS/Pesute・不良要因印刷_B1・不良要因印刷範囲・不良要因の PrintJob
+                                手元DB の `不良要因印刷_<Line>`(通常検査と同じシート)→ `report_model` → 帳票の HTML
+    Register_Check/Daily_Create Worker.Register_Check(UF1 の検査員)→ Daily_Create(`Daily_<UFMitsubishi.LineName>`)
+    Daily_Report                Worker.Daily_Report(全ヵ所・H494 表示中は `Daily_`)
+    UF対角(フォーム)           2 秒の演出。UFOK/UFNG を閉じる → 画面の大きな表示を「対角」に
+VBA の実行時エラーは、ComboBox1_Change の中なら部品のエラー処理(「DB読み込みエラー:」)へ渡すため `sh.VbaError` にする。
 """
 from __future__ import annotations
 
@@ -45,7 +60,9 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .. import trace
-from . import checks, datasource, judge, legacy_log, paths, quality, report_html, terminal, vbx, workers
+from . import checks, datasource, judge, legacy_log, packing, paths, quality, report_html, report_model, terminal, vbx, \
+    workers
+from . import lot as lotmod
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .modes import h494 as hm
 from .modes import sheet as sh
@@ -53,7 +70,7 @@ from .modes import zenkasho as zk
 from .modes.sheet import H494, ZEN
 from .report_model import ReportModel
 from .session import Result
-from .store import HOZON, LocalStore
+from .store import HOZON, LOT_HISTORY, LocalStore
 
 #: 作業シート → 手元DB のシート名(VBA の作業中保存のシート名)
 SAVE_SHEETS = {ZEN: "全ヵ所作業中保存", H494: "H494作業中保存"}
@@ -61,6 +78,8 @@ SAVE_SHEETS = {ZEN: "全ヵ所作業中保存", H494: "H494作業中保存"}
 META_SHEET = "全ヵ所作業中保存_画面"
 #: 三菱受託の未回答の確認(docs/04 W2)
 W2_NOTICE = "三菱受託は確認待ちの項目があります(docs/04 W2)"
+#: UF1.ZEB_Click / H494B_Click の Register_Check が真のとき(UF1:4873 / 606)
+NEED_WORKER = "検査員登録をして下さい"
 #: Excel の既定(Enter で下へ)。Change が選択を動かさなかったとき(ラテラル・歪・外観など)に効く
 ENTER_MOVES_DOWN = True
 
@@ -93,6 +112,8 @@ H494_COLS: tuple[tuple[int, str, str, str], ...] = (
     (25, "ﾗﾃﾗﾙ", "v", "ラテラル"), (26, "定盤", "v", "歪"), (27, "ｹﾞｰｼﾞ", "v", "歪"), (28, "外観", "t", "外観"),
 )
 SHEET_ROWS = {ZEN: (7, 76), H494: (7, 16)}
+DEFECT_PREFIX = "不良要因印刷_"                            # 不良要因印刷 & "_" & Lname
+TYPE_MISMATCH = "型が一致しません。"
 SHEET_COLS = {ZEN: 35, H494: 28}
 
 
@@ -230,6 +251,11 @@ class ZenkashoSession:
         self.ainput: Optional[dict[str, str]] = None
         self.pending: list[str] = []
         self.errors: list[str] = []
+        self.pack: Optional[packing.PackForm] = None           # UF_PackNo(閉じるまで残る。モーダル)
+        self.diag = False                                      # UF対角(直近の操作で出た)
+        self._lot_rows: Optional[list[list[Any]]] = None       # GetLotInfo の結果(DbReturnItem が使う)
+        self._defect_had: Optional[str] = None                 # 操作の前にあった不良要因シート
+        self._env: Optional[Any] = None
 
     # ------------------------------------------------------------------
     # 土台
@@ -299,7 +325,8 @@ class ZenkashoSession:
         return {"diagonal": lambda a, b: judge.diagonal(a, b, messages=m),
                 "re_diagonal": lambda a, b: judge.re_diagonal(a, b, messages=m),
                 "lateralbow_j": lambda a, b, c: judge.lateralbow_j(a, b, c, messages=m),
-                "re_lateralbow": lambda a, b, c: judge.re_lateralbow(a, b, c, messages=m)}
+                "re_lateralbow": lambda a, b, c: judge.re_lateralbow(a, b, c, messages=m),
+                "lot_info_found": self._get_lot_info}
 
     # ------------------------------------------------------------------
     # Effects
@@ -320,9 +347,21 @@ class ZenkashoSession:
             elif call.name == "Ainput_Startup":
                 self.ainput = {"kind": str(call.args[0]), "method": str(call.args[1]), "url": "/ainput"}
             elif call.name == "Daily_Report":
-                # 全ヵ所・H494 の表示中は Lname が "" → `Daily_` が無ければ何もしない(Worker:747-751)
-                if self.store.exists("Daily_"):
-                    self._pending("Daily_Report")
+                self._daily_report(int(call.args[0]))
+            elif call.name == "HistorySave":
+                self._history_save(list(call.args[0]))
+            elif call.name == "GetLotInfo/DbReturnItem":
+                self._db_return_items()
+            elif call.name == "PackingNoCheck/UFPack_Open":
+                self._packing(str(call.args[0]))
+            elif call.name == "AddWS/Pesute":
+                self._add_ws_pesute(str(call.args[0]), str(call.args[1]))
+            elif call.name == "不良要因印刷_B1":
+                self._defect_b1(str(call.args[0]), call.args[1])
+            elif call.name == "不良要因印刷範囲":
+                self._defect_range(str(call.args[0]))
+            elif call.name == "Register_Check/Daily_Create":
+                self._daily_create()
             elif call.name == "作業毎保存":
                 pass                                       # 毎操作のあと手元DB へ書いている(_persist)
             else:
@@ -348,16 +387,19 @@ class ZenkashoSession:
     def _dist_array(self, lot_no: str, ken_no: str) -> None:
         """ComboBox1_Change の DistArray → FormReflectDist (UFMit:846-850 / QP:1986-2055)。
 
-        UFMitsubishi が表示中なら 全ヵ所検査 の M5/O5(幅歪・丈歪の公差)へ。開く途中(非表示)は VBA では UF1 の欄に
-        書くが、通常検査の状態は書き換えない約束なので書かない(pending に出す)。
+        UFMitsubishi が表示中なら 全ヵ所検査 の M5/O5(幅歪・丈歪の公差)へ。
+        開く途中(OpenMitubisi の LotBox 代入。UFMitsubishi.Visible = False)は、FormReflectDist の最初の分岐
+        (`UF品質基準.Visible = False And UFMitsubishi.Visible = False`)で **UF1 の MG・HaHiz・TaHiz・Naka・Mimi・
+        HizCome・DistortionFrame にだけ**書く(シートには書かない。UF1 はこの後 Hide される)。通常検査の状態は
+        書き換えない約束なので書かず、DistArray の知らせだけ出して pending に理由を残す。
         """
         b = self.book
-        if not b.mit.visible:
-            self._pending("FormReflectDist(UF1 の歪公差)")
-            return
         qp = quality.dist_array(lot_no, ken_no, quality.hiki_arr_create(lot_no), quality.read_lot(lot_no))
         self._msgs.extend(qp.messages)
         if not qp.kousa:
+            return
+        if not b.mit.visible:
+            self._pending("FormReflectDist(開く途中は UF1 の歪公差の欄だけに書く。通常検査の状態は書き換えない)")
             return
         r = quality.form_reflect_dist(qp.kousa, quality_visible=False, mitsubishi_visible=True, uf1_visible=False,
                                       zenkasho_sheet=ZEN in b.sheets)
@@ -365,6 +407,341 @@ class ZenkashoSession:
             ws = b.ws(r.sheet)
             for (rr, cc), v in r.cells.items():
                 ws.set(rr, cc, sh.to_cell(v))              # EnableEvents は False の間(UFMit:850)
+
+    # ------------------------------------------------------------------
+    # ロット読込の続き(HistorySave・GetLotInfo・DbReturnItem・包装仕様書)
+    # ------------------------------------------------------------------
+    def env(self) -> Any:
+        from . import wiring
+        if self._env is None:
+            self._env = wiring.Env(store=self.store, now=self.now, facility=terminal.facility,
+                                   write_logs=self.write_logs)
+        return self._env
+
+    @staticmethod
+    def _vba_error(e: Exception, number: int = 13, desc: str = TYPE_MISMATCH) -> sh.VbaError:
+        """部品のエラー処理(ComboBox1_Change の ErrHandler_MitCombo など)へ渡す形にする。"""
+        if isinstance(e, packing.PackingError):
+            return sh.VbaError(e.number, e.description, e.where)
+        if isinstance(e, quality.VbaRuntimeError):
+            return sh.VbaError(getattr(e, "number", number), str(e), "")
+        if isinstance(e, datasource.DbMissing):
+            return sh.VbaError(0, str(e), "datasource")
+        return sh.VbaError(number, desc, str(e))
+
+    def _history_save(self, past: list[Any]) -> None:
+        """ComboBox1_Change の `Call HistorySave(PastHiki)`(UFMit:804)。Lot情報履歴 に引当ごとの行。
+
+        途中の実行時エラーは ComboBox1_Change のエラー処理(「DB読み込みエラー:」)に落ちる(行の削除は済んだまま)。
+        g_CacheLotNo などの控え(UF1 のロットと同じときだけ効く)は通常検査の状態なので書き換えない。
+        """
+        b = self.book
+        st = self._kstate()
+        over12 = False
+        if st is not None:
+            from . import wiring
+            over12 = wiring.RealHooks(self.env())._over12(st)
+        henv = lotmod.HistoryEnv(dbflag=getattr(st, "dbflag", "") or "", now=self.now(), over12=over12,
+                                 zenkasho_visible=ZEN in b.sheets and b.sheets[ZEN].visible,
+                                 uf1_test=getattr(st, "line_option", "") == "Test", mitsubishi_line=b.mit.line_name)
+        from . import wiring
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY) or []
+        with trace.timed("db.save", "Lot情報履歴(HistorySave)", path=str(self.store.path), table=LOT_HISTORY,
+                         expected=(sh.VbaError,)) as info:
+            try:
+                res = lotmod.history_save(past, hist, henv)
+            except (vbx.TypeMismatch, lotmod.SubscriptOutOfRange, IndexError, datasource.DbMissing) as e:
+                partial = getattr(e, "partial", None)
+                if partial is not None:
+                    self._apply_history(partial)
+                raise self._vba_error(e, 9 if isinstance(e, (lotmod.SubscriptOutOfRange, IndexError)) else 13,
+                                      "インデックスが有効範囲にありません。"
+                                      if isinstance(e, (lotmod.SubscriptOutOfRange, IndexError)) else TYPE_MISMATCH)
+            info["rows"] = self._apply_history(res)
+        self._msgs.extend(res.messages)
+        if self.write_logs:
+            for lg in res.logs:
+                legacy_log.write_log(lg.msg, lg.sepl, lg.target_path, now=self.now())
+
+    def _apply_history(self, h: lotmod.HistorySaveResult) -> int:
+        """HistorySave の結果を Lot情報履歴 に反映する(行を消してから足す。通常検査・キャスクと同じ)。"""
+        lh = self.store.sheet(LOT_HISTORY)
+        trace.note_used(self.store.path, "save")
+        for r in sorted(h.delete_rows, reverse=True):
+            lh.delete_row(r)
+        for row in h.new_rows:
+            lh.append(row[:26])
+        return len(h.new_rows)
+
+    def _get_lot_info(self) -> bool:
+        """`TempArry = GetLotInfo("Lot情報履歴", UFMitsubishi.LotBox.Text)`(UFMit:807-809)。Empty なら抜ける(偽)。
+
+        H494 でも LotBox(全ヵ所のロット欄)で引く(VBA どおり)。
+        """
+        from . import wiring
+        try:
+            self._lot_rows = lotmod.get_lot_info(wiring.sheet_rows(self.store, LOT_HISTORY), self.book.mit.lot_box)
+        except vbx.TypeMismatch as e:
+            raise self._vba_error(e) from e
+        return self._lot_rows is not None
+
+    def _db_return_items(self) -> None:
+        """UFMit:810-845。引当ごとの納入先で DbReturnItem(前回と同じ納入先は飛ばす)。
+
+        用途コード・材質・調質・厚・幅・丈は**最後の行**の値(VBA のループで上書き)。DbReturnItem は
+        UFMitsubishi 表示中ならシート(全ヵ所検査 / H494検査)の O1・M1・AC6 に書く。UF1 に書く分(HURIS の空け、
+        該当なしのときの Sumisei・Additional・LateralText、表示前の LateralText など)は通常検査の状態なので書かない。
+        """
+        rows = self._lot_rows or []
+        if not rows:
+            return
+        b, f = self.book, self.book.mit
+        st = self._kstate()
+        try:
+            last = rows[-1]
+            youto, zai, tyou = (vbx.cstr(last[i]) if last[i] is not None else "" for i in (2, 3, 4))
+            atu, haba, take = (self._single(last[i]) for i in (5, 6, 7))
+        except vbx.TypeMismatch as e:
+            raise self._vba_error(e) from e
+        prev = ""
+        lateral_lot = None
+        quiet = False                                  # DBdisplayラテラル: IsOver12Hours が真なら MsgBox を出さない
+        if st is not None:
+            from . import wiring
+            quiet = wiring.RealHooks(self.env())._over12(st)
+        for r in rows:
+            nou = r[0]
+            if vbx.compare_typed(nou, "", vbx.VAR, vbx.STR) == 0:
+                continue
+            nou_s = vbx.cstr(nou)
+            tori_s = vbx.cstr(r[1]) if r[1] is not None else ""
+            if nou_s == prev:
+                continue
+            prev = nou_s
+            if lateral_lot is None:
+                lateral_lot = quality.read_lot(f.lot_box)
+            try:
+                res = quality.db_return_item(nou_s, tori_s, youto, zai, tyou, atu, haba, take,
+                                             additional_caption=getattr(st, "additional", "") or "",
+                                             mitsubishi_visible=f.visible, work_flag=f.work_flag,
+                                             zenkasho_sheet=ZEN in b.sheets, lateral_lot=lateral_lot,
+                                             lateral_quiet=quiet)
+            except (quality.VbaRuntimeError, vbx.TypeMismatch, datasource.DbMissing) as e:
+                raise self._vba_error(e) from e
+            self._msgs.extend(res.messages)
+            if res.sheet:
+                ws = b.ws(res.sheet)
+                for (rr, cc), v in res.cells.items():
+                    ws.set(rr, cc, sh.to_cell(v))          # EnableEvents は False の間
+            if any(k != "HURIS" or v != "" for k, v in res.uf1.items()) or res.cb_add_atu is not None:
+                self._pending("DbReturnItem(UF1 の欄: " + "・".join(k for k in res.uf1 if k != "HURIS")
+                              + ")" if res.uf1 else "DbReturnItem(UF1 の CBAdd)")
+
+    @staticmethod
+    def _single(v: Any) -> float:
+        """`Dim x As Single: x = TempArry(i, n)`(Empty は 0、数にならない文字列は型エラー 13)。"""
+        if v is None:
+            return 0.0
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return vbx.single(float(v))
+        return vbx.single(vbx.cdbl(v))
+
+    def _packing(self, lot_no: str) -> None:
+        """`If Not PackingNoCheck(LotNo) = "" Then Call UFPack_Open(PackingNoCheck(LotNo), LotNo)`(UFMit:856-858)。"""
+        from . import wiring
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
+        with trace.timed("zenkasho.packing", "包装仕様書の確認(PackingNoCheck)", expected=(sh.VbaError,), lot=lot_no):
+            try:
+                n = packing.packing_no_check(hist, lot_no, messages=self._msgs)
+                if n == "":
+                    return
+                form = packing.pack_open(n, lot_no, hist, messages=self._msgs)
+            except (packing.PackingError, quality.VbaRuntimeError, vbx.TypeMismatch) as e:
+                raise self._vba_error(e) from e
+        if form is not None:
+            self.pack = form
+
+    def pack_select(self, i: Any) -> Result:
+        return self._run(self._pack_select, i)
+
+    def _pack_select(self, i: Any) -> None:
+        """UF_PackNo の引当の行をクリック(LabelCls → JPGLoad)。"""
+        if self.pack is None:
+            raise Stop("包装仕様書の画面は開いていません", level=WARN)
+        from . import wiring
+        try:
+            n = int(i)
+        except (TypeError, ValueError):
+            raise Stop("行の番号が正しくありません", level=WARN) from None
+        packing.pack_select(self.pack, n, wiring.sheet_rows(self.store, LOT_HISTORY), messages=self._msgs)
+
+    def pack_close(self, confirmed: Any = False) -> Result:
+        return self._run(self._pack_close, bool(confirmed))
+
+    def _pack_close(self, confirmed: bool) -> None:
+        """UF_PackNo.CommandButton2_Click(「確認」が無いと閉じない)。"""
+        m = packing.pack_close(confirmed)
+        if m is not None:
+            self._msgs.append(m)
+            return
+        self.pack = None
+
+    def pack_image(self) -> Optional[Path]:
+        """いま出している包装仕様書の画像(使用パスの QualityPath\包装仕様書)。"""
+        with self._lock:
+            if self.pack is None:
+                return None
+            return packing.picture_file(self.pack.picture)
+
+    # ------------------------------------------------------------------
+    # 不良要因票(手元DB の 不良要因印刷_<Line>。通常検査と同じシート)
+    # ------------------------------------------------------------------
+    def _defect_name(self) -> str:
+        return DEFECT_PREFIX + self.book.mit.line_name
+
+    def _sync_defect(self) -> None:
+        """操作の前に、手元DB の不良要因シートの有無と B1 をブックへ映す(部品は `book.has` / B1 で判断する)。"""
+        b = self.book
+        for k in [k for k in b.extra if k.startswith(DEFECT_PREFIX)]:
+            b.extra.pop(k)
+        name = self._defect_name()
+        self._defect_had = None
+        if self.store.exists(name):
+            ws = sh.Sheet(name)
+            ws.visible = False
+            ws.set(1, 2, self.store.sheet(name).get(1, 2))
+            b.extra[name] = ws
+            self._defect_had = name
+
+    def _defect_after(self) -> None:
+        """部品が消した不良要因シート(新規発行の `Sheets(…).Delete`)を手元DB からも消す。"""
+        name = self._defect_had
+        if name and not self.book.has(name) and self.store.exists(name):
+            trace.note_used(self.store.path, "save")
+            with trace.timed("db.save", "不良要因シートを消す", path=str(self.store.path), table=name):
+                self.store.delete_sheet(name)
+        self._defect_had = None
+
+    def _add_ws_pesute(self, template: str, name: str) -> None:
+        """補助.AddWS(name) + Print.Pesute(原紙, name)。手元DB のシートを作り直して原紙の値を写す。"""
+        trace.note_used(self.store.path, "save")
+        with trace.timed("db.save", "不良要因シートを原紙から作る(AddWS/Pesute)", path=str(self.store.path), table=name):
+            ws = self.store.add_sheet(name)
+            report_model.paste_template_values(ws, template)
+        b1 = ws.get(1, 2)
+        if name in self.book.extra:
+            self.book.extra[name].set(1, 2, b1)
+        self._defect_had = None                            # 作り直した(この操作で消したのではない)
+
+    def _defect_b1(self, name: str, lot: Any) -> None:
+        """`Sheets("不良要因印刷_" & Lname).Cells(1, 2) = UFMitsubishi.LotBox`(Mit:735)。"""
+        if not self.store.exists(name):
+            raise sh.VbaError(9, "インデックスが有効範囲にありません。", f"Sheets({name})")
+        self.store.sheet(name).write(1, 2, lot, "O")
+        trace.note_used(self.store.path, "save")
+
+    def _defect_range(self, kname: str) -> None:
+        """Print.不良要因印刷範囲(Kname) (Print:1278-1335)。**LotN を渡さない形**なので UF1 の Lname・Lot を使う。
+
+        - シート名は `不良要因印刷_` & UF1.LineName & UF1.LineNo。全ヵ所が作るのは `不良要因印刷_` & UFMitsubishi.LineName
+          なので、号機のある丸徳では別のシート(通常検査のもの)を見る/無ければ何もしない(VBA どおり)
+        - 右ヘッダは UF1.Lot と検査員名、右フッターの開始は 全ヵ所検査!B1(UFMitsubishi 表示中。H494 でも)
+        """
+        b = self.book
+        st = self._kstate()
+        lname = getattr(st, "lname", "") if st is not None else ""
+        lot_c = getattr(st, "lot", "") if st is not None else ""
+        start = None
+        if b.mit.visible:
+            v = b.ws(ZEN).get(1, 2)                        # 全ヵ所検査 が無ければ実行時エラー 9
+            start = "" if v is None else v
+        shifts = self.env().shift_times()
+        try:
+            with trace.timed("db.save", "不良要因票のページ設定・合計(不良要因印刷範囲)", path=str(self.store.path),
+                             table=DEFECT_PREFIX + lname, expected=(vbx.TypeMismatch,)):
+                report_model.defect_print_range(self.store, lname, kname, lot_c, now=self.now(), uf1_visible=False,
+                                                start1=shifts.start1, end3=shifts.end3, start_override=start)
+        except vbx.TypeMismatch as e:
+            raise self._vba_error(e) from e
+
+    def _defect_print(self, job: sh.PrintJob) -> None:
+        """不良要因の PrintJob(`sh.PrintOut`)→ 手元DB のシートに原紙の書式を当てた帳票の HTML(D8)。"""
+        model = report_model.render_defect_sheet(self.store, job.sheet[len(DEFECT_PREFIX):])
+        if model is None:
+            raise sh.VbaError(9, "インデックスが有効範囲にありません。", f"Sheets({job.sheet})")
+        folder = self._print_dir()
+        stem = _safe_name(job.sheet)
+        with trace.timed("db.save", "不良要因票の HTML", path=str(folder), table=stem) as info:
+            files = report_html.save_html_and_pdf(model, folder, stem, None)
+            trace.note_used(files["html"], "save")
+            info["files"] = len(files)
+        p = Path(files["html"])
+        self.reports.append({"label": job.sheet, "name": p.name, "path": str(p)})
+
+    # ------------------------------------------------------------------
+    # 日報(Register_Check / Daily_Create / Daily_Report)
+    # ------------------------------------------------------------------
+    def _registered(self, st: Any) -> bool:
+        """Worker.Register_Check(Format$(Now, "hh:mm:ss"))。UF1 の検査員で見る。True = 登録が要る。"""
+        from . import wiring
+        now = self.now()
+        env = self.env()
+        return workers.register_check(workers.hhmmss(now), wiring.registry(st), wiring.worker_sheet_a(self.store, st.lname),
+                                      now=now, facility=terminal.facility() or workers.DEFAULT_FACILITY,
+                                      shifts=env.shift_times())
+
+    def _daily_create(self) -> None:
+        """新規発行の `If Register_Check(…) Then Call Daily_Create`(UFMit:1253 / 2117)。
+
+        Daily_Create は UF1 が隠れているので Lname = UFMitsubishi.LineName(Worker:721-725)。
+        見出しの後の Daily_Report(1)(3) は全ヵ所・H494 表示中のため `Daily_` を探す。
+        """
+        from . import wiring
+        st = self._kstate()
+        if st is None or not self._registered(st):
+            return
+        b = self.book
+        env = self.env()
+        now = self.now()
+        fac = terminal.facility() or workers.DEFAULT_FACILITY
+        lname = b.mit.line_name if b.mit.visible else ""
+        name = "Daily_" + lname
+        day_return = workers.yea_dayr_check(workers.hhmm(now), now=now, facility=fac, shifts=env.shift_times())
+        set_time = workers.time_check(workers.hhmmss(now), facility=fac, shifts=env.shift_times())
+        cells = wiring.sheet_cells(self.store, name)
+        recreate = cells is None or sh.cell_str(cells.get((1, 1))) != day_return + "_" + set_time
+        trace.note_used(self.store.path, "save")
+        with trace.timed("db.save", "日報の作成(Daily_Create)", path=str(self.store.path), table=name):
+            wiring.write_cells(self.store, name, [workers.CellWrite(2, c, v) for c, v in
+                                                  enumerate(workers.DAILY_FIELDS, start=1)], recreate=recreate)
+        self._daily_report(1)
+        self._daily_report(3)
+
+    def _daily_report(self, n: int) -> None:
+        """Worker.Daily_Report(n)。全ヵ所・H494 が表示中なので Lname = "" → `Daily_` シート(普通は無い → 何もしない)。"""
+        from . import wiring
+        mode = "全ヵ所" if self.page == "P1" else "H494"
+        name = workers.daily_sheet_name(mode, "")
+        cells = wiring.sheet_cells(self.store, name)
+        if cells is None:
+            return
+        b = self.book
+        env = self.env()
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
+        lot_sheet = ZEN if ZEN in b.sheets and b.sheets[ZEN].visible else H494
+        working = sh.cell_str(b.ws(lot_sheet).get(2, 4)) if lot_sheet in b.sheets else ""
+        ctx = workers.DailyContext(exists=True, cells=dict(cells), history_rows=hist[1:] if hist is not None else None,
+                                   working_lot=working, now=self.now(),
+                                   facility=terminal.facility() or workers.DEFAULT_FACILITY, shifts=env.shift_times(),
+                                   mode=mode, sub_line=b.mit.line_name, sub_kname=b.mit.kname)
+        try:
+            writes = workers.daily_report(n, ctx)
+        except IndexError as e:
+            raise sh.VbaError(9, "インデックスが有効範囲にありません。", "Worker.Daily_Report") from e
+        if writes:
+            trace.note_used(self.store.path, "save")
+            with trace.timed("db.save", f"日報(Daily_Report {n})", path=str(self.store.path), table=name):
+                wiring.write_cells(self.store, name, writes)
 
     def _log_out(self, name: str, mitsu: str) -> None:
         """補助.LogOut(KenHBox?, "", "三菱")。ラインと検査員は UF1(通常検査)のもの。"""
@@ -389,6 +766,8 @@ class ZenkashoSession:
         """集めた Effects の後始末。画面に返す知らせ(音を含む)を返す。"""
         msgs: list[Message] = list(self._msgs)
         b = self.book
+        if b is not None:
+            self._defect_after()
         for fx in self._acc:
             msgs.extend(fx.messages)
             for s in fx.sounds:
@@ -399,6 +778,10 @@ class ZenkashoSession:
             for form in fx.forms:
                 if form.name in ("UFOK", "UFNG"):
                     self.flash = "OK" if form.name == "UFOK" else "NG"
+                elif form.name == "UF対角":
+                    # UF対角.UserForm_Activate: 絵を 2 秒出して閉じる。UFOK/UFNG/UFcount は閉じる(演出だけ)
+                    self.flash = ""
+                    self.diag = True
                 else:
                     self._pending(form.name)
             self.errors.extend(fx.errors)
@@ -422,6 +805,8 @@ class ZenkashoSession:
             b = self._ensure()
             self._acc, self._msgs = [], []
             self.flash, self.reports, self.saved, self.ainput, self.pending, self.errors = "", [], [], None, [], []
+            self.diag = False
+            self._sync_defect()
             q: Optional[Question] = None
             stop: Optional[Stop] = None
             b.fx = b._new_fx()                         # 前の操作の Effects は片付け済み(集め直さない)
@@ -529,8 +914,15 @@ class ZenkashoSession:
         return self.store.path.parent / "print"
 
     def _print_job(self, job: sh.PrintJob, msgs: list[Message]) -> None:
-        """PrintJob → 帳票の HTML(D8: ブラウザで開いて印刷)。中身の無いもの(不良要因印刷)はつないでいない。"""
+        """PrintJob → 帳票の HTML(D8: ブラウザで開いて印刷)。不良要因印刷_<Line> は手元DB のシートから作る。"""
         if not job.snapshot:
+            if job.sheet.startswith(DEFECT_PREFIX):
+                try:
+                    self._defect_print(job)
+                except sh.VbaError as e:
+                    msgs.append(Message(f"実行時エラー '{e.number}':" + "\r\n\r\n" + e.description, ERROR,
+                                        source="PrintOut"))
+                return
             self._pending(f"印刷:{job.sheet}")
             return
         lot = sh.cell_str(job.snapshot.get("D2") or "") if job.sheet != "転送済" else ""
@@ -630,7 +1022,29 @@ class ZenkashoSession:
     def _start(self, choice_input: Optional[str]) -> Optional[Question]:
         if self.book.mit.visible:
             return None
+        if self._need_worker():
+            return None
         return self._open(self.page, choice_input)
+
+    def _need_worker(self) -> bool:
+        """UF1.ZEB_Click (UF1:4870-4875) / H494B_Click (UF1:604-609)。開く前の検査員チェック。
+
+        `If Register_Check(Format$(Now, "hh:mm:ss"), "") Then MsgError "検査員登録をして下さい", Lname, 2: Exit Sub`。
+        UF1(通常検査の状態)が無ければ登録が無いのと同じに扱う(キャスクの画面と同じ)。真なら開かない。
+        """
+        st = self._kstate()
+        if st is None:
+            self._msgs.append(Message(NEED_WORKER, ERROR, "警告", source="UF1:4873"))
+            return True
+        if not self._registered(st):
+            return False
+        from . import wiring
+        env = self.env()
+        env.messages = []
+        wiring._msg_error(env, st, NEED_WORKER, 2)
+        self._msgs.extend(env.messages)
+        env.messages = []
+        return True
 
     def _open(self, page: str, choice_input: Optional[str]) -> Optional[Question]:
         """Mitsubishi.OpenMitubisi (Mit:3-76) + UserForm_Activate。"""
@@ -673,12 +1087,16 @@ class ZenkashoSession:
                 return None
             if f.visible:
                 self._call(zk.query_close, b)
+            elif self._need_worker():                  # 閉じている → UF1 の H494B_Click と同じ
+                return None
             return self._open("P_H494", None)
         if mode not in ("一般", "5N", "三菱"):
             raise Stop("正しい作業選択名を入力してください", level=WARN, source="UFMit:513")
         if not (f.visible and f.work_flag == "P1"):
             if f.visible:
                 self._call(zk.query_close, b)
+            elif self._need_worker():                  # 閉じている → UF1 の ZEB_Click と同じ
+                return None
             q = self._open("P1", choice_input if choice_input is not None else mode)
             if q is not None:
                 return q
@@ -902,6 +1320,8 @@ class ZenkashoSession:
             "rows": rows, "active": active, "flash": self.flash, "reports": self.reports, "saved": self.saved,
             "ainput": self.ainput, "pending": self.pending, "errors": self.errors,
             "can_next_empty": self.page == "P1",
+            "diag": self.diag,
+            "pack": self.pack.to_dict() if self.pack is not None else None,
         }
 
     def _cell_label(self, name: str, r: int, c: int, cols: list) -> str:

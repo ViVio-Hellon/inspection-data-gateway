@@ -35,7 +35,13 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "new": ("new_sheet", ("answers",)),
     "resume": ("resume", ()),
     "next-empty": ("next_empty", ()),
+    "pack-select": ("pack_select", ("i",)),
+    "pack-close": ("pack_close", ("confirmed",)),
 }
+
+#: 包装仕様書の画像の種類(拡張子 → MIME)。VBA は LoadPicture で .JPG を読む
+_IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
+                ".bmp": "image/bmp"}
 
 
 @bp.get("/zenkasho")
@@ -59,6 +65,15 @@ def report(name: str):
     if not f.is_file():
         return jsonify({"error": {"code": "not_found", "message": f"帳票がありません: {safe}"}}), 404
     return send_file(f, mimetype="text/html")
+
+
+@bp.get("/api/zenkasho/pack_image")
+def pack_image():
+    """いま出している包装仕様書の画像(UF_PackNo.PacIM)。使用パス(QualityPath\\包装仕様書)のファイルだけを返す。"""
+    f = zenkasho_session.get().pack_image()
+    if f is None or not f.is_file():
+        return jsonify({"error": {"code": "not_found", "message": "包装仕様書の画像がありません"}}), 404
+    return send_file(f, mimetype=_IMAGE_TYPES.get(f.suffix.lower(), "application/octet-stream"), max_age=0)
 
 
 @bp.post("/api/zenkasho/<op>")

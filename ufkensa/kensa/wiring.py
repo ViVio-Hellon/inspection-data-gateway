@@ -53,6 +53,9 @@ from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import Ctl, Hooks, KensaState
 from .store import LOT_HISTORY, ROW_TABLES, LocalStore, cell_text, line_sheet
 
+#: TeColor・LcColor の水色(RGB(0,255,255))。不良枚数欄・外観ボタンの「選んでいる欄」
+COLOR_CYAN = "CYAN"
+
 # ------------------------------------------------------------------
 # 名前 → KensaState
 # ------------------------------------------------------------------
@@ -311,6 +314,11 @@ class Env:
     confi: list[checks.ConfiRequest] = field(default_factory=list)
     reason: Optional[checks.ConfiRequest] = None       # 消去理由の入力(ConfiReason_Open)
     proofread: Optional[calibration.ProofreadLoad] = None
+    #: CBAdd が最後に入れた歪コンボの選択肢(CB?1 = 定盤の形状、CB?3 = ゲージの形状)。画面の候補
+    cb_items: dict[str, list[str]] = field(default_factory=lambda: {"shape": checks.cb_shape_items(),
+                                                                    "gauge": checks.cbg_shape_items({})})
+    #: VC_Picture / VC_Clear の結果(None = VC_Clear 後・未表示)
+    vc: Optional[lotmod.VcView] = None
 
     def shift_times(self) -> workers.ShiftTimes:
         if self.shifts is None:
@@ -775,10 +783,53 @@ class RealHooks(Hooks):
                                                    value, vbx.clng(count))
 
     def te_color(self, state: KensaState, name: str) -> None:
-        """OutTolerance.TeColor は色付けだけ(checks で移さなかった)。何もしない。"""
+        """OutTolerance.TeColor (OutTolerance:2451-2469)。不良枚数欄を全部白にして、押した欄を水色にする。
+
+        色そのものは表示だけだが、「反映」(ListReflect → TecReturn)は水色の欄を書く先にするので状態として持つ。
+        """
+        for c in state.bad.values():
+            c.color = grid.COLOR_WHITE
+        state.ctl(name).color = COLOR_CYAN
 
     def cb_add(self, state: KensaState, sika_set_atu: float) -> None:
-        """OutTolerance.CBAdd は歪コンボの選択肢(画面の候補)。値は変えないので何もしない(選択肢は view で出す)。"""
+        """OutTolerance.CBAdd (OutTolerance:1427-1485)。歪コンボ CB?1(定盤の形状)・CB?3(ゲージの形状)の選択肢。
+
+        値は変えない(VBA の `.Clear` は一覧だけ)。ゲージ側はその時点の LG? の Caption で決まるので、ここで控える。
+        """
+        self.env.cb_items = {"shape": checks.cb_shape_items(sika_set_atu),
+                             "gauge": checks.cbg_shape_items({"LG" + p: state.v("LG" + p).value
+                                                              for p in grid.POSITIONS})}
+
+    def draw_list_box_content(self, state: KensaState) -> None:
+        """OutTolerance.DrawListBoxContent (OutTolerance:1747-1840)。検入高さの山数(YamaLB)で入力欄を出し分け、
+        CalculateSheets で枚数と式を出し直す。YamaLB が空なら何もしない。"""
+        lay = checks.yama_layout(state.v("YamaLB").value)
+        if lay is None:
+            return
+        for k, vis in lay.visible.items():
+            if k.startswith("KenHBox"):
+                state.ken_h[int(k[7:])].visible = vis
+            else:
+                state.v(k).visible = vis
+        for k, cap in lay.hl_captions.items():
+            state.v(k).value = cap
+        if lay.formula_reset:
+            state.v("高さ計算式").value = ""
+        self.calculate_sheets(state, vbx.single(vbx.val(state.atu)))
+
+    def vc_picture(self, state: KensaState, order_no: str = "") -> None:
+        """SaveLoad.VC_Picture (SaveLoad:1554-1758)。VC 画像と VC厚 の系統・備考。受注番号を渡すと MaterialsUpperPart も。"""
+        hist = sheet_rows(self.store, LOT_HISTORY) or []
+        mup = None
+        if order_no != "":
+            mup = lambda o, b: quality.materials_upper_part(o, hist or None, b)   # noqa: E731
+        self.env.vc = lotmod.vc_picture(hist, state.lot, order_no, test=state.line_option == "Test",
+                                        materials_upper_part=mup)
+        self.env.messages.extend(self.env.vc.messages)
+
+    def vc_clear(self, state: KensaState) -> None:
+        """FormRelat.VC_Clear (FormRelat:6465-)。VC の画像とラベルを隠す。"""
+        self.env.vc = None
 
     def write_log(self, state: KensaState, text: str) -> None:
         self.env.log(legacy_log.line_entry(state.line_name, text))
@@ -863,9 +914,24 @@ class RealHooks(Hooks):
                     th = grid.small_count_th(state, self.calculate_sheets)
                     if state.work_caption.get("厚板") == "H" and state.is_work("少枚数"):
                         self.small_number_count(state, th)
-            # VC_Clear / VC_Picture / InitialSetting / DrawListBoxContent / Conductiv_Check / UFProgress は表示だけ
+            elif name == "DrawListBoxContent":
+                # YamaLB.ListIndex を入れると YamaLB_Click が走る(Load_Text。SaveLoad:2830-2836)
+                idx = state.v("YamaLB").tag
+                if idx == "last":
+                    state.v("YamaLB").value = checks.YAMA_ITEMS[-1]
+                elif idx.lstrip("-").isdigit() and 0 <= int(idx) < len(checks.YAMA_ITEMS):
+                    state.v("YamaLB").value = checks.YAMA_ITEMS[int(idx)]
+                if state.atu != "":
+                    self.draw_list_box_content(state)
+            elif name == "VC_Clear":
+                self.vc_clear(state)
+            elif name == "VC_Picture":
+                self.vc_picture(state)
+            # InitialSetting / Conductiv_Check / UFProgress は表示だけ
         except safe:
             pass
+        except (datasource.DbMissing, datasource.TableMissing, vbx.TypeMismatch, IndexError) as e:   # VC厚 が読めない
+            self.env.messages.append(Message(str(e), ERROR, source="SaveLoad.VC_Picture"))
 
 
 # ------------------------------------------------------------------
@@ -882,6 +948,224 @@ def pdf_folders(line: str, now: datetime) -> list[str]:
     month, day = now.strftime("%Y.%m"), now.strftime("%d") + "日"
     return [paths.join(paths.get("local_history"), big, month, day),
             paths.join(paths.get("factory"), "【梱包】" + big, month, day)]
+
+
+# ------------------------------------------------------------------
+# オーダーNo・包装仕様(OrdNoOpen / OrdNoCB_Change / PackingNoCheck / UF_PackNo)
+# ------------------------------------------------------------------
+def _hist_cols(hist: Sequence[Sequence[Any]], names: Sequence[str]) -> dict[str, int]:
+    """Lot情報履歴 の 1 行目から列番号(1 始まり。無ければ 0 = VBA の未代入の Long)。同名なら後の列。"""
+    out = {n: 0 for n in names}
+    for i, v in enumerate(hist[0] if hist else [], start=1):
+        if cell_text(v) in out:
+            out[cell_text(v)] = i
+    return out
+
+
+def _hcell(row: Sequence[Any], col: int) -> Any:
+    """`Hist(i, col)`。列 0(見出しが無い)は VBA では添字エラー 9。"""
+    if col < 1:
+        raise IndexError("インデックスが有効範囲にありません(Lot情報履歴の見出しが無い)")
+    return row[col - 1] if col <= len(row) else None
+
+
+def _lot_eq(v: Any, lot: str) -> bool:
+    """`Hist(i, R_Lot) = LotNo`(Variant と String)。"""
+    try:
+        return vbx.compare_typed(v, lot, vbx.VAR, vbx.STR) == 0
+    except vbx.TypeMismatch:
+        return False
+
+
+def _hiki_key(v: Any) -> tuple[int, Any]:
+    """merge_sort2(引当No)の比較。Variant の数は文字より小さい(安定な並べ替え)。"""
+    if v is None:
+        return (0, 0.0)
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return (0, float(v))
+    return (1, str(v))
+
+
+def _lot_hits(hist: Sequence[Sequence[Any]], lot: str, cols: dict[str, int], take: Sequence[str]) -> list[list[Any]]:
+    """`For i = LBound(Hist, 1) To UBound(Hist, 1)`(見出し行も対象)でロットが一致する行の、指定の列。"""
+    if not hist:
+        return []
+    r_lot = cols["ﾛｯﾄNo"]
+    return [[_hcell(row, cols[n]) for n in take] for row in hist if _lot_eq(_hcell(row, r_lot), lot)]
+
+
+def ord_no_open(hist: Optional[Sequence[Sequence[Any]]], lot: str) -> Optional[list[str]]:
+    """SaveLoad.OrdNoOpen (SaveLoad:2452-2499)。ロットのオーダーNo を引当No 順に(空は入れない)。
+
+    None = シートが無い・ロットが空・一致なし(VBA の Exit Sub。コンボも PackingNo なども変えない)。
+    一覧を返したときは PackingNo / PackingForm / PackingComment を空にする(呼び手)。
+    """
+    if hist is None or lot == "":
+        return None
+    cols = _hist_cols(hist, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO"))
+    rows = _lot_hits(hist, lot, cols, ("ｵｰﾀﾞｰNo", "包装仕様NO", "引当NO"))
+    if not rows:
+        return None
+    rows.sort(key=lambda r: _hiki_key(r[2]))
+    return [cell_text(r[0]) for r in rows if cell_text(r[0]) != ""]
+
+
+@dataclass
+class OrderPacking:
+    """OrdNoCB_Change の結果(PackingNo / PackingForm / PackingComment の Caption)。None = 変えない。"""
+    packing_no: Optional[str] = None
+    packing_form: Optional[str] = None
+    packing_comment: Optional[str] = None
+    reload: bool = False                     # VC_Picture(オーダー) と MaterialsMsgBox(オーダー) を呼ぶ
+
+
+def ord_no_change(hist: Optional[Sequence[Sequence[Any]]], lot: str, ord_no: str, current_packing_no: str,
+                  test: bool = False) -> OrderPacking:
+    """UF1.OrdNoCB_Change (UF1:1721-1790)。選んだオーダーの包装仕様No と、伝送用ファイル PkgSpecData の梱包形態・タイトル。
+
+    - PackingNo は一致した最後の行の値。一致が無ければ前の値のまま(VBA と同じ)
+    - 伝送用ファイルは PackingPath(Test でも同じ)。無ければここで終わり(ReadCheck)
+    """
+    out = OrderPacking()
+    if hist is None or lot == "":
+        return out
+    cols = _hist_cols(hist, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "包装仕様NO"))
+    rows = _lot_hits(hist, lot, cols, ("ｵｰﾀﾞｰNo", "包装仕様NO"))
+    if not rows:
+        return out
+    pno = current_packing_no
+    for r in rows:
+        try:
+            if vbx.compare_typed(ord_no, r[0], vbx.STR, vbx.VAR) == 0:
+                pno = cell_text(r[1])
+        except vbx.TypeMismatch:
+            pass
+    out.packing_no = pno
+    if pno == "":
+        return out
+    spec = _pkg_spec(pno)
+    if spec is None:
+        return out
+    fields, rec = spec
+    if rec is not None:
+        c_form, c_title = datasource.column_index(fields, "梱包形態"), datasource.column_index(fields, "タイトル")
+        # 見出しが無いと VBA の C_梱包形態 = 0 → 1 列目(LBound の列)を読む
+        out.packing_form = rec[0][max(c_form, 0)]
+        out.packing_comment = rec[0][max(c_title, 0)]
+    out.reload = True
+    return out
+
+
+def _pkg_spec(n: str) -> Optional[tuple[list[str], Optional[list[list[str]]]]]:
+    """伝送用ファイル PkgSpecData の `[包装仕様書№]='n'`(PackingPath)。ファイルが無ければ None(ReadCheck)。"""
+    from .lot import read_check
+    file_path = paths.join(paths.get("packing"), "伝送用ファイル.sqlite3")
+    if not read_check(file_path, 1):
+        return None
+    flt = "[包装仕様書№]='" + n + "'"
+    rec = datasource.get_records(file_path, "PkgSpecData", flt)
+    fields = datasource.get_fields(file_path, "PkgSpecData", "")
+    if fields is None:
+        return None
+    return fields, rec
+
+
+def pack_folder() -> str:
+    """包装仕様書の画像の置き場所(`QualityPath & "包装仕様書"`。FormRelat:6714 / OutTolerance:524)。"""
+    return paths.join(paths.get("quality"), "包装仕様書")
+
+
+def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot: str,
+                     gaichu: Callable[[Sequence[Sequence[Any]], str, int], str],
+                     folder_files: Callable[[], Sequence[str]]) -> str:
+    """FormRelat.PackingNoCheck (FormRelat:6619-6760)。ロットの包装仕様書No のうち、画像フォルダにあるもの。
+
+    - 外注条件(QP.GaichuPackingNo)に当たればその No
+    - フォルダの各ファイル: 「.」が 7 文字目なら左 6 文字、それ以外はファイル名のまま。ロットの包装仕様NO の
+      どれかと一致したらそれ(**最後に一致したファイル**が残る。VBA は内側の For だけを抜ける)
+    - `folder_files()` はフォルダの並び順のファイル名。フォルダが無いと VBA は実行時エラー 76(呼び手へ OSError)
+    - VBA はデバッグ用の配列 PacN(1 To ファイル数) に入れていて、最初のファイルの「.」が 7 文字目でないと
+      PacN(0) で実行時エラー 9(IndexError)
+    """
+    if hist is None or lot == "":
+        return ""
+    cols = _hist_cols(hist, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO", "材質", "調質", "ｺｰｽ", "厚", "用途ｺｰﾄﾞ"))
+    g = gaichu(hist, lot, cols["ﾛｯﾄNo"])
+    if g != "":
+        return g
+    rows = _lot_hits(hist, lot, cols, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "包装仕様NO", "引当NO"))
+    if not rows:
+        return ""
+    files = list(folder_files())
+    found = ""
+    int_no = 0
+    for name in files:
+        pos_ext = name.rfind(".") + 1                      # InStrRev(名前, ".")
+        if pos_ext == 7:
+            int_no += 1
+            stem = vbx.left(name, 6)
+        else:
+            stem = name
+        if not 1 <= int_no <= len(files):                  # PacN(intNo) = …(ReDim PacN(1 To FileInt))
+            raise IndexError("実行時エラー '9': インデックスが有効範囲にありません。(PackingNoCheck の PacN)")
+        for r in rows:
+            try:
+                if vbx.compare_typed(r[2], stem, vbx.VAR, vbx.STR) == 0:
+                    found = stem
+                    break
+            except vbx.TypeMismatch:
+                pass
+    return found
+
+
+def list_pack_folder() -> list[str]:
+    """`fso.GetFolder(包装仕様書).Files` の並び(名前順とする。NTFS の並び)。無ければ OSError(実行時エラー 76)。"""
+    folder = paths.to_local(pack_folder())
+    if not folder.is_dir():
+        raise FileNotFoundError("実行時エラー '76': パスが見つかりません。" + str(folder))
+    return sorted((f.name for f in folder.iterdir() if f.is_file()), key=lambda n: n.upper())
+
+
+def pack_rows(hist: Optional[Sequence[Sequence[Any]]], lot: str) -> list[dict[str, str]]:
+    """UF_PackNo.UserForm_Activate (UF_PackNo:118-186)。引当No・オーダーNo・包装仕様書No(最大 5 行、引当No 順)。
+
+    VBA は配列を 5 行で作り、6 行目以降は On Error Resume Next で入らない(= 一致した先頭 5 行を並べ替える)。
+    """
+    if hist is None or lot == "":
+        return []
+    cols = _hist_cols(hist, ("ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "包装仕様NO"))
+    rows = _lot_hits(hist, lot, cols, ("ｵｰﾀﾞｰNo", "包装仕様NO", "引当NO"))[:5]
+    rows.sort(key=lambda r: _hiki_key(r[2]))
+    return [{"hiki": cell_text(r[2]), "ord": cell_text(r[0]), "pac": cell_text(r[1])} for r in rows]
+
+
+def pack_select(n: str) -> Optional[dict[str, str]]:
+    """FormRelat.PackSelect (FormRelat:6826-6873)。UF_PackNo の L1〜L5(包装仕様書No・梱包形態・梱包指定・特記1・2)。
+
+    伝送用ファイルが無い・列名が読めないときは None(L1〜L5 は空のまま)。一致するレコードが無いと VBA は
+    `Temp(1, …)` で実行時エラー(IndexError)。
+    """
+    spec = _pkg_spec(n)
+    if spec is None:
+        return None
+    fields, rec = spec
+    if rec is None:
+        raise IndexError("実行時エラー '13': 型が一致しません。(PackSelect: 包装仕様書№ " + n + " が PkgSpecData に無い)")
+    col = lambda name: rec[0][max(datasource.column_index(fields, name), 0)]   # noqa: E731
+    return {"L1": n, "L2": "梱包形態:" + col("梱包形態"), "L3": "梱包指定:" + col("梱包指定別"),
+            "L4": "特記1:" + col("タイトル"), "L5": "特記2:" + col("用途名")}
+
+
+def upper_part_messages(hist: Optional[Sequence[Sequence[Any]]], ord_no: str) -> list[Message]:
+    """UF_PackNo / JPGLoad の上部緩衝材の表示(MaterialsUpperPart の MsgBox。UF_PackNo:175-183)。"""
+    out: list[Message] = []
+    r1 = quality.materials_upper_part(ord_no, hist, False)
+    r2 = quality.materials_upper_part(ord_no, hist, True)
+    if r1 != "" and r1 != "一致なし":
+        out.append(Message(r1, INFO, source="UF_PackNo:179"))
+    if r1 == "アングル" and r2 != "" and r2 != "一致なし":
+        out.append(Message(r2, INFO, source="UF_PackNo:182"))
+    return out
 
 
 __all__ = ["SCALAR", "TAG_SCALAR", "put", "get", "all_controls", "to_uf1", "to_judge_form", "apply_judge",

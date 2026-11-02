@@ -9,6 +9,7 @@
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { confirmBox } from "../askbox.js";
+import { packDialog } from "./pack_dialog.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -17,6 +18,7 @@ let V = null;
 let colSig = "";
 const rowEls = new Map();      // 行番号 → { tr, sig }
 let lastReport = "";
+let pack = null;               // 包装仕様書の窓(UF_PackNo)
 
 async function op(name, body = {}, answers = {}, { refocus = true } = {}) {
   let res;
@@ -52,6 +54,7 @@ function play(name) {
 
 function focusInput() {
   if (!V || !V.visible) return;
+  if (document.querySelector("dialog[open]")) return;
   const el = V.focus === "zero" ? $("zeroIn") : $("measIn");
   el.focus();
 }
@@ -235,6 +238,7 @@ function render(v) {
   renderTop(v);
   renderGrid(v);
   renderSide(v);
+  if (pack) pack.render(v.pack);
 }
 
 function remember(line) {
@@ -254,6 +258,7 @@ function onEnter(id, fn) {
 }
 
 function init() {
+  pack = packDialog({ imageUrl: "/api/cask/pack_image", send: (name, body) => op(name, body) });
   onEnter("measIn", (t) => { remember(t); op("receive", { text: t }); });
   onEnter("zeroIn", (t) => op("zero", { text: t }));
   $("lotIn").addEventListener("keydown", (e) => {

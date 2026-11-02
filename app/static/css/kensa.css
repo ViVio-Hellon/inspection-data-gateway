@@ -44,4 +44,56 @@
          color: #fff; font-size: var(--fs-lg); border-radius: var(--radius); }
 .kensa__center { position: relative; }
 
+/* 手入力の欄(歪・直角度・ラテラル・外観・不良・検入高さ・BH)。セルの中の input / select */
+.mgrid td.in { padding: 1px 2px; cursor: default; }
+.mgrid .cellin { font-family: var(--mono); font-size: var(--fs-sm); padding: 2px 4px; border: 1px solid var(--field-line);
+                 border-radius: var(--radius-xs); background: var(--surface); color: var(--ink); width: 100%; min-width: 3.5em; }
+.mgrid td.in[data-color="OK"] .cellin { background: var(--ok-bg); color: var(--state-ok); }
+.mgrid td.in[data-color="NG"] .cellin { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.mgrid td.in[data-color="YELLOW"] .cellin { background: #fff3a6; color: #5a4a00; }
+/* TeColor / LcColor の水色 = 「反映」や外観の書く先として選んでいる欄 */
+.mgrid td[data-color="CYAN"], .mgrid td.in[data-color="CYAN"] .cellin { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.mgrid td.ng { cursor: pointer; }
+.mgrid td.lc { cursor: pointer; text-align: left; font-family: var(--sans); min-width: 6em; }
+.mgrid.strain th.rowh { min-width: 6.5em; }
+
+/* 歪・外観・不良…のタブ(VBA の MPEX のページ)。カードの見出しに並べる */
+.subtabs-head { gap: 8px; }
+.subtabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.subtabs button { border: 0; background: transparent; color: var(--muted); padding: 4px 10px; border-radius: var(--radius-xs);
+                  font: inherit; font-weight: 600; cursor: pointer; }
+.subtabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+.visual { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 10px; align-items: start; }
+.visual select { width: 100%; font-size: var(--fs-sm); }
+.kenh { display: flex; flex-wrap: wrap; gap: 6px; }
+.kenh table { width: auto; }
+.vc { display: flex; gap: 10px; flex-wrap: wrap; }
+.vc figure { margin: 0; }
+.vc img { max-height: 160px; max-width: 360px; display: block; border-radius: var(--radius-xs); }
+.vc figcaption { font-size: var(--fs-sm); color: var(--muted); }
+
+.tol-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; font-size: var(--fs-sm); }
+.tol-edit label { display: flex; flex-direction: column; color: var(--muted); }
+.tol-edit .input { font-family: var(--mono); padding: 2px 4px; }
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-sm); }
+#izyouBtn[data-on="1"] { background: var(--warn-bg); color: var(--state-error); border-color: var(--state-error); }
+#printBtn[data-printed="1"] { background: var(--warn-bg); color: var(--warn-fg); }
+.notice { border: 2px solid var(--state-error); background: var(--warn-bg); border-radius: var(--radius); padding: 8px;
+          display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.notice p { margin: 0; color: var(--state-error); font-weight: 700; }
+
+/* 包装仕様書(UF_PackNo)。VBA と同じく閉じるまで前に出す */
+.packbox { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.packbox[hidden] { display: none; }
+.packbox__panel { background: var(--surface); border-radius: var(--radius); width: min(1500px, 96vw); height: min(900px, 92vh);
+                  display: flex; flex-direction: column; box-shadow: var(--shadow-pop, 0 10px 30px rgb(0 0 0 / 30%)); }
+.packbox__panel > header { display: flex; gap: 10px; align-items: baseline; padding: 10px 14px; }
+.packbox__body { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 10px; padding: 0 14px 14px; min-height: 0; flex: 1; }
+.packbox__side { display: flex; flex-direction: column; gap: 8px; }
+.packbox__side tr[data-row] td { cursor: pointer; }
+.packbox__side tr[data-sel="1"] td { background: var(--accent-soft); }
+.packbox__labels { max-height: none; color: var(--ink); font-size: var(--fs-sm); }
+.packbox__img { overflow: auto; background: var(--sunken); border-radius: var(--radius-xs); }
+.packbox__img img { display: block; max-width: 100%; }
+
 @media (max-width: 1280px) { .kensa { grid-template-columns: 220px minmax(0, 1fr) 230px; } }

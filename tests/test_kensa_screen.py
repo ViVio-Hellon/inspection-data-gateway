@@ -57,6 +57,56 @@ class KensaScreenTest(SessionBase):
         self.assertFalse(d["view"]["print_ready"])
         self.assertTrue(any(c["ok"] is False for c in d["view"]["checks"]))
 
+    def test_new_ops_round_trip(self) -> None:
+        """足した操作(外観・不良要因・山数・保留・オーダー・包装仕様書・印刷履歴クリア・サイズ修正)の往復。"""
+        self.post("start")
+        self.post("worker", card=CARD, answers={"worker_register": True})
+        d = self.post("lot", lot=LOT, answers={"lot_register": True})
+        v = d["view"]
+        for k in ("lists", "cb_choices", "order", "pack", "vc", "buttons", "visual_caps", "ken_hl"):
+            self.assertIn(k, v)
+        self.post("work", work="厚板")
+        d = self.post("visual", lc=2, items=[1])
+        self.assertEqual(d["view"]["visual_caps"]["U_UpVisual"]["value"], v["lists"]["visual"][1])
+        self.post("value", name="SBad", value="2")
+        d = self.post("defect-reflect", items=[2])
+        self.assertEqual(d["view"]["bad"][0]["value"], "")
+        d = self.post("yamalb", value="3")
+        self.assertEqual(d["view"]["ken_hl"]["HL1"]["value"], "3-3")
+        d = self.post("hold")
+        self.assertIsNone(d["question"])                                  # 入力先が無ければ知らせるだけ
+        d = self.post("order", order=v["order"]["list"][0])
+        self.assertEqual(d["view"]["order"]["no"], "1P0116")
+        d = self.post("resize")
+        self.assertEqual(d["question"]["key"], "resize")
+        d = self.post("resize", answers={"resize": True})
+        self.assertTrue(d["view"]["buttons"]["resize"])
+        d = self.post("print-reset")
+        self.assertIsNone(d["question"])
+        d = self.post("pack-close", checked=True)
+        self.assertIsNone(d["view"]["pack"])
+        d = self.post("ng-delete", pos="S")
+        self.assertEqual(d["question"]["key"], "ng_delete")
+        d = self.post("namelist-ack")
+        self.assertIsNone(d["view"]["name_list"])
+
+    def test_page_has_new_parts(self) -> None:
+        html = self.c.get("/kensa", headers=self.h).get_data(as_text=True)
+        for part in ("visualList", "defectList", "strainGrid", "yamaLb", "orderSel", "packBox", "holdBtn",
+                     "izyouBtn", "resizeBtn", "printResetBtn", "manualIn", "byousyaChk"):
+            self.assertIn(part, html)
+
+    def test_picture_route(self) -> None:
+        (self.db_dir / "VC種類画像").mkdir()
+        (self.db_dir / "VC種類画像" / "208WRYG.JPG").write_bytes(b"\xff\xd8\xff")
+        (self.db_dir / "包装仕様書").mkdir()
+        (self.db_dir / "包装仕様書" / "1P0116.JPG").write_bytes(b"\xff\xd8\xff")
+        self.assertEqual(self.c.get("/api/kensa/picture/vc/208WRYG.JPG", headers=self.h).status_code, 200)
+        self.assertEqual(self.c.get("/api/kensa/picture/pack/1P0116.JPG", headers=self.h).status_code, 200)
+        self.assertEqual(self.c.get("/api/kensa/picture/pack/無い.JPG", headers=self.h).status_code, 404)
+        self.assertEqual(self.c.get("/api/kensa/picture/other/a.JPG", headers=self.h).status_code, 404)
+        self.assertEqual(self.c.get("/api/kensa/picture/vc/a.txt", headers=self.h).status_code, 400)
+
     def test_no_line(self) -> None:
         user_settings.save(terminal.KEY_FACILITY, "")
         d = self.post("start")

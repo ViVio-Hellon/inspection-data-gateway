@@ -38,7 +38,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .. import trace
-from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax,
+from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .grid import KensaState
@@ -101,6 +101,12 @@ class Session:
         self.print_ready = False
         self.report: dict[str, Any] = {}
         self.calibration_required = False
+        self.visual_lists: checks.VisualLists = checks.VisualLists()   # Visual_Add(外観・山・不良要因の選択肢)
+        self.orders: list[str] = []                                   # OrdNoCB の一覧(OrdNoOpen)
+        self.order: str = ""                                          # OrdNoCB.Text
+        self.packing_info = {"no": "", "form": "", "comment": ""}     # PackingNo / PackingForm / PackingComment
+        self.pack: Optional[packing.PackForm] = None                  # 出している UF_PackNo(包装仕様書の確認)
+        self.name_list: Optional[int] = None                          # 開くべき UFNameList(1 不一致 / 3 梱包枚数)
 
     # ------------------------------------------------------------------
     # 土台
@@ -128,7 +134,7 @@ class Session:
         for t, day, label in ((reg.t1, reg.day1, "T1"), (reg.t2, reg.day2, "T2"), (reg.t3, reg.day3, "T3")):
             if t != "" or day != "":
                 workers_list.append(f"{label}: {t}" + (f"({day})" if day else ""))
-        return {"workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
+        return {**self._extra_more(), "workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
                 "confi": self.confi, "calibration_required": self.calibration_required and not self._calibrated(),
                 "report": self.report or None, "proofread": "ok" if self._calibrated() else "",
                 "range": {"ops": st.ops, "ope": st.ope,
@@ -187,6 +193,14 @@ class Session:
         if self.state.line_name == "":
             raise Stop(NO_LINE_TEXT, level=WARN, source="UF1:225")
 
+    def current(self) -> Result:
+        """いまの画面の値だけ(操作をしない。画面を開いたときの最初の描画)。"""
+        with self._lock:
+            try:
+                return Result(self._view())
+            except (datasource.DbMissing, datasource.TableMissing) as e:
+                return Result(view.build(self.state, {}), stop=Stop(str(e), source="datasource"))
+
     # ------------------------------------------------------------------
     # 起動
     # ------------------------------------------------------------------
@@ -207,6 +221,10 @@ class Session:
             st.auto, st.form_tag, st.load, st.flag_label, st.inp_tag, st.picfm_tag = "on", "STOP", "off", 1, "", "0"
             st.v("Abno").value = "異常値on"
             st.v("DistortionFrame").value = "歪公差"
+            self.orders, self.order, self.pack, self.name_list = [], "", None, None
+            self.packing_info = {"no": "", "form": "", "comment": ""}
+            env.vc = None
+            self._visual_add()                                          # UF1:226 Visual_Add
             opt = FACILITY_OPTION.get(fac, "")
             if opt:
                 st.line_option = opt
@@ -221,9 +239,17 @@ class Session:
                     all_ = None
                 if all_:
                     st.sika_set_atu = vbx.single(vbx.val(all_[0]))
+            if st.sika_set_atu != 0:                                    # UF1:253-261 歪コンボ
+                if st.blindfold_tag != "Set":
+                    hooks.cb_add(st, st.sika_set_atu)
+                else:
+                    st.blindfold_tag = ""
+            else:
+                hooks.cb_add(st, 6.0)
             st.form_tag = ""
             st.load = "on"
             self.started = True
+            self._activate_name_check()
 
     # ------------------------------------------------------------------
     # 検査員
@@ -353,6 +379,9 @@ class Session:
             if not a3:
                 return None
         self._acc_reflec()
+        # CheckAndUpdateButtonColor は view が印刷履歴から毎回決める(印刷 / 再印刷・印刷履歴クリア)
+        self._ord_no_open()                                              # UF1:4518
+        self._packing_open()                                             # UF1:4519-4520
         # DistArray → OpForcedSelection → FormReflectDist
         lot_data = quality.LotData(hooks.arrbox(st, "SIKALOTNOW.accdb", "板", "Fields"),
                                    hooks.arrbox(st, "SIKALOTNOW.accdb", st.lot, "Record"))
@@ -407,6 +436,13 @@ class Session:
                 layout.lselect_lateral(st, r.ken_no)
             except layout.VBA_ERRORS:
                 pass
+        try:                                                             # SaveLoad:378-381
+            if r.vc_action == "clear":
+                hooks.vc_clear(st)
+            elif r.vc_action == "picture":
+                hooks.vc_picture(st)
+        except (datasource.DbMissing, datasource.TableMissing, vbx.TypeMismatch, IndexError) as e:
+            env.messages.append(Message(str(e), ERROR, source="SaveLoad.VC_Picture"))
         if st.atu != "":
             w = quality.weight(vbx.val(st.atu), vbx.val(st.hab), vbx.val(st.tak))
             layout.atu_opselect(st, vbx.single(vbx.val(st.atu)), hooks, w, env.messages)
@@ -446,6 +482,7 @@ class Session:
         for p in grid.POSITIONS:
             st.v("LZ" + p).value = "幅ｹﾞｰｼﾞ" if gauge else "定盤"
             st.v("LG" + p).value = "丈ｹﾞｰｼﾞ" if gauge else "ｹﾞｰｼﾞ"
+        hooks.cb_add(st, st.sika_set_atu)                                # SaveLoad:501 / 515
         rows = hooks.get_lot_info(st, st.lot)
         if rows is None:
             return
@@ -629,6 +666,14 @@ class Session:
             return
         if name == "DBflag":
             st.dbflag = value
+            return
+        if name in ("ATU", "Hab", "Tak", "Ap", "Am", "Hp", "Hm", "Tp", "Tm", "TAIK", "Lateral", "TaikText",
+                    "LateralText"):
+            self._resize_value(name, value)
+            return
+        if name == "Byousya":                                            # Byousya_AfterUpdate(印を付けても外しても)
+            st.byousya = value in ("True", "true", "1", "on")
+            layout.byousya_after_update(st, hooks)
             return
         raise Stop(f"手入力できない欄です: {name}", source="session.set_value")
 
@@ -814,6 +859,457 @@ class Session:
         self.confi = None
 
     # ------------------------------------------------------------------
+    # 画面に足りなかった操作(外観・不良要因・歪コンボ・検入高さ・オーダー・包装仕様・VC・保留・廃棄フラグ・
+    # 印刷履歴クリア・サイズ修正・強制描写・検査員不一致)
+    # ------------------------------------------------------------------
+    def _extra_more(self) -> dict[str, Any]:
+        """view に足す値(選択肢・オーダー・包装仕様・VC・印刷ボタン)。判断はここで済ませる。"""
+        st, env = self.state, self._env()
+        vl = self.visual_lists
+        vc = env.vc
+        printed = st.lot != "" and report_model.is_printed(self.store, st.lot)
+        worker_needed = False
+        if self.started and st.line_name != "" and self.hooks is not None:
+            try:
+                worker_needed = self.hooks.register_check(st)            # UF1:4227 WorkButton を赤に
+            except (datasource.DbMissing, IndexError, vbx.TypeMismatch):
+                worker_needed = False
+        cb = {}
+        for p in grid.POSITIONS:
+            c1, c3 = st.strain_cb[f"CB{p}1"].value, st.strain_cb[f"CB{p}3"].value
+            cb[p] = {"1": list(env.cb_items["shape"]), "2": checks.cb_updown_items(c1),
+                     "3": list(env.cb_items["gauge"]), "4": checks.cbg_updown_items(c3)}
+        return {
+            "lists": {"visual": vl.visual or [], "yama": vl.yama or [],
+                      "defect": [{"name": n, "code": c} for n, c in (vl.defect or [])]},
+            "cb_choices": cb,
+            "yama_lb": st.v("YamaLB").value,
+            "ken_hl": {k: {"value": st.v(k).value, "visible": st.v(k).visible}
+                       for k in [f"HL{i}" for i in range(1, 7)] + [f"KenHL{i}" for i in range(1, 11)]},
+            "ken_formula": st.v("高さ計算式").value, "ken_h_label": st.v("KenH").value,
+            "ken_count_visible": st.v("KenCount").visible,
+            "visual_caps": {f"{p}_{k}": {"value": st.v(f"{p}_{k}").value, "visible": st.v(f"{p}_{k}").visible}
+                            for p in grid.POSITIONS for k in ("UpVisual", "UnderVisual")},
+            "order": {"list": list(self.orders), "value": self.order, **self.packing_info},
+            "pack": self.pack.to_dict() if self.pack is not None else None,
+            "vc": None if vc is None else {
+                "a": {"label": vc.l_a_caption, "visible": vc.l_a_visible and vc.a_visible,
+                      "image": _picture_name(vc.a_picture)},
+                "b": {"label": vc.l_b_caption, "visible": vc.l_b_visible and vc.b_visible,
+                      "image": _picture_name(vc.b_picture)},
+                "nothing": vc.nothing_text if vc.nothing_visible else ""},
+            "buttons": {"abno": st.v("Abno").value, "aorb": st.strain_face,
+                        "izyou": st.v("IzyouFl").color == "255",
+                        "print": "再印刷" if printed else "印刷", "print_reset": printed,
+                        "resize": st.resize_tag == "有", "byousya": bool(st.byousya),
+                        "conductiv": st.v("Conductiv").color == "255"},
+            "worker_needed": worker_needed,
+            "name_list": self.name_list,
+            "bh_note": {"qf": st.v("QF").value, "last_hot": st.v("LastHot").value},
+            "strain_note": self._strain_note(),
+            "inp_tag": st.inp_tag,
+            "strain_frame": {p: {"lz": st.v("LZ" + p).value, "lg": st.v("LG" + p).value,
+                                 "visible": st.v("FM" + p).visible} for p in grid.POSITIONS},
+            "taik_text": st.v("TaikText").value,
+        }
+
+    def _strain_note(self) -> str:
+        """UF1.MPEX_Change の歪ページの案内(UF1:1652-1663)。A 案は歪の欄を常に見せるので、文言を欄の見出しに出す。"""
+        st = self.state
+        if st.atu == "":
+            return ""
+        w = quality.weight(vbx.val(st.atu), vbx.val(st.hab), vbx.val(st.tak))
+        if w == 0:
+            return ""
+        try:
+            ab = checks.withor_without_gauge(wiring.to_uf1(st), wiring.work_dist(self.store, st.lname))
+        except (vbx.TypeMismatch, IndexError, checks.VbaRuntimeError):
+            return ""
+        out = []
+        if ab != "":
+            out.append("ゲージ不要 * 両面定盤歪測定必要" if 35 >= w else "ゲージによる測定必要")
+        if st.strain_face == "Now_B" and w > 35:
+            out.append("B面歪 入力画面です")
+        return " / ".join(out)
+
+    def _visual_add(self) -> None:
+        """OutTolerance.Visual_Add (OutTolerance:1513-1614)。外観異常名(品質基準「欠陥名」)・山数・不良要因。"""
+        from .report_model import XSheet
+        t = XSheet.from_template("不良要因印刷原紙", "不良要因印刷原紙")
+        cell = lambda r, c: t.cells[(r, c)].value if (r, c) in t.cells else None   # noqa: E731
+        self.visual_lists = checks.visual_add([cell(2, c) for c in range(3, 25)], [cell(9, c) for c in range(3, 25)])
+        if self.visual_lists.error is not None:
+            self._env().messages.append(self.visual_lists.error)
+
+    def _activate_name_check(self) -> None:
+        """UF1.UserForm_Activate の検査員不一致フラグ (UF1:4229-4246)。WorkerTime_<L> の R1 = "OUT" なら知らせて名簿画面へ。"""
+        st, env = self.state, self._env()
+        wt = line_sheet(records.WORKER_TIME, st.lname)
+        if st.lname == "" or not self.store.exists(wt):
+            return
+        if records.cell_text(self.store.sheet(wt).get(1, 18)) == "OUT":
+            env.messages.append(Message("Excelを閉じても解除はできません" + "\r\n" + "隠蔽工作Log出力", WARN,
+                                        source="UF1:4231"))
+            self._log("*UFKen:UFNameList起動隠蔽対策:Excel再起動の形跡")
+            self._name_list_open(1)
+
+    def _name_list_open(self, n: int) -> None:
+        """OutTolerance.NameList_Open(n) (OutTolerance:545-)。名簿画面(/meibo)を開くよう画面に伝える。"""
+        st = self.state
+        if n == 1:
+            reg = wiring.registry(st)
+            self._log("*UFKen:" + "UFNameList起動" + " T1:" + reg.t1 + " T2:" + reg.t2 + " T3:" + reg.t3)
+            if not self.store.exists(line_sheet(records.WORKER_TIME, st.lname)):
+                return
+        self.name_list = n
+
+    def name_list_ack(self) -> Result:
+        """名簿画面(UFNameList)への案内を出し終えた(画面が開いた)。"""
+        return self._run(self._name_list_ack, posting=False)
+
+    def _name_list_ack(self) -> None:
+        self.name_list = None
+
+    # --- 外観(LC1〜LC12)----------------------------------------------
+    def visual(self, lc: int, items: Optional[list[int]] = None) -> Result:
+        return self._run(self._visual, lc, items or [])
+
+    def _visual(self, lc: int, items: list[int]) -> None:
+        """UF1.LC1_Click〜LC12_Click (UF1:1458-1505) → LcColor (OutTolerance:1628-1704) → CheckLabelsByCategory。
+
+        items = LBVisual で選んでいる行の番号(0 始まり。先頭は空白行)。
+        """
+        st, env, hooks = self.state, self._env(), self.hooks
+        lc = int(lc)
+        if lc not in st.visual:
+            raise Stop(f"外観ボタン LC{lc} はありません", source="UF1.LC_Click")
+        text = checks.get_selected_items(self.visual_lists.visual or [], [int(i) for i in items])
+        res = checks.lc_color(lc, 1 if lc <= 6 else 7, text, st.lname, hooks.worker_name(st),
+                              [i for i, c in st.visual.items() if c.color == wiring.COLOR_CYAN])
+        st.visual[lc].value = ""                                          # UF1(La.Name).Caption = ""
+        for i, c in st.visual.items():
+            c.color = wiring.COLOR_CYAN if i in res.cyan else grid.COLOR_WHITE
+        for k, v in res.captions.items():
+            st.v(k).value = v
+        # WriteLog(…, "", Lpath, "Measured.log") と WriteLog(…, "")(LcColor:1701-1702。Lpath は Lname で決まる)
+        env.log(legacy_log.LogEntry(res.log_text, paths.join(paths.get("history"), res.log_folder,
+                                                             res.log_folder + "_Log"), legacy_log.MEASURED_LOG))
+        env.log(legacy_log.LogEntry(res.log_text))
+        hooks.check_labels_by_category(st, "SUCDEF"[(lc - 1) % 6])
+
+    def visual_clear(self, lc: int) -> Result:
+        return self._run(self._visual_clear, lc)
+
+    def _visual_clear(self, lc: int) -> None:
+        """UF1.LC1_DblClick〜LC10_DblClick (UF1:1507-1546)。ボタンを白に戻す(LBVisual の選択は画面で外す)。"""
+        lc = int(lc)
+        if lc not in range(1, 11):                                        # LC11・LC12 には DblClick が無い
+            return
+        self.state.visual[lc].color = grid.COLOR_WHITE
+
+    # --- 不良要因(DefectFactorLB・ListReflect・Cle)---------------------
+    def defect_reflect(self, items: Optional[list[int]] = None) -> Result:
+        return self._run(self._defect_reflect, items or [])
+
+    def _defect_reflect(self, items: list[int]) -> None:
+        """UF1.ListReflect_Click (UF1:1548-1605) → TecReturn → SelectionInput (OutTolerance:2356-2449)。"""
+        st, env = self.state, self._env()
+        defect = self.visual_lists.defect or []
+        sel = sorted({int(i) for i in items if 0 <= int(i) < len(defect)})
+        temps = checks.get_selected_items(defect, sel, defect=True)
+        if not sel:                                                       # ListIndex = -1
+            env.messages.append(Message("不良要因が選択されていません", ERROR, source="UF1:1552"))
+            return
+        if all(st.bad[p].value == "" for p in grid.POSITIONS):
+            env.messages.append(Message("枚数入力がありません", ERROR, source="UF1:1558"))
+            return
+        n = {p: (vbx.clng(vbx.val(st.bad[p].value)) if vbx.is_numeric(st.bad[p].value) else 0) for p in grid.POSITIONS}
+        if temps != checks.SPOT and any(v > 50 for v in n.values()):
+            env.messages.append(Message("すみません、50枚以上は分けて入力してください", INFO, source="UF1:1572"))
+            return
+        te = checks.tec_return([p + "Bad" for p in grid.POSITIONS if st.bad[p].color == wiring.COLOR_CYAN])
+        if te == "":                                                      # UF1("") → 実行時エラー
+            raise Stop("実行時エラー '-2147024809 (80070057)': 指定されたオブジェクトが見つかりません。",
+                       source="UF1:1578")
+        # SelectionInput: 単一選択で名前が空の行は .Value = "" で抜ける
+        if len(sel) == 1 and defect[sel[0]][0] == "":
+            pass
+        else:
+            sheet = report_model.ensure_defect_sheet(self.store, st.lname, st.lot)
+            code_row = [sheet.get(9, c) for c in range(3, 25)]
+            try:
+                w = checks.selection_input(temps, te, st.bad[te[0]].value, code_row, wiring.to_uf1(st))
+            except checks.VbaRuntimeError as e:
+                raise Stop("実行時エラー '9': インデックスが有効範囲にありません。", source="SelectionInput") from e
+            if w is not None:
+                with trace.timed("db.save", "不良要因の枚数(SelectionInput)", path=str(self.store.path),
+                                 table=line_sheet(report_model.DEFECT_SHEET, st.lname)):
+                    for r, c, v in w.cells:
+                        sheet.write(r, c, v)
+        for p in grid.POSITIONS:                                          # リセット
+            st.bad[p].value = ""
+            st.bad[p].color = grid.COLOR_WHITE
+
+    def defect_clear(self) -> Result:
+        return self._run(self._defect_clear)
+
+    def _defect_clear(self) -> None:
+        """UF1.Cle_Click (UF1:567-577)。不良要因印刷_<L> の C3:X8・C10:X10・C11 を消す。"""
+        name = line_sheet(report_model.DEFECT_SHEET, self.state.lname)
+        if not self.store.exists(name):
+            return
+        sh = self.store.sheet(name)
+        for r1, c1, r2, c2 in ((3, 3, 8, 24), (10, 3, 10, 24), (11, 3, 11, 3)):
+            for r in range(r1, r2 + 1):
+                for c in range(c1, c2 + 1):
+                    sh.set(r, c, None)
+
+    # --- 検入高さの山数(YamaLB)-----------------------------------------
+    def yama_lb(self, value: str) -> Result:
+        return self._run(self._yama_lb, value)
+
+    def _yama_lb(self, value: str) -> None:
+        """UF1.YamaLB_Click (UF1:2508-2511) → DrawListBoxContent。厚が空なら選ぶだけ。"""
+        if value not in checks.YAMA_ITEMS:
+            raise Stop(f"山数 {value!r} は選べません", source="UF1.YamaLB")
+        st = self.state
+        st.v("YamaLB").value = value
+        st.v("YamaLB").tag = str(checks.YAMA_ITEMS.index(value))
+        if st.atu == "":
+            return
+        self.hooks.draw_list_box_content(st)
+
+    # --- オーダーNo・包装仕様 -------------------------------------------
+    def _ord_no_open(self) -> None:
+        """SaveLoad.OrdNoOpen。オーダーNo の一覧を作り、包装仕様の表示を空にする。"""
+        orders = wiring.ord_no_open(wiring.sheet_rows(self.store, LOT_HISTORY), self.state.lot)
+        if orders is None:
+            return
+        self.orders, self.order = orders, ""
+        self.packing_info = {"no": "", "form": "", "comment": ""}
+
+    def ord_no_open(self) -> Result:
+        """UF1.NoL_Click (UF1:1717-1719)。オーダーNo を読み直す。"""
+        return self._run(self._ord_no_open)
+
+    def select_order(self, order: str) -> Result:
+        return self._run(self._select_order, order)
+
+    def _select_order(self, order: str) -> None:
+        """UF1.OrdNoCB_Change (UF1:1721-1790)。包装仕様No・梱包形態・タイトル → VC_Picture(オーダー) → MaterialsMsgBox。"""
+        st, env, hooks = self.state, self._env(), self.hooks
+        self.order = order
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
+        try:
+            r = wiring.ord_no_change(hist, st.lot, order, self.packing_info["no"], test=st.line_option == "Test")
+        except datasource.TableMissing as e:
+            env.messages.append(Message(str(e), ERROR, source="UF1.OrdNoCB_Change"))
+            return
+        if r.packing_no is not None:
+            self.packing_info["no"] = r.packing_no
+        if r.packing_form is not None:
+            self.packing_info["form"] = r.packing_form
+        if r.packing_comment is not None:
+            self.packing_info["comment"] = r.packing_comment
+        if not r.reload:
+            return
+        try:
+            hooks.vc_picture(st, order)
+        except (datasource.DbMissing, datasource.TableMissing, vbx.TypeMismatch, IndexError) as e:
+            env.messages.append(Message(str(e), ERROR, source="SaveLoad.VC_Picture"))
+        try:
+            wiring.apply_judge(st, judge.materials_msgbox(wiring.to_judge_form(st), order,
+                                                          arrbox=hooks._arrbox_fn(st)), env)
+        except (lotmod.SubscriptOutOfRange, judge.VbaError, vbx.TypeMismatch) as e:
+            env.messages.append(Message(str(e), ERROR, source="Judg.MaterialsMsgBox"))
+
+    def _packing_open(self) -> None:
+        """FormRelat.PackingNoCheck → OutTolerance.UFPack_Open(UF1:4519-4520)。`packing.py`(全ヵ所・キャスクと共通)。
+
+        画像(使用パス「品証やり取り」\\包装仕様書\\<No>.JPG)があるときだけ UF_PackNo を出す。VBA はモーダルで、
+        「確認」に印を付けないと閉じられない。実行時エラー(76 / 9)は VBA ではロット登録がここで止まるが、
+        通常検査ではエラーを知らせて続ける(DistArray 以降の公差の表示を残すため。最終報告の不明点)。
+        """
+        st, env = self.state, self._env()
+        self.pack = None
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
+        msgs: list[Message] = []
+        try:
+            n = packing.packing_no_check(hist, st.lot, messages=msgs)
+            form = packing.pack_open(n, st.lot, hist, messages=msgs) if n != "" else None
+        except packing.PackingError as e:
+            env.messages.extend(msgs)
+            env.messages.append(Message(f"実行時エラー '{e.number}': {e.description}", ERROR,
+                                        source="FormRelat.PackingNoCheck"))
+            return
+        except (datasource.DbMissing, datasource.TableMissing, quality.VbaRuntimeError, vbx.TypeMismatch) as e:
+            env.messages.extend(msgs)
+            env.messages.append(Message(str(e), ERROR, source="FormRelat.PackingNoCheck"))
+            return
+        env.messages.extend(msgs)
+        self.pack = form
+
+    def pack_select(self, i: int) -> Result:
+        return self._run(self._pack_select, i, posting=False)
+
+    def _pack_select(self, i: int) -> None:
+        """UF_PackNo の引当の行を押す(LabelCls → Loop_Label → FormRelat.JPGLoad)。"""
+        if self.pack is None:
+            raise Stop("包装仕様書の画面は開いていません", level=WARN, source="UF_PackNo")
+        try:
+            n = int(i)
+        except (TypeError, ValueError):
+            raise Stop("行の番号が正しくありません", level=WARN) from None
+        msgs: list[Message] = []
+        try:
+            packing.pack_select(self.pack, n, wiring.sheet_rows(self.store, LOT_HISTORY), messages=msgs)
+        except (datasource.DbMissing, datasource.TableMissing) as e:
+            msgs.append(Message(str(e), ERROR, source="QP.MaterialsUpperPart"))
+        self._env().messages.extend(msgs)
+
+    def pack_close(self, confirmed: bool = False) -> Result:
+        return self._run(self._pack_close, bool(confirmed), posting=False)
+
+    def _pack_close(self, confirmed: bool) -> None:
+        """UF_PackNo.CommandButton2_Click (UF_PackNo:25-48)。「確認」に印が無ければ閉じない。"""
+        if self.pack is None:
+            return
+        m = packing.pack_close(confirmed)
+        if m is not None:
+            self._env().messages.append(m)
+            return
+        self.pack = None
+
+    def pack_image(self) -> Optional[Path]:
+        """いま出している包装仕様書の画像(使用パス QualityPath\\包装仕様書)。"""
+        with self._lock:
+            return packing.picture_file(self.pack.picture) if self.pack is not None else None
+
+    # --- 保留・まとめて削除・廃棄フラグ ----------------------------------
+    def hold(self, answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._hold, answers or {})
+
+    def _hold(self, answers: dict[str, bool]) -> Optional[Question]:
+        """UF1.CommandButton18_Click「保留」(UF1:120-170)。いまの入力先(INP.Tag)の位置で NG_Pass(位置, "保留")。"""
+        st, env = self.state, self._env()
+        tag = st.inp_tag
+        left = vbx.left(tag, 1)
+        for prefix in ("Lateral", "Diag"):
+            if tag.startswith(prefix) and (tag[len(prefix):] in grid.POSITIONS
+                                           or (prefix == "Diag" and tag.endswith("Kou") and tag[4:5] in grid.POSITIONS)):
+                left = tag[len(prefix)]
+        if len(tag) == 2 and tag[0] in "ZG" and tag[1] in grid.POSITIONS:
+            left = tag[1]
+        if left == "":
+            env.messages.append(Message("保留の根拠位置をクリックしてください。", INFO, source="UF1:155"))
+            return None
+        temp = st.header(left) if left in grid.POSITIONS else ""
+        ans = answers.get("hold")
+        if ans is None:
+            return Question("hold", temp + "で保留処理を行いますか？", source="UF1:169")
+        if ans:
+            for k, v in checks.ng_pass(left, "保留").items():
+                wiring.put(st, k, v)
+            self.confi = None                                             # NG_Pass: Unload UFConfi
+        return None
+
+    def ng_delete(self, pos: str, answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._ng_delete, pos, answers or {})
+
+    def _ng_delete(self, pos: str, answers: dict[str, bool]) -> Optional[Question]:
+        """UF1.NGS_DblClick〜NGF_DblClick (UF1:330-365)。まとめて削除 → ConfiReason_Open(位置, 0, …, "S板1枚", DeleteC)。"""
+        st = self.state
+        if pos not in grid.POSITIONS:
+            raise Stop(f"NG{pos} はありません", source="UF1.NG_DblClick")
+        ans = answers.get("ng_delete")
+        if ans is None:
+            return Question("ng_delete", "まとめて削除しますか?", source="UF1:331")
+        if ans:
+            self.hooks.confi_reason_open(st, pos, 0, st.lname, pos + "板1枚", vbx.val(st.delete_c))
+        return None
+
+    def izyou(self, answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._izyou, answers or {})
+
+    def _izyou(self, answers: dict[str, bool]) -> Optional[Question]:
+        """UF1.IzyouFl_Click「廃棄ﾌﾗｸﾞ」(UF1:3213-3228)。異常ロット用_<L> の A1 がこのロットなら、2 回聞いてシートを消す。"""
+        st = self.state
+        name = line_sheet(records.ABNORMAL, st.lname)
+        if not self.store.exists(name):
+            return None
+        if records.cell_text(self.store.sheet(name).get(1, 1)) != st.lot:
+            return None
+        st.v("IzyouFl").color = "255"
+        a1 = answers.get("izyou")
+        if a1 is None:
+            return Question("izyou", "異常内容印刷フラグが立っています,取り消しますか？", source="UF1:3218")
+        if not a1:
+            return None
+        a2 = answers.get("izyou_sure")
+        if a2 is None:
+            return Question("izyou_sure", "本当に取り消しますか？", source="UF1:3219")
+        if a2:
+            if self.store.exists(name):
+                self.store.delete_sheet(name)
+            st.v("IzyouFl").color = grid.COLOR_BUTTON
+        return None
+
+    # --- 印刷履歴クリア ---------------------------------------------------
+    def print_reset(self, answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._print_reset, answers or {})
+
+    def _print_reset(self, answers: dict[str, bool]) -> Optional[Question]:
+        """UF1.PrintBreset_Click「印刷履歴クリア」(UF1:3599-3617)。印刷済み(オレンジ)のときだけ。"""
+        st, env = self.state, self._env()
+        if st.lot == "" or not report_model.is_printed(self.store, st.lot):
+            return None
+        ans = answers.get("print_reset")
+        if ans is None:
+            return Question("print_reset", "このロットの印刷履歴を消しますか？" + "\r\n"
+                            + "消せば印刷実行時にもう一度保存処理されます。", title="履歴削除の確認", source="UF1:3604")
+        if ans:
+            report_model.clear_printed(self.store, st.lot)
+            env.messages.append(Message("履歴を削除しました。", INFO, source="UF1:3612"))
+        else:
+            env.messages.append(Message("履歴削除処理を中断しました。", WARN, source="UF1:3614"))
+        return None
+
+    # --- サイズ修正 -------------------------------------------------------
+    def resize(self, answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._resize, answers or {})
+
+    def _resize(self, answers: dict[str, bool]) -> Optional[Question]:
+        """UF1.ReSize_Click「ｻｲｽﾞ修正」(UF1:4057-4097)。はい なら ReSize.Tag="有"(サイズ・公差を編集できる)。最後に Posting。"""
+        st = self.state
+        ans = answers.get("resize")
+        if ans is None:
+            return Question("resize", "Size、公差の編集を行いますか？", source="UF1:4064")
+        if ans:
+            st.resize_tag = "有"
+            st.v("ResizText").value = st.resize_tag
+        return None
+
+    def _resize_value(self, name: str, value: str) -> None:
+        """Atu/Hab/Tak/Ap/Am/Hp/Hm/Tp/Tm/TAIK/Lateral/TaikText/LateralText の Change(UF1:442-551, 3199-3211, 4161-4200)。"""
+        st = self.state
+        if st.resize_tag != "有":
+            raise Stop("ｻｲｽﾞ修正を押してから編集してください(Locked)", level=WARN, source="UF1.ReSize")
+        if name in ("ATU", "Hab", "Tak", "Ap", "Am", "Hp", "Hm", "Tp", "Tm"):
+            wiring.put(st, name, value if vbx.is_numeric(value) else "")
+            if name not in ("ATU", "Hab", "Tak"):
+                layout.form_formula(st)
+        elif name == "TAIK":
+            st.taik = value
+            st.v("TaikText").value = ""                                   # Taik_Change(DebugTaikaku は表示だけ)
+        elif name == "Lateral":
+            st.lateral_grade = value
+            st.lateral_text = ""                                          # Lateral_Change(DebugLate は表示だけ)
+        elif name == "TaikText":
+            st.v("TaikText").value = value
+        elif name == "LateralText":
+            st.lateral_text = value
+
+    # ------------------------------------------------------------------
     # Min/Max
     # ------------------------------------------------------------------
     def min_max(self) -> Result:
@@ -893,11 +1389,15 @@ class Session:
         for w in nm.writes:
             sh.write(w.row, w.col, w.value)
         items.append({"label": "検査員の照合", "ok": not nm.out})
+        if nm.out:                                                       # Name_Match → NameList_Open(1)
+            self._name_list_open(1)
         # Number_Count
         nc = records.number_count(self.store, lname, st.lot)
         stop = nc is not None and nc.stop
         if nc is not None:
             env.messages.extend(nc.messages)
+            if nc.stop:                                                  # Number_Count → NameList_Open(3)
+                self._name_list_open(3)
         items.append({"label": "梱包枚数", "ok": None if nc is None else not nc.stop})
         self.checks = items
         self.print_ready = not stop
@@ -1117,6 +1617,13 @@ class Session:
         st.load = "on"
         self.confi, self.checks, self.print_ready, self.report = None, [], False, {}
         return None
+
+
+def _picture_name(path: Optional[str]) -> str:
+    """画像のパスからファイル名だけ(画面は /api/kensa/picture/<種類>/<名前> で読む)。"""
+    if not path:
+        return ""
+    return path.replace("/", "\\").rsplit("\\", 1)[-1]
 
 
 def quirks_reproduce_diag_d() -> bool:

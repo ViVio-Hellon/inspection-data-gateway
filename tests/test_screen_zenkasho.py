@@ -15,7 +15,10 @@ from pathlib import Path
 from tests import kensa_fixture
 from tests._web import make_client
 from ufkensa import user_settings
-from ufkensa.kensa import paths, store, terminal, zenkasho_session
+from unittest import mock
+
+from ufkensa.kensa import packing, paths, quality, store, terminal, wiring, zenkasho_session
+from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import sheet as sh
 
 LOT = "RX021T0"
@@ -38,10 +41,15 @@ class ZenBase(unittest.TestCase):
         terminal.set_facility("LVC")
         self.store = store.LocalStore(self.tmp / "data" / "kensa_local.sqlite3")
         self.clock = Clock()
+        # UF1 の検査員は登録済み(Register_Check = 偽)にしておく。登録の要否そのものは RegisterCheckTest で見る
+        p = mock.patch.object(zenkasho_session.ZenkashoSession, "_registered", return_value=False)
+        self.registered = p.start()
+        self.addCleanup(p.stop)
+        self.ks = KensaState(line_name="LVC")
         self.s = self.new_session()
 
     def new_session(self) -> zenkasho_session.ZenkashoSession:
-        return zenkasho_session.ZenkashoSession(self.store, now=self.clock, kensa_state=lambda: None,
+        return zenkasho_session.ZenkashoSession(self.store, now=self.clock, kensa_state=lambda: self.ks,
                                                 write_logs=False)
 
     def tearDown(self) -> None:
@@ -215,6 +223,217 @@ class ScreenTest(ZenBase):
         self.assertEqual(r.status_code, 400)
         r = self.c.get("/api/zenkasho/report/none.html", headers=self.h)
         self.assertEqual(r.status_code, 404)
+
+    def test_pack_image_and_ops(self) -> None:
+        r = self.c.get("/api/zenkasho/pack_image", headers=self.h)
+        self.assertEqual(r.status_code, 404)
+        f = paths.to_local(packing.folder_path())
+        f.mkdir(parents=True, exist_ok=True)
+        (f / "1P1216.JPG").write_bytes(b"\xff\xd8\xff\xe0")
+        self.post("start", choice_input="一般")
+        d = self.post("form", name="LotBox", value=LOT)
+        self.assertEqual(d["view"]["pack"]["picture"], "1P1216")
+        r = self.c.get("/api/zenkasho/pack_image?n=1P1216", headers=self.h)
+        self.assertEqual((r.status_code, r.mimetype), (200, "image/jpeg"))
+        r.close()
+        d = self.post("pack-select", i=1)
+        self.assertEqual(d["view"]["pack"]["selected"], 1)
+        d = self.post("pack-close", confirmed=True)
+        self.assertIsNone(d["view"]["pack"])
+
+class ConnectTest(ZenBase):
+    """部品の Effects.calls をつないだもの(HistorySave・GetLotInfo/DbReturnItem・包装仕様書・不良要因票・日報・UF対角)。
+
+    通常検査(UF1)の状態は KensaState(ライン LVC・ロット AAA0001)を読むだけで渡す。
+    """
+
+    def new_session(self) -> zenkasho_session.ZenkashoSession:
+        self.ks = KensaState(line_name="LVC", lot="AAA0001")
+        return zenkasho_session.ZenkashoSession(self.store, now=self.clock, kensa_state=lambda: self.ks,
+                                                write_logs=False)
+
+    def pack_folder(self, *names: str) -> Path:
+        f = paths.to_local(packing.folder_path())
+        f.mkdir(parents=True, exist_ok=True)
+        for n in names:
+            (f / n).write_bytes(b"\xff\xd8\xff\xe0")
+        return f
+
+    def history_rows(self) -> list:
+        rows = wiring.sheet_rows(self.store, store.LOT_HISTORY) or []
+        return [r for r in rows[1:] if r[2] == LOT]
+
+    def test_history_save_and_packing_folder_missing(self) -> None:
+        d = self.open_ippan()
+        rows = self.history_rows()                                       # HistorySave(UFMit:804): 引当ごとに 1 行
+        self.assertEqual(sorted(r[21] for r in rows), ["61029052", "61029053"])
+        self.assertEqual({r[25] for r in rows}, {"1P1216"})
+        # 包装仕様書のフォルダが無い → fso.GetFolder の実行時エラー 76 → ErrHandler_MitCombo(UFMit:874)
+        self.assertIn("DB読み込みエラー:\r\nパスが見つかりません。", [m["text"] for m in d["messages"]])
+        self.assertIsNone(d["view"]["pack"])
+        self.assertTrue(d["view"]["events_enabled"])                     # LotBox_Change が最後に True に戻す
+        self.s.set_form("LotBox", LOT)                                   # 同じロットを読み直しても行は増えない
+        self.assertEqual(len(self.history_rows()), 2)
+
+    def test_packing_dialog(self) -> None:
+        self.pack_folder("1P1216.jpg", "1P0113.JPG")
+        d = self.open_ippan()
+        p = d["view"]["pack"]
+        self.assertEqual((p["tb_load"], p["picture"], p["caption"], p["selected"]), ("1P1216", "1P1216", LOT, 0))
+        self.assertEqual([r["hiki"] for r in p["rows"]], ["61029052", "61029053"])    # 引当NO で並べる(merge_sort2)
+        self.assertEqual(p["spec"][0:2], ["1P1216", "梱包形態:パレット"])               # PackSelect(PkgSpecData)
+        d = self.s.pack_select(2).to_dict()
+        self.assertEqual(d["view"]["pack"]["selected"], 2)
+        d = self.s.pack_close(False).to_dict()                                         # 確認の印が無い
+        self.assertIn(packing.NEED_CONFIRM, [m["text"] for m in d["messages"]])
+        self.assertIsNotNone(d["view"]["pack"])
+        self.assertEqual(self.s.pack_image().name, "1P1216.jpg")
+        d = self.s.pack_close(True).to_dict()
+        self.assertIsNone(d["view"]["pack"])
+        self.assertIsNone(self.s.pack_image())
+
+    def test_packing_not_while_opening(self) -> None:
+        self.pack_folder("1P1216.JPG")
+        self.open_ippan()
+        self.s.pack_close(True)
+        s2 = self.new_session()                                          # 開き直す: PackNo_on_off = "off" の間の読込
+        d = s2.start().to_dict()
+        self.assertIsNone(d["view"]["pack"])
+        # 開く途中の FormReflectDist は UF1 の欄にしか書かない → 書かずに理由を残す
+        self.assertTrue(any(x.startswith("FormReflectDist(開く途中") for x in d["view"]["pending"]))
+
+    def test_get_lot_info_empty_exits(self) -> None:
+        self.pack_folder("1P1216.JPG")
+        with mock.patch("ufkensa.kensa.lot.get_lot_info", return_value=None), \
+                mock.patch.object(quality, "dist_array") as dist:
+            d = self.open_ippan()
+        dist.assert_not_called()                                         # If IsEmpty(TempArry) Then Exit Sub
+        self.assertIsNone(d["view"]["pack"])
+
+    def test_db_return_item(self) -> None:
+        calls = []
+
+        def fake(nou, tori, youtc, zai, tyou, atu, haba, take, **kw):
+            calls.append((nou, tori, youtc, zai, tyou, atu, haba, take, kw["mitsubishi_visible"], kw["work_flag"]))
+            r = quality.ReturnItemResult(items=",ラテラルボー,フリー反り")
+            r.uf1["HURIS"] = ""
+            if kw["mitsubishi_visible"]:
+                r.sheet = "全ヵ所検査"
+                r.cells[(1, 15)] = nou + zai
+                r.cells[(6, 29)] = "ﾌﾘｰｿﾘ"
+            return r
+        with mock.patch.object(quality, "db_return_item", side_effect=fake):
+            self.open_ippan()
+        # 納入先が同じ 2 引当 → 1 回だけ(UFMit:838-839)。厚・幅・丈は Single
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][:8], ("ｺ-ﾐｷﾝｿﾞｸ(ｶ ﾌｸｼﾏｼﾃﾝ", "ｺ-ﾐｷﾝｿﾞｸ(ｶ", "H197", "R61S", "T651", 25.0, 1385.0, 2770.5))
+        self.assertEqual(calls[0][8:], (True, "P1"))
+        ws = self.s.book.ws(sh.ZEN)
+        self.assertEqual(ws.get(1, 15), "ｺ-ﾐｷﾝｿﾞｸ(ｶ ﾌｸｼﾏｼﾃﾝR61S")
+        self.assertEqual(ws.get(6, 29), "ﾌﾘｰｿﾘ")
+        self.assertEqual(self.s.pending, [])
+
+    def print_normal(self) -> dict:
+        self.open_ippan()
+        self.s.resume()
+        self.s.receive("DT10002+0000025.012M")
+        self.s.set_form("YamaLB", "1")
+        self.s.set_form("KenHBox1", "250")
+        self.s.save_height()
+        self.s.set_form("Kname", "検査員01")
+        return self.s.print("normal", {"zen_print": True}).to_dict()
+
+    def test_defect_report(self) -> None:
+        d = self.print_normal()
+        self.assertIsNone(d["stop"])
+        labels = [r["label"] for r in d["view"]["reports"]]
+        self.assertEqual(labels, ["全ヵ所検査", "不良要因印刷_LVC"])
+        self.assertNotIn("印刷:不良要因印刷_LVC", d["view"]["pending"])
+        name = "不良要因印刷_LVC"
+        self.assertEqual(self.store.sheet(name).get(1, 2), LOT)          # 全ヵ所用転送の B1(Mit:735)
+        page = __import__("json").loads(self.store.load_report(name + "#page"))["page"]
+        # 不良要因印刷範囲(Kname) は LotN を渡さない形 → UF1 の Lname・Lot(Print:1279-1285)
+        self.assertEqual((page["header_left"], page["header_right"]), ("LVC", "AAA0001 検査員01"))
+        self.assertTrue(page["footer_right"].startswith(" 2026/11/02  10:05～"))     # 開始 = 全ヵ所検査!B1
+        html = Path(d["view"]["reports"][1]["path"]).read_text(encoding="utf-8")
+        self.assertIn(LOT, html)
+        # 新規発行: Register_Check(真 = 直が変わって登録が要る)→ Daily_Create、不良要因シートは消す(UFMit:1273)
+        self.registered.return_value = True
+        d = self.s.new_sheet({"zen_new": True}).to_dict()
+        self.assertIsNone(d["stop"])
+        self.assertFalse(self.store.exists(name))
+        self.assertTrue(self.store.exists("Daily_LVC"))
+        self.assertEqual(self.store.sheet("Daily_LVC").get(2, 1), "ﾛｯﾄNo")
+
+    def test_defect_range_other_lname(self) -> None:
+        """丸徳の号機: シート名は UFMitsubishi.LineName、不良要因印刷範囲 は UF1 の Lname(号機つき)を見る。"""
+        self.ks.line_no = "A22"                                          # Lname = LVCA22 → シートが無い → Exit Sub
+        d = self.print_normal()
+        self.assertEqual([r["label"] for r in d["view"]["reports"]], ["全ヵ所検査", "不良要因印刷_LVC"])
+        self.assertIsNone(self.store.load_report("不良要因印刷_LVC#page"))
+
+    def test_uf_taikaku_h494(self) -> None:
+        self.open_ippan()
+        self.s.choose("H494")
+        self.s.set_form("H494_Lot", LOT)
+        self.s.resume()
+        self.s.select(7, 21)
+        d = self.s.receive("1960.5").to_dict()                           # 対角1 を入れた → UF対角(Cask:1899-1918)
+        self.assertTrue(d["view"]["diag"])
+        self.assertEqual(d["view"]["flash"], "")
+        self.assertNotIn("UF対角", d["view"]["pending"])
+
+
+
+class RegisterCheckTest(ZenBase):
+    """UF1.ZEB_Click / H494B_Click: Register_Check が真なら「検査員登録をして下さい」で開かない(UF1:4870-4875 / 604-609)。"""
+
+    def test_start_needs_worker(self) -> None:
+        self.registered.return_value = True
+        d = self.s.start("一般").to_dict()
+        self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])
+        self.assertFalse(d["view"]["open"])
+        d = self.s.choose("H494").to_dict()                              # 閉じているときの H494 も同じ
+        self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])
+        self.assertFalse(d["view"]["open"])
+        self.registered.return_value = False
+        d = self.s.start("一般").to_dict()
+        self.assertTrue(d["view"]["open"])
+        self.registered.return_value = True                              # 開いた後の切替では見ない(フォーム内のページ)
+        d = self.s.choose("H494").to_dict()
+        self.assertEqual((d["view"]["open"], d["view"]["page"]), (True, "P_H494"))
+
+    def test_real_register_check(self) -> None:
+        self.registered.stop()                                           # 本物: 検査員_LVC が無い → 真(Worker:456-)
+        s = self.new_session()
+        d = s.start("一般").to_dict()
+        self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])
+        self.assertFalse(d["view"]["open"])
+
+    def test_no_uf1_state(self) -> None:
+        s = zenkasho_session.ZenkashoSession(self.store, now=self.clock, kensa_state=lambda: None, write_logs=False)
+        d = s.start("一般").to_dict()
+        self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])
+        self.assertFalse(d["view"]["open"])
+
+
+class LateralQuietTest(ZenBase):
+    def test_quiet_follows_is_over_12_hours(self) -> None:
+        """DbReturnItem → DBdisplayラテラル は IsOver12Hours が真なら MsgBox を出さない(VBA どおり)。"""
+        from ufkensa.kensa import wiring as w
+        for over in (False, True):
+            got = []
+
+            def fake(*a, **kw):
+                got.append(kw["lateral_quiet"])
+                return quality.ReturnItemResult()
+            with mock.patch.object(quality, "db_return_item", side_effect=fake), \
+                    mock.patch.object(w.RealHooks, "_over12", return_value=over):
+                self.s = self.new_session()
+                self.s.start("一般")
+                self.s.set_form("LotBox", LOT)
+            self.assertEqual(set(got), {over})
+            self.store.delete_sheet(zenkasho_session.META_SHEET)
 
 
 if __name__ == "__main__":

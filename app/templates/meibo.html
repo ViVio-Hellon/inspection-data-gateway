@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}名簿・日報 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h2>名簿・日報</h2>
+  <p class="muted">検査員の不一致・梱包枚数の不一致を確かめ、日報を直します(VBA の UFNameList)。</p>
+</section>
+<section class="card">
+  <header>
+    <div class="subtabs" role="tablist" id="meiboTabs" style="display:flex;gap:4px">
+      <button class="btn" type="button" role="tab" data-mode="1">検査員不一致</button>
+      <button class="btn" type="button" role="tab" data-mode="3">梱包枚数</button>
+      <button class="btn" type="button" role="tab" data-mode="2">日報閲覧</button>
+    </div>
+    <span class="lv lv--info" id="meiboLine"></span>
+  </header>
+  <div class="pad">
+    <div class="status status--ng" id="meiboWarn" hidden>登録検査員と測定者が一致しません。不正の為検査判定を停止します。「組長」に連絡して対処の事。</div>
+    <p class="muted" id="meiboMsg"></p>
+    <div class="btn-row">
+      <button class="btn" type="button" id="cb1Btn" hidden>不一致ﾘｽﾄ</button>
+      <button class="btn" type="button" id="editBtn" hidden>編集起動</button>
+      <button class="btn" type="button" id="delBtn" hidden>選択行削除</button>
+      <button class="btn btn--primary" type="button" id="postBtn" hidden>反映</button>
+      <a class="btn" href="/kensa">検査画面へ戻る</a>
+    </div>
+    <div class="tablewrap" style="max-height:72vh;overflow:auto">
+      <table class="table" id="meiboTable"></table>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/meibo.js') }}"></script>
+{% endblock %}

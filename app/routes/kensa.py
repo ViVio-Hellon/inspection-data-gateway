@@ -34,7 +34,28 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "print-check": ("print_check", ("answers",)),
     "print-commit": ("print_commit", ("answers",)),
     "new": ("new_inspection", ("answers",)),
+    # 外観・不良要因・検入高さ(MPEX の各ページ)
+    "visual": ("visual", ("lc", "items")),
+    "visual-clear": ("visual_clear", ("lc",)),
+    "defect-reflect": ("defect_reflect", ("items",)),
+    "defect-clear": ("defect_clear", ()),
+    "yamalb": ("yama_lb", ("value",)),
+    # オーダーNo・包装仕様書(UF_PackNo)
+    "orders": ("ord_no_open", ()),
+    "order": ("select_order", ("order",)),
+    "pack-select": ("pack_select", ("row",)),
+    "pack-close": ("pack_close", ("checked",)),
+    # 保留・まとめて削除・廃棄フラグ・印刷履歴クリア・サイズ修正・名簿画面の案内
+    "hold": ("hold", ("answers",)),
+    "ng-delete": ("ng_delete", ("pos", "answers")),
+    "izyou": ("izyou", ("answers",)),
+    "print-reset": ("print_reset", ("answers",)),
+    "resize": ("resize", ("answers",)),
+    "namelist-ack": ("name_list_ack", ()),
 }
+
+#: 画像の種類 → (使用パスの項目, その下のフォルダ)。VC 画像は SaveLoad.VC_Picture、包装仕様書は UFPack_Open
+PICTURES: dict[str, tuple[str, str]] = {"vc": ("packing", "VC種類画像"), "pack": ("quality", "包装仕様書")}
 
 MSG_NOT_READY = "この操作はまだ結合中です(工程 8c)。いまは VBA の UF検査判定.xlsm を使ってください。"
 
@@ -59,10 +80,28 @@ def sound(name: str):
     return send_file(f, mimetype="audio/wav", max_age=3600)
 
 
+@bp.get("/api/kensa/picture/<kind>/<path:name>")
+def picture(kind: str, name: str):
+    """VC 画像・包装仕様書の画像(使用パスの下のフォルダの <名前>.JPG)。無ければ 404(VBA は出さないだけ)。"""
+    from pathlib import Path
+    from flask import send_file
+    from ufkensa.kensa import paths
+    if kind not in PICTURES:
+        return jsonify({"error": {"code": "not_found", "message": "その画像の種類はありません"}}), 404
+    safe = Path(name).name
+    if safe != name or not safe.lower().endswith((".jpg", ".jpeg")):
+        return jsonify({"error": {"code": "bad_value", "message": "画像の名前が正しくありません"}}), 400
+    key, sub = PICTURES[kind]
+    f = paths.to_local(paths.join(paths.get(key), sub, safe))
+    if not f.is_file():
+        return jsonify({"error": {"code": "not_found", "message": f"画像がありません: {safe}"}}), 404
+    return send_file(f, mimetype="image/jpeg", max_age=60)
+
+
 @bp.get("/api/kensa/state")
 def state():
     s = session.get()
-    return jsonify({"view": view.build(s.state), "messages": [], "question": None, "stop": None})
+    return jsonify(s.current().to_dict())
 
 
 @bp.post("/api/kensa/<op>")
