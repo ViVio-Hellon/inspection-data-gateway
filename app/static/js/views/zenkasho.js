@@ -1,5 +1,5 @@
 /*
-  全ヵ所検査(一般 / 5N / 三菱受託)・H494 検査の画面。
+  全ヵ所検査(一般。5N・三菱受託は使っていないので切り替えに出さない D21)・H494 検査の画面。
   判断はすべてサーバ(ufkensa/kensa/zenkasho_session.py)。ここは受け取った view を描き、操作を送るだけ。
 
   操作の返り値(Result): { view, messages, question, stop }

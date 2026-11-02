@@ -87,6 +87,8 @@ SOUNDS = {"音楽合格": judge.SOUND_OK, "音楽不合格": judge.SOUND_NG, "�
 YAMA_LIST = ("1", "2", "3", "4", "5", "6", "枚数")          # YamaLB.List (UFMit:2305)
 METHODS = ("L1", "L2", "M6")                               # Inspection1〜3 / op1〜3 の Caption
 MODES = (("一般", "一般"), ("5N", "5N"), ("三菱", "三菱受託"), ("H494", "H494"))
+#: 決定 D21(W2・W3): 三菱受託・5N は使っていないので切り替えには出さない(コードは残す。いまその作業中なら出す)
+SHOWN_MODES = ("一般", "H494")
 
 #: 表の列(列番号, 見出し, 種類, まとまり)。種類 v=測定値 j=判定 c=計算 t=文字 l=原紙の固定文字
 ZEN_COLS: tuple[tuple[int, str, str, str], ...] = (
@@ -1299,7 +1301,8 @@ class ZenkashoSession:
         h = self.page == "P_H494"
         return {
             "page": self.page, "mode": mode, "open": f.visible, "line": f.line_name,
-            "modes": [{"key": k, "label": lb, "active": k == mode} for k, lb in MODES],
+            "modes": [{"key": k, "label": lb, "active": k == mode} for k, lb in MODES
+                      if k in SHOWN_MODES or k == mode],
             "notice": W2_NOTICE if mode == "三菱" else "", "suspect": list(zk.MITSUBISHI_SUSPECT) if mode == "三菱" else [],
             "events_enabled": b.events_enabled,
             "form": {"lot": f.h494_lot if h else f.lot_box, "ken_no": f.h494_ken_no if h else f.ken_no,

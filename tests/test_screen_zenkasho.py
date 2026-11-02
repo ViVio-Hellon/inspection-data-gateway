@@ -438,3 +438,12 @@ class LateralQuietTest(ZenBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShownModesTest(unittest.TestCase):
+    def test_d21_unused_modes_hidden(self) -> None:
+        """決定 D21: 三菱受託・5N は使っていないので切り替えに出さない(その作業中なら出す)。"""
+        from ufkensa.kensa import zenkasho_session as zs
+        self.assertEqual(zs.SHOWN_MODES, ("一般", "H494"))
+        keys = [k for k, _ in zs.MODES if k in zs.SHOWN_MODES or k == "三菱"]
+        self.assertEqual(keys, ["一般", "三菱", "H494"])
