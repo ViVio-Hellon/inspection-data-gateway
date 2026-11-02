@@ -67,6 +67,8 @@ function renderPaths() {
     const tr = document.createElement("tr");
     tr.dataset.key = p.key;
     const name = document.createElement("td");
+    name.style.whiteSpace = "normal";
+    name.style.width = "38%";
     const b = document.createElement("b");
     b.textContent = p.label;
     const small = document.createElement("small");
@@ -77,15 +79,16 @@ function renderPaths() {
     const input = document.createElement("input");
     input.className = "input";
     input.style.width = "100%";
-    input.style.minWidth = "30em";
+    input.style.minWidth = "22em";
     input.value = p.path;
     input.disabled = !S.admin;
     input.setAttribute("aria-label", p.label + " のパス");
+    if (p.key === "log") input.placeholder = "空ならこの端末のローカル(logs)";
     pathTd.append(input);
     if (p.changed) {
       const s = document.createElement("small");
       s.className = "muted";
-      s.textContent = "既定: " + (p.default || "(空)");
+      s.textContent = "既定: " + (p.default || (p.key === "log" ? "この端末のローカル(logs)" : "(空)"));
       pathTd.append(document.createElement("br"), s);
     }
     const status = cell("", "path-status");

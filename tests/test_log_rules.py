@@ -78,3 +78,47 @@ class LogRulesTest(_LogDirCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LogPathSettingTest(_LogDirCase):
+    """ログの出力パスは 設定 → 使用パス(と ログ)で決められる。下に ufkensa フォルダを作る。"""
+
+    def setUp(self):
+        super().setUp()
+        import os
+        from unittest import mock as _m
+        from tests._web import make_client
+        from ufkensa import auth
+        env = _m.patch.dict(os.environ, {"USERNAME": "admin1", "COMPUTERNAME": "PC-1"})
+        env.start()
+        self.addCleanup(env.stop)
+        auth.end()
+        self.addCleanup(auth.end)
+        admin = _m.patch.object(auth, "can_edit", return_value=True)
+        admin.start()
+        self.addCleanup(admin.stop)
+        self.c = make_client()
+        self.h = {"X-Tool-Token": self.c.application.config["TOKEN"]}
+
+    def test_set_from_paths_tab(self):
+        out = self.dir.parent / "共有" / "ログ"
+        st = self.c.post("/api/settings/path", json={"key": "log", "path": str(out)}, headers=self.h).get_json()
+        row = [p for p in st["paths"][st["mode"]] if p["key"] == "log"][0]
+        self.assertEqual(row["path"], str(out))
+        self.assertEqual(config.LOG_DIR, out / "ufkensa")                 # 直下ではなく ufkensa フォルダ
+        self.assertEqual(st["log"]["dir"], str(out / "ufkensa"))          # ログの面と同じ設定
+        chk = self.c.post("/api/settings/path/check", json={"key": "log"}, headers=self.h).get_json()
+        self.assertTrue(chk["ok"])
+        trace.event("x", "y")
+        self.assertTrue((out / "ufkensa").glob("ufkensa_記録_*.jsonl"))
+        st = self.c.post("/api/settings/path", json={"key": "log", "reset": True}, headers=self.h).get_json()
+        self.assertEqual([p for p in st["paths"][st["mode"]] if p["key"] == "log"][0]["path"], "")
+
+    def test_unwritable_keeps_current(self):
+        before = config.LOG_DIR
+        blocker = self.dir.parent / "ファイル"
+        blocker.write_text("x", encoding="utf-8")
+        r = self.c.post("/api/settings/path", json={"key": "log", "path": str(blocker / "下")}, headers=self.h)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("書けません", r.get_json()["error"]["message"])
+        self.assertEqual(config.LOG_DIR, before)

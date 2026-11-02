@@ -46,7 +46,7 @@ def _state() -> dict:
         },
         "mode": m,
         "modes": [{"key": k, "label": v} for k, v in paths.MODE_LABELS.items()],
-        "paths": {k: paths.overview(k) for k in paths.MODE_LABELS},
+        "paths": {k: paths.overview(k) + [_log_path_row()] for k in paths.MODE_LABELS},
         "rights": {
             "user": s.user_id,
             "pc": auth.pc_name(),
@@ -60,6 +60,30 @@ def _state() -> dict:
         "quirks": {"fix": quirks.summary()["fix"], "titles": quirks.TITLES},
         "log": _log_state(),
     }
+
+
+LOG_KEY = "log"
+
+
+def _log_path_row() -> dict:
+    """使用パスの一覧に出す「ログの出力パス」の行(中身は 設定 → ログ と同じ設定。モードによらず1つ)。"""
+    requested = str(user_settings.get(config.KEY_LOG_DIR, "") or "")
+    return {"key": LOG_KEY, "label": "ログの出力パス", "vba": "(新規。all-tools と同じ決まり)",
+            "use": "この下に ufkensa フォルダを作り ufkensa_<PC名>_日付.log / ufkensa_記録_<PC名>_日付.jsonl を書く。"
+                   "空ならこの端末のローカル(logs)。オンライン/オフライン共通",
+            "need": "write", "kind": "dir", "path": requested, "default": "", "changed": bool(requested)}
+
+
+def _set_log_dir(text: str):
+    """ログの出力パスを変える。書けなければ変えずに理由を返す(今までの置き場所のまま)。"""
+    text = (text or "").strip().strip('"')
+    target = logging_utils.resolve_log_dir(text)
+    why = logging_utils.set_log_dir(target)
+    if why:
+        return _err("not_writable", f"そのフォルダに書けません: {target}({why})。今までの置き場所のままです。")
+    user_settings.save(config.KEY_LOG_DIR, text)
+    trace.event("settings.log", f"ログの置き場所を {target} にしました")
+    return None
 
 
 def _log_state() -> dict:
@@ -122,6 +146,9 @@ def save_path():
         return _err("not_admin", MSG_ADMIN, 403)
     body = request.get_json(silent=True) or {}
     key, mode = str(body.get("key", "")), str(body.get("mode", "") or paths.mode())
+    if key == LOG_KEY:
+        refused = _set_log_dir("" if body.get("reset") else str(body.get("path", "")))
+        return refused or jsonify(_state())
     if key not in paths.BY_KEY or mode not in paths.MODE_LABELS:
         return _err("bad_value", "その項目はありません")
     if body.get("reset"):
@@ -136,6 +163,12 @@ def save_path():
 def check_path():
     body = request.get_json(silent=True) or {}
     key, mode = str(body.get("key", "")), str(body.get("mode", "") or paths.mode())
+    if key == LOG_KEY:
+        target = logging_utils.resolve_log_dir(str(user_settings.get(config.KEY_LOG_DIR, "") or ""))
+        why = logging_utils.probe_writable(target)
+        return jsonify({"key": key, "path": str(target), "exists": target.is_dir(), "readable": not why,
+                        "writable": not why, "ok": not why,
+                        "message": f"書けます({target})" if not why else f"書けません: {why}"})
     if key not in paths.BY_KEY or mode not in paths.MODE_LABELS:
         return _err("bad_value", "その項目はありません")
     return jsonify(paths.check(key, mode))
@@ -170,11 +203,7 @@ def save_log():
             return _err("bad_value", "残す日数は 0 以上の数で入れてください(0 = 消さない)")
         user_settings.save(config.KEY_LOG_KEEP_DAYS, days)
     if "dir" in body:
-        text = str(body.get("dir") or "").strip().strip('"')
-        target = logging_utils.resolve_log_dir(text)
-        why = logging_utils.set_log_dir(target)
-        if why:
-            return _err("not_writable", f"そのフォルダに書けません: {target}({why})。今までの置き場所のままです。")
-        user_settings.save(config.KEY_LOG_DIR, text)
-        trace.event("settings.log", f"ログの置き場所を {target} にしました")
+        refused = _set_log_dir(str(body.get("dir") or ""))
+        if refused:
+            return refused
     return jsonify(_state())
