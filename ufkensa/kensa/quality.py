@@ -649,7 +649,11 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     m_atu = csng(lv("製造板厚"))
     m_haba = csng(lv("製造板幅"))
     m_take = csng(lv("製造板丈"))
-    flat = clng(lv("品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ"))
+    flat_raw = lv("品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ")
+    if not quirks.reproduce("B74") and not vbx.is_numeric(flat_raw):
+        flat = 0                          # B74 を直す: 等級が「.」などの数でない値も「3,4 以外」として扱う
+    else:
+        flat = clng(flat_raw)
     grade = vstr(lv("品質ｸﾞﾚｰﾄﾞ_表面処理"))
     vstr(lv("納入先名"))
     nou_code = vstr(lv("納入先ｺｰﾄﾞ"))
@@ -715,7 +719,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     if not matching:
         return _dbqp_skip_qp(res, db, flat, m_tyo, o_atu, o_haba, o_take, naka_sika, mimi_sika,
                              execution, uf1_visible, update_day, m_atu, m_haba, m_take, m_zai, youto,
-                             grade, delivery)
+                             grade, delivery, flat_text=vstr(flat_raw))
 
     new_array = list(matching)
     # 優先: 納入先・取引先・送り先とコード・巾取数のどれかが記入された最初の行(QP:352-376)
@@ -871,7 +875,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
 def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, o_haba: float,
                   o_take: float, naka_sika: str, mimi_sika: str, execution: str, uf1_visible: bool,
                   update_day: str, m_atu: float, m_haba: float, m_take: float, m_zai: str, youto: str,
-                  grade: str, delivery: str) -> QpResult:
+                  grade: str, delivery: str, flat_text: str = "") -> QpResult:
     """DBQP の SkipQP(QP:638-760)。QP 表に該当なし → O 材・Hx8 材の判定不要、または等級表。"""
     kousa = [[None] * 9]
     k0 = kousa[0]
@@ -909,17 +913,19 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
             k0[K_SOURCE] = vstr(k0[K_SOURCE]) + " " + search_s
         return True
 
+    if not quirks.reproduce("B74") and flat != 3 and flat != 4:
+        # B74 を直す(2026-11-02 の回答で見直し): 等級が 3/4 以外なら、どの表の公差も当てはまらないので
+        # ソリ(幅・丈)・中・耳は空にして知らせる。平坦度一覧QP追加の値は入れない
+        res.messages.append(Message(f"歪等級が3,4以外です(品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ={flat_text or flat})。"
+                                    "歪公差は出しません。品証に確認してください", ERROR, source="QP:732"))
+        k0[K_HA] = k0[K_TA] = k0[K_NAKA] = k0[K_MIMI] = ""
+        return _dbqp_end(res, naka_sika, mimi_sika, execution, update_day, m_atu, m_haba, m_take,
+                         m_zai, m_tyo, youto, grade, delivery)
     if not sori():
         res.kousa = None
         return res
     if 6.0 >= o_atu:
         if naka_sika == "" or mimi_sika == "":
-            if table_n == "" and not quirks.reproduce("B74"):
-                # B74 を直す: 等級が 3/4 以外で中歪表の名前が空。空の表を開いて止まらず、
-                # 6mm 超の分岐(QP:727-730)と同じく MsgBox して skipEnd(中耳は空)
-                res.messages.append(Message("歪等級が3,4以外です", ERROR, source="QP:732"))
-                return _dbqp_end(res, naka_sika, mimi_sika, execution, update_day, m_atu, m_haba, m_take,
-                                 m_zai, m_tyo, youto, grade, delivery)
             f, rws = _table(db, table_n)
             if f is None or rws is None:
                 res.kousa = None

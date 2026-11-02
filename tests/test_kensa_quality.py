@@ -1027,8 +1027,15 @@ class FixBranchTest(unittest.TestCase):
             q.dbqp("L1099R0", "H", "x", "x", lot)
         quirks.set_for_test({"B74": "fix"})
         r = q.dbqp("L1099R0", "H", "x", "x", lot)
-        self.assertEqual([m.text for m in r.messages], ["歪等級が3,4以外です"])
-        self.assertEqual(r.kousa[0][q.K_NAKA:q.K_MIMI + 1], [None, None])         # 中耳は空のまま skipEnd
+        self.assertEqual(len(r.messages), 1)
+        self.assertTrue(r.messages[0].text.startswith("歪等級が3,4以外です(品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ=5)"))
+        # 回答で見直し: ソリ(幅・丈)も中・耳も出さない(平坦度一覧QP追加の値は入れない)
+        self.assertEqual([r.kousa[0][q.K_HA], r.kousa[0][q.K_TA], r.kousa[0][q.K_NAKA], r.kousa[0][q.K_MIMI]],
+                         ["", "", "", ""])
+        # 等級が「.」(未入力)も同じ扱い(VBA は CLng で型エラー 13)
+        lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "."})
+        r = q.dbqp("L1099R0", "H", "x", "x", lot)
+        self.assertTrue(r.messages[0].text.startswith("歪等級が3,4以外です(品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ=.)"))
         # 指示値があれば skipEnd で補う(QP:779-780)
         lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "5", "指示_中歪_高さ": "2", "指示_耳歪_高さ": ""})
         r = q.dbqp("L1099R0", "H", "x", "x", lot)
