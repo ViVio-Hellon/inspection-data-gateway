@@ -52,6 +52,7 @@ function render() {
   $("importWhy").textContent = P.why || (P.admin ? "" : "取り込むには管理者(ufkensa:admin)の権限が要ります。");
   $("importRun").disabled = !P.admin || !P.can_run;
   $("importAll").disabled = !P.admin || !P.can_run;
+  $("xlsmRun").disabled = !P.admin;
 }
 
 async function load() {
@@ -76,4 +77,12 @@ $("importAll").addEventListener("change", () => {
   for (const b of $("importTable").querySelectorAll("tbody input[type=checkbox]")) b.checked = $("importAll").checked;
 });
 $("importRun").addEventListener("click", runImport);
+$("xlsmRun").addEventListener("click", async () => {
+  try {
+    await api.post("/api/import/xlsm", { path: $("xlsmPath").value });
+    toast("xlsm の取り込みを始めました。進み具合は上の帯に出ます。", "info");
+  } catch (e) {
+    toastError(e);
+  }
+});
 load().catch(toastError);

@@ -46,3 +46,9 @@ class ImportApiTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class XlsmApiTest(ImportApiTest):
+    def test_xlsm_needs_admin_or_file(self):
+        r = self.c.post("/api/import/xlsm", json={"path": ""}, headers=self.h)
+        self.assertIn(r.status_code, (400, 403))

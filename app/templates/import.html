@@ -22,9 +22,14 @@
 </section>
 
 <section class="card">
-  <header><h3>各ラインの xlsm からの取り込み</h3><span class="lv lv--info">準備中</span></header>
+  <header><h3>各ラインの xlsm からの取り込み</h3><span class="lv lv--info">切替のとき1回</span></header>
   <div class="pad">
-    <p class="muted">切り替えのときに1回だけ、各ラインの UF検査判定.xlsm に貯まった保存用・耳用・Lot情報履歴・校正記録・印刷履歴・作業中保存をこの端末の DB に取り込みます(判断事項 D5)。保存の仕組みができたら使えるようにします。</p>
+    <p class="muted">その端末で使っていた UF検査判定.xlsm に貯まった 保存用・耳用・Lot情報履歴・校正記録・印刷履歴・作業中保存・検査員・日報 を、この端末の DB に取り込みます(判断事項 D5)。同じシートは入れ直すので、2回押しても重なりません。</p>
+    <div class="field">
+      <label for="xlsmPath">xlsm のファイル</label>
+      <input class="input" id="xlsmPath" style="min-width:32em" placeholder="例: C:\Users\...\UF検査判定.xlsm">
+      <button class="btn btn--primary" type="button" id="xlsmRun">取り込む</button>
+    </div>
   </div>
 </section>
 {% endblock %}

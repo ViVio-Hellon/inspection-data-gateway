@@ -8,7 +8,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, render_template, request
 
 from ufkensa import auth, jobs
-from ufkensa.kensa import importing
+from ufkensa.kensa import importing, paths, xlsm_import
 from ufkensa.logging_utils import get_logger
 
 from ..shell import shell_context
@@ -58,6 +58,31 @@ def run():
 
     try:
         job = jobs.get_registry().start("import", "Access の取り込み", work)
+    except jobs.JobBusy as e:
+        return _err("busy", f"ほかの処理が動いています: {e}", 409)
+    return jsonify({"job": job.id})
+
+
+@bp.post("/api/import/xlsm")
+def import_xlsm():
+    """各ラインの xlsm から1回だけ取り込む(D5)。管理者だけ。"""
+    if not auth.can_edit():
+        return _err("not_admin", auth.MSG_NO_LEVEL, 403)
+    body = request.get_json(silent=True) or {}
+    text = str(body.get("path", "")).strip().strip('"')
+    if not text:
+        return _err("bad_value", "取り込む xlsm のファイルを指定してください")
+    src = paths.to_local(text)
+    if not src.is_file():
+        return _err("not_found", f"ファイルが見つかりません: {text}")
+
+    def work(progress):
+        progress(10, "xlsm を読んでいます")
+        rep = xlsm_import.import_book(src)
+        return "取り込みました: " + rep.summary()
+
+    try:
+        job = jobs.get_registry().start("import_xlsm", "xlsm の取り込み", work)
     except jobs.JobBusy as e:
         return _err("busy", f"ほかの処理が動いています: {e}", 409)
     return jsonify({"job": job.id})
