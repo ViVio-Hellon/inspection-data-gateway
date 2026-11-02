@@ -295,7 +295,9 @@ def check_thickness(row: Sequence[Any], c1: int, c2: int, c3: int, order: float,
 
     下・上は Single(`Val` を Single に入れる)、x は `Val(Single の引数)`(有効 7 桁)。
     """
-    if vstr(cell(row, c1)) == "" and vstr(cell(row, c2)) == "" and vstr(cell(row, c3)) == "":
+    # VBA の And は短絡しないので3列とも必ず読む(値列が無い表でも添字エラー 9。QP:930-932)
+    v1, v2, v3 = cell(row, c1), cell(row, c2), cell(row, c3)
+    if vstr(v1) == "" and vstr(v2) == "" and vstr(v3) == "":
         return True
     lower = vbx.single(vbx.val(cell(row, c1)))
     upper = vbx.single(vbx.val(cell(row, c2)))
@@ -1229,12 +1231,11 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     table = "ラテフリ直角"
     db: Path = _quality_db()
     pf = datasource.get_fields(db, table)
-    u["HURIS"] = ""
     if pf is None:
-        db = _packing_db("品質基準.sqlite3")
-        pf = datasource.get_fields(db, table)
-        if pf is None:
-            return out
+        # `Dim PackF(): PackF = GetFieldsArr(…)`(QP:1184)。動的配列に Empty を代入すると型エラー 13 なので、
+        # PackingPath へ切り替える処理(QP:1196-1201)には到達しない(UF1.HURIS のリセットより前に止まる)
+        raise vbx.TypeMismatch("ラテフリ直角 の列名が Empty (Dim PackF() への代入 QP:1184)")
+    u["HURIS"] = ""
     C = {n: col_of(pf, n) for n in ("管理番号", "納入先", "取引先", "用途コード", "製造材質", "製造調質", "厚下",
                                     "厚上", "幅下", "幅上", "丈下", "丈上", "フリー反り", "ラテラルボー", "直角度",
                                     "製造板厚", "製造板幅", "製造板丈", "公差")}
@@ -1678,6 +1679,8 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
     else:
         pf = datasource.get_fields(path, "梱包保護材")
         if pf is None:
+            # 不明点: VBA の EnsureCache は `Dim PackF(): PackF = GetFieldsArr(…)`(QP:1641)で、表が空だと
+            # 代入で型エラー 13 になるはず。梱包資材マスタが未受領で空の表のまま動かしているため、ここは "" で返す
             return ""
         C = {n: col_of(pf, n) for n in _PACK_COLS}
         rows = datasource.get_records(path, "梱包保護材")
@@ -1705,21 +1708,22 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
 # 伝送用ファイル: 時間用・校正ストレートエッヂ・設備仕様
 # ------------------------------------------------------------------
 def _transfer_fields(table: str) -> tuple[Optional[Path], Optional[list[str]]]:
-    """QualityPath の伝送用ファイル。列が取れなければ PackingPath の同名ファイル。"""
+    """QualityPath の伝送用ファイルの列名。
+
+    VBA は `Dim PackF(): PackF = GetFieldsArr(…)`(QP:1792・1837・2091)で、表が空(Empty)だと動的配列への
+    代入で型エラー 13 になる。そのため PackingPath へ切り替える処理には到達しない(MachineTransfer と同じ)。
+    """
     db = _transfer_db()
     f = datasource.get_fields(db, table)
     if f is None:
-        db = _packing_db("伝送用ファイル.sqlite3")
-        f = datasource.get_fields(db, table)
-        if f is None:
-            return None, None
+        raise vbx.TypeMismatch(f"{table} の列名が Empty (Dim PackF() への代入)")
     return db, f
 
 
 def shift_time() -> Any:
     """QP.ShiftTime (QP:1786-1829)。「時間用」の**先頭4行**の (直, 開始, 終了)。
 
-    列が取れなければ None(Empty)、行が無ければ ""。4行未満は VBA と同じく添字エラー。
+    表が空なら型エラー 13(`_transfer_fields`)、行が無ければ ""。4行未満は VBA と同じく添字エラー。
     """
     db, f = _transfer_fields("時間用")
     if f is None:
@@ -1736,7 +1740,7 @@ def shift_time() -> Any:
 def straight_edge(line_name: str) -> Any:
     """QP.StraightEdge (QP:1831-1864)。ライン名の行の (先頭行の長さ下, 最終行の長さ上)。
 
-    ライン名の照合は D13(文字の幅だけ揃える `lines.matches`)。列が取れなければ None、行が無ければ ""。
+    ライン名の照合は D13(文字の幅だけ揃える `lines.matches`)。表が空なら型エラー 13、行が無ければ ""。
     """
     db, f = _transfer_fields("校正ストレートエッヂ")
     if f is None:

@@ -689,6 +689,9 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
     if out.shiji_late != "":
         out.lateral_text = convert_to_half(out.shiji_late)
         out.late_flag = True
+        if ph[5] is None:
+            # `Dim kenNoTemp As String: kenNoTemp = PastHiki(5)`(SaveLoad:301)。Null の代入はエラー 94
+            out.null_uses.append("SaveLoad:301 検査番号")
     if out.taik_flag and out.late_flag:
         out.additional = "対角ﾗﾃﾗﾙﾎﾞ-追記公差あり"
     elif out.taik_flag:

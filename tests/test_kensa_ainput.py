@@ -222,6 +222,19 @@ class HeightInputTest(unittest.TestCase):
 
 
 class InputCheckTest(unittest.TestCase):
+    def test_vcab_cleared_with_vctext(self) -> None:
+        # UFAinput:254(CommandButton9)/947(AinButt)で VcText = "" → VcText_Change(UFAinput:69-71)で VCAB も ""。
+        # ストア(Remain=1)・用途が高精度でないと Height_Check の VC 分岐(Input:513)を通らず VCAB は "" のまま
+        f = AinputForm(remain="1", youto="H279", order_no="04077194", amin="15", amax="15", mount_count="1",
+                       heights=["15"] + [""] * 14, mai1="1", cou1="1", vc_text="1.2", vcab="1.2")
+        ainput.recheck_height(f, HIST, vc=vc_stub)
+        self.assertEqual((f.vc_text, f.vcab), ("", ""))
+        # VcText がもともと "" なら Change は起きず、VCAB(Else 分岐の "0" など)はそのまま
+        f = AinputForm(remain="1", youto="H279", order_no="04077194", amin="15", amax="15", mount_count="1",
+                       heights=["15"] + [""] * 14, mai1="1", cou1="1", vc_text="", vcab="0")
+        ainput.recheck_height(f, HIST, vc=vc_stub)
+        self.assertEqual(f.vcab, "0")
+
     def test_konno(self) -> None:
         self.assertEqual(ainput.konno_before_update("5"), "05")
         self.assertEqual(ainput.konno_before_update("0"), "")

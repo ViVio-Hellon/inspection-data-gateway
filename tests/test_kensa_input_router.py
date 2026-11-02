@@ -259,7 +259,35 @@ class InpChangeTest(QuirkCase):
         ir.receive(s, "#L395.8", FakeHooks())
         self.assertEqual((s.flag_label, s.inp), (0, "#L395.8"))
         self.assertEqual(ir.receive(s, "#L400.0", FakeHooks()), [])     # 以後は受け付けない
-        self.assertEqual(s.inp, "#L400.0")
+        # StartTB_KeyDown は FlagLabel<>1 で INP に入れずに抜ける(UF1:3297)。INP は前の値のまま
+        self.assertEqual(s.inp, "#L395.8")
+
+    def test_receive_ignored_while_flag_not_1(self) -> None:
+        # UF1:3297 `If Me.FlagLabel <> 1 Then Exit Sub` → INP は変わらない。
+        # その後 FlagLabel が戻っても、同じ文字列なら INP の Change が起きず何もしない
+        s = ready()
+        s.inp = "DT10002+0000021.712M"
+        s.flag_label = 0
+        h = FakeHooks()
+        self.assertEqual(ir.receive(s, "#〆1.5", h), [])
+        self.assertEqual(s.inp, "DT10002+0000021.712M")
+        s.flag_label = 1
+        self.assertEqual(ir.receive(s, "DT10002+0000021.712M", h), [])
+        self.assertEqual((s.cells["S1"].value, h.calls), ("", []))
+
+    def test_receive_empty_text_keeps_inp(self) -> None:
+        # UF1:3298 `If UF1.StartTB = "" Then Exit Sub` → INP を "" にしない
+        s = ready()
+        s.inp = "#〆1.5"
+        self.assertEqual(ir.receive(s, "", FakeHooks()), [])
+        self.assertEqual(s.inp, "#〆1.5")
+
+    def test_manual_entry_ignores_flag(self) -> None:
+        # CommandButton3_Click (UF1:4552-4557) は FlagLabel を見ずに INP へ入れる。INP_Change が FlagLabel で抜ける
+        s = ready()
+        s.flag_label = 0
+        self.assertEqual(ir.manual_entry(s, "1.5", FakeHooks()), [])
+        self.assertEqual((s.inp, s.cells["S1"].value), ("#〆1.500", ""))
 
     def test_no_work_with_previous_target(self) -> None:
         s = KensaState(proofread_flag="ok", inp_tag="S1")

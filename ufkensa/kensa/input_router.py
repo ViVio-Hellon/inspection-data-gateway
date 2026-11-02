@@ -548,7 +548,20 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
 
 
 def receive(state: KensaState, text: str, hooks: Hooks) -> list[Message]:
-    """UF1.StartTB_KeyDown (UF1:3295-3306)。`INP = StartTB`。値が変わったときだけ INP_Change が走る(MSForms の Change)。"""
+    """UF1.StartTB_KeyDown (UF1:3295-3306)。`INP = StartTB`。値が変わったときだけ INP_Change が走る(MSForms の Change)。
+
+    FlagLabel が 1 でないとき・StartTB が空のときは INP に入れずに抜ける(UF1:3297-3298)。
+    INP は前の値のまま残るので、その後に同じ文字列が来ても Change は起きない(VBA どおり)。
+    """
+    if state.flag_label != 1:
+        return []
+    if text == "":
+        return []
+    return _set_inp(state, text, hooks)
+
+
+def _set_inp(state: KensaState, text: str, hooks: Hooks) -> list[Message]:
+    """`UF1.INP = text`。値が変わったときだけ INP_Change が走る(MSForms の Change)。"""
     if state.inp == text:
         return []
     state.inp = text
@@ -556,12 +569,15 @@ def receive(state: KensaState, text: str, hooks: Hooks) -> list[Message]:
 
 
 def manual_entry(state: KensaState, manual: str, hooks: Hooks) -> list[Message]:
-    """UF1.CommandButton3_Click (UF1:4552-4558)。手入力: `INP = "#〆" & Manual`(INP が 3 文字以下なら "0.000" に整える)。"""
+    """UF1.CommandButton3_Click (UF1:4552-4558)。手入力: `INP = "#〆" & Manual`(INP が 3 文字以下なら "0.000" に整える)。
+
+    StartTB_KeyDown と違い FlagLabel を見ずに INP へ入れる(止めるのは INP_Change の FlagLabel の確認)。
+    """
     if len(state.inp) >= 4:
         text = "#〆" + manual
     else:
         text = "#〆" + vbx.fmt(manual, "0.000")
-    return receive(state, text, hooks)
+    return _set_inp(state, text, hooks)
 
 
 # ------------------------------------------------------------------

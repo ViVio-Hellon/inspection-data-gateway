@@ -756,63 +756,6 @@ def daily_create(ctx: DailyContext) -> DailyCreateResult:
 
 
 @dataclass
-class NumberCountResult:
-    pack: dict[str, float]               # ロット → 梱包枚数(Σ 枚数×包数)
-    inspected: dict[str, Any]            # ロット → 検入枚数(最初に出た行の E 列)
-    sheet_writes: list[CellWrite]        # 梱包枚数計算_<L>
-    red_cell: Optional[tuple[int, int]]  # Daily_<L> で赤くするセル
-    stop_print: bool                     # UF1.PrintB.Tag = "stop"
-    messages: list[Message] = field(default_factory=list)
-    open_name_list: Optional[int] = None
-
-
-def number_count(cells: Cells, lot_name: str) -> NumberCountResult:
-    """Worker.Number_Count (Worker:948-1020)。日報の梱包枚数が検入枚数を超えていたら印刷を止める。"""
-    ur = last_row(cells, 1)
-    r0, r1 = min(3, ur), max(3, ur)                   # Range(Cells(3,1), Cells(UR,13))
-    total = [[cells.get((r, c)) for c in range(1, 14)] for r in range(r0, r1 + 1)]
-    count: dict[str, Any] = {}
-    kara: Any = ""
-    for row in total:
-        if _empty(row[0]):
-            row[0] = kara
-        else:
-            kara = row[0]
-            if _text(row[0]) not in count:
-                count[_text(row[0])] = row[4]
-    pack: dict[str, float] = {}
-    for row in total:
-        key = _text(row[0])
-        x = vbx.clng(vbx.val(_text(row[11])) * vbx.val(_text(row[12])))
-        pack[key] = x if key not in pack else vbx.val(pack[key]) + x
-    sw = [CellWrite(1, 1, "LotNo"), CellWrite(1, 2, "梱包枚数")]
-    for j, (k, v) in enumerate(pack.items(), start=2):
-        sw += [CellWrite(j, 1, k), CellWrite(j, 2, v)]
-    sw += [CellWrite(1, 3, "LotNo"), CellWrite(1, 4, "検入枚数")]
-    for j, (k, v) in enumerate(count.items(), start=2):
-        sw += [CellWrite(j, 3, k), CellWrite(j, 4, v)]
-    red = None
-    bad = False
-    if lot_name in count:
-        if vbx.val(pack.get(lot_name)) > vbx.val(_text(count[lot_name])):
-            posi = 0
-            for i, row in enumerate(total, start=1):
-                if _text(row[0]) == lot_name and not _empty(row[4]):
-                    posi = i
-                    break
-            red = (posi + 2, 5)
-            bad = True
-    res = NumberCountResult(pack, count, sw, red, bad)
-    if bad:
-        res.messages.append(Message("梱包数と検入枚数が一致しません", ERROR, source="Worker:1016"))
-        res.open_name_list = 3
-    return res
-
-
-# ------------------------------------------------------------------
-# UFNameList の書き戻し
-# ------------------------------------------------------------------
-@dataclass
 class WriteBack:
     sheet: str
     clear: tuple[int, int, int, int]      # (行1, 列1, 行2, 列2) を ClearContents

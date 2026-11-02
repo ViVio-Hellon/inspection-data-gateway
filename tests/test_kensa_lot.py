@@ -575,5 +575,24 @@ class VcTest(_Base):
         self.assertEqual((r.value, r.messages[0].text), (0.0, "日稲:伝送用ファイル.accdbがありません_ReadCheck_VcConv"))
 
 
+class VerifierAccReflecNullTest(_Base):
+    def test_ken_no_null_with_lateral_instruction(self) -> None:
+        # 指示_ﾗﾃﾗﾙﾎﾞｰ があるときだけ `Dim kenNoTemp As String: kenNoTemp = PastHiki(5)`(SaveLoad:301)を通る。
+        # 検査番号が Null ならそこでエラー 94 → null_uses に残す(L8430D0 は指示 "2.0MM/1M" あり)
+        from unittest import mock
+        orig = lot._select_lot
+
+        def null_ken(file_path: str, cb_text: str):
+            cols, values = orig(file_path, cb_text)
+            v = list(values)
+            v[cols.index("検査番号")] = None
+            return cols, tuple(v)
+
+        with mock.patch.object(lot, "_select_lot", null_ken):
+            r = lot.acc_reflec(lot.LotScreen(lot="L8430D0", cb_text="L8430D0"), check_equipment=_ok)
+        self.assertEqual(r.null_uses, ["SaveLoad:301 検査番号"])
+        self.assertEqual(r.ken_no, "")
+
+
 if __name__ == "__main__":
     unittest.main()

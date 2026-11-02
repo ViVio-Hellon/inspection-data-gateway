@@ -304,21 +304,6 @@ class DailyTest(unittest.TestCase):
         self.assertEqual(workers.daily_sheet_name("キャスク", "Test"), "Daily_")
 
 
-class NumberCountTest(unittest.TestCase):
-    def test_over(self) -> None:
-        cells = {(2, 1): "ﾛｯﾄNo", (3, 1): "A1", (3, 5): 100, (3, 12): 50, (3, 13): 1,
-                 (4, 12): 60, (4, 13): 1, (5, 1): "B2", (5, 5): 10, (5, 12): 5, (5, 13): 2}
-        r = workers.number_count(cells, "A1")
-        self.assertEqual(r.pack, {"A1": 110.0, "B2": 10})
-        self.assertEqual(r.inspected, {"A1": 100, "B2": 10})
-        self.assertTrue(r.stop_print)
-        self.assertEqual(r.red_cell, (3, 5))
-        self.assertEqual(r.messages[0].text, "梱包数と検入枚数が一致しません")
-        self.assertEqual(r.open_name_list, 3)
-        r = workers.number_count(cells, "B2")
-        self.assertFalse(r.stop_print)
-
-
 class NameListTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)

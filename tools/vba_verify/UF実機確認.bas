@@ -130,6 +130,9 @@ Private Sub 文字列関数()
     Rec "S-3", "StrComp(""ﾄｯﾄ"",""トット"",vbTextCompare)", "StrComp", StrComp("ﾄｯﾄ", "トット", vbTextCompare)
     Rec "S-4", "InStr(1,""ABC"",""b"",vbTextCompare)", "InStr", InStr(1, "ABC", "b", vbTextCompare)
     Rec "S-5", """ﾄｯﾄ"" = ""トット""", "=", ("ﾄｯﾄ" = "トット")
+    Dim e As Variant
+    Rec "U13-1", "Format(Empty, ""0.0"")(SkipQP の MG1 の表示)", "Format", "[" & Format(e, "0.0") & "]"
+    Rec "U13-2", "Format("""", ""0.0"")", "Format", "[" & Format("", "0.0") & "]"
 End Sub
 
 '--- U3 / U4 / U9: Access(ADO Filter・列名の全角半角・返却順) ------------------------------

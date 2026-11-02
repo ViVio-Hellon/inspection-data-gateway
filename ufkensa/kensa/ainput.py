@@ -1140,6 +1140,16 @@ def _lock(form: AinputForm) -> None:
     form.locked = True
 
 
+def _clear_calc_texts(form: AinputForm) -> None:
+    """`AiText = "": GaText = "": VcText = ""`(UFAinput:252-254, 945-947)。
+
+    VcText_Change(UFAinput:69-71)は値が変わったときだけ起き、VCAB に写す。Aisi・Gaisousi は表示時に ai_text・ga_text から作る。
+    """
+    if form.vc_text != "":
+        form.vcab = ""
+    form.ai_text = form.ga_text = form.vc_text = ""
+
+
 def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], answers: dict[str, bool],
                registry: WorkerRegistry, day_max: str, now: datetime, daily: Optional[DailyContext] = None,
                vc: Callable[[str], tuple[float, list[Message]]] = vc_conv,
@@ -1166,7 +1176,7 @@ def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], ans
     if form.tag == "Load":
         res.stage = "busy"
         return res
-    form.ai_text = form.ga_text = form.vc_text = ""
+    _clear_calc_texts(form)
     form.tag = "Load"
     m_count = _m_count(form)
     mount_height = calc_mount_height(form, _mount_count(form))
@@ -1277,7 +1287,7 @@ def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], ans
 def recheck_height(form: AinputForm, history_rows: Optional[list[list[Any]]], *,
                    vc: Callable[[str], tuple[float, list[Message]]] = vc_conv) -> HeightCheckResult:
     """UFAinput.CommandButton9_Click (UFAinput:250-277)。外注で合紙・VC・外装紙を外したあとの再計算。"""
-    form.ai_text = form.ga_text = form.vc_text = ""
+    _clear_calc_texts(form)
     m_count = _m_count(form)
     mount_height = calc_mount_height(form, _mount_count(form))
     hc = height_check(vbx.val(form.amin), vbx.val(form.amax), vbx.val_single(mount_height), vbx.val(m_count),

@@ -933,5 +933,40 @@ class DistortionVcTest(_DbCopy):
         self.assertEqual(f.Sansyou1, " QA-022-01")
 
 
+# ------------------------------------------------------------------
+# 突き合わせ検証で見つけた差(VBA の手追い)
+# ------------------------------------------------------------------
+class VerifierRangeCheckTest(unittest.TestCase):
+    def test_value_column_always_read(self) -> None:
+        # CheckThickness/CheckWidth の `A = "" And B = "" And C = ""` は短絡しない(QP:930-932・949-951)。
+        # 値列(Col3)が 0(表に無い)なら、下・上に値があっても ArrQuality(row, 0) で添字エラー 9
+        with self.assertRaises(q.VbaRuntimeError) as cm:
+            q.check_thickness(["4", "50"], 1, 2, 0, 5)
+        self.assertEqual(cm.exception.number, 9)
+        with self.assertRaises(q.VbaRuntimeError):
+            q.check_width(["4", "50"], 1, 2, 3, 5)
+
+
+class VerifierEmptyFieldsTest(_DbCopy):
+    """`Dim PackF(): PackF = GetFieldsArr(…)` は表が空(Empty)だと代入で型エラー 13。
+    PackingPath へ切り替える `If IsEmpty(PackF) Then …` には到達しない。"""
+
+    def test_db_return_item_empty_table(self) -> None:
+        self.sql("品質基準", 'DELETE FROM "ラテフリ直角"')
+        with self.assertRaises(vbx.TypeMismatch):          # QP:1184
+            q.db_return_item("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
+
+    def test_transfer_tables_empty(self) -> None:
+        self.sql("伝送用ファイル", 'DELETE FROM "設備仕様"')
+        with self.assertRaises(vbx.TypeMismatch):          # QP:2091
+            q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30)
+        self.sql("伝送用ファイル", 'DELETE FROM "時間用"')
+        with self.assertRaises(vbx.TypeMismatch):          # QP:1792
+            q.shift_time()
+        self.sql("伝送用ファイル", 'DELETE FROM "校正ストレートエッヂ"')
+        with self.assertRaises(vbx.TypeMismatch):          # QP:1837
+            q.straight_edge("LVC")
+
+
 if __name__ == "__main__":
     unittest.main()
