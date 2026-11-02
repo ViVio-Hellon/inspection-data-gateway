@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import datasource, lines, paths, quirks, vbx
-from .flow import ERROR, INFO, Message
+from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
 

@@ -832,3 +832,11 @@ def name_list_write_back(items: list[list[str]], lname: str, col_count: int) -> 
         for a in range(1, col_count + 1):
             writes.append(CellWrite(i + 2, a, row[a - 1] if a - 1 < len(row) else ""))
     return WriteBack(sheet, (3, 1, 20 + cont, col_count), writes)
+
+
+def list_posting(items: list[list[str]], lname: str, col_count: int) -> WriteBack:
+    """ListView.ListPosting (ListView:504-521)。UFNameList の「日報修正」(CommandButton2)は `Daily_<ライン>` に書く。"""
+    cont = len(items)
+    writes = [CellWrite(i + 2, a, row[a - 1] if a - 1 < len(row) else "")
+              for i, row in enumerate(items, start=1) for a in range(1, col_count + 1)]
+    return WriteBack("Daily_" + lname, (3, 1, 20 + cont, col_count), writes)

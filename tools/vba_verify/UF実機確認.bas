@@ -72,6 +72,14 @@ Private Sub U1_”äŠr()
         Case Else: hit = "Case Else"
     End Select
     Rec "U1-6", "Select Case ‚É ""S""(Case 2, 4)", "Select Case ""S""", hit, Err.Number
+    Dim vn As Variant: vn = 0
+    v = ""
+    Err.Clear: b = (v > vn): Rec "U1-10", "Variant ‚Ì‹ó•¶š > Variant ‚Ì 0", "v="""": vn=0: v > vn", b, Err.Number
+    s = ""
+    Err.Clear: b = (s = vn): Rec "U1-11", "String ‚Ì‹ó•¶š = Variant ‚Ì 0", "s="""": s = vn", b, Err.Number
+    s = "10"
+    vn = 9
+    Err.Clear: b = (s < vn): Rec "U1-12", "String ‚Ì ""10"" < Variant ‚Ì 9(•¶š‚Å”ä‚×‚é‚È‚ç True)", "s=""10"": s < vn", b, Err.Number
     Err.Clear: b = (CDbl("1.5") > ""): Rec "U1-7", "CDbl(""1.5"") > """"", "CDbl(TB) > """"", b, Err.Number
     ' On Error Resume Next ‚Ì’†‚Å If ‚ÌğŒ‚ªƒGƒ‰[‚É‚È‚Á‚½‚Æ‚«AThen ‚Ì’†‚É“ü‚é‚©
     Err.Clear: hit = "Then ‚É“ü‚ç‚È‚¢"

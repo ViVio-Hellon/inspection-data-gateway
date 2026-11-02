@@ -21,7 +21,7 @@ from . import paths
 log = get_logger("kensa.importing")
 
 #: 取り込む DB(VBA が読み書きしていた Access)。梱包検査ﾃﾞｰﾀ は後日受領(04 の資料)
-TARGETS: tuple[str, ...] = ("SIKALOTNOW", "SIKAHIKINOW", "SIKAODRNOW", "SIKACOMP", "品質基準", "伝送用ファイル",
+TARGETS: tuple[str, ...] = ("SIKALOTNOW", "SIKAHIKINOW", "SIKAODRNOW", "SIKACOMP", "SIKATWOYEAR", "品質基準", "伝送用ファイル",
                             "梱包検査ﾃﾞｰﾀ")
 
 

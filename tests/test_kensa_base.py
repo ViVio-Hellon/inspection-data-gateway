@@ -53,6 +53,15 @@ class VbxTest(unittest.TestCase):
         with self.assertRaises(vbx.TypeMismatch):
             vbx.cdbl("")
 
+    def test_compare_typed_follows_vba_table(self) -> None:
+        N, S, V = vbx.NUM, vbx.STR, vbx.VAR
+        with self.assertRaises(vbx.TypeMismatch):               # 数値型 と 数にならない文字列の Variant
+            vbx.compare_typed("", 0, V, N)
+        self.assertEqual(vbx.compare_typed("", 0, V, V), 1)     # Variant どうし: 文字列 > 数(エラーにしない)
+        self.assertEqual(vbx.compare_typed("10", 9.0, S, V), -1)  # String と Variant: 文字で比べる("10" < "9")
+        self.assertEqual(vbx.compare_typed("3", 2, V, N), 1)    # 数になる Variant と数値型: 数で比べる
+        self.assertEqual(vbx.compare_typed(None, 0, V, N), 0)   # Empty は 0
+
     def test_like_mid_instr(self) -> None:
         self.assertTrue(vbx.like("ABC52S1", "*52S*"))
         self.assertFalse(vbx.like("abc", "A*"))                 # バイナリ比較
@@ -112,6 +121,9 @@ class AdoFilterTest(unittest.TestCase):
 
     def test_or_and_paren(self) -> None:
         self.assertEqual(self.pick("([ﾛｯﾄ番号]='X') OR [ｵｰﾀﾞｰ板丈]='0'"), [1, 2])
+
+    def test_column_name_case(self) -> None:
+        self.assertTrue(ado_filter.compile_filter("[No]='1'")({"NO": "1"}))   # ADO は列名の大小を区別しない
 
     def test_unknown_column(self) -> None:
         with self.assertRaises(KeyError):

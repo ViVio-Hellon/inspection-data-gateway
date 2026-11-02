@@ -233,6 +233,7 @@ class StepResult:
     kiroku_create: bool = False
     hinsho_writes: list[CellWrite] = field(default_factory=list)   # 品証検証
     hinsho_red: list[tuple[int, int]] = field(default_factory=list)
+    kiroku_rank: Optional["RankResult"] = None                      # 1000mm 合格後の 校正ランク付け(校正記録を書き換える)
 
 
 def _log(line_name: str, text: str) -> legacy_log.LogEntry:
@@ -262,10 +263,11 @@ def _night(now: datetime, shifts: ShiftTimes) -> bool:
 
 
 def input_1000(state: CalibrationState, raw: str, hinsho: Optional[Cells], kiroku: Optional[Cells], *,
-               now: datetime, facility: str, shifts: ShiftTimes) -> StepResult:
+               now: datetime, facility: str, shifts: ShiftTimes, red_rows: Optional[set[int]] = None) -> StepResult:
     """UF校正.INP1000_AfterUpdate (UF校正:220-240) + Proofreading.品証測定 (Proofreading:258-386)。
 
-    hinsho は 品証検証 シート(無ければ VBA は End → Stop)、kiroku は 校正記録(合格後の 校正ランク付け 用)。
+    hinsho は 品証検証 シート(無ければ VBA は End → Stop)、kiroku は 校正記録(合格後の 校正ランク付け 用。
+    red_rows はその赤字の行)。
     白い画面(ストレートエッヂ)では INP1000 に入れない(INP1000_Enter)ので何もしない。
     """
     res = StepResult()
@@ -277,13 +279,13 @@ def input_1000(state: CalibrationState, raw: str, hinsho: Optional[Cells], kirok
     state.sokutei = state.inp1000
     if state.sokutei != "":
         res.logs.append(_log(state.line_name, "1000mm測定:" + state.sokutei))
-        _hinsho_measure(state, hinsho, kiroku, res, now=now, facility=facility, shifts=shifts)
+        _hinsho_measure(state, hinsho, kiroku, res, now=now, facility=facility, shifts=shifts, red_rows=red_rows)
     state.f1 = "1"
     return res
 
 
 def _hinsho_measure(state: CalibrationState, sh: Optional[Cells], kiroku: Optional[Cells], res: StepResult, *,
-                    now: datetime, facility: str, shifts: ShiftTimes) -> None:
+                    now: datetime, facility: str, shifts: ShiftTimes, red_rows: Optional[set[int]] = None) -> None:
     """Proofreading.品証測定 (Proofreading:258-386)。"""
     if sh is None:
         raise Stop("品証検証 シートがありません(VBA は End)", messages=res.messages, source="Proofreading:260")
@@ -321,8 +323,8 @@ def _hinsho_measure(state: CalibrationState, sh: Optional[Cells], kiroku: Option
         state.gauge = gauge_guidance(state.line_name)
         state.ranks = {}
         if kiroku is not None:
-            rk = calibration_rank(kiroku, state.line_name, now=now)
-            state.ranks.update(rk.ranks)
+            res.kiroku_rank = calibration_rank(kiroku, state.line_name, now=now, red_rows=red_rows)
+            state.ranks.update(res.kiroku_rank.ranks)
         state.mode = WHITE
         state.f1 = "0"
     else:

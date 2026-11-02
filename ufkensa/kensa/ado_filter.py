@@ -82,9 +82,14 @@ def _as_number(text: Optional[str]) -> Optional[float]:
 
 
 def _match(cond: _Cond, row: Row) -> bool:
-    if cond.col not in row:
-        raise KeyError(f"Filter の列 [{cond.col}] が表にありません")
-    raw = row[cond.col]
+    if cond.col in row:
+        raw = row[cond.col]
+    else:
+        # ADO の列名は大文字小文字を区別しない(VBA の [No] が表の NO に当たる)
+        hit = [k for k in row if k.casefold() == cond.col.casefold()]
+        if not hit:
+            raise KeyError(f"Filter の列 [{cond.col}] が表にありません")
+        raw = row[hit[0]]
     cell = "" if raw is None else str(raw)
     op = cond.op.upper()
     if op == "LIKE":

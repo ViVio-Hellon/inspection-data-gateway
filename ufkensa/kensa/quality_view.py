@@ -230,7 +230,8 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
         if quirks.reproduce("B25"):
             c2 = c1 & check_condition(r, R["材質"], zai)        # B25: 調質を見ずに材質をもう一度
         else:
-            c2 = c1 & check_condition(r, R["調質"], tyo)
+            # 直す: 調質で照合する(表に調質の列が無ければ条件なし。いまの別表2 には列が無い)
+            c2 = c1 & (check_condition(r, R["調質"], tyo) if R["調質"] else True)
         c3 = c2 & check_thickness(r, R["板厚下"], R["板厚上"], R["厚"], m_atu)
         c4 = c3 & check_width(r, R["板幅下"], R["板幅上"], R["幅"], o_haba)
         c5 = c4 & check_width(r, R["板丈下"], R["板丈上"], R["丈"], o_take)

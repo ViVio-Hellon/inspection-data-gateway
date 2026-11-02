@@ -79,6 +79,7 @@ DB_FILES = {
     "SIKAHIKINOW": ("main", "SIKAHIKINOW.sqlite3"),
     "SIKAODRNOW": ("main", "SIKAODRNOW.sqlite3"),
     "SIKACOMP": ("next", "SIKACOMP.sqlite3"),
+    "SIKATWOYEAR": ("next", "SIKATWOYEAR.sqlite3"),     # 仕掛_完了2年(Input:293。VBA は NextPath から読む)
     "品質基準": ("quality", "品質基準.sqlite3"),
     "伝送用ファイル": ("quality", "伝送用ファイル.sqlite3"),
     "梱包検査ﾃﾞｰﾀ": ("factory", "【測定DB】梱包\\梱包検査ﾃﾞｰﾀ.sqlite3"),
@@ -155,6 +156,8 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
 def to_local(path_text: str) -> Path:
     """Windows のパス文字列 → この OS の Path(試験では UFKENSA_PATH_ROOT の下に読み替える)。"""
     root = os.environ.get("UFKENSA_PATH_ROOT")
+    if not root and os.name != "nt" and "\\" in path_text and not path_text.startswith("\\\\"):
+        return Path(path_text.replace("\\", "/"))             # 試験(Linux)で "…/fixtures\\品質基準.sqlite3" を読む
     if root:
         pw = PureWindowsPath(path_text)
         parts = [p.replace(":", "").strip("\\") for p in pw.parts if p.strip("\\")]

@@ -349,3 +349,74 @@ def instr(s: Any, sub: str, start: int = 1) -> int:
         return start
     i = t.find(sub, start - 1)
     return i + 1
+
+
+# ------------------------------------------------------------------
+# 型つきの比較(VBA の比較演算子の表どおり。U1)
+# ------------------------------------------------------------------
+NUM, STR, VAR = "num", "str", "var"
+
+
+def compare_typed(a: Any, b: Any, a_type: str = VAR, b_type: str = VAR) -> int:
+    """VBA の `a < b` などの比較を、**両側の宣言の型**まで含めて再現する。-1 / 0 / 1 を返す。
+
+    型の指定(VBA で何として書かれているか):
+        NUM … 数値型の変数・数値の定数(`Dim x As Double`、`0`、`74#`)
+        STR … String 型(`Dim s As String`、`.Caption`、`.Text`)
+        VAR … Variant(`.Value` の既定・Variant 変数・配列の要素・`Cells().Value`)。中身は Python の型で見る
+
+    VBA の表(比較演算子のヘルプ):
+    - 数値型 と 数値型                        → 数で比べる
+    - String と String                        → 文字で比べる(バイナリ)
+    - 数値型 と 数になる Variant              → 数で比べる
+    - 数値型 と 数にならない文字列の Variant  → **型エラー 13**
+    - String と(Null 以外の)Variant          → 文字で比べる(Variant の数は CStr して比べる)
+    - Empty と 数値型 / String                → 0 / "" として比べる
+    - Variant(数) と Variant(文字列)        → **数のほうが小さい**(エラーにしない)
+    """
+    def kind(x: Any, t: str) -> str:
+        if t != VAR:
+            return t
+        if x is None:
+            return "empty"
+        if isinstance(x, (int, float)) and not isinstance(x, bool):
+            return "vnum"
+        if isinstance(x, bool):
+            return "vnum"
+        return "vstr"
+
+    ka, kb = kind(a, a_type), kind(b, b_type)
+
+    def num(x: Any) -> float:
+        if isinstance(x, bool):
+            return -1.0 if x else 0.0
+        return float(x) if not isinstance(x, str) else cdbl(x)
+
+    def cmp(x: Any, y: Any) -> int:
+        return (x > y) - (x < y)
+
+    # Empty は相手に合わせて 0 / ""
+    if ka == "empty":
+        a, ka = (0, NUM) if kb in (NUM, "vnum") else ("", STR)
+        if kb == "empty":
+            return 0
+    if kb == "empty":
+        b, kb = (0, NUM) if ka in (NUM, "vnum") else ("", STR)
+
+    if ka == STR and b_type == STR or (ka == STR and kb == STR):
+        return cmp(str(a), str(b))
+    if ka == STR or kb == STR:                     # String と Variant → 文字で比べる
+        sa = str(a) if ka in (STR, "vstr") else cstr(a)
+        sb = str(b) if kb in (STR, "vstr") else cstr(b)
+        return cmp(sa, sb)
+    if ka == NUM or kb == NUM:                     # 数値型が片方にある
+        other, other_k = (b, kb) if ka == NUM else (a, ka)
+        if other_k == "vstr" and not is_numeric(other):
+            raise TypeMismatch(f"{a!r} と {b!r} の比較(数値型と数にならない文字列)")
+        return cmp(num(a), num(b))
+    # 両方 Variant
+    if ka == "vnum" and kb == "vnum":
+        return cmp(num(a), num(b))
+    if ka == "vstr" and kb == "vstr":
+        return cmp(str(a), str(b))
+    return -1 if ka == "vnum" else 1               # 数の Variant < 文字列の Variant

@@ -158,8 +158,17 @@ _VIEW_CAPTION = {
 }
 
 
+#: グリッド以外で、表示を切り替えるコントロールの名前(位置ごと)
+_VIEW_BY_POS = ("TS{}", "TE{}", "FM{}", "{}_UpVisual", "{}_UnderVisual", "CheckT{}")
+
+
 def _view() -> dict[str, Ctl]:
     d = {k: Ctl(value=v) for k, v in _VIEW_CAPTION.items()}
+    for pat in _VIEW_BY_POS:
+        for p in POSITIONS:
+            d.setdefault(pat.format(p), Ctl())
+    for name in ("L7", "L8", "L12", "L13", "YamaLabel", "Loading", "ConductivL", "ZEB"):
+        d.setdefault(name, Ctl())
     for k in _HIDDEN_VIEW:
         d.setdefault(k, Ctl()).visible = False
     return d

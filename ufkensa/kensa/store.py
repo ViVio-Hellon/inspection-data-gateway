@@ -30,6 +30,9 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Union
 
 from .. import app_config
+from ..logging_utils import get_logger
+
+log = get_logger("kensa.store")
 
 Value = Union[None, str, float, int]
 
@@ -404,6 +407,10 @@ class RowSheet(Sheet):
     def set(self, r: int, c: int, v: Value) -> None:
         if r == 1:
             raise ValueError(f"{self.name} の見出し(1 行目)は変えられません")
+        if c > len(self.headers):
+            # 見出しより右のセル。VBA のシートには書けるが、DB 登録(UC(sh,1) まで)にも使われないので持たない
+            log.warning("%s の %s%d(見出しより右)への書き込みを捨てました: %r", self.name, col_letter(c), r, v)
+            return
         col = self._col(c)
         with self.store._lock, self.conn:
             self.conn.execute(f'INSERT OR IGNORE INTO {_q(self.name)} ("行") VALUES (?)', (r,))
@@ -462,12 +469,16 @@ class RowSheet(Sheet):
         return n
 
 
-def import_rows(store: LocalStore, name: str, rows: Iterable[Sequence[Any]]) -> int:
-    """D5 の取り込み: xlsm のシートの 2 行目以降をそのまま(型も)入れる。入れた行数。"""
-    sh = store.sheet(name)
+def import_cells(store: LocalStore, name: str, cells: Iterable[tuple[int, int, Value]]) -> int:
+    """D5 の取り込み: xlsm のシートのセル(行, 列, 値)をそのまま(型も)入れる。見出しの表は 2 行目から。
+
+    値は Excel のセルの値(None・文字列・数。日付は呼び手で CStr の文字にしておく)。入れたセルの数を返す。
+    """
+    sh = store.ensure_sheet(name)
     n = 0
-    for values in rows:
-        if isinstance(sh, RowSheet):
-            sh.append([excel_value(v, "O") if isinstance(v, str) else v for v in values], kind="O")
+    for r, c, v in cells:
+        if isinstance(sh, RowSheet) and r == 1:
+            continue
+        sh.set(r, c, v)
         n += 1
     return n

@@ -331,6 +331,7 @@ class NameListTest(unittest.TestCase):
         self.assertEqual(wb.writes[:3], [CellWrite(3, 1, "L1"), CellWrite(3, 2, "x"), CellWrite(3, 3, "")])
         quirks.set_for_test({"B22": "fix"})
         self.assertEqual(workers.name_list_write_back([], "L-1", 3).sheet, "Daily_L-1")
+        self.assertEqual(workers.list_posting([["a"]], "L-1", 2).sheet, "Daily_L-1")    # 日報修正は常に自ラインに
 
 
 if __name__ == "__main__":

@@ -106,8 +106,8 @@ class PucketMoveTest(unittest.TestCase):
         fill(s, cells("S", range(1, 5)))
         ir.pucket_move(s, "DT", "L", "", FakeHooks())
         self.assertEqual(s.inp_tag, "E1")
-        # 検番 H = 5 回: S → U
-        s = ready("薄板")
+        # 山数 3 = 5 回: S → U(検番 H だけでは AllCheck の分岐に当たらない → test_thin_h_only_counts_as_done)
+        s = ready("薄板", yama="3")
         fill(s, cells("S", range(1, 5)))
         ir.pucket_move(s, "DT", "H", "", FakeHooks())
         self.assertEqual(s.inp_tag, "U1")
@@ -242,8 +242,9 @@ class InpChangeTest(QuirkCase):
         self.assertEqual(s.inp_tag, "S2")                   # 次の欄
         self.assertEqual(s.cells["S2"].color, grid.COLOR_YELLOW)
         self.assertEqual((s.inp, s.flag_label, s.auto, s.load), ("", 1, "on", "on"))
-        self.assertEqual([c[0] for c in h.calls], ["loop_text", "posting", "out_tolerance"])
-        self.assertEqual(h.calls[0], ("loop_text", "S1"))
+        # AllCheck は ATU があれば作業に関係なく CalculateSheets を呼ぶ(FormRelat:436)
+        self.assertEqual([c[0] for c in h.calls], ["calculate_sheets", "loop_text", "posting", "out_tolerance"])
+        self.assertEqual(h.calls[1], ("loop_text", "S1"))
 
     def test_register_check_blocks(self) -> None:
         s = ready()
