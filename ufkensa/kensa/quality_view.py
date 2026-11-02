@@ -529,7 +529,9 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
             if rows is None:
                 goto = "skip122A"
             else:
-                found = any(vtrim(x) == youto for x in vsplit(vstr(cell(rows[0], C["用途コード"])), ","))
+                # B89(QDB:1023): LIKE で絞った先頭行の用途コードだけを完全一致で見る。直すと全行を見る
+                look = rows[:1] if quirks.reproduce("B89") else rows
+                found = any(vtrim(x) == youto for r0 in look for x in vsplit(vstr(cell(r0, C["用途コード"])), ","))
                 if found:
                     if len(zai) >= 4:
                         zai = vbx.right(zai, 3)

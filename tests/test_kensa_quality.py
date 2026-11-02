@@ -1144,3 +1144,31 @@ class FixB72WideTest(_DbCopy):
         r = q.db_return_item(*args, mitsubishi_visible=True, work_flag="P1")
         self.assertEqual(r.uf1["HURIS"], "30")
         self.assertEqual(r.cells[(1, 13)], "30.0")                             # ラテラル公差も行 10(既存の B72)
+
+
+class FixB72HurisAndB89Test(_DbCopy):
+    def test_b72_huris_loop_first_free_row(self) -> None:
+        # 行 9・10 ともフリー反り「要」(公差 1 / 30)。UFMitsubishi 表示中は QP:1337 のループの HURIS が残る
+        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "フリー反り"=? WHERE "管理番号"=?', "要", "9")
+        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "フリー反り"=?, "公差"=? WHERE "管理番号"=?', "要", "30", "10")
+        args = ("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
+        kw = {"mitsubishi_visible": True, "work_flag": "P1"}
+        self.assertEqual(q.db_return_item(*args, **kw).uf1["HURIS"], "30")          # 再現: 要の最後の行
+        self.assertEqual(q.db_return_item(*args).uf1["HURIS"], "1")                 # 再現: HitArry(1)(QP:1407)
+        quirks.set_for_test({"B72": "fix"})
+        self.assertEqual(q.db_return_item(*args, **kw).uf1["HURIS"], "1")           # 直す: 要の最初の行にそろう
+        r = q.db_return_item(*args)
+        self.assertEqual((r.uf1["HURIS"], r.uf1["HizCome.Tag"]), ("1", "1mm以下"))
+
+    def test_b89_122_B_all_rows(self) -> None:
+        # 先頭行の用途に K9990(K999 を含むが完全一致しない)、U74S の行に K999。用途 K999 で LIKE は両方を返す
+        self.sql("品質基準", 'UPDATE "Q_S_QA_DIM_122_B" SET "用途コード"=? WHERE "材質"=? AND "板厚下"=?',
+                 "K21S,K9990", "NP56", "1")
+        self.sql("品質基準", 'UPDATE "Q_S_QA_DIM_122_B" SET "用途コード"=? WHERE "材質"=? AND "板厚下"=?',
+                 "K21S,K999", "U74S", "4")
+        lot = lot_with("H9022K1", {"用途ｺｰﾄﾞ": "K999"})
+        f = qv.display_distortion(lot, qv.QualityForm()).form
+        self.assertNotIn("Q-S-QA-DIM-122_B", f.Sansyou1)                           # 再現: 先頭行だけ見て外れる
+        quirks.set_for_test({"B89": "fix"})
+        f = qv.display_distortion(lot, qv.QualityForm()).form                      # 直す: NP56 O 23×670 → 先頭行
+        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Naka1, f.Sansyou1), ("2.5", "3.5", "不問", " Q-S-QA-DIM-122_B"))

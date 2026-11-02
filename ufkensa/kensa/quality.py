@@ -1326,10 +1326,14 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
 
     hit = _hit_rows(ta, C["管理番号"], matching)
     items = ""
+    huris_set = False
     for h in hit:
         if veq(cell(h, C["フリー反り"]), "要", VAR, STR):
             items += ",フリー反り"
-            u["HURIS"] = cell(h, C["公差"])
+            # B72(QP:1337): 再現は「要」の最後の行の公差が残る。直すと「要」の最初の行(下の kousa_f と同じ)
+            if quirks.reproduce("B72") or not huris_set:
+                u["HURIS"] = cell(h, C["公差"])
+                huris_set = True
         if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
             items += ",ラテラルボー"
         if veq(cell(h, C["直角度"]), "要", VAR, STR):
@@ -1346,7 +1350,7 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
                 break
 
     # B72: フリー反りの公差(HizCome.Tag・HURIS。QP:1394-1395・1407)も HitArry(1) から取る。直した場合は
-    # フリー反りが「要」の最初の行(ループ中の UF1.HURIS = HitArry(i)(QP:1337)は VBA のまま)
+    # フリー反りが「要」の最初の行(ループ中の UF1.HURIS(QP:1337)も同じ行にそろえる)
     kousa_f = kousa1
     if not quirks.reproduce("B72"):
         for h in hit:
