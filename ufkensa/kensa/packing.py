@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
-from . import datasource, paths, quality, vbx
+from . import datasource, paths, quality, quirks, vbx
 from .flow import ERROR, INFO, Message
 from .lot import read_check
 
@@ -124,7 +124,8 @@ def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot_no: str, *,
        それ以外は名前のまま)と一致するもの。**フォルダの並びで最後に一致したもの**が返る(内側の Exit For だけ抜ける)
 
     VBA どおりの実行時エラー(`PackingError`): フォルダが無い = 76。Dir で数えたファイルが 0 件 = 9
-    (`ReDim PacN(1 To 0)`)。フォルダの最初のファイルの "." が 7 文字目でない = 9(`PacN(0)`。新しく見つけた不具合)。
+    (`ReDim PacN(1 To 0)`)。フォルダの最初のファイルの "." が 7 文字目でない = 9(`PacN(0)`)。この2つは B84
+    (直した場合はエラーにせず、空のフォルダは ""、名前はそのまま照合する)。
     引当NO での並び替え(merge_sort2)は結果に効かないので行わない。
     """
     msgs = messages if messages is not None else []
@@ -146,7 +147,11 @@ def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot_no: str, *,
     folder = paths.to_local(folder_path())
     names = (files or list_files)(folder)
     file_int = len(names)                       # Dir(FILE_PATH & "\*") の数
+    # B84: PacN はデバッグ用の配列。直した場合は PacN を作らない(空のフォルダ・"." が 7 文字目でない名前で止まらない)
+    fix_b84 = not quirks.reproduce("B84")
     if file_int == 0:
+        if fix_b84:
+            return ""                           # 一致するファイルが無い
         raise PackingError(9, "インデックスが有効範囲にありません。", "ReDim PacN(1 To 0)")
     result = ""
     int_no = 0
@@ -157,7 +162,7 @@ def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot_no: str, *,
             stem = vbx.left(name, 6)
         else:
             stem = name
-        if not 1 <= int_no <= file_int:          # PacN(intNo) = …
+        if not fix_b84 and not 1 <= int_no <= file_int:          # PacN(intNo) = …
             raise PackingError(9, "インデックスが有効範囲にありません。", "PacN(intNo)")
         for p in packs:
             if _eq_str(p, stem):

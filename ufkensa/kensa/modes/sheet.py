@@ -264,18 +264,17 @@ def unit_record(n: float) -> float:
     """Judg.UnitRecord (Judg:2421-2444)。ラテラルボー値を 0.5 刻みに切り上げる。引数・戻り値は Single。
 
     B13: Single の誤差で 0.51・1.01… が範囲から外れて 0 になる、999 超も 0(VBA どおり)。
-    直した場合は 7 桁の 10 進で比べ、999 超はそのまま返す。
+    直した場合は judge.unit_record_fixed(区間の間の値・0.1 未満・999 超も落とさない)。
     """
     n = vbx.single(n)
     flag = n > 0
     n = vbx.single(abs(n))
-    if quirks.reproduce("B13"):
-        x = n
-        big_ok = lambda v: 5.01 <= v <= 999  # noqa: E731
-    else:
-        from decimal import Decimal
-        x = float(Decimal(vbx.cstr(n, is_single=True)))
-        big_ok = lambda v: v >= 5.01  # noqa: E731
+    if not quirks.reproduce("B13"):
+        from ..judge import unit_record_fixed      # 通常検査と同じ直し方(区間の間の値も落とさない)
+        r = vbx.single(unit_record_fixed(n))
+        return r if flag else vbx.single(vbx.val_single(r) * -1)
+    x = n
+    big_ok = lambda v: 5.01 <= v <= 999  # noqa: E731
     table = ((0.1, 0.5, 0.5), (0.51, 1.0, 1.0), (1.01, 1.5, 1.5), (1.51, 2.0, 2.0), (2.01, 2.5, 2.5),
              (2.51, 3.0, 3.0), (3.01, 3.5, 3.5), (3.51, 4.0, 4.0), (4.01, 4.5, 4.5), (4.51, 5.0, 5.0))
     r = 0.0
@@ -847,7 +846,10 @@ class Book:
 # Cask モジュールのシート処理(3 シート共用)
 # ------------------------------------------------------------------
 def move_tg(book: Book, n: str, sh: str) -> Optional[tuple[int, int]]:
-    """Cask.MoveTg (Cask:2-40)。キャスク 7-706 行 B/D/F、全ヵ所 7-**36** 行 B/D/F/H の最初の空セル。無ければ None。"""
+    """Cask.MoveTg (Cask:2-40)。キャスク 7-706 行 B/D/F、全ヵ所 B/D/F/H の最初の空セル。無ければ None。
+
+    決定 D22(W12): VBA は全ヵ所を 7-36 行(No.1-30)しか見ないが、31 枚以上もあるのでシートの全行 7-76 を見る。
+    """
     ws = book.ws(sh)
     book.activate_sheet(sh)
     if n != "A":
@@ -855,7 +857,7 @@ def move_tg(book: Book, n: str, sh: str) -> Optional[tuple[int, int]]:
     if ws.name == CASK:
         rows, cols = range(7, 707), range(2, 7, 2)
     elif ws.name == ZEN:
-        rows, cols = range(7, 37), range(2, 9, 2)
+        rows, cols = range(7, 77), range(2, 9, 2)          # D22: VBA は For i = 7 To 36(Cask:25)
     else:
         return None
     for i in rows:

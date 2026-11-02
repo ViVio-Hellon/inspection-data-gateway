@@ -139,6 +139,7 @@ def last_worker(uf: Uf1) -> Optional[str]:
     """`Split(UF1.T?, "_")` の最後(WorkeDayMax が "1"/"2"/"3" のとき)。それ以外は None(画面を変えない)。
 
     VBA は Split の結果が空配列(T? が "")だと `Worker(UBound(Worker))` が添字エラー(9)。
+    B48 を直すと None(`If IsEmpty(Worker) = False` の意図どおり KenName を変えない)。
     (O:633-640, 662-669, 705-712)
     """
     key = {"1": "T1", "2": "T2", "3": "T3"}.get(uf.worker_day_max)
@@ -146,7 +147,9 @@ def last_worker(uf: Uf1) -> Optional[str]:
         return None
     parts = uf.t(key).split("_") if uf.t(key) != "" else []
     if not parts:
-        raise VbaRuntimeError(9, "インデックスが有効範囲にありません(検査員欄が空)")
+        if quirks.reproduce("B48"):
+            raise VbaRuntimeError(9, "インデックスが有効範囲にありません(検査員欄が空)")
+        return None
     return parts[-1]
 
 
@@ -552,7 +555,8 @@ def ng_posting(uf: Uf1, posi: str, sheet: Optional[AbnormalSheet]) -> AbnormalSh
     17 = 定盤歪("A:"/"B:" & 値)、18 = ゲージ歪("ｹﾞ:" & 値)、19 = 位置。NG 色の欄は同じ列を塗る。
     シートが無い・A1 がロットと違うときは作り直す。
     書く行は「A 列の最後の値がある行 + 1」(`UR(sh, 1) + 1`)。そのため **前の行の A 列が空だと
-    その行に上書きする**(値は置き換え、色は前の行の色が残る。VBA のとおり)。
+    その行に上書きする**(値は置き換え、色は前の行の色が残る。VBA のとおり。B44)。
+    B44 を直すと、何か書いてある最後の行(19 列目の位置は必ず書く)の次に書く。
     この後、画面の IzyouFl の背景を赤(RED)にする。
     """
     lot = uf.t("Lot")
@@ -560,7 +564,11 @@ def ng_posting(uf: Uf1, posi: str, sheet: Optional[AbnormalSheet]) -> AbnormalSh
         sheet = AbnormalSheet(lot, [])
     last = 1
     for idx, row in enumerate(sheet.rows):
-        if row.values and row.values[0] != "":
+        if quirks.reproduce("B44"):
+            used = bool(row.values) and row.values[0] != ""
+        else:
+            used = any(v != "" for v in row.values)
+        if used:
             last = idx + 2
     lr = last + 1
     ng = [""] * 18
@@ -1059,9 +1067,11 @@ class DistortionResult:
 def _zero_clear(uf: Uf1) -> tuple[dict[str, str], list[str]]:
     vals = dict(uf.text)
     cleared: list[str] = []
-    # 定盤は ZF → CBF1 が無い(VBA のとおり)
+    # 定盤は ZF → CBF1 が無い(VBA のとおり。B46)
     pairs = [("ZS", "CBS1"), ("ZU", "CBU1"), ("ZC", "CBC1"), ("ZD", "CBD1"), ("ZE", "CBE1"),
              ("GS", "CBS3"), ("GU", "CBU3"), ("GC", "CBC3"), ("GD", "CBD3"), ("GE", "CBE3"), ("GF", "CBF3")]
+    if not quirks.reproduce("B46"):
+        pairs.insert(5, ("ZF", "CBF1"))                      # 直した側: F 位置の定盤も 0 なら形状を空にする
     for val_name, cb in pairs:
         if _num_eq(vals.get(val_name, ""), 0):
             vals[cb] = ""
@@ -1074,7 +1084,7 @@ def distortion_check(uf: Uf1, n: str) -> DistortionResult:
 
     n="Z": 定盤(CB?1, CB?2, Z?)。n="G": flatnesText が "" ならゲージ(CB?3, CB?4, G?)、
     "ﾌﾘｰｿﾘ要" ならフリーソリ(CB?3, G?)。どれかが入っていて、どれかが空で、値が 0 でない位置。
-    複数なら最後(F 側)。先に「値が 0 なら形状を空にする」。
+    複数なら最後(F 側)。先に「値が 0 なら形状を空にする」(B46: ZF→CBF1 は無い。直すと足す)。
     B9: 定盤の F 行は ZE の値を見る(VBA どおり)。
     """
     vals, cleared = _zero_clear(uf)
@@ -1426,6 +1436,9 @@ def selection_input(selected_value: str, te_name: str, te_value: str, code_row: 
     「ｽﾎﾟｯﾄ処理」は C11 に「枚数 & 枚」。TP は 22 列目(X 列)固定。それ以外はコード(最後の "_" の後)が一致する列。
     コードが見つからない・欄名が S〜F でないときは、VBA は b_Arr の添字エラー(9)で止まる
     (`itti = 0` のやり直し処理には届かない)。
+    B45: 複数選択(「汚_12 TP」など。一覧は複数選択できる)だと最後の "_" の後("12 TP")で探すので
+    添字エラー(9)、または最後の項目の列だけに書く。直すと、空白で区切った項目ごとに同じ枚数を書く
+    (TP は 22 列目、ｽﾎﾟｯﾄ処理 は C11)。
     """
     if selected_value == "":
         return None
@@ -1436,10 +1449,27 @@ def selection_input(selected_value: str, te_name: str, te_value: str, code_row: 
     if selected_value == SPOT:
         cells.append((11, 3, te_value + "枚"))
         return SelectionWrite(tuple(cells))
-    parts = selected_value.split("_")
-    code = parts[-1] if parts else ""
     a = {"S": 1, "U": 2, "C": 3, "D": 4, "E": 5, "F": 6}.get(vbx.left(te_name, 1), 0)
     codes = [_cell_text(v) for v in code_row]
+    if not quirks.reproduce("B45"):
+        # 直した側: GetSelectedItems は項目を " " でつなぐので、項目ごとに書く
+        for piece in selected_value.split(" "):
+            if piece == "":
+                continue
+            if piece == SPOT:
+                cells.append((11, 3, te_value + "枚"))
+                continue
+            if piece == "TP":
+                col = 22
+            else:
+                code = piece.split("_")[-1]
+                col = codes.index(code) + 1 if code in codes else 0
+            if a == 0 or col == 0:
+                raise VbaRuntimeError(9, "インデックスが有効範囲にありません(不良要因の列・行)")
+            cells.append((2 + a, 2 + col, te_value))
+        return SelectionWrite(tuple(cells))
+    parts = selected_value.split("_")
+    code = parts[-1] if parts else ""
     itti = 0
     for i, v in enumerate(codes, start=1):
         if v == code:
@@ -1545,6 +1575,8 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     ラテラルボーは DbReturnItem の結果に「ラテラルボー」があり、Additional の右 4 文字が「検査不要」でないとき。
     納入先が前の行と同じなら DbReturnItem を呼ばない。用途コード〜丈は**最後の行の値**で全行を照合する(VBA のとおり)。
     位置(Left/Top)・幅は移さない。
+    B47 を直すと: 照合はその行の用途コード〜丈で(前と同じ照合値なら呼ばない)、ラテラル不要のロットでは
+    ラテラル欄(L11・Lateral?)を隠し、5 回では隠した DiagU/D の直角度欄(DiagUKou/DKou)も隠す。
     """
     ng_temp = vbx.right(uf.t("Additional"), 4)
     ch = ScreenChanges()
@@ -1573,19 +1605,35 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
         for r in rows:
             youto, zai, tyo = _cell_text(r[2]), _cell_text(r[3]), _cell_text(r[4])
             atu, haba, take = (vbx.single(vbx.cdbl(r[k])) for k in (5, 6, 7))
-        prev = ""
-        for nou, tori in zip(nounyu, torihiki):
-            if nou != "":
-                if nou == prev:
-                    continue
-                prev = nou
-                temp = db_return_item(nou, tori, youto, zai, tyo, atu, haba, take)
-                if vbx.instr(temp, "ラテラルボー") > 0:
-                    late = True
+        if quirks.reproduce("B47"):
+            prev = ""
+            for nou, tori in zip(nounyu, torihiki):
+                if nou != "":
+                    if nou == prev:
+                        continue
+                    prev = nou
+                    temp = db_return_item(nou, tori, youto, zai, tyo, atu, haba, take)
+                    if vbx.instr(temp, "ラテラルボー") > 0:
+                        late = True
+        else:
+            # 直した側: 行ごとの値で照合する(同じ照合値が続くときだけ省く)
+            prev_key: Optional[tuple] = None
+            for r in rows:
+                key = (_cell_text(r[0]), _cell_text(r[1]), _cell_text(r[2]), _cell_text(r[3]), _cell_text(r[4]),
+                       *(vbx.single(vbx.cdbl(r[k])) for k in (5, 6, 7)))
+                if key[0] != "":
+                    if key == prev_key:
+                        continue
+                    prev_key = key
+                    temp = db_return_item(*key)
+                    if vbx.instr(temp, "ラテラルボー") > 0:
+                        late = True
     show_late = late and ng_temp != "検査不要"
     ch.lateral = show_late
     if show_late:
         ch.vis(["L11"] + ["Lateral" + p for p in rows5], True)
+    elif not quirks.reproduce("B47"):
+        ch.vis(["L11"] + ["Lateral" + p for p in rows5], False)     # 前ロットの表示を残さない
     r115 = uf.t("Youto") == "R115"
     kou = [f"Diag{p}Kou" for p in rows5]
     if r115:
@@ -1599,6 +1647,8 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
         if r115:
             ch.vis(["L10"] + kou, True)
         ch.vis(["DiagU", "DiagD"], False, False)
+        if r115 and not quirks.reproduce("B47"):
+            ch.vis(["DiagUKou", "DiagDKou"], False, False)           # 隠した対角の直角度欄も隠す
     elif tb == 4:
         ch.set(E="", FE="", OPS5="", OPE5="")
         ch.vis(["FME", "LC5", "LC11", "E_UpVisual", "E_UnderVisual"], False)

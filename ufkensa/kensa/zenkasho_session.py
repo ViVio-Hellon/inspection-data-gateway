@@ -60,8 +60,8 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .. import trace
-from . import checks, datasource, judge, legacy_log, packing, paths, quality, report_html, report_model, terminal, vbx, \
-    workers
+from . import checks, datasource, judge, legacy_log, packing, paths, quality, quirks, report_html, report_model, \
+    terminal, vbx, workers
 from . import lot as lotmod
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .modes import h494 as hm
@@ -653,6 +653,10 @@ class ZenkashoSession:
         st = self._kstate()
         lname = getattr(st, "lname", "") if st is not None else ""
         lot_c = getattr(st, "lot", "") if st is not None else ""
+        if not quirks.reproduce("B85"):
+            # 直した側: 全ヵ所(H494)のライン名・ロットで動く(LotN を渡す形と同じ)。フッターは今までどおり付ける
+            lname = b.mit.line_name
+            lot_c = b.mit.h494_lot if self.page == "P_H494" else b.mit.lot_box
         start = None
         if b.mit.visible:
             v = b.ws(ZEN).get(1, 2)                        # 全ヵ所検査 が無ければ実行時エラー 9

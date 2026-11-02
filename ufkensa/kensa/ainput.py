@@ -2,8 +2,8 @@
 
 VBA `【UFKen_09】Input` と `UFAinput` の移植。
 
-- 梱包高さチェック `height_check`(Input:430-584 の**現行コード**)。コメントアウトされた旧版(Input:592-751)とは
-  合紙・外注・外装紙・VC の計算が違う(不明点 W1)。旧版は移植しない。
+- 梱包高さチェック `height_check` は**コメントアウトされた旧版**(Input:592-751)を使う(決定 D20 = W1 の回答)。
+  現行コード(Input:430-584)とは合紙・外注・外装紙・VC の計算が違う。現行コードは移植しない。
 - 電文(hostsend.txt): `"KEN:AIN:" & "0185" & A3 … A40 & ライン` の固定長 1 行(FormArray n=2)。
 - 梱包課保存用 CSV: 項目名と値の 2 列、各行の末尾にカンマ、cp932、`<検査履歴>\\<ライン>\\<ライン>_Ainput\\yyyy.mm\\<Lot>\\
   yyyymmdd_<検査No>.csv`。同名があれば .02〜.99、.99 もあれば止める(VBA は End)。
@@ -335,18 +335,46 @@ def _fmt_single(x: float, pattern: str) -> str:
     return vbx.fmt(vbx.cstr(_single(x), is_single=True), pattern)
 
 
+def _set_vc_text(form: AinputForm, text: str) -> None:
+    """`UFAinput.VcText = …`。値が変わると VcText_Change(UFAinput:69-71)で VCAB にも写る。"""
+    if form.vc_text != text:
+        form.vc_text = text
+        form.vcab = text
+
+
+def _paper(mai: int, form: AinputForm, unit: float) -> float:
+    """旧 Height_Check の合紙の Select Case (Input:619-624 ほか)。個装ごとに +1 枚、個装なしは (枚数+1) 枚。"""
+    c1, c2 = form.cou1 != "", form.cou2 != ""
+    if c1 and c2:
+        x = vbx.val(mai * unit) + vbx.val(form.cou1) * unit + vbx.val(form.cou2) * unit
+    elif c1:
+        x = vbx.val(mai * unit) + vbx.val(form.cou1) * unit
+    elif c2:
+        x = vbx.val(mai * unit) + vbx.val(form.cou2) * unit
+    else:
+        x = vbx.val(mai + 1) * unit
+    return _single(x)
+
+
 def height_check(atu1: float, atu2: float, hei: float, mai: int, order_no: str, form: AinputForm,
                  history_rows: Optional[list[list[Any]]], *,
                  vc: Callable[[str], tuple[float, list[Message]]] = vc_conv) -> HeightCheckResult:
-    """Input.Height_Check (Input:430-584)。梱包の山高さの実測と「板厚×枚数＋合紙＋VC＋外装紙」を比べる。
+    """Input.Height_Check の**旧版**(コメントアウトされたもの。Input:592-751)。決定 D20(W1 の回答)。
 
+    梱包の山高さの実測と「板厚×枚数＋合紙＋VC＋外装紙」を比べる。現行版(Input:430-584)は使わない。
     - atu1=最小厚、atu2=最大厚、hei=山高さの合計、mai=枚数(引数は VBA と同じく Single / Long に直す)
     - history_rows は Lot情報履歴 の 2 行目から(None はシートなし → 判定せず False)
     - オーダーNo が無ければ「Lot情報履歴内にｵｰﾀﾞｰNO無し」で **False(合格扱い)**
+    - 合紙: 合紙あり 0.029 / ストア 0.042。個装なしは (枚数+1)×単位、個装ありは (枚数+個装数)×単位。
+      外注で Ai=True なら 0。合紙なし・ストアでもないときは、外注で Ai=True のときだけ 0.029 で数える
+    - VC: VC なし、または**ストアなら一律 0**(VCAB=0)。用途(高精度)は見ない(条件の Or で到達しない)
+    - 外装紙: `Val(COU1) + Val(COU2) * 0.357`(両方 2 以上のとき。演算子の優先順位どおり COU1 には掛けない)、
+      片方だけのときはもう片方が "" のときだけ ×0.357(COU2="1" などは 0)
     - NG: 実測 > 最大の理論値 かつ 差(小数 2 桁に四捨五入)> 3/4×最大厚 → [許容値ｵｰﾊﾞｰ]
           実測 < 最小の理論値 かつ 差 > 1/3×最小厚 → [枚数不足(?)]。差がちょうどなら合格。
       NG のときは山高さを消し、Tag を "" にする(form を書き換える)。
-    - 画面の AiText / VcText / GaText / VCAB も form に書く。
+    - VBA の Or は両辺を評価するので、VC の条件の `Remain = 1` は毎回評価する(出荷ストアが空なら型エラー 13)
+    - メッセージの文言だけは現行版(「*推定枚数:」「 *入力枚数:」)のまま。旧版は「*測定高さから計算した枚数:」「 *入力枚数」
     """
     res = HeightCheckResult(False)
     if history_rows is None:
@@ -359,75 +387,85 @@ def height_check(atu1: float, atu2: float, hei: float, mai: int, order_no: str, 
             x = row
             break
     if x is None:
-        res.messages.append(Message("Lot情報履歴内にｵｰﾀﾞｰNO無し", INFO, source="Input:454"))
+        res.messages.append(Message("Lot情報履歴内にｵｰﾀﾞｰNO無し", INFO, source="Input:748"))
         res.show_uf1 = True
         return res
 
-    ais = vcs = gai = a1 = v1 = 0.0
+    vcs = ais = 0.0
     atu_max, atu_min = atu2, atu1
-    gaityuu = form.gaityuu_text == "外注"
-    # 合紙
-    unit_ais = 0.0
+    gaityuu_ai = form.gaityuu_text == "外注" and form.ai
+    # 合紙 (Input:616-660)
     if vbx.vcompare(_hist(x, 17), 0) != 0:
-        unit_ais = _single(0.029)
-        form.ai_text = "通常"
-    elif _veq(form.remain, 1):
-        unit_ais = _single(0.042)
-        form.ai_text = "ストア"
-    if unit_ais > 0 or (gaityuu and form.ai):
-        if gaityuu and form.ai:
-            unit_ais = _single(0.029)
-            form.ai_text = "通常"
-        a1 = unit_ais
-        extra = 1
-        if form.cou1 != "":
-            extra = vbx.clng(extra + vbx.val(form.cou1))
-        if form.cou2 != "":
-            extra = vbx.clng(extra + vbx.val(form.cou2))
-        ais = _single(vbx.val(mai + extra - 1) * a1)
-        form.ai_text = form.ai_text + vbx.cstr(ais, is_single=True)
-        if gaityuu and form.ai:
-            pass
-        elif gaityuu:
-            a1 = 0.0
-            ais = 0.0
+        ais = _paper(mai, form, 0.029)
+        a1 = _single(0.029)
+        form.ai_text = "通常" + vbx.cstr(ais, is_single=True)
+        if gaityuu_ai:
+            a1 = ais = 0.0
             form.ai_text = "0"
-    # VC(VBA の Or は両辺を評価する)
-    vca = vcb = 0.0
-    if _veq(_hist(x, 18), 1):
-        not_store = vbx.vcompare(form.remain, 1) != 0
-        high = form.youto in HIGH_PRECISION
-        if not_store or high:
-            if nz(_hist(x, 19)) != "":
-                vca, m = vc(nz(_hist(x, 19)))
-                res.messages += m
-            if nz(_hist(x, 20)) != "":
-                vcb, m = vc(nz(_hist(x, 20)))
-                res.messages += m
-            v1 = _single(vca + vcb)
-            vcs = _single(v1 * vbx.val(mai))
-            form.vc_text = vbx.cstr(vcs, is_single=True)
-            form.vcab = form.vc_text
-            if gaityuu and form.vab:
-                v1 = 0.0
-                vcs = 0.0
-                form.vc_text = "0"
-                form.vcab = "0"
+    elif _veq(form.remain, 1):
+        ais = _paper(mai, form, 0.042)
+        a1 = _single(0.042)
+        form.ai_text = "ストア" + vbx.cstr(ais, is_single=True)
+        if gaityuu_ai:
+            a1 = ais = 0.0
+            form.ai_text = "0"
     else:
+        a1 = ais = 0.0
+        form.ai_text = "0"
+        if gaityuu_ai:
+            ais = _paper(mai, form, 0.029)
+            a1 = _single(0.029)
+            form.ai_text = "通常" + vbx.cstr(ais, is_single=True)
+    # VC (Input:662-690)。Or の両辺を評価する
+    c18_not1 = vbx.vcompare(_hist(x, 18), 1) != 0
+    store = _veq(form.remain, 1)
+    if c18_not1 or store:
+        vcs = v1 = 0.0
         form.vcab = "0"
-    # 外装紙(個装 2 包以上のとき 1 包あたり 0.119×3)
-    if vbx.val(form.cou1) > 1 or vbx.val(form.cou2) > 1:
-        cnt = 0
-        if vbx.val(form.cou1) > 1:
-            cnt = vbx.clng(cnt + vbx.val(form.cou1))
-        if vbx.val(form.cou2) > 1:
-            cnt = vbx.clng(cnt + vbx.val(form.cou2))
-        gai = _single(cnt * (2 * 0.119 + 0.119))
+    else:
+        vca = nz(_hist(x, 19))
+        vcb = nz(_hist(x, 20))
+
+        def conv(code: str) -> float:
+            v, m = vc(code)
+            res.messages.extend(m)
+            return _single(v)
+        # VcConv は Vcs と V1 で 2 回ずつ呼ぶ(登録なしの案内も 2 回出る)
+        if vca != "" and vcb != "":
+            vcs = _single(_single(conv(vca) + conv(vcb)) * vbx.val(mai))
+        elif vca != "":
+            vcs = _single(conv(vca) * vbx.val(mai))
+        elif vcb != "":
+            vcs = _single(conv(vcb) * vbx.val(mai))
+        else:
+            vcs = _single(0 * vbx.val(mai))
+        if vca != "" and vcb != "":
+            v1 = _single(conv(vca) + conv(vcb))
+        elif vca != "":
+            v1 = conv(vca)
+        elif vcb != "":
+            v1 = conv(vcb)
+        else:
+            v1 = 0.0
+        _set_vc_text(form, vbx.cstr(vcs, is_single=True))
+        if form.gaityuu_text == "外注" and form.vab:
+            v1 = vcs = 0.0
+            _set_vc_text(form, "0")
+    # 外装紙 (Input:691-704)
+    k1, k2 = vbx.val(form.cou1), vbx.val(form.cou2)
+    if k1 > 1 and k2 > 1:
+        gai = _single(k1 + k2 * (2 * 0.119 + 0.119))
+    elif k1 > 1 and form.cou2 == "":
+        gai = _single(k1 * (2 * 0.119 + 0.119))
+    elif form.cou1 == "" and k2 > 1:
+        gai = _single(k2 * (2 * 0.119 + 0.119))
+    else:
+        gai = 0.0
     form.ga_text = vbx.cstr(gai, is_single=True)
-    if gaityuu and form.ga:
+    if form.gaityuu_text == "外注" and form.ga:
         gai = 0.0
         form.ga_text = "0"
-    # 判定
+    # 判定 (Input:713-746)
     gosa = _single(_single(ais + vcs) + gai)
     gp = _single(atu_max * mai + gosa)
     gm = _single(atu_min * mai + gosa)
@@ -439,20 +477,20 @@ def height_check(atu1: float, atu2: float, hei: float, mai: int, order_no: str, 
     res.error_a, res.error_b, res.sap, res.sam = error_a, error_b, sap, sam
     hv = vbx.val_single(hei)
     if hv > gp and vbx.vcompare(_fmt_single(sap, "0.00"), error_a) > 0:
-        count_1 = _single(_single(atu_max + a1) + v1)
+        count_1 = _single(_single(a1 + v1) + atu_max)
         res.ng, res.kind = True, "over"
         res.msg_error = ("[許容値ｵｰﾊﾞｰ]" + " *測定高さ:" + _fmt_single(hei, "0.00") + "*推定枚数:"
                          + _fmt_single(_single(_single(hei - gai) / count_1), "0.00")
                          + " *入力枚数:" + str(mai) + "枚")
     elif hv < gm and vbx.vcompare(_fmt_single(sam, "0.00"), error_b) > 0:
-        count_1 = _single(_single(atu_min + a1) + v1)
+        count_1 = _single(_single(a1 + v1) + atu_min)
         res.ng, res.kind = True, "short"
         res.msg_error = ("[枚数不足(?)]" + " *測定高さ:" + _fmt_single(hei, "0.00") + "*推定枚数:"
                          + _fmt_single(_single(_single(hei - gai) / count_1), "0.00")
                          + " *入力枚数:" + str(mai) + "枚")
     if res.ng:
-        res.messages.append(Message(res.msg_error, ERROR, title="警告", source="Input:570" if res.kind == "over"
-                                    else "Input:579"))
+        res.messages.append(Message(res.msg_error, ERROR, title="警告", source="Input:727" if res.kind == "over"
+                                    else "Input:739"))
         clear_all_k_height(form)
         form.tag = ""
     return res

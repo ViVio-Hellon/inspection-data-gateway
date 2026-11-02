@@ -596,3 +596,106 @@ class VerifierAccReflecNullTest(_Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------------------------------------------
+# 直した場合の分岐(B49・B50・B51・B54)。既定(再現)の側は上の試験で確かめている
+# ------------------------------------------------------------------
+class FixBranchTest(_Base):
+    def ph(self, lot_no: str = "H2500K0") -> list:
+        r = lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, work_time="T"), check_equipment=_ok)
+        return r.past_hiki
+
+    def test_b49_next_selected_window(self) -> None:
+        ph = self.ph()
+        # 再現: DBflag で控えを選び時刻窓に当たると、控えにファイルがあっても抜ける (SaveLoad:1321-1323)
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
+        self.assertEqual(res.new_rows, [])
+        quirks.set_for_test({"B49": "fix"})
+        # 直す: 控えのファイルがあればそのまま控えを読む
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
+        self.assertEqual(res.messages, [])
+        self.assertEqual(res.file_path, lot.db_path(paths.get("next"), "SIKAHIKINOW"))
+        self.assertEqual(len(res.new_rows), 3)
+        # PLEASE WAIT でも同じ
+        self.d.please_wait()
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(len(res.new_rows), 3)
+        # 控えのファイルが無いときは今までどおり「ありません」で抜ける
+        self.d.remove(self.d.next, "SIKAHIKINOW")
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
+        self.assertEqual([m.text for m in res.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_HistorySave"])
+        self.assertFalse(res.completed)
+
+    def test_b49_offline_same_paths(self) -> None:
+        # オフライン(MainPath = NextPath)で時刻窓: 再現は抜ける、直すと同じファイルを読む
+        kensa_fixture.use_offline(kensa_fixture.copy_to(self.d.root / "same"))
+        ph = self.ph()
+        self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).messages), 1)
+        quirks.set_for_test({"B49": "fix"})
+        self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).new_rows), 3)
+
+    def test_b50_delete_only_after_db_checks(self) -> None:
+        ph = self.ph()
+        sheet = _sheet(_hrow("H2500K0"))
+        quirks.set_for_test({"B50": "fix"})
+        # 最後まで進めば消す
+        res = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(res.completed)
+        self.assertEqual(res.delete_rows, [2])
+        # 途中で抜けたら消さない(再現は [2]。test_delete_happens_before_db_checks)
+        self.d.remove(self.d.main, "SIKAHIKINOW")
+        self.d.remove(self.d.next, "SIKAHIKINOW")
+        res = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertFalse(res.completed)
+        self.assertEqual(res.delete_rows, [])
+        # Test で黙って抜けるときも消さない
+        res = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL, uf1_test=True))
+        self.assertEqual(res.delete_rows, [])
+
+    def test_b50_fix_error_keeps_rows(self) -> None:
+        quirks.set_for_test({"B50": "fix"})
+        for d in (self.d.main, self.d.next):
+            with sqlite3.connect(d / "SIKAODR.sqlite3") as c:
+                c.execute('DELETE FROM "仕掛"')
+        with self.assertRaises(vbx.TypeMismatch) as cm:          # B51 は再現のまま → 型エラー 13
+            lot.history_save(self.ph(), _sheet(_hrow("H2500K0")), lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(cm.exception.partial.delete_rows, [])
+
+    def test_b51_odr_fallback(self) -> None:
+        ph = self.ph()
+        with sqlite3.connect(self.d.main / "SIKAODR.sqlite3") as c:
+            c.execute('DELETE FROM "仕掛"')
+        quirks.set_for_test({"B51": "fix"})
+        # 直す: MainPath の SIKAODRNOW が空 → NextPath へ切り替えて続ける (SaveLoad:1391-1401)
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(res.completed)
+        self.assertEqual(len(res.new_rows), 3)
+        # 控えを選んでいたら「…がありません」で抜ける (SaveLoad:1393)
+        with sqlite3.connect(self.d.next / "SIKAODR.sqlite3") as c:
+            c.execute('DELETE FROM "仕掛"')
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_NORMAL))
+        self.assertEqual([m.text for m in res.messages], ["SIKAODRNOW.accdbにVCFieldﾃﾞｰﾀがありません_HistorySave"])
+        self.assertFalse(res.completed)
+        # MainPath → NextPath も空 → 「VCFieldData無」
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in res.messages], ["VCFieldData無_HistorySave"])
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL, over12=True))
+        self.assertEqual(res.messages, [])
+        # NextPath のファイルが無い → 「日稲:…がありません」
+        self.d.remove(self.d.next, "SIKAODRNOW")
+        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in res.messages], ["日稲:SIKAODRNOW.accdbがありません_ReadCheck_HistorySave"])
+
+    def test_b54_clear_previous_captions(self) -> None:
+        # 再現: 熱処理工程・QF が無いロットは None(前ロットの表示を変えない)(SaveLoad:211-213)
+        r = lot.acc_reflec(lot.LotScreen(lot="R9022F3", cb_text="R9022F3", work_time="T"), check_equipment=_ok)
+        self.assertIsNone(r.last_hot)
+        self.assertIsNone(r.qf)
+        quirks.set_for_test({"B54": "fix"})
+        r = lot.acc_reflec(lot.LotScreen(lot="R9022F3", cb_text="R9022F3", work_time="T"), check_equipment=_ok)
+        self.assertEqual((r.last_hot, r.qf), ("", ""))
+        r = lot.acc_reflec(lot.LotScreen(lot="RX021T0", cb_text="RX021T0", work_time="T"), check_equipment=_ok)
+        self.assertEqual((r.last_hot, r.qf), ("", "QF有り"))
+        r = lot.acc_reflec(lot.LotScreen(lot="L8430D0", cb_text="L8430D0", work_time="T"), check_equipment=_ok)
+        self.assertEqual((r.last_hot, r.qf), ("最終熱処理工程：ANF", ""))

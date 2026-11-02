@@ -85,7 +85,9 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
         book.events_enabled = False
         book.resume(lambda: sh.al_ter_range(book, TR, TC, befor), "AlTerRange")
         if not sh.is_numeric(target.get(TR, TC)):
-            return                                # EnableEvents は False のまま(VBA どおり)
+            if not quirks.reproduce("B79"):
+                book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
+            return                                # B79: EnableEvents は False のまま(VBA どおり)
         book.events_enabled = True
         book.resume(lambda: sh.kensa_hantei(book, TR, TC), "検査判定")
         book.events_enabled = False
@@ -337,17 +339,26 @@ def max_min(book: Book) -> None:
         v = col_vals(col)
         return min(v) if v else 0.0
 
+    # B80: 空の列の MIN は 0 になり、空セル(Empty=0)と一致して 0 が書かれる。直すと空の列は除き、空セルとは一致させない
+    fix80 = not quirks.reproduce("B80")
+
+    def cmin(*cols: int) -> float:
+        if fix80:
+            mins = [wmin(c) for c in cols if col_vals(c)]
+            return min(mins) if mins else 0.0
+        return min(wmin(c) for c in cols)
+
     max_atu = min_atu = 0.0
     if f.count_st == "4":
         max_atu = vbx.single(max(wmax(2), wmax(4), wmax(6), wmax(8)))
-        min_atu = vbx.single(min(wmin(2), wmin(4), wmin(6), wmin(8)))
+        min_atu = vbx.single(cmin(2, 4, 6, 8))
     elif f.count_st == "3":
         max_atu = vbx.single(max(wmax(2), wmax(4), wmax(6)))
-        min_atu = vbx.single(min(wmin(2), wmin(4), wmin(6)))
+        min_atu = vbx.single(cmin(2, 4, 6))
     max_haba = vbx.single(max(wmax(11), wmax(13)))
-    min_haba = vbx.single(min(wmin(11), wmin(13)))
+    min_haba = vbx.single(cmin(11, 13))
     max_take = vbx.single(max(wmax(15), wmax(17)))
-    min_take = vbx.single(min(wmin(15), wmin(17)))
+    min_take = vbx.single(cmin(15, 17))
     for r, c in ((3, 22), (4, 22), (3, 23), (4, 23), (3, 24), (4, 24)):
         book.write(ws, r, c, "")
     ws.clear_underline(7, 2, 706, 28)
@@ -360,7 +371,10 @@ def max_min(book: Book) -> None:
     def mark(rows: range, cols: range, target: float, out: tuple[int, int]) -> None:
         for i in rows:
             for a in cols:
-                if sh.eq_single(cell(i, a), target):
+                v = cell(i, a)
+                if fix80 and sh.blank(v):
+                    continue
+                if sh.eq_single(v, target):
                     ws.underline.add((i, a))
                     book.write(ws, out[0], out[1], target)
                     break
@@ -369,7 +383,10 @@ def max_min(book: Book) -> None:
     for i in range(n, k + 1):
         x = {"4": 8, "3": 6}.get(f.count_st, x)
         for a in range(2, x + 1, 2):
-            if sh.eq_single(cell(i, a), max_atu):
+            v = cell(i, a)
+            if fix80 and sh.blank(v):
+                continue
+            if sh.eq_single(v, max_atu):
                 ws.underline.add((i, a))
                 book.write(ws, 3, 22, max_atu)
                 break

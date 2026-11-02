@@ -290,25 +290,30 @@ def _order_val(order: float, is_single: bool) -> float:
 
 
 def check_thickness(row: Sequence[Any], c1: int, c2: int, c3: int, order: float, *,
-                    is_single: bool = True) -> bool:
+                    is_single: bool = True, same_precision: bool = False) -> bool:
     """QP.CheckThickness (QP:928-945)。下・上・値列の3つとも "" なら真。それ以外は 下 <= x <= 上。
 
     下・上は Single(`Val` を Single に入れる)、x は `Val(Single の引数)`(有効 7 桁)。
+    same_precision: 下・上も `Val` のまま(Double)で比べる(B71 を直した場合に DbReturnItem が使う)。
     """
     # VBA の And は短絡しないので3列とも必ず読む(値列が無い表でも添字エラー 9。QP:930-932)
     v1, v2, v3 = cell(row, c1), cell(row, c2), cell(row, c3)
     if vstr(v1) == "" and vstr(v2) == "" and vstr(v3) == "":
         return True
-    lower = vbx.single(vbx.val(cell(row, c1)))
-    upper = vbx.single(vbx.val(cell(row, c2)))
+    if same_precision:
+        lower = vbx.val(cell(row, c1))
+        upper = vbx.val(cell(row, c2))
+    else:
+        lower = vbx.single(vbx.val(cell(row, c1)))
+        upper = vbx.single(vbx.val(cell(row, c2)))
     x = _order_val(order, is_single)
     return lower <= x and upper >= x
 
 
 def check_width(row: Sequence[Any], c1: int, c2: int, c3: int, order: float, *,
-                is_single: bool = True) -> bool:
+                is_single: bool = True, same_precision: bool = False) -> bool:
     """QP.CheckWidth (QP:947-964)。CheckThickness と同じ判定(幅・丈)。"""
-    return check_thickness(row, c1, c2, c3, order, is_single=is_single)
+    return check_thickness(row, c1, c2, c3, order, is_single=is_single, same_precision=same_precision)
 
 
 def check_within(row: Sequence[Any], c1: int, c2: int, order: float, *, is_single: bool = True) -> bool:
@@ -874,7 +879,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
             res.uf1["HizCome.Caption"] = "別表Dに記載のないHx8材_判定不要"
         return res
 
-    table_name = "平坦度一覧QP追加"       # 等級が 3/4 以外ならこのまま(QP:229。要確認)
+    table_name = "平坦度一覧QP追加"       # 等級が 3/4 以外ならこのまま(QP:229。B74)
     table_n = table_m = search_s = ""
     if flat == 3:
         table_n, table_m, table_name, search_s = "中歪3級", "耳歪3級", "ソリ3級", "Q-E-001_品質規格:等級3"
@@ -898,6 +903,12 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
         return res
     if 6.0 >= o_atu:
         if naka_sika == "" or mimi_sika == "":
+            if table_n == "" and not quirks.reproduce("B74"):
+                # B74 を直す: 等級が 3/4 以外で中歪表の名前が空。空の表を開いて止まらず、
+                # 6mm 超の分岐(QP:727-730)と同じく MsgBox して skipEnd(中耳は空)
+                res.messages.append(Message("歪等級が3,4以外です", ERROR, source="QP:732"))
+                return _dbqp_end(res, naka_sika, mimi_sika, execution, update_day, m_atu, m_haba, m_take,
+                                 m_zai, m_tyo, youto, grade, delivery)
             f, rws = _table(db, table_n)
             if f is None or rws is None:
                 res.kousa = None
@@ -1244,6 +1255,9 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         return out
     matching: list[int] = []
     c = [False] * 9
+    # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
+    # 直した場合は同じ精度(Double)で比べる。ラテフリ直角(この関数)だけ直す
+    same = not quirks.reproduce("B71")
     for r in ta:
         c = [False] * 9
         c[1] = check_condition(r, C["納入先"], nou)
@@ -1251,9 +1265,9 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         c[3] = c[2] & check_condition(r, C["用途コード"], youtc)
         c[4] = c[3] & check_condition(r, C["製造材質"], zai)
         c[5] = c[4] & check_condition(r, C["製造調質"], tyou)
-        c[6] = c[5] & check_thickness(r, C["厚下"], C["厚上"], C["製造板厚"], atu)
-        c[7] = c[6] & check_width(r, C["幅下"], C["幅上"], C["製造板幅"], haba)
-        c[8] = c[7] & check_width(r, C["丈下"], C["丈上"], C["製造板丈"], take)
+        c[6] = c[5] & check_thickness(r, C["厚下"], C["厚上"], C["製造板厚"], atu, same_precision=same)
+        c[7] = c[6] & check_width(r, C["幅下"], C["幅上"], C["製造板幅"], haba, same_precision=same)
+        c[8] = c[7] & check_width(r, C["丈下"], C["丈上"], C["製造板丈"], take, same_precision=same)
         if all(c[1:9]):
             matching.append(clng(cell(r, C["管理番号"])))
 
@@ -1310,6 +1324,13 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
             items += ",直角度"
     out.items = items
     kousa1 = cell(hit[0], C["公差"])
+    # B72: ラテラルボーの公差も HitArry(1)(最初に一致した行)から取る。直した場合はラテラルボーが「要」の最初の行
+    kousa_l = kousa1
+    if not quirks.reproduce("B72"):
+        for h in hit:
+            if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
+                kousa_l = cell(h, C["公差"])
+                break
 
     def lateral(text: str) -> str:
         return vbx.fmt(dbdisplay_lateral(lateral_lot, text, quiet=lateral_quiet, messages=out.messages), "0.0")
@@ -1318,12 +1339,12 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         if vbx.instr(items, "ラテラルボー") > 0:
             u["Sumisei.Caption"] = nou
             if not vbx.like(additional, "*ﾗﾃﾗﾙﾎﾞ-追記公差あり*"):
-                if isnum(kousa1):
-                    u["LateralText"] = vbx.fmt(kousa1, "0.0")
-                elif veq(kousa1, "別表B", VAR, STR):
+                if isnum(kousa_l):
+                    u["LateralText"] = vbx.fmt(kousa_l, "0.0")
+                elif veq(kousa_l, "別表B", VAR, STR):
                     u["LateralText"] = lateral("日車")
                     u["LateralText.BackColor"] = ORANGE
-                elif veq(kousa1, "別表A", VAR, STR):
+                elif veq(kousa_l, "別表A", VAR, STR):
                     u["LateralText"] = lateral("白銅滑川")
                     u["LateralText.BackColor"] = ORANGE
         if vbx.instr(items, "フリー反り") > 0:
@@ -1347,11 +1368,11 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
             raise VbaRuntimeError(91, "ZenSh が Nothing(WorkFlag が P1/P_H494 以外)")
         if vbx.instr(items, "ラテラルボー") > 0:
             out.cells[(1, 15)] = nou + zai
-            if isnum(kousa1):
-                out.cells[(1, 13)] = vbx.fmt(kousa1, "0.0")
-            elif veq(kousa1, "別表B", VAR, STR):
+            if isnum(kousa_l):
+                out.cells[(1, 13)] = vbx.fmt(kousa_l, "0.0")
+            elif veq(kousa_l, "別表B", VAR, STR):
                 out.cells[(1, 13)] = lateral("日車")
-            elif veq(kousa1, "別表A", VAR, STR):
+            elif veq(kousa_l, "別表A", VAR, STR):
                 out.cells[(1, 13)] = lateral("白銅滑川")
         if vbx.instr(items, "フリー反り") > 0:
             out.cells[(6, 29)] = "ﾌﾘｰｿﾘ"

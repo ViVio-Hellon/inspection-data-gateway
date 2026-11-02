@@ -17,7 +17,7 @@ from tests._web import make_client
 from ufkensa import user_settings
 from unittest import mock
 
-from ufkensa.kensa import packing, paths, quality, store, terminal, wiring, zenkasho_session
+from ufkensa.kensa import packing, paths, quality, quirks, store, terminal, wiring, zenkasho_session
 from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import sheet as sh
 
@@ -371,6 +371,16 @@ class ConnectTest(ZenBase):
         d = self.print_normal()
         self.assertEqual([r["label"] for r in d["view"]["reports"]], ["全ヵ所検査", "不良要因印刷_LVC"])
         self.assertIsNone(self.store.load_report("不良要因印刷_LVC#page"))
+
+    def test_defect_range_b85_fix(self) -> None:
+        """B85 を直す: 全ヵ所のライン名・ロットで動く(号機つきでもページ設定が付き、右ヘッダは全ヵ所のロット)。"""
+        quirks.set_for_test({"B85": "fix"})
+        self.addCleanup(quirks.set_for_test, None)
+        self.ks.line_no = "A22"
+        self.print_normal()
+        page = __import__("json").loads(self.store.load_report("不良要因印刷_LVC#page"))["page"]
+        self.assertEqual((page["header_left"], page["header_right"]), ("LVC", LOT + " 検査員01"))
+        self.assertTrue(page["footer_right"].startswith(" 2026/11/02  10:05～"))     # フッターは今までどおり
 
     def test_uf_taikaku_h494(self) -> None:
         self.open_ippan()

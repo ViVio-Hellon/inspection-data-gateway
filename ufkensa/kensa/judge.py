@@ -373,22 +373,39 @@ def bh_judg(text: str, bh_lower: int) -> str:
     return result
 
 
+def unit_record_fixed(n: float) -> float:
+    """B13 を直した UnitRecord の中身(絶対値を受け取る)。2026-11-02 の回答「あり得ない数値が入っても Case の範囲に入れる」。
+
+    有効 7 桁の 10 進(VBA の CStr(Single))で比べ、0 は 0、5 以下は 0.5 刻みに切り上げ(0.05 → 0.5、0.505 → 1.0、
+    1.0 → 1.0)、5 を超えたらそのままの値(999 超も)。VBA の Case の区切り(0.1〜0.5 → 0.5、0.51〜1.0 → 1.0 …)と
+    同じ結果になり、区切りの間(0.501〜0.509 など)と 0.1 未満・999 超も落ちない。
+    """
+    from decimal import Decimal, ROUND_CEILING
+    x = Decimal(vbx.cstr(vbx.single(abs(n)), is_single=True))
+    if x == 0:
+        return 0.0
+    if x <= 5:
+        return float((x / Decimal("0.5")).to_integral_value(rounding=ROUND_CEILING) * Decimal("0.5"))
+    return float(vbx.single(abs(n)))
+
+
 def unit_record(n: float) -> float:
     """0.5 刻みへの切り上げ `Judg.UnitRecord` (J:2421-2443、Q-S-QA-ALL-153)。n は Single。
 
     B13: n が Single なので 0.51・1.01・1.51・2.01・2.51・3.01・3.51 が区間の下限よりわずかに小さくなり 0 になる。
-    999 を超えても 0。直した場合は有効 7 桁の 10 進(VBA の CStr(Single))で区間を比べ、5 を超えたらそのまま。
+    999 を超えても 0。直した場合は `unit_record_fixed`(区間の間の値も必ずどこかに入れる)。
     0 のとき VBA は -0 になるが、-0 は 0 に揃える(V10)。
     """
     n = vbx.single(n)
     positive = n > 0                       # Sgn(n) = 1
     n = abs(n)
-    if quirks.reproduce("B13"):
-        x = n                              # Single を Double の区間と比べる
-        upper = 999.0
-    else:
-        x = vbx.val_single(n)
-        upper = float("inf")
+    if not quirks.reproduce("B13"):
+        r = vbx.single(unit_record_fixed(n))
+        if not positive:
+            r = vbx.single(vbx.val_single(r) * -1)
+        return r + 0.0 if r != 0 else 0.0
+    x = n                                  # Single を Double の区間と比べる
+    upper = 999.0
     r = 0.0
     if x == 0:
         r = 0.0
@@ -600,7 +617,7 @@ def simply_judge(form: Form, name: str, n: str, worker_name: str = "") -> Outcom
     NG のとき、最後に検査した位置(1 行目の S1〜E1 の入り方)で工程の指示を出す:
     S だけ検査済みで SBH が NG → BH_MSG_FIRST、E まで検査済みで EBH が NG → BH_MSG_LAST。
     比較は `Iti = UF1.S.Caption` / `Iti = UF1.E.Caption` なので、Iti が "" で見出しが "" の位置があると
-    そちらのメッセージも出る(VBA どおり)。
+    そちらのメッセージも出る(VBA どおり)。B39 を直すと、位置が決まったときだけ(見出しの中身によらない)。
     """
     out = Outcome()
     lname = form.lname
@@ -628,10 +645,18 @@ def simply_judge(form: Form, name: str, n: str, worker_name: str = "") -> Outcom
         out.states[name] = NG
         out.sounds.append(SOUND_NG)
         out.logs.extend(_judge_logs(f"*BH|{text}|({name})|×|{lname}|{worker_name}", lname))
-        if iti == form.captions["S"]:
-            out.msg_errors.append(MsgErrorCall(BH_MSG_FIRST, lname, 1))
-        if iti == form.captions["E"]:
-            out.msg_errors.append(MsgErrorCall(BH_MSG_LAST, lname, 1))
+        if quirks.reproduce("B39"):
+            # 見出しどうしの比較なので、Iti="" と見出し "" の位置(スラブの E など)でも出る
+            if iti == form.captions["S"]:
+                out.msg_errors.append(MsgErrorCall(BH_MSG_FIRST, lname, 1))
+            if iti == form.captions["E"]:
+                out.msg_errors.append(MsgErrorCall(BH_MSG_LAST, lname, 1))
+        else:
+            # 直した側: 最終検査位置が決まったときだけ(S だけ検査済みの SBH / E まで検査済みの EBH)
+            if count_l[1] and name == "SBH":
+                out.msg_errors.append(MsgErrorCall(BH_MSG_FIRST, lname, 1))
+            elif count_l[5] and name == "EBH":
+                out.msg_errors.append(MsgErrorCall(BH_MSG_LAST, lname, 1))
     elif n == "不要":
         out.states[name] = WHITE
     return out
@@ -1187,7 +1212,7 @@ def is_wildcard_match(pattern: str, target: str) -> bool:
     """`Judg.IsWildcardMatch` (J:2390-2411)。
 
     `*xxx*` 部分一致(テキスト比較)、`xxx*` 前方一致(バイナリ)、`*xxx` 後方一致(バイナリ)、`xxx` 完全一致(テキスト)。
-    パターンが "*" 1 文字だと `Left("", -1)` で実行時エラー 5(VBA どおり)。
+    パターンが "*" 1 文字だと `Left("", -1)` で実行時エラー 5(VBA どおり)。B42 を直すと True(無条件)。
     """
     has_head = vbx.left(pattern, 1) == "*"
     has_tail = vbx.right(pattern, 1) == "*"
@@ -1196,7 +1221,9 @@ def is_wildcard_match(pattern: str, target: str) -> bool:
         core = vbx.mid(core, 2)
     if has_tail:
         if len(core) - 1 < 0:
-            raise VbaError(5, "プロシージャの呼び出し、または引数が不正です")
+            if quirks.reproduce("B42"):
+                raise VbaError(5, "プロシージャの呼び出し、または引数が不正です")
+            return True                                      # 直した側: "*" 1 文字は何にでも合う(欄全体の "*" と同じ)
         core = vbx.left(core, len(core) - 1)
     if has_head and has_tail:
         return _text_instr(target, core)
@@ -1233,11 +1260,14 @@ def is_match_condition_field(field_value: str, target: str) -> bool:
 
 
 def _dims_in(row: Sequence[str], c: dict[str, int], thick: float, width: float, length: float) -> bool:
-    """寸法の条件(両端を含む)。厚・幅・丈は Single のまま、Val(マスタ) の Double と比べる。"""
+    """寸法の条件(両端を含む)。厚・幅・丈は Single のまま、Val(マスタ) の Double と比べる(B41 を直すと両方 Single)。"""
     # VBA の And は短絡しないので、先に全部読む(列が無ければ実行時エラー 9)
     lo_t, hi_t = vbx.val(_at(row, c["厚下"])), vbx.val(_at(row, c["厚上"]))
     lo_w, hi_w = vbx.val(_at(row, c["板幅下"])), vbx.val(_at(row, c["板幅上"]))
     lo_l, hi_l = vbx.val(_at(row, c["板丈下"])), vbx.val(_at(row, c["板丈上"]))
+    if not quirks.reproduce("B41"):
+        # 直した側: マスタの値も Single にして同じ精度で比べる(厚 1.2・上限 1.2 は範囲内)
+        lo_t, hi_t, lo_w, hi_w, lo_l, hi_l = (vbx.single(x) for x in (lo_t, hi_t, lo_w, hi_w, lo_l, hi_l))
     return lo_t <= thick <= hi_t and lo_w <= width <= hi_w and lo_l <= length <= hi_l
 
 
@@ -1259,15 +1289,18 @@ def packaging_specification_no(packaging_no: str, youto: str, thick: float, widt
     1 件: 条件(フラグ: ""/用途コード/寸法/納入先/寸法納入/寸法取引)に合えばコメント、合わなければ "形状_"。
     2 件以上: 合ったコメントを前に足していく("C,B,A," のように DB と逆順で末尾に "," が残る)。
     B11: 「寸法納入」に合うと前に足さずに上書きする(それまでのコメントが消える)。
-    厚・幅・丈は Single なので、上限ちょうどの値が Single の誤差で外れることがある(VBA どおり)。
+    厚・幅・丈は Single なので、上限ちょうどの値が Single の誤差で外れることがある(VBA どおり。B41)。
+    B40: 表が空(列も取れない)だと型エラー 13。直すと "" を返す。
     """
     db = db if db is not None else packing_master_path()
     table = "注意_包装仕様"
     datasource.get_fields(db, table, "")                     # Hikifields(使っていない)
     pack_f = datasource.get_fields(db, table, "")
     if pack_f is None:
-        # `Dim PackF(): PackF = Empty` は動的配列に Empty を入れるので型エラー 13(IsEmpty の判定まで行かない)
-        raise vbx.TypeMismatch("PackF = GetFieldsArr(…) が Empty")
+        if quirks.reproduce("B40"):
+            # `Dim PackF(): PackF = Empty` は動的配列に Empty を入れるので型エラー 13(IsEmpty の判定まで行かない)
+            raise vbx.TypeMismatch("PackF = GetFieldsArr(…) が Empty")
+        return ""                                            # 直した側: `If IsEmpty(PackF) Then Exit Function` が効く
     c = {name: _last_index(pack_f, name) for name in _PACK_COLS}
     rows = datasource.get_records(db, table, "[包装仕様NO]='" + packaging_no + "'")
     if rows is None:

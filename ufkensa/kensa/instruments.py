@@ -13,10 +13,11 @@
 
 【ライン名の照合(D13)】`測定機器ID` の `ライン` 列との照合は VBA の ADO Filter `[ライン]='<ライン>'` だが、
 D13 により `lines.matches`(文字の幅だけ揃える。`ﾄｯﾄ` = `トット`)で照合する。
-機器転送はバランサー・トットで "大板" を渡すので、マスタに "大板" の行が無い限り機器名は空になる(VBA どおり)。
+機器転送はバランサー・トットで "大板" を渡すので、マスタに "大板" の行が無い限り機器名は空になる(VBA どおり。B53)。
+B53 を直した場合は、"大板" で引けなければ実際のライン(バランサー/トット)で引き直す。
 
 【伝送用ファイルが無い・表が空】VBA は `Dim PackF(): PackF = GetFieldsArr(…)` で、Empty を代入すると
-型エラー 13 になる。そのため PackingPath へ切り替える処理(MT:415-420)は到達しない。
+型エラー 13 になる。そのため PackingPath へ切り替える処理(MT:415-420)は到達しない(B51。直すと切り替える)。
 ファイルが無いときは GetFieldsArr の中で End(→ `datasource.DbMissing`)。
 """
 from __future__ import annotations
@@ -25,7 +26,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
 
-from . import ado_filter, datasource, flow, lines, paths, vbx
+from . import ado_filter, datasource, flow, lines, paths, quirks, vbx
 from .flow import WARN
 from .lot import SubscriptOutOfRange
 
@@ -60,9 +61,9 @@ def check_thick_and_code(lower: Any, upper: Any, youto_cond: Any, atu: float, yo
     用途条件(カンマ区切り)のどれかに用途が当たり、かつ 厚下 <= 厚 <= 厚上 なら真。
     - `≠X`: 用途が X でなければ当たり / `*X`: 用途に X を含む / `X*`: 用途に X を含む / それ以外は完全一致
     厚下・厚上は Single(`Val`)、厚は `Val(Single)`(有効 7 桁)で比べる。
+    B52: Single と Double の比較なので 28.01 などの境界ちょうどで外れる。直した場合は厚下・厚上も Double で比べる。
     """
-    lower_t = _val_single(lower)
-    upper_t = _val_single(upper)
+    lower_t, upper_t = _bounds(lower, upper)
     tmp = "" if youto_cond is None else str(youto_cond)
     items = tmp.split(",") if tmp != "" else []      # Split("", ",") は要素 0 個
     found = False
@@ -89,12 +90,29 @@ def check_thick_and_code(lower: Any, upper: Any, youto_cond: Any, atu: float, yo
     return False
 
 
-def _master() -> tuple[list[str], list[list[str]], str]:
-    """`測定機器ID` の列名と全行(QualityPath の伝送用ファイル)。"""
+def _bounds(lower: Any, upper: Any) -> tuple[float, float]:
+    """厚下・厚上(MT:505-506・489-490)。
+
+    再現: `Dim LowerT As Single: LowerT = Val(…)`。厚は `Val(ATU)`(Double)なので、Single(28.01) > 28.01 で
+    境界ちょうどの厚が外れる(B52)。直した場合は `Val` のまま(Double)にして厚と同じ精度で比べる。
+    """
+    if quirks.reproduce("B52"):
+        return _val_single(lower), _val_single(upper)
+    return vbx.val(lower), vbx.val(upper)
+
+
+def _master() -> Optional[tuple[list[str], list[list[str]], str]]:
+    """`測定機器ID` の列名と全行(QualityPath の伝送用ファイル)。None は B51 を直した場合に両方とも空。"""
     file_path = paths.join(paths.get("quality"), DENSO_FILE)
     fields = datasource.get_fields(file_path, TABLE, "")
     if fields is None:
-        raise vbx.TypeMismatch("測定機器ID の列名が Empty (Dim PackF() への代入 MT:413)")
+        if quirks.reproduce("B51"):
+            raise vbx.TypeMismatch("測定機器ID の列名が Empty (Dim PackF() への代入 MT:413)")
+        # B51 を直す: PackingPath の伝送用ファイルへ切り替える(MT:415-420)。それも空なら None(Exit Function)
+        file_path = paths.join(paths.get("packing"), DENSO_FILE)
+        fields = datasource.get_fields(file_path, TABLE, "")
+        if fields is None:
+            return None
     _, rows = datasource.get_table(file_path, TABLE, "")
     return fields, rows, file_path
 
@@ -109,7 +127,10 @@ def db_return_micro(line_name: str, atu: float, yout: str, n: str = "", dep: str
     5. n="機器名"/"ID" ならその列
     `atu` は Single(VBA の引数の型)。
     """
-    fields, rows, _ = _master()
+    master = _master()
+    if master is None:
+        return ""                    # B51 を直した場合: どちらの伝送用ファイルも空(Exit Function で "")
+    fields, rows, _ = master
     c = {k: datasource.column_index(fields, k)
          for k in ("ライン", "機器名", "ID", "出力テキスト", "厚下", "厚上", "用途")}
 
@@ -139,8 +160,7 @@ def db_return_micro(line_name: str, atu: float, yout: str, n: str = "", dep: str
     if itti < 0:
         o = vbx.val_single(atu)
         for i, r in enumerate(temp):
-            lower_t = _val_single(r[col("厚下")])
-            upper_t = _val_single(r[col("厚上")])
+            lower_t, upper_t = _bounds(r[col("厚下")], r[col("厚上")])     # B52
             if lower_t <= o and upper_t >= o:
                 itti = i
                 break
@@ -286,6 +306,10 @@ def machine_transfer(t: TransferInput, *, db: Callable[..., str] = db_return_mic
     out: list[tuple[int, int, str]] = []
     atu_val = _val_single(t.atu)
     mdevice = db(line, atu_val, t.yout, "機器名")
+    if mdevice == "" and line == "大板" and not quirks.reproduce("B53"):
+        # B53 を直す: マスタに「大板」の行が無いので、帳票のライン名は「大板」のまま、
+        # 機器は実際のライン(バランサー/トット)の行から引く。マスタに大板の行ができればそちらが先
+        mdevice = db(official, atu_val, t.yout, "機器名")
     out.append((t.x, t.y, line + " " + mdevice))
     out.append((t.x, t.y + 2, line + conb))
 

@@ -549,6 +549,100 @@ class EventsTest(QuirkCase):
         self.assertEqual(s.blind_message, "作業選択を選んでください")
 
 
+class LayoutFixedQuirksTest(QuirkCase):
+    """B56〜B59・B62 の「再現」(既定)と「直す」。"""
+
+    def test_b56_at_butt_stays_hidden(self) -> None:
+        for atu, course in (("8", "HOT L-1 KEN"), ("2", "HOT 2HI KEN")):    # 6mm 超 / 2HI 通過
+            for yama in ("1", "2", "3"):
+                quirks.set_for_test(None)
+                s = KensaState(lot="LOT0001", work="薄板", yama=yama)
+                layout.lselect(s, "薄板", fake_db(atu=atu, course=course), skip_db_check=True)
+                self.assertTrue(s.at_butt_visible, (atu, yama))              # 再現: LineSkip でまた表示
+                quirks.set_for_test({"B56": "fix"})
+                s = KensaState(lot="LOT0001", work="薄板", yama=yama)
+                layout.lselect(s, "薄板", fake_db(atu=atu, course=course), skip_db_check=True)
+                self.assertFalse(s.at_butt_visible, (atu, yama))
+                self.assertEqual((s.at_butt_caption, s.at_count), ("厚2ヵ所", "厚4ヵ所検査中"))
+        # 6mm 以下・2HI なしは表示(変わらない)
+        s = KensaState(lot="LOT0001", work="薄板", yama="1")
+        layout.lselect(s, "薄板", fake_db(atu="2"), skip_db_check=True)
+        self.assertTrue(s.at_butt_visible)
+        # 住精の 2 回目(薄板)も表示し直さない
+        s = KensaState(lot="LOT0001", work="薄板", yama="1", sumisei="有")
+        layout.lselect(s, "薄板", fake_db(atu="8"), skip_db_check=True)
+        layout.lselect(s, "住精", fake_db(atu="8"), skip_db_check=True)
+        self.assertFalse(s.at_butt_visible)
+
+    def test_b57_byousya_line_skip(self) -> None:
+        def run() -> KensaState:
+            s = KensaState(lot="LOT0001", work="", byousya=True, yama="2", yama_visible=True)
+            s.v("S").value = "X"
+            s.at_butt_caption = "厚4ヵ所"
+            layout.lselect(s, "薄板", fake_db(), skip_db_check=True)
+            return s
+        s = run()
+        self.assertEqual((s.v("S").value, s.at_butt_caption, s.at_butt_visible), ("X", "厚4ヵ所", False))   # 再現
+        quirks.set_for_test({"B57": "fix"})
+        s = run()
+        self.assertEqual((s.at_butt_caption, s.at_count, s.at_butt_visible), ("厚2ヵ所", "厚4ヵ所検査中", True))
+        self.assertEqual(caps(s, "S", "C", "E", "OPS5"), ["2-2-S", "2-2-E", "2-1-E", "2-1-E"])
+        # 薄板以外の作業では薄板の見出しにしない
+        s = KensaState(lot="LOT0001", work="", byousya=True)
+        s.v("S").value = "X"
+        s.at_butt_caption = "厚4ヵ所"
+        layout.lselect(s, "厚板", fake_db(), skip_db_check=True)
+        self.assertEqual((s.v("S").value, s.at_butt_caption), ("X", "厚4ヵ所"))
+        # 極厚の L9・L10 を消す `.` の文は効く
+        s = KensaState(lot="LOT0001", work="", byousya=True)
+        s.v("L9").visible = True
+        layout.lselect(s, "極厚", fake_db(), skip_db_check=True)
+        self.assertFalse(s.v("L9").visible)
+
+    def test_b57_sumisei_db_missing(self) -> None:
+        h = FakeHooks(records={}, fields={})                               # 仕掛 DB が読めない → GoTo LineSkip
+        s = KensaState(lot="LOT0001", work="薄板", yama="1", yama_visible=True)
+        s.at_butt_caption = "厚4ヵ所"
+        info = layout.lselect(s, "住精", h, skip_db_check=True)
+        self.assertTrue(info.jumped)
+        self.assertEqual(s.at_butt_caption, "厚4ヵ所")                     # 再現
+        quirks.set_for_test({"B57": "fix"})
+        s = KensaState(lot="LOT0001", work="薄板", yama="1", yama_visible=True)
+        s.at_butt_caption = "厚4ヵ所"
+        layout.lselect(s, "住精", h, skip_db_check=True)
+        self.assertEqual((s.at_butt_caption, s.at_butt_visible), ("厚2ヵ所", True))
+        self.assertEqual(caps(s, "S", "C", "E"), ["S", "2", "E"])
+
+    def test_b58_c_under_visual(self) -> None:
+        def run() -> KensaState:
+            s = KensaState(lot="LOT0001", work="薄板", yama="1")
+            s.v("C_UnderVisual").visible = False
+            layout.inspection_select(s, "表示", fake_db(ken="H6X0001"))
+            return s
+        self.assertFalse(run().v("C_UnderVisual").visible)               # 再現
+        quirks.set_for_test({"B58": "fix"})
+        s = run()
+        self.assertTrue(s.v("C_UnderVisual").visible and s.v("C_UpVisual").visible)
+
+    def test_b59_f_enabled(self) -> None:
+        s = KensaState(lot="LOT0001", work="薄板", yama="4")
+        layout.at_count_select(s, 2, fake_db(ken="T6X0001"))
+        self.assertFalse(s.cells["F3"].enabled)                            # 再現
+        quirks.set_for_test({"B59": "fix"})
+        s = KensaState(lot="LOT0001", work="薄板", yama="4")
+        layout.at_count_select(s, 2, fake_db(ken="T6X0001"))
+        self.assertTrue(s.cells["F3"].visible and s.cells["F3"].enabled and s.cells["F4"].enabled)
+        self.assertTrue(s.cells["S3"].enabled)
+
+    def test_b62_slab_cleared(self) -> None:
+        s = KensaState(lot="LOT0001", work="スラブ", atu="3", hab="1000", tak="2000")
+        layout.byousya_after_update(s, fake_db())
+        self.assertEqual(s.work, "スラブ")                                  # 再現
+        quirks.set_for_test({"B62": "fix"})
+        layout.byousya_after_update(s, fake_db())
+        self.assertEqual(s.work, "")
+
+
 if __name__ == "__main__":
     unittest.main()
 

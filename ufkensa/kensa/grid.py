@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator, Optional
 
-from . import vbx
+from . import quirks, vbx
 
 # ------------------------------------------------------------------
 # 定数
@@ -470,8 +470,12 @@ def fm_clear(state: KensaState, n: str) -> None:
 
 
 def n_count(state: KensaState) -> bool:
-    """FormRelat.nCount (FormRelat:5423-5453)。測定値が 1 つでもあれば真(S..E は 1〜12 行、F は 1〜10)。"""
-    for i in range(1, 13):
+    """FormRelat.nCount (FormRelat:5423-5453)。測定値が 1 つでもあれば真(S..E は 1〜12 行、F は 1〜10)。
+
+    B88: VBA は S..E の行 1〜12 しか見ない。直す: 極厚の丈3・4(行 13・14)も見る。
+    """
+    last = 12 if quirks.reproduce("B88") else 14
+    for i in range(1, last + 1):
         for p in ("S", "U", "C", "D", "E"):
             if state.cells[f"{p}{i}"].value != "":
                 return True

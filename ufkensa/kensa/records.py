@@ -529,8 +529,11 @@ def register_measurement(path: Union[str, Path], table: str, values: Sequence[Va
                     if len(texts) < jcnt:
                         raise _SqlError(9, "インデックスが有効範囲にありません。")
                     upd = texts[1:jcnt]
-                    if any("'" in t for t in upd) or "'" in key_filter.split("=", 1)[-1].strip()[1:-1]:
+                    if (quirks.reproduce("B75") and any("'" in t for t in upd)) \
+                            or "'" in key_filter.split("=", 1)[-1].strip()[1:-1]:
                         # VBA は値を '…' で囲んで SQL に埋め込む(エスケープなし)→ 構文エラー
+                        # B75 を直すと、値はパラメータで渡す(下の UPDATE)ので値の ' は通る。
+                        # 照合キー(keySQLfilter)の ' は ADO の Filter でも通らないので直した側でも同じ
                         raise _SqlError(-2147217900, "クエリ式の構文エラー(値に ' がある)")
                     sets = ", ".join(f"{_qi(c)} = ?" for c in cols[1:jcnt])
                     marks = ", ".join("?" for _ in matched)
@@ -1121,9 +1124,17 @@ def _history_load_normal(out: FormRestore, c, cur: Mapping[str, str], aorb: str)
 
 def _history_strain(out: FormRestore, face: str, kind: str, cell: Value, state: dict[str, str], *,
                     guard: bool, gb_prev: Optional[list[str]] = None) -> list[str]:
-    """HistoryLoad の歪 1 面 (SaveLoad:3616-3773)。定盤とゲージで微妙に違う分岐をそのまま再現する。"""
+    """HistoryLoad の歪 1 面 (SaveLoad:3616-3773)。定盤とゲージで微妙に違う分岐をそのまま再現する。
+
+    B76: VBA は TempA/tempB(ゲージは tempC/TempD)を面ごとに空にしないので前の面の値が残り、ゲージの
+    「A のみ」が空の面では前の面の GdataB が Tag に入る。直すと面ごとに空から始め、前の面の B は使わない。
+    """
     src = "SaveLoad:3631"
     text = cell_text(cell)
+    fix = not quirks.reproduce("B76")
+    if fix:
+        state["a"] = state["b"] = ""
+        gb_prev = None
     gb: list[str] = list(gb_prev or [])
     if "," in text:
         a, b = _ab_strain(text, state)
@@ -1400,7 +1411,10 @@ def number_count(store: LocalStore, lname: str, lotname: str) -> Optional[Number
         if sh.color(r, 5) is not None:
             sh.set_color(r, 5, None)
     ur1 = sh.last_row(1)
-    total = [list(row) for row in sh.read_range(3, 1, ur1, 13)]
+    if ur1 < 3 and not quirks.reproduce("B78"):
+        total = []                       # 直した側: 3 行目以降が空なら数える行なし(見出しの 2 行目を数えない)
+    else:
+        total = [list(row) for row in sh.read_range(3, 1, ur1, 13)]   # B78: A3:M2 は A2:M3 になり見出しを数える
     count_dic: dict[Any, Value] = {}
     kara: str = ""
     for row in total:

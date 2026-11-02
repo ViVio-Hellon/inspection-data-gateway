@@ -134,6 +134,11 @@ class RegistrySheetTest(unittest.TestCase):
         self.assertEqual(workers.get_worker_name("", reg), "")
         with self.assertRaises(IndexError):            # Split("") の UBound で実行時エラー 9
             workers.get_worker_name("2", reg)
+        quirks.set_for_test({"B69": "fix"})
+        try:
+            self.assertEqual(workers.get_worker_name("2", reg), "")   # 直した側: 空なら名前なし
+        finally:
+            quirks.set_for_test(None)
         self.assertEqual(workers.workers_text("1", reg), " T1:阿部_佐藤")
         self.assertEqual(workers.workers_text("", reg), "")
 
@@ -204,6 +209,26 @@ class WorkerTimeTest(unittest.TestCase):
         r = workers.name_match({(3, 1): "阿部 久知"}, WorkerRegistry(t1="阿部 久知"))
         # 登録検査員は Split(Join(...)) で半角空白でも分かれる → 照合で一致しない(VBA どおり)
         self.assertTrue(r.out)
+
+    def test_name_match_b86_clears_out(self) -> None:
+        quirks.set_for_test({})
+        reg = WorkerRegistry(t1="阿部")
+        r = workers.name_match({(1, 18): "OUT", (3, 1): "阿部"}, reg)
+        self.assertNotIn(18, [w.col for w in r.writes])                      # VBA: R1 の OUT は残る
+        quirks.set_for_test({"B86": "fix"})
+        r = workers.name_match({(1, 18): "OUT", (3, 1): "阿部"}, reg)
+        self.assertEqual([w for w in r.writes if w.col == 18], [CellWrite(1, 18, "")])
+        r = workers.name_match({(1, 18): "OUT", (3, 1): "田中"}, reg)
+        self.assertEqual([w.value for w in r.writes if w.col == 18], ["", "OUT"])  # 不一致なら書き直す
+
+    def test_name_match_b68_fix(self) -> None:
+        quirks.set_for_test({"B68": "fix"})
+        reg = WorkerRegistry(t1="阿部 久知_佐藤", t3="鈴木")
+        r = workers.name_match({(3, 1): "阿部 久知", (4, 1): "佐藤", (3, 2): "阿部"}, reg)
+        self.assertEqual([w.value for w in r.writes if w.col == 16], ["登録検査員", "阿部 久知", "佐藤", "鈴木"])
+        self.assertEqual([w.value for w in r.writes if w.col == 17], ["一致無し検査員", "阿部"])
+        r = workers.name_match({(3, 1): "阿部 久知", (4, 1): "佐藤"}, reg)
+        self.assertFalse(r.out)
 
 
 HIST = [
@@ -285,6 +310,30 @@ class DailyTest(unittest.TestCase):
         c.history_rows = None
         with self.assertRaises(IndexError):
             workers.daily_report(1, c)
+        quirks.set_for_test({"B69": "fix"})
+        self.assertEqual(workers.daily_report(1, c), [])            # 直した側: 一致なしと同じく何もしない
+        self.assertEqual(workers.daily_create(c).writes[-1], CellWrite(2, 25, " 単重"))
+
+    def test_daily_a1_7_00_b70(self) -> None:
+        quirks.set_for_test({})
+        c = ctx(at(7, 0, 30))
+        c.facility = "L-1"
+        self.assertIn(CellWrite(1, 1, "2026.10.29_1直"), workers.daily_report(1, c))   # VBA: 前日_1直
+        c = ctx(at(7, 0, 30), cells={(1, 1): "2026.10.29_1直"})
+        c.facility = "L-1"
+        self.assertFalse(workers.daily_create(c).recreate)
+        quirks.set_for_test({"B70": "fix"})
+        c = ctx(at(7, 0, 30))
+        c.facility = "L-1"
+        w = workers.daily_report(1, c)
+        self.assertIn(CellWrite(1, 1, "2026.10.29_3直"), w)                          # 日付・直とも hh:mm
+        self.assertIn(CellWrite(1, 3, "鈴木"), w)                                     # C1(T3)と揃う
+        c = ctx(at(7, 0, 30), cells={(1, 1): "2026.10.29_3直"})
+        c.facility = "L-1"
+        self.assertFalse(workers.daily_create(c).recreate)
+        c = ctx(at(7, 1, 0))
+        c.facility = "L-1"
+        self.assertIn(CellWrite(1, 1, "2026.10.30_1直"), workers.daily_report(1, c))
 
     def test_daily_create(self) -> None:
         quirks.set_for_test({})

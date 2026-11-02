@@ -726,3 +726,98 @@ class MiscTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------------------------------------------
+# 「直す」と決まった不具合(B44〜B48)の直した側
+# ------------------------------------------------------------------
+class FixedQuirksTest(QuirkCase):
+    def test_b48_blank_worker(self) -> None:
+        # 再現: Split("") → Worker(-1) で添字エラー(O:705-712)。直すと KenName を変えない(None)
+        uf = make_uf(text={"T1": ""}, worker_day_max="1")
+        with self.assertRaises(checks.VbaRuntimeError):
+            checks.confi_open(uf, "S", 2, "Test", "24.0")
+        self.fix("B48")
+        self.assertIsNone(checks.confi_open(uf, "S", 2, "Test", "24.0").ken_name)
+        self.assertIsNone(checks.confi_reason_open(uf, "S", 2, "Test", "24.0").ken_name)
+        uf = make_uf(text={"T1": "山田_鈴木"}, worker_day_max="1")
+        self.assertEqual(checks.confi_open(uf, "S", 2, "Test", "24.0").ken_name, "鈴木")
+
+    def test_b44_posting_next_row(self) -> None:
+        uf = make_uf(text={"S1": "", "S5": "1380"}, ng={"S5"})
+        uf2 = make_uf(text={"S1": "24.0"}, ng={"S1"})
+        self.fix("B44")
+        sh = checks.ng_posting(uf2, "S", checks.ng_posting(uf, "S", None))
+        self.assertEqual(len(sh.rows), 2)                            # 上書きせず次の行へ
+        self.assertEqual((sh.rows[0].values[4], sh.rows[0].ng_cols), ("1380", {5}))
+        self.assertEqual((sh.rows[1].values[0], sh.rows[1].ng_cols), ("24.0", {1}))
+        sh = checks.ng_posting(uf2, "S", sh)                         # A 列がある行のあとも同じ
+        self.assertEqual(len(sh.rows), 3)
+
+    def test_b45_multi_select(self) -> None:
+        codes = SelectionInputTest.CODES
+        # 再現: 「汚_12 TP」は "12 TP" を探して添字エラー、「汚_12 フクレ_01」はフクレの列だけ
+        w = checks.selection_input("汚_12 ﾌｸﾚ_01", "SBad", "2", codes, None, "LOT")
+        self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 3, "2")))
+        self.fix("B45")
+        w = checks.selection_input("汚_12 TP", "SBad", "1", codes, None, "LOT")
+        self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 6, "1"), (3, 24, "1")))     # F 列(12)と X 列(TP)
+        w = checks.selection_input("汚_12 ﾌｸﾚ_01", "UBad", "2", codes, None, "LOT")
+        self.assertEqual(w.cells, ((1, 2, "LOT"), (4, 6, "2"), (4, 3, "2")))
+        w = checks.selection_input("汚_12 " + checks.SPOT, "SBad", "3", codes, None, "LOT")
+        self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 6, "3"), (11, 3, "3枚")))
+        # 1 件だけは今までどおり
+        self.assertEqual(checks.selection_input("汚_12", "UBad", "3", codes, None, "L").cells[-1], (4, 6, "3"))
+        self.assertEqual(checks.selection_input("TP", "FBad", "1", codes, None, "L").cells[-1], (8, 24, "1"))
+        with self.assertRaises(checks.VbaRuntimeError):              # 無いコードは今までどおり添字エラー
+            checks.selection_input("汚_99 TP", "SBad", "1", codes, None, "L")
+
+    def test_b46_zf_clears_cbf1(self) -> None:
+        uf = make_uf(text={"CBF1": "幅", "CBF2": "上"})
+        self.assertNotIn("CBF1", checks.distortion_check(uf, "Z").cleared)
+        self.fix("B46")
+        r = checks.distortion_check(uf, "Z")
+        self.assertIn("CBF1", r.cleared)
+        self.assertEqual(r.text, "")
+        uf = make_uf(text={"ZF": "1.00", "CBF1": "幅"})
+        self.assertNotIn("CBF1", checks.distortion_check(uf, "Z").cleared)
+
+    def test_b47_row_values(self) -> None:
+        calls = []
+
+        def dbr(*a):
+            calls.append(a)
+            return ""
+
+        rows = SmallNumberTest.ROWS
+        self.fix("B47")
+        checks.small_number_count(4, make_uf(), rows, dbr)
+        # 行ごとの値。1・2 行目は同じ照合値なので 1 回
+        self.assertEqual([(c[0], c[5]) for c in calls], [("滑川", 6.0), ("日車", 6.5)])
+        calls.clear()
+        rows2 = [rows[0], ["滑川", "白銅", "T100", "52S", "H34", "6", "1250", "2500", "L1", "K1"]]
+        checks.small_number_count(4, make_uf(), rows2, dbr)
+        self.assertEqual([c[2] for c in calls], ["R115", "T100"])   # 同じ納入先でも照合値が違えば呼ぶ
+
+    def test_b47_lateral_hidden(self) -> None:
+        uf = make_uf(text={"Additional": "ﾗﾃﾗﾙﾎﾞｰ検査不要"})
+        ch = checks.small_number_count(5, uf, SmallNumberTest.ROWS, lambda *a: "ラテラルボー")
+        self.assertNotIn("LateralS", ch.visible)                    # 再現: 触らない
+        self.fix("B47")
+        ch = checks.small_number_count(5, uf, SmallNumberTest.ROWS, lambda *a: "ラテラルボー")
+        self.assertFalse(ch.lateral)
+        self.assertFalse(any(ch.visible[k] for k in ("L11", "LateralS", "LateralU", "LateralE")))
+        ch = checks.small_number_count(5, make_uf(), SmallNumberTest.ROWS, lambda *a: "ラテラルボー")
+        self.assertEqual({k: ch.visible[k] for k in ("LateralS", "LateralU", "LateralC")},
+                         {"LateralS": True, "LateralU": False, "LateralC": True})   # 要るロットは今までどおり
+
+    def test_b47_count5_right_angle(self) -> None:
+        uf = make_uf(text={"Youto": "R115"})
+        ch = checks.small_number_count(5, uf, None, lambda *a: "")
+        self.assertTrue(ch.visible["DiagUKou"] and ch.visible["DiagDKou"])   # 再現: DiagU/D は隠すのに出す
+        self.fix("B47")
+        ch = checks.small_number_count(5, uf, None, lambda *a: "")
+        self.assertFalse(ch.visible["DiagUKou"] or ch.visible["DiagDKou"] or ch.visible["DiagU"])
+        self.assertTrue(ch.visible["DiagSKou"] and ch.visible["DiagCKou"] and ch.visible["DiagEKou"])
+        ch = checks.small_number_count(4, uf, None, lambda *a: "")
+        self.assertTrue(ch.visible["DiagDKou"])                     # 4 回は今までどおり

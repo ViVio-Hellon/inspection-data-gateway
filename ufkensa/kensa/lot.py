@@ -12,7 +12,7 @@ VBA の対応(行番号は vba_src の各ファイル):
 | AccHIki.GetLotInfo (AccHIki:644-704)   | `get_lot_info`             |
 | SaveLoad.SikaAtuCreate (SaveLoad:16-54)| `sika_atu_create`          |
 | SaveLoad.AccReflec (SaveLoad:56-573)   | `acc_reflec`(DB を読んで画面に出す値まで)、`materials_order_no`、`dedupe_message` |
-| SaveLoad.HistorySave (SaveLoad:1258-1552) | `history_save`(B15・B16) |
+| SaveLoad.HistorySave (SaveLoad:1258-1552) | `history_save`(B15・B16・B49・B50・B51) |
 | SaveLoad.VC_Picture (SaveLoad:1554-1758)  | `vc_picture`             |
 | Input.VcConv (Input:753-800)            | `vc_conv`(VC厚 品名ｺｰﾄﾞ → 厚-係数) |
 
@@ -21,7 +21,7 @@ VBA の対応(行番号は vba_src の各ファイル):
    どれかで NextPath へ(VBA の `Or` は短絡しないので、時刻窓と PLEASE WAIT の確認とログは毎回両方)
 2. AccReflec: PLEASE WAIT.txt → NextPath、DBflag → NextPath、それ以外 MainPath。時刻窓は見ない
 3. HistorySave: PLEASE WAIT.txt → NextPath、全ヵ所/キャスク検査の表示中 → MainPath、DBflag → NextPath、
-   それ以外 MainPath。そのあと ReadCheck・時刻窓・PLEASE WAIT で切替(NextPath を選んでいたら「ありません」で抜ける)
+   それ以外 MainPath。そのあと ReadCheck・時刻窓・PLEASE WAIT で切替(NextPath を選んでいたら「ありません」で抜ける。B49)
 4. SikaAtuCreate: MainPath で列名も行も取れなければ NextPath(ReadCheck・時刻窓は見ない)
 
 【パスの比べ方】VBA は `FPath = MainPath` を文字列で比べる。オフラインでは MainPath と NextPath が
@@ -632,8 +632,12 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
     f["KenH"] = "前工程実績" + rs.control("BOX実績_枚本数") + "枚"
     if find_right_string(h_cours) != "":
         out.last_hot = "最終熱処理工程：" + find_right_string(h_cours)
+    elif not quirks.reproduce("B54"):
+        out.last_hot = ""                   # B54 を直す: 前ロットの表示を消す
     if vbx.instr(h_cours, "QF") > 0:
         out.qf = "QF有り"
+    elif not quirks.reproduce("B54"):
+        out.qf = ""                         # B54 を直す: 前ロットの表示を消す
     if not vbx.is_numeric(f["TAIK"]):
         f["TAIK"] = "4"
     if not vbx.is_numeric(f["Lateral"]):
@@ -763,7 +767,8 @@ class HistoryEnv:
 class HistorySaveResult:
     """HistorySave の結果。保存先(シートの代わり)への反映は呼び手。
 
-    1. `delete_rows`(シートの行番号。1 始まり)を消す ── DB の確認より先に必ず行う
+    1. `delete_rows`(シートの行番号。1 始まり)を消す ── 再現では DB の確認より先に必ず行う
+       (B50 を直した場合は最後まで進んだときだけ入る)
     2. 残った行の後ろに `new_rows`(A..Z の 26 列。B15 を直した場合は 27 列目にﾗﾃﾗﾙﾎﾞｰ等級)を足す
     3. `cache` があれば g_CacheLotNo / g_CacheCours / g_CacheKenNo を置き換える(None は前のまま)
     """
@@ -817,6 +822,30 @@ def _need(idx: int, what: str) -> int:
     return idx
 
 
+def _odr_fallback(fpath: str, odr_path: str, what: str, res: HistorySaveResult,
+                  over12: bool) -> tuple[str, str, bool]:
+    """B51 を直した場合の SIKAODRNOW の控えへの切替(SaveLoad:1391-1401・1409-1423)。
+
+    控え側を選んでいたら「…がありません」で抜ける。MainPath なら NextPath へ切り替え、ファイルが無ければ抜ける。
+    戻り値は (FPath, ファイル, 続けるか)。
+    """
+    main, nxt = paths.get("main"), paths.get("next")
+    target = vba_target("SIKAODRNOW")
+    if fpath == nxt:
+        if not over12:
+            res.messages.append(Message(target + "に" + what + "_HistorySave", ERROR, source="SaveLoad:1393"))
+        return fpath, odr_path, False
+    if fpath == main:
+        fpath = nxt
+        odr_path = db_path(fpath, "SIKAODRNOW")
+        if not read_check(odr_path, 1):
+            if not over12:
+                res.messages.append(Message("日稲:" + target + "がありません" + "_ReadCheck_HistorySave", ERROR,
+                                            source="SaveLoad:1399"))
+            return fpath, odr_path, False
+    return fpath, odr_path, True
+
+
 def history_save(past_hiki: Sequence[Any], sheet_rows: Sequence[Sequence[Any]], env: HistoryEnv) -> HistorySaveResult:
     """SaveLoad.HistorySave。`Lot情報履歴` に引当ごとの 1 行を作る(行の内容と消す行の判断まで)。
 
@@ -825,13 +854,20 @@ def history_save(past_hiki: Sequence[Any], sheet_rows: Sequence[Sequence[Any]], 
     """
     res = HistorySaveResult()
     lot = past_hiki[1]
-    res.delete_rows = history_delete_rows(sheet_rows, lot)
+    delete_rows = history_delete_rows(sheet_rows, lot)
+    if quirks.reproduce("B50"):
+        # VBA: DB を確かめる前に消す(途中で抜けても消えたまま)
+        res.delete_rows = delete_rows
     try:
-        return _history_save_db(past_hiki, env, res)
+        _history_save_db(past_hiki, env, res)
     except (vbx.TypeMismatch, SubscriptOutOfRange) as e:
-        # 行の削除は済んでいる(VBA は削除の後で止まる)。呼び手が `e.partial` を反映する
+        # 再現: 行の削除は済んでいる(VBA は削除の後で止まる)。直した場合は消さない。呼び手が `e.partial` を反映する
         e.partial = res  # type: ignore[attr-defined]
         raise
+    if not quirks.reproduce("B50") and res.completed:
+        # B50 を直す: DB の確認を通って新しい行を作れたときだけ古い行を消す
+        res.delete_rows = delete_rows
+    return res
 
 
 def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySaveResult) -> HistorySaveResult:
@@ -850,12 +886,14 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
                       source="SaveLoad:1322")
     if c1 or c2 or c3:
         if fpath == nxt:
-            # 控え側を選んでいたら、控えのファイルがあっても抜ける(VBA どおり)
-            if not over12:
-                res.messages.append(missing)
-            res.file_path = file_path
-            return res
-        if fpath == main:
+            # 再現: 控え側を選んでいたら、控えのファイルがあっても抜ける(VBA どおり)
+            # B49 を直す: 控えのファイルがあればそのまま控えを読む(無いときだけ抜ける)
+            if quirks.reproduce("B49") or not read_check(file_path, 1):
+                if not over12:
+                    res.messages.append(missing)
+                res.file_path = file_path
+                return res
+        elif fpath == main:
             fpath = nxt
             file_path = db_path(fpath, target)
             if not read_check(file_path, 1):
@@ -907,14 +945,33 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
          for n in ("受注番号", "引当番号", "ﾛｯﾄ番号", "検査番号", "引当数量", "引当調整NO", "引当ﾌｧｲﾙ登録年月日時分秒")}
 
     # SIKAODRNOW。`Dim VC(): VC = GetFieldsArr(…)` は Empty を代入すると型エラー 13
-    # (SaveLoad:1390。そのため L1391-1406 の控えへの切替は到達しない)
+    # (SaveLoad:1390。そのため L1391-1406 の控えへの切替は到達しない)。B51 を直すと切替まで進む
     odr_path = db_path(fpath, "SIKAODRNOW")
     vc = datasource.get_fields(odr_path, TABLE, "")
     if vc is None:
-        raise vbx.TypeMismatch("SIKAODRNOW の列名が Empty (SaveLoad:1390)")
+        if quirks.reproduce("B51"):
+            raise vbx.TypeMismatch("SIKAODRNOW の列名が Empty (SaveLoad:1390)")
+        fpath, odr_path, ok = _odr_fallback(fpath, odr_path, "VCFieldﾃﾞｰﾀがありません", res, over12)
+        if not ok:
+            return res
+        # VBA の L1402 は GetRecordsArr だが、列名を引く所なので GetFieldsArr(作者の意図)
+        vc = datasource.get_fields(odr_path, TABLE, "")
+        if vc is None:
+            if not over12:
+                res.messages.append(Message("VCFieldData無" + "_HistorySave", ERROR, source="SaveLoad:1404"))
+            return res
     vcr = datasource.get_records(odr_path, TABLE, "")
     if vcr is None:
-        raise vbx.TypeMismatch("SIKAODRNOW の行が Empty (SaveLoad:1408)")
+        if quirks.reproduce("B51"):
+            raise vbx.TypeMismatch("SIKAODRNOW の行が Empty (SaveLoad:1408)")
+        fpath, odr_path, ok = _odr_fallback(fpath, odr_path, "VCRecordﾃﾞｰﾀがありません", res, over12)
+        if not ok:
+            return res
+        vcr = datasource.get_records(odr_path, TABLE, "")
+        if vcr is None:
+            if not over12:
+                res.messages.append(Message("VCRecordData無" + "_HistorySave", ERROR, source="SaveLoad:1426"))
+            return res
     r = {n: datasource.column_index(vc, n)
          for n in ("受注番号", "VC_表", "VC_裏", "製品単重", "合紙", "取引先名称", "納入先名称", "送り先名称", "包装仕様NO")}
 

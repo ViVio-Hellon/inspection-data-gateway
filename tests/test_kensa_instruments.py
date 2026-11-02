@@ -183,3 +183,89 @@ class MachineTransferTest(_Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------------------------------------------
+# 直した場合の分岐(B51・B52・B53)
+# ------------------------------------------------------------------
+class FixBranchTest(_Base):
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+
+    def test_b52_bounds_same_precision(self) -> None:
+        f = ins.check_thick_and_code
+        quirks.set_for_test({"B52": "fix"})
+        # 厚下・厚上も Double(Val のまま)で比べる → 境界ちょうどが範囲に入る
+        self.assertTrue(f("28.01", "54", "X", vbx.single(28.01), "X"))
+        self.assertTrue(f("0", "24.99", "X", vbx.single(24.99), "X"))
+        self.assertFalse(f("28.01", "54", "X", vbx.single(28.0), "X"))
+        self.assertFalse(f("0", "24.99", "X", vbx.single(25.0), "X"))
+        d = ins.db_return_micro
+        # 再現では 28.01・74.01 は "" (DbReturnMicroTest)。直すと M2・N5
+        self.assertEqual(d("L-1", 28.01, "H207", "機器名"), "M2")
+        self.assertEqual(d("L-1", 74.01, "H207", "機器名"), "N5")
+        self.assertEqual(d("L-1", 54.01, "H207", "機器名"), "M3")
+        self.assertEqual(d("L-1", 28.0, "H207", "機器名"), "M1")
+        self.assertEqual(d("HVC", 24.99, "H207", "機器名"), "M4")       # 用途の行(0–24.99)
+
+    def test_b52_micro_juge(self) -> None:
+        m = ins.MicroInput(st="S1", machin="10001", atu="28.01", hab="1000", youto="K126", lname="L-1")
+        self.assertFalse(ins.micro_juge(m).ok)              # 再現: 機器名が空で「…を使用の事」
+        quirks.set_for_test({"B52": "fix"})
+        self.assertTrue(ins.micro_juge(m).ok)               # 直す: M2(10001)で一致
+
+    def test_b53_balancer_tott(self) -> None:
+        f = ins.machine_transfer
+        base = dict(x=9, y=5, atu="3", haba="1000", yout="K126", tak="2000.0", hab="1000.0")
+        quirks.set_for_test({"B53": "fix"})
+        # 帳票のライン名は「大板」のまま、機器は実際のラインの行から(ﾊﾞﾗﾝｻｰ M2・トット M1)
+        self.assertEqual(f(ins.TransferInput(line="ﾊﾞﾗﾝｻｰ", **base)), [(9, 5, "大板 M2"), (9, 7, "大板 C12")])
+        self.assertEqual(f(ins.TransferInput(line="トット", **base)), [(9, 5, "大板 M1"), (9, 7, "大板 C11")])
+        # 範囲外の厚は空のまま
+        base["atu"] = "30"
+        self.assertEqual(f(ins.TransferInput(line="ﾄｯﾄ", **base))[0], (9, 5, "大板 "))
+        # マスタに「大板」の行があればそちらが先
+        calls: list = []
+
+        def db(line: str, *a) -> str:
+            calls.append(line)
+            return "X9" if line == "大板" else "M1"
+        self.assertEqual(f(ins.TransferInput(line="トット", **base), db=db)[0], (9, 5, "大板 X9"))
+        self.assertEqual(calls, ["大板"])
+
+    def test_b51_packing_fallback(self) -> None:
+        import shutil
+        import sqlite3
+        import tempfile
+        from pathlib import Path
+        from ufkensa import user_settings
+        from ufkensa.kensa import paths
+        root = Path(tempfile.mkdtemp(prefix="ufk_ins_"))
+        try:
+            q, p = root / "q", root / "p"
+            q.mkdir()
+            p.mkdir()
+            src = kensa_fixture.build() / ins.DENSO_FILE
+            shutil.copy2(src, q)
+            shutil.copy2(src, p)
+            with sqlite3.connect(q / ins.DENSO_FILE) as c:
+                c.execute('DELETE FROM "測定機器ID"')
+            c.close()
+            user_settings.save(paths.KEY_PATHS, {paths.OFFLINE: {
+                k: str(root) + "/" for k in ("main", "next", "history", "factory")} | {
+                "quality": str(q) + "/", "packing": str(p) + "/"}})
+            paths.set_mode(paths.OFFLINE)
+            # 再現: Dim PackF() に Empty → 型エラー 13
+            with self.assertRaises(vbx.TypeMismatch):
+                ins.db_return_micro("L-1", 3.0, "H207")
+            quirks.set_for_test({"B51": "fix"})
+            # 直す: PackingPath の伝送用ファイルから引く (MT:415-420)
+            self.assertEqual(ins.db_return_micro("L-1", 3.0, "H207", "機器名"), "M1")
+            # PackingPath も空なら ""(Exit Function)
+            with sqlite3.connect(p / ins.DENSO_FILE) as c:
+                c.execute('DELETE FROM "測定機器ID"')
+            c.close()
+            self.assertEqual(ins.db_return_micro("L-1", 3.0, "H207", "機器名"), "")
+        finally:
+            kensa_fixture.use_offline()
+            shutil.rmtree(root, ignore_errors=True)

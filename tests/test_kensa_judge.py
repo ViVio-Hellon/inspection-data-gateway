@@ -164,7 +164,7 @@ class LateralTest(QuirkCase):
             self.assertEqual(judge.unit_record(n), 0.0, n)       # B13 再現
         quirks.set_for_test({"B13": "fix"})
         fixed = {0.51: 1.0, 1.01: 1.5, 1.51: 2.0, 2.01: 2.5, 2.51: 3.0, 3.01: 3.5, 3.51: 4.0,
-                 -1.01: -1.5, 1000: 1000.0, 0.05: 0.0}
+                 -1.01: -1.5, 1000: 1000.0, 0.05: 0.5}   # 0.1 未満も区間に入れる(2026-11-02 の回答)
         for n, want in fixed.items():
             self.assertEqual(judge.unit_record(n), want, n)
 
@@ -695,3 +695,79 @@ class CheckForLotTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------------------------------------------
+# 「直す」と決まった不具合(B39〜B42)の直した側
+# ------------------------------------------------------------------
+class FixedBhTest(QuirkCase):
+    def test_b39(self) -> None:
+        quirks.set_for_test({"B39": "fix"})
+        # 見出し E が "" でも途中の位置では出さない
+        f = put(spec_form(), S1="25", U1="25", UBH="30")
+        f.captions["E"] = ""
+        self.assertEqual(judge.simply_judge(f, "UBH", "NG").msg_errors, [])
+        # S だけ検査済みの SBH / E まで検査済みの EBH は今までどおり
+        f = put(spec_form(), S1="25", SBH="30")
+        f.captions["E"] = ""
+        self.assertEqual([m.text for m in judge.simply_judge(f, "SBH", "NG").msg_errors],
+                         ["作業中止・保留・ロット異常連絡票発行"])
+        f = put(spec_form(), S1="25", U1="25", C1="25", D1="25", E1="25", EBH="30")
+        self.assertEqual([m.text for m in judge.simply_judge(f, "EBH", "NG").msg_errors],
+                         ["梱包完了させてAインプット・保留・ロット異常連絡票発行"])
+        f = put(spec_form(), S1="25", U1="25", C1="25", D1="25", E1="25", DBH="30")
+        self.assertEqual(judge.simply_judge(f, "DBH", "NG").msg_errors, [])
+
+
+class FixedConditionTest(QuirkCase):
+    def test_b42(self) -> None:
+        quirks.set_for_test({"B42": "fix"})
+        self.assertTrue(judge.is_match_condition_field("A,*", "B"))      # "*" は何にでも合う
+        self.assertTrue(judge.is_wildcard_match("*", ""))
+        self.assertFalse(judge.is_match_condition_field("≠*", "B"))     # 除外の "*" は誰にも当たらない
+        self.assertFalse(judge.is_match_condition_field("abc*", "ABCD"))  # ほかは今までどおり
+
+
+class FixedPackagingTest(PackagingTest):
+    def test_b40_empty_table(self) -> None:
+        con = sqlite3.connect(self.pack)
+        con.execute("DELETE FROM 注意_包装仕様")
+        con.commit()
+        con.close()
+        quirks.set_for_test({"B40": "fix"})
+        self.assertEqual(self.psn(), "")
+        self.assertEqual(self.msgbox(flag=True).msg_errors[0].text, "先行データ票が必要です。")
+
+    def test_b41_boundary(self) -> None:
+        self.add(フラグ="寸法", コメント="寸法注意", 厚下="0.5", 厚上="1.2", 板幅下="900", 板幅上="1100.3",
+                 板丈下="1500", 板丈上="2500")
+        quirks.set_for_test({"B41": "fix"})
+        self.assertEqual(self.psn(thick=1.2), "板_寸法注意")              # 上限ちょうどは範囲内
+        self.assertEqual(self.psn(thick=1.2, width=1100.3), "板_寸法注意")
+        self.assertEqual(self.psn(thick=1.3), "板_")
+        self.assertEqual(self.psn(thick=1.2000001), "板_寸法注意")         # Single では 1.2 と同じ値
+        self.assertEqual(self.psn(thick=1.21), "板_")
+        quirks.set_for_test(None)
+        self.assertEqual(self.psn(thick=1.2, width=1000), "板_")          # 再現
+
+
+class UnitRecordB13FixTest(unittest.TestCase):
+    """B13 を直した側: 区間の間の値・0.1 未満・999 超も必ずどこかの区間に入れる(2026-11-02 の回答)。"""
+
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+
+    def test_fixed(self) -> None:
+        from ufkensa.kensa.modes import sheet
+        quirks.set_for_test({"B13": "fix"})
+        cases = {0.05: 0.5, 0.1: 0.5, 0.5: 0.5, 0.505: 1.0, 0.51: 1.0, 1.0: 1.0, 1.01: 1.5, 1.009: 1.5,
+                 3.51: 4.0, 4.99: 5.0, 5.0: 5.0, -1.01: -1.5}
+        for v, want in cases.items():
+            self.assertEqual(judge.unit_record(v), want, v)
+            self.assertEqual(sheet.unit_record(v), want, v)
+        self.assertEqual(judge.unit_record(1500), 1500.0)                 # 999 超はそのまま
+        self.assertAlmostEqual(judge.unit_record(12.3), 12.3, places=5)  # 5 超はそのまま
+
+    def test_vba(self) -> None:
+        self.assertEqual(judge.unit_record(1.01), 0.0)                    # Single の誤差で区間に入らない
+        self.assertEqual(judge.unit_record(1500), 0.0)

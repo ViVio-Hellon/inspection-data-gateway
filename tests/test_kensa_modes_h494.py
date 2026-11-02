@@ -59,6 +59,32 @@ class H494SheetTest(unittest.TestCase):
         self.assertEqual(ws.get(11, 25), 3.0)
         self.assertEqual(fx.logs, [])
 
+    def test_lateral_color_b81_fix(self) -> None:
+        quirks.set_for_test({"B81": "fix"})
+        b = h_book()
+        ws = b.ws(sh.H494)
+        b.user_edit(7, 25, "0.3")
+        self.assertEqual(ws.interior[(7, 25)], sh.COLOR_INDEX[10])           # 緑が残る
+        self.assertEqual(ws.interior[(7, 26)], sh.LIGHT_BLUE)                # 次のセルは薄青
+        b.user_edit(8, 25, "3.0")
+        self.assertEqual(ws.interior[(8, 25)], sh.NG_RED)
+        b.activate(7, 25)                                                    # 判定済みのセルを選んでも色は変えない
+        b.activate(9, 2)
+        self.assertEqual(ws.interior[(7, 25)], sh.COLOR_INDEX[10])
+        self.assertEqual(ws.interior[(9, 2)], sh.LIGHT_BLUE)
+        self.assertEqual(ws.interior[(7, 26)], (255, 255, 255))
+
+    def test_text_input_events_b79(self) -> None:          # H494_SH:76-79
+        b = h_book()
+        b.user_edit(7, 27, "良")
+        self.assertFalse(b.events_enabled)                     # 数でない文字 → EnableEvents が False のまま
+        quirks.set_for_test({"B79": "fix"})
+        b = h_book()
+        b.user_edit(7, 27, "良")
+        self.assertTrue(b.events_enabled)
+        b.user_edit(7, 15, "DT10002+0000150.500M")             # 以後の自動判定も動く
+        self.assertEqual(b.ws(sh.H494).get(7, 16), "○")
+
     def test_diagonal(self) -> None:                     # Cask:1555-1573
         b = h_book()
         ws = b.ws(sh.H494)

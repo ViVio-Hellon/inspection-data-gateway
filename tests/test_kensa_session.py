@@ -21,7 +21,7 @@ from unittest import mock
 
 from tests import kensa_fixture
 from ufkensa import user_settings
-from ufkensa.kensa import paths, records, session, store, terminal, workers
+from ufkensa.kensa import paths, quirks, records, session, store, terminal, workers
 from ufkensa.kensa.store import HOZON, LOT_HISTORY
 
 LOT = "H7345B0"
@@ -333,6 +333,29 @@ class NoLineTest(SessionBase):
         r = self.ok(self.s.register_worker("9999999999999", {"worker_register": True}))
         self.assertIn(workers.UNREGISTERED_SOUND, [m.sound for m in r.messages])
         self.assertEqual(r.view["workers"], [])
+
+
+class DiagDKouTest(SessionBase):
+    """B43: D 欄の直角度(DiagDKou_BeforeUpdate UF1:1184-1205)。"""
+
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+        super().tearDown()
+
+    def test_b43(self) -> None:
+        self.register()
+        st = self.s.state
+        st.diag_kou["S"].value = "9.9"
+        self.ok(self.s.set_value("DiagDKou", "0.7"))
+        # 再現: S 欄に Format(D, "0.0")、D は 0.5 刻みにしないまま(UF1:1195-1196)
+        self.assertEqual((st.diag_kou["S"].value, st.diag_kou["D"].value), ("0.7", "0.7"))
+        quirks.set_for_test({"B43": "fix"})
+        st.diag_kou["S"].value = "9.9"
+        self.ok(self.s.set_value("DiagDKou", "0.7"))
+        # 直す: D 欄自身を UnitRecord → "0.0"(0.7 → 1.0)、S は触らない
+        self.assertEqual((st.diag_kou["S"].value, st.diag_kou["D"].value), ("9.9", "1.0"))
+        self.ok(self.s.set_value("DiagDKou", "-"))                       # 測定不要はそのまま
+        self.assertEqual(st.diag_kou["D"].value, "-")
 
 
 if __name__ == "__main__":

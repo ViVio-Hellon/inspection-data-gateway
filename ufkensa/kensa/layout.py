@@ -297,7 +297,8 @@ def slab_set(state: KensaState, hooks: Hooks) -> None:
 def at_count_select(state: KensaState, n: int, hooks: Hooks) -> None:
     """FormRelat.AtCountSelect (FormRelat:1950-2181)。薄板の厚測定箇所 2/4 の切替(行 3・4 の表示)。
 
-    検番 T・山数 4 のとき F 列は Visible を 2 回設定し Enabled を設定しない(VBA どおり。G1 §0-3-6)。
+    B59: 検番 T・山数 4 のとき F 列は Visible を 2 回設定し Enabled を設定しない(VBA。G1 §0-3-6)。
+    直す: 2 回目の Visible を Enabled の意図とみなし、F3/F4 も Enabled にする。
     """
     ken_no = lookup_ken_no(state, hooks)
     f = ken_flags(state, ken_no)
@@ -332,7 +333,10 @@ def at_count_select(state: KensaState, n: int, hooks: Hooks) -> None:
             _show(state, f"AL{i}", True)
             if f[6]:
                 _cells(state, [i], FIVE + ("F",), True)
-                _cells(state, [i], FIVE, enabled=True)
+                if quirks.reproduce("B59"):
+                    _cells(state, [i], FIVE, enabled=True)          # F の Enabled を設定しない(F の Visible を2回)
+                else:
+                    _cells(state, [i], FIVE + ("F",), enabled=True)
             elif f[4]:
                 _cells(state, [i], ("S", "E"), True, True)
             elif f[3]:
@@ -407,8 +411,9 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
             dist_select(state, 5)
             for i in (2, 3, 4, 8, 9, 10):
                 _show(state, f"LC{i}", True)
-            # VBA は C_UpVisual を 2 回表示にして C_UnderVisual を触らない(FormRelat:2375-2380)
-            for name in ("U_UpVisual", "C_UpVisual", "D_UpVisual", "U_UnderVisual", "C_UpVisual", "D_UnderVisual",
+            # B58: VBA は C_UpVisual を 2 回表示にして C_UnderVisual を触らない(FormRelat:2375-2380)
+            c_under = "C_UpVisual" if quirks.reproduce("B58") else "C_UnderVisual"
+            for name in ("U_UpVisual", "C_UpVisual", "D_UpVisual", "U_UnderVisual", c_under, "D_UnderVisual",
                          "UBH", "CBH", "DBH"):
                 _show(state, name, True)
         if variant_eq(yama, 1):
@@ -593,17 +598,22 @@ def judge_lot_allocations(state: KensaState, rows: list[list[str]], hooks: Hooks
 # ------------------------------------------------------------------
 # LSelect
 # ------------------------------------------------------------------
-def _thin_yama_captions(state: KensaState, ken_no: str, *, with_ok: bool, four: bool = False) -> None:
-    """LSelect の薄板 `Select Case UF1.Yama.Text`(FormRelat:2902-2967 / 3421-3497)。With UF1 の中の `.` の文。"""
+def _thin_yama_captions(state: KensaState, ken_no: str, *, with_ok: bool, four: bool = False,
+                        at_butt: bool = True) -> None:
+    """LSelect の薄板 `Select Case UF1.Yama.Text`(FormRelat:2902-2967 / 3421-3497)。With UF1 の中の `.` の文。
+
+    at_butt=False(B56 を直したとき、2HI・6mm 超)は AtButt を表示し直さない。
+    """
     if not with_ok:
         return
     y = state.yama
+    ken_no_for_at = ken_no if at_butt else "T"      # 「検番が T 以外なら AtButt 表示」を効かせない(InspeButt は検番どおり)
     if y == "1":
         _caps(state, S="S", C="2", E="E", FS="S", FC="2", FE="E", OPS1="S", OPS3="2", OPS5="E",
               OPE1="S", OPE3="2", OPE5="E", U="", FU="", D="", FD="")
         if four:
             _caps(state, OPS2="", OPS4="", OPE2="", OPE4="")
-        if ken_no != "T":
+        if ken_no_for_at != "T":
             state.at_butt_visible = True
         if state.yama_visible:
             state.inspe_butt_visible = True
@@ -613,7 +623,7 @@ def _thin_yama_captions(state: KensaState, ken_no: str, *, with_ok: bool, four: 
         _caps(state, S="2-2-S", U="", C="2-2-E", D="", E="2-1-E", FS="2-2-S", FU="", FC="2-2-E", FD="", FE="2-1-E",
               OPS1="2-2-S", OPS2="", OPS3="2-2-E", OPS4="", OPS5="2-1-E",
               OPE1="2-2-S", OPE2="", OPE3="2-2-E", OPE4="", OPE5="2-1-E")
-        if ken_no != "T":
+        if ken_no_for_at != "T":
             state.at_butt_visible = True
         state.inspe_butt_visible = True
         if ken_no == "T":
@@ -623,11 +633,11 @@ def _thin_yama_captions(state: KensaState, ken_no: str, *, with_ok: bool, four: 
               FS="3-3-S", FU="3-3-E", FC="3-2-2", FD="3-1-S", FE="3-1-E",
               OPS1="3-3-S", OPS2="3-3-E", OPS3="3-2-2", OPS4="3-1-S", OPS5="3-1-E",
               OPE1="3-3-S", OPE2="3-3-E", OPE3="3-2-2", OPE4="3-1-S", OPE5="3-1-E")
-        if ken_no != "T":
+        if ken_no_for_at != "T":
             state.at_butt_visible = True
         state.inspe_butt_visible = False
     elif y == "4" and four:
-        if ken_no != "T":
+        if ken_no_for_at != "T":
             state.at_butt_visible = True
         state.inspe_butt_visible = False
 
@@ -761,6 +771,10 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
     info.ken_no, info.hi_flag, info.fs4_flag, info.atu_flag = ken_no, hi, fs4, atu_flag
     info.new_atu, info.course, info.jumped = new_atu, course, jumped
     with_ok = not jumped
+    # B57: GoTo LineSkip が With UF1 の途中へ飛び、`.` の文がエラー91 で飛ばされる。直すと LineSkip 以降の `.` の文は効く
+    fix_jump = jumped and not quirks.reproduce("B57")
+    # B56: 2HI 通過・6mm 超で消した AtButt を LineSkip でまた表示する(検番 T 以外)。直すと消したまま(DB を見たときだけ)
+    keep_at_hidden = (not jumped) and (hi or not atu_flag) and not quirks.reproduce("B56")
 
     if with_ok:
         if n in ("厚板", "薄板", "少枚数"):
@@ -799,14 +813,10 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
             if ken_no == "T":
                 state.inspe_butt_visible = False
             # LineSkip:(With が効いているときだけ)
-            state.at_butt_caption = "厚2ヵ所"
-            state.at_count = "厚4ヵ所検査中"
-            if ken_no != "T":
-                state.at_butt_visible = True
-            _thin_yama_captions(state, ken_no, with_ok=True)
-            if not state.yama_visible:
-                _caps(state, S="S", U="U", C="2", D="D", E="E", FS="S", FU="U", FC="2", FD="D", FE="E",
-                      OPS1="S", OPS2="U", OPS3="2", OPS4="D", OPS5="E", OPE1="S", OPE2="U", OPE3="2", OPE4="D", OPE5="E")
+            _line_skip(state, ken_no, at_butt=not keep_at_hidden)
+    elif fix_jump and (n == "薄板" or (n == "住精" and state.is_work("薄板"))):
+        # B57 を直す: GoTo LineSkip の先(薄板の見出し・AtButt)を効かせる。薄板以外の作業では薄板の見出しにしない
+        _line_skip(state, ken_no, at_butt=True)
 
     for name in ("TSE", "TEE", "E", "NGE", "LC2", "LC8"):
         _show(state, name, True)
@@ -881,7 +891,7 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                   OPS1="S", OPS2="S1", OPS3="2", OPS4="E1", OPS5="E", OPE1="S", OPE2="S1", OPE3="2", OPE4="E1", OPE5="E")
         elif state.is_work("薄板"):
             _thin_body(state, hooks, set_diag=True)
-            _thin_yama_captions(state, ken_no, with_ok=with_ok, four=True)
+            _thin_yama_captions(state, ken_no, with_ok=with_ok or fix_jump, four=True, at_butt=not keep_at_hidden)
 
     if n in ("極厚", "厚板", "薄板", "少枚数", "スラブ"):
         try:
@@ -903,7 +913,7 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                 state.v("LG" + p).value = "ｹﾞｰｼﾞ"
 
     if n == "極厚":
-        if with_ok:
+        if with_ok or fix_jump:
             _show(state, "L9", False)
             _show(state, "L10", False)
         for p in FIVE:
@@ -956,6 +966,18 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                 safe(lselect_lateral, state, alloc.ken_no)
     state.blind_message = ""                         # frameblindfold("通常")
     return info
+
+
+def _line_skip(state: KensaState, ken_no: str, *, at_butt: bool) -> None:
+    """LSelect の `LineSkip:` から薄板の Case の終わりまで(FormRelat:2897-3007)。"""
+    state.at_butt_caption = "厚2ヵ所"
+    state.at_count = "厚4ヵ所検査中"
+    if ken_no != "T" and at_butt:
+        state.at_butt_visible = True
+    _thin_yama_captions(state, ken_no, with_ok=True, at_butt=at_butt)
+    if not state.yama_visible:
+        _caps(state, S="S", U="U", C="2", D="D", E="E", FS="S", FU="U", FC="2", FD="D", FE="E",
+              OPS1="S", OPS2="U", OPS3="2", OPS4="D", OPS5="E", OPE1="S", OPE2="U", OPE3="2", OPE4="D", OPE5="E")
 
 
 def _lc_and_visual(state: KensaState) -> None:
@@ -1155,9 +1177,10 @@ def select_work(state: KensaState, name: str, hooks: Hooks, msgs: Optional[list[
 def byousya_after_update(state: KensaState, hooks: Hooks) -> None:
     """UF1.Byousya_AfterUpdate (UF1:554-566)。強制描写: 作業選択を外し 6 回目まで表示、ラテラル・直角度を強制表示。
 
-    VBA はスラブを外さない(厚板・薄板・少枚数・極厚だけ False にする)。On Error Resume Next。
+    B62: VBA はスラブを外さない(厚板・薄板・少枚数・極厚だけ False にする)。直すとスラブも外す。On Error Resume Next。
     """
-    if state.work in ("厚板", "薄板", "少枚数", "極厚"):
+    works = ("厚板", "薄板", "少枚数", "極厚") if quirks.reproduce("B62") else ("厚板", "薄板", "少枚数", "極厚", "スラブ")
+    if state.work in works:
         state.work = ""
     for fn, args in ((six_display, ("on", hooks)), (lselect_lateral, ("強制", "6回目も表示")),
                      (right_angle_display, ("強制", "6回目も表示"))):

@@ -162,6 +162,76 @@ class MaxMinTest(unittest.TestCase):
         zk.max_min(b)
         self.assertEqual(ws.get(4, 23), vbx.single(10.3))
 
+    def test_b80_empty_column(self) -> None:
+        b = zen_book()
+        b.mit.min_text, b.mit.max_text = "1", "2"
+        ws = b.ws(sh.ZEN)
+        ws.set(7, 11, 1385.5)
+        ws.set(8, 11, 1386.0)                                # 幅2(M 列)は空
+        b.events_enabled = False
+        quirks.set_for_test({"B28": "fix"})
+        zk.max_min(b)
+        self.assertEqual((ws.get(3, 25), ws.get(4, 25)), (1386.0, 0.0))    # VBA: 空の列の MIN 0 が空セルと一致
+        self.assertIn((7, 13), ws.underline)
+        self.assertEqual(ws.get(3, 27), 0.0)                 # 丈が全部空でも 0
+        quirks.set_for_test({"B28": "fix", "B80": "fix"})
+        zk.max_min(b)
+        self.assertEqual((ws.get(3, 25), ws.get(4, 25)), (1386.0, 1385.5))
+        self.assertNotIn((7, 13), ws.underline)
+        self.assertIn(ws.get(3, 27), (None, ""))              # 値が無ければ書かない
+        self.assertIn(ws.get(4, 23), (None, ""))
+        # 厚の列が 1 つだけ(3 つ空)でも、その列の最小
+        ws.set(7, 2, 10.5)
+        ws.set(8, 2, 10.4)
+        zk.max_min(b)
+        self.assertEqual((ws.get(3, 23), ws.get(4, 23)), (vbx.single(10.5), vbx.single(10.4)))
+
+
+class EventsTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+
+    def test_text_in_ad_column_b79(self) -> None:         # ZenSh:110-113
+        b = zen_book()
+        b.user_edit(7, 30, "良")
+        self.assertFalse(b.events_enabled)
+        quirks.set_for_test({"B79": "fix"})
+        b = zen_book()
+        b.user_edit(7, 30, "良")
+        self.assertTrue(b.events_enabled)
+
+
+class AllRowsTest(unittest.TestCase):
+    """決定 D22(W12): 31 枚以上もあるので、VBA が 36 行目までしか見ない処理を全行(7-76)にした。"""
+
+    def test_move_tg_beyond_row_36(self) -> None:          # Cask:25 は For i = 7 To 36
+        b = zen_book()
+        ws = b.ws(sh.ZEN)
+        for r in range(7, 37):
+            for c in (2, 4, 6, 8):
+                ws.set(r, c, 10.0)
+        self.assertEqual(sh.move_tg(b, "A", sh.ZEN), (37, 2))
+        for r in range(37, 77):
+            for c in (2, 4, 6, 8):
+                ws.set(r, c, 10.0)
+        self.assertIsNone(sh.move_tg(b, "A", sh.ZEN))
+
+    def test_max_min_underline_reset_all_rows(self) -> None:   # Mit:156 は Erow = 36
+        b = zen_book()
+        b.mit.min_text, b.mit.max_text = "1", "40"
+        ws = b.ws(sh.ZEN)
+        for r in range(7, 47):
+            ws.set(r, 2, 10.5)
+        ws.set(46, 2, 10.7)                                  # 40 枚目が最大
+        b.events_enabled = False
+        zk.max_min(b)
+        self.assertIn((46, 2), ws.underline)
+        ws.set(46, 2, 10.5)
+        ws.set(45, 2, 10.8)
+        zk.max_min(b)
+        self.assertNotIn((46, 2), ws.underline)              # 37 行目以降の前回の下線も消える
+        self.assertIn((45, 2), ws.underline)
+
 
 class FormTest(unittest.TestCase):
     def tearDown(self) -> None:

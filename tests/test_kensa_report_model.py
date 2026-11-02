@@ -142,6 +142,17 @@ class PrintTransferTest(Base):
         self.assertEqual(rep4.text("B17"), "1-E")
         self.assertEqual(rep4.cell("B17")["borders"]["top"], ["dot", "thin"])
 
+    def test_thin_yama4_lateral_not_needed_b77(self) -> None:
+        s = make_snap(kind="薄板", usuita_caption="L", yama="4", sumisei="白銅", additional="ﾗﾃﾗﾙﾎﾞｰ検査不要")
+        with self.assertRaises(Stop) as cm:                    # Lascol=0 → Range(B16:@16) で 1004(Print:873-899)
+            self.run_print(s)
+        self.assertIn("1004", cm.exception.text)
+        quirks.set_for_test({"B77": "fix"})
+        rep = self.run_print(s).report
+        self.assertEqual(rep.text("B17"), "1-E")
+        self.assertEqual(rep.cell("I17")["borders"]["top"], ["dot", "thin"])      # 9 列目(I)まで点線
+        self.assertNotEqual(rep.cell("J17")["borders"]["top"], ["dot", "thin"])
+
     def test_slab_labels(self) -> None:
         rep = self.run_print(make_snap(kind="スラブ")).report
         self.assertEqual([rep.text(f"B{r}") for r in range(19, 24)], ["1上", "1下", "2上", "2下", ""])

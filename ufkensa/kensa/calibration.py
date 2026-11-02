@@ -360,8 +360,13 @@ def input_gauge(state: CalibrationState, raw: str, kiroku: Optional[Cells],
     res.messages += msgs
     state.sokutei = state.inpg
     if state.sokutei != "":
+        measured = state.sokutei
         _measure_done(state, kiroku, straight_edge, res, now=now, facility=facility, shifts=shifts)
-        res.logs.append(_log(state.line_name, "ｹﾞｰｼﾞ測定:" + state.sokutei))
+        if quirks.reproduce("B66"):
+            # VBA: 不合格だと 測定完了 が SokuteiH を消した後にログを書くので、値が残らない
+            res.logs.append(_log(state.line_name, "ｹﾞｰｼﾞ測定:" + state.sokutei))
+        else:
+            res.logs.append(_log(state.line_name, "ｹﾞｰｼﾞ測定:" + measured))
     else:
         state.f1 = "1"
     return res
@@ -535,7 +540,7 @@ def calibration_rank(cells: Cells, line_name: str, *, now: datetime,
 
     当月(A 列の先頭 7 文字 = yyyy.mm)の最初の行から、**A 列が赤字の行**を、ラインの中心値の以上(I:K)・未満(M:O)に
     分けて写し、上位・下位 3 位を作る。red_rows は赤字の行番号(B14 を再現している限り新しい記録は赤字にならない)。
-    J・N 列の最終行は**消す前の**値で数える(VBA どおり)。
+    J・N 列の最終行は**消す前の**値で数える(VBA どおり。B67 を直すと写した後で数える)。
     """
     red_rows = red_rows or set()
     k_old = last_row(cells, 10)
@@ -571,6 +576,10 @@ def calibration_rank(cells: Cells, line_name: str, *, now: datetime,
             for col, src in zip(cols, (1, 5, 6)):
                 sheet[(r, col)] = sheet.get((c, src))
                 writes.append(CellWrite(r, col, sheet.get((c, src))))
+    if not quirks.reproduce("B67"):
+        # 直した側: I:O を消して書き写した後の J・N 列で最終行を数える(新しい記録がその回に出る)
+        k_old = last_row(sheet, 10)
+        l_old = last_row(sheet, 14)
     ran1 = [sheet.get((r, 10)) for r in range(min(2, k_old), max(2, k_old) + 1)]
     ran2 = [sheet.get((r, 14)) for r in range(min(2, l_old), max(2, l_old) + 1)]
     mx = _top3(ran1, largest=True)

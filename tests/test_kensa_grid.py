@@ -249,5 +249,16 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(grid.small_count_th(s2, h.calculate_sheets, by_ken_count_blank=True), 2)
 
 
+class NCountQuirkTest(QuirkCase):
+    def test_b88(self) -> None:
+        s = KensaState(work="極厚")
+        s.cells["S14"].value = "2502.0"
+        self.assertFalse(grid.n_count(s))                   # 再現: 行 13・14 は見ない(FormRelat:5425)
+        quirks.set_for_test({"B88": "fix"})
+        self.assertTrue(grid.n_count(s))
+        s.cells["S14"].value = ""
+        self.assertFalse(grid.n_count(s))
+
+
 if __name__ == "__main__":
     unittest.main()

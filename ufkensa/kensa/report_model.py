@@ -1206,7 +1206,10 @@ def _print_borders(sh: XSheet, n: str, snap: KensaSnapshot, env: PrintEnv) -> No
                 lascol = 10
             if flag_color:
                 lascol = 10
-            sh.copy(16, 2, 16, lascol, 17, 2, formats_only=True)
+            if lascol == 0 and not quirks.reproduce("B77"):
+                # 直した側: 住精あり・ラテラル検査不要・指示色なしは、ラテラルボーの列なし(住精なしと同じ 9 列目まで)
+                lascol = 9
+            sh.copy(16, 2, 16, lascol, 17, 2, formats_only=True)                # B77: Lascol=0 だと 1004
             sh.border(17, 2, 17, lascol, "top", linestyle="dot")
             sh.copy(23, 2, 23, lascol, 24, 2, formats_only=True)
             sh.border(24, 2, 24, lascol, "top", linestyle="dot")

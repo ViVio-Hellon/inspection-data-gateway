@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 from tests import kensa_fixture
-from ufkensa.kensa import packing, paths
+from ufkensa.kensa import packing, paths, quirks
 from ufkensa.kensa.store import LOT_HISTORY_HEADERS
 
 LOT = "RX021T0"
@@ -125,3 +125,26 @@ class PackingTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PackingB84FixTest(PackingTest):
+    """B84 を直した場合: PacN(デバッグ用)を作らないので、空のフォルダ・"." が 7 文字目でない名前で止まらない。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        quirks.set_for_test({"B84": "fix"})
+
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+        super().tearDown()
+
+    def test_folder_errors(self) -> None:
+        with self.assertRaises(packing.PackingError) as e:                 # フォルダが無い(76)は直さない
+            self.check()
+        self.assertEqual(e.exception.number, 76)
+        self.files()
+        self.assertEqual(self.check(), "")                                 # 空のフォルダ → 一致なし
+        self.files("0.txt", "1P1216.JPG")
+        self.assertEqual(self.check(), "1P1216")
+        hist = [self.hist[0], row(LOT, "1", "1", "0.txt")]                 # 7 文字目でない名前はそのまま照合
+        self.assertEqual(self.check(hist=hist), "0.txt")

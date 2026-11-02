@@ -190,6 +190,18 @@ class RegisterTest(Base):
         self.assertEqual(rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals3, "[検査開始終了] ='abc'").mode, "UPDATE")
         self.assertEqual(self.rows("検査ﾃﾞｰﾀ")[0][1:3], ("abc", "z"))
 
+    def test_quote_b75_fix(self) -> None:
+        quirks.set_for_test({"B75": "fix"})
+        try:
+            vals = ["L", "abc"] + [""] * 113
+            self.assertEqual(rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals, "[検査開始終了] ='abc'").mode, "ADDNEW")
+            vals2 = ["L", "abc", "x'y"] + [""] * 112
+            r = rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals2, "[検査開始終了] ='abc'")
+            self.assertEqual(r.mode, "UPDATE")                 # 値はパラメータで渡すので ' があっても通る
+            self.assertEqual(self.rows("検査ﾃﾞｰﾀ")[0][1:3], ("abc", "x'y"))
+        finally:
+            quirks.set_for_test(None)
+
     def test_missing_db(self) -> None:
         with self.assertRaises(Stop):
             rc.register_measurement(self.dir / "無い.sqlite3", "検査ﾃﾞｰﾀ", ["x"], "[検査開始終了] ='x'")
@@ -289,6 +301,33 @@ class HistoryTest(Base):
         self.assertEqual(out.messages[0].text, "Load完了,印刷する場合はフォームを閉じないでください。")
         self.assertFalse(rc.history_load(self.store, "無い").found)
 
+    def test_history_strain_b76(self) -> None:
+        def run(kind: str, cells: list[str]):
+            out = rc.FormRestore()
+            st = {"a": "", "b": ""}
+            gb: list[str] = []
+            for f, cell in zip("SU", cells):
+                gb = rc._history_strain(out, f, kind, cell, st, guard=False, gb_prev=gb)
+            return out
+        try:
+            quirks.set_for_test({})
+            # ゲージ: U が空(A のみの分岐)だと前の面(S)の GdataB が U の Tag に入る(SaveLoad:3738-3744)
+            out = run("G", ["A:幅_下_0.30,B:丈_上_0.50", ""])
+            self.assertEqual(out.tags.get("CBU3"), "丈")
+            # 定盤: U に A: も B: も無いと、前の面の TempA/tempB が残って U に入る
+            out = run("Z", ["A:幅_下_0.30,B:丈_上_0.50", "x,y"])
+            self.assertEqual(out.values["ZU"], "0.30")
+            quirks.set_for_test({"B76": "fix"})
+            out = run("G", ["A:幅_下_0.30,B:丈_上_0.50", ""])
+            self.assertNotIn("CBU3", out.tags)
+            self.assertEqual((out.values["CBU3"], out.values["GU"]), ("", ""))
+            self.assertEqual(out.tags["CBS3"], "丈")                     # 同じ面の B はそのまま
+            out = run("Z", ["A:幅_下_0.30,B:丈_上_0.50", "x,y"])
+            self.assertEqual(out.values["ZU"], "")
+            self.assertNotIn("CBU1", out.tags)
+        finally:
+            quirks.set_for_test(None)
+
     def test_kanri_view(self) -> None:
         rc.main_data_save(self.store, make_snap(), register=False)
         rc.main_data_save(self.store, make_snap(start_time="2024/11/03 05:00:00"), register=False)
@@ -347,6 +386,18 @@ class NumberCountTest(Base):
         ws = self.store.sheet("梱包枚数計算_Test")
         self.assertEqual((ws.get(2, 1), ws.get(2, 2), ws.get(2, 3), ws.get(2, 4)), ("ﾛｯﾄNo", 0, "ﾛｯﾄNo", "検入枚数"))
         self.assertFalse(res.stop)
+
+    def test_no_rows_b78_fix(self) -> None:
+        quirks.set_for_test({"B78": "fix"})
+        try:
+            self.daily([])
+            res = rc.number_count(self.store, "Test", "N1")
+            ws = self.store.sheet("梱包枚数計算_Test")
+            self.assertEqual([ws.get(1, c) for c in range(1, 5)], ["LotNo", "梱包枚数", "LotNo", "検入枚数"])
+            self.assertEqual([ws.get(2, c) for c in range(1, 5)], [None] * 4)    # 見出しを数えない
+            self.assertEqual((res.packed, res.inspected, res.stop), ({}, {}, False))
+        finally:
+            quirks.set_for_test(None)
 
     def test_no_daily(self) -> None:
         self.assertIsNone(rc.number_count(self.store, "Test", "N1"))

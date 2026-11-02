@@ -110,57 +110,76 @@ class HeightCheckTest(unittest.TestCase):
         f = AinputForm(remain="0", tag="Load", heights=["1"] * 15)
         r = hc(1.5, 2.0, 21.51, 10, form=f)
         self.assertEqual(r.msg_error, "[許容値ｵｰﾊﾞｰ] *測定高さ:21.51*推定枚数:10.76 *入力枚数:10枚")
-        self.assertEqual(r.messages[-1].source, "Input:570")
+        self.assertEqual(r.messages[-1].source, "Input:727")           # 旧版の MsgError(D20)
         self.assertEqual((f.tag, f.heights), ("", [""] * 15))
 
     def test_example_b_paper(self) -> None:
-        # 合紙あり・個装なし: 現行は 枚数×0.029(旧版なら (枚数+1)×0.029)
-        f = AinputForm()
+        # D20(W1): 旧版。合紙あり・個装なしは (枚数+1)×0.029(Input:623)。現行版なら 枚数×0.029
+        f = AinputForm(remain="0")
         r = hc(2.95, 3.05, 310.1, 100, order="57076309", form=f)
-        self.assertAlmostEqual(r.ais, 2.9, places=5)
-        self.assertEqual(f.ai_text, "通常2.9")
-        self.assertFalse(r.ng)
-        self.assertTrue(hc(2.95, 3.05, 310.2, 100, order="57076309", form=AinputForm()).ng)
-        self.assertFalse(hc(2.95, 3.05, 297.0, 100, order="57076309", form=AinputForm()).ng)
-        self.assertTrue(hc(2.95, 3.05, 296.9, 100, order="57076309", form=AinputForm()).ng)
+        self.assertEqual(r.ais, S(101 * 0.029))
+        self.assertEqual(f.ai_text, "通常2.929")
+        self.assertFalse(r.ng)                                           # GP = 305 + 2.929 = 307.929、ErrorA 2.2875
+        self.assertFalse(hc(2.95, 3.05, 310.21, 100, order="57076309", form=AinputForm(remain="0")).ng)
+        self.assertTrue(hc(2.95, 3.05, 310.23, 100, order="57076309", form=AinputForm(remain="0")).ng)
+        # GM = 295 + 2.929 = 297.929、ErrorB 0.98333 → 差 "0.99" で NG
+        self.assertFalse(hc(2.95, 3.05, 296.95, 100, order="57076309", form=AinputForm(remain="0")).ng)
+        self.assertTrue(hc(2.95, 3.05, 296.93, 100, order="57076309", form=AinputForm(remain="0")).ng)
 
     def test_example_c_packages(self) -> None:
-        f = AinputForm(cou1="3")
+        # 個装あり: Val(枚数×0.029) + 包数×0.029(Input:621)。外装紙は COU2="" なので COU1×0.357(Input:695)
+        f = AinputForm(cou1="3", remain="0")
         r = hc(2.95, 3.05, 300, 100, order="57076309", form=f)
-        self.assertEqual(r.ais, S(S(103 * S(0.029))))
+        self.assertEqual(r.ais, S(vbx.val(100 * 0.029) + 3 * 0.029))
         self.assertEqual(r.gai, S(3 * (2 * 0.119 + 0.119)))
         self.assertEqual(f.ga_text, "1.071")
+        # 両方 2 以上: Val(COU1) + Val(COU2)×0.357(演算子の優先順位のまま。Input:694)
+        f = AinputForm(cou1="3", cou2="2", remain="0")
+        r = hc(2.95, 3.05, 300, 100, order="57076309", form=f)
+        self.assertEqual(r.gai, S(3 + 2 * (2 * 0.119 + 0.119)))
+        self.assertEqual(r.ais, S(vbx.val(100 * 0.029) + 3 * 0.029 + 2 * 0.029))
+        # COU2 が "1"(空でなく 2 未満)だと外装紙は 0
+        f = AinputForm(cou1="3", cou2="1", remain="0")
+        self.assertEqual(hc(2.95, 3.05, 300, 100, order="57076309", form=f).gai, 0.0)
 
     def test_outsourcing_four_cases(self) -> None:
-        # 外注 × Ai × 合紙あり/なし(現行コードの結果)
-        f = AinputForm(gaityuu_text="外注", ai=True)
-        self.assertAlmostEqual(hc(3, 3, 300, 100, order="57076309", form=f).ais, 2.9, places=5)
-        f = AinputForm(gaityuu_text="外注", ai=False)
+        # 外注 × Ai × 合紙あり/なし(旧版 Input:627-660)
+        f = AinputForm(gaityuu_text="外注", ai=True, remain="0")             # 合紙あり・Ai → 0
         r = hc(3, 3, 300, 100, order="57076309", form=f)
         self.assertEqual((r.ais, f.ai_text), (0.0, "0"))
-        f = AinputForm(gaityuu_text="外注", ai=True, remain="0")
-        self.assertAlmostEqual(hc(3, 3, 300, 100, form=f).ais, 2.9, places=5)
-        f = AinputForm(gaityuu_text="外注", ai=False, remain="0")
+        f = AinputForm(gaityuu_text="外注", ai=False, remain="0")            # 合紙あり・Ai なし → 数える
+        self.assertEqual(hc(3, 3, 300, 100, order="57076309", form=f).ais, S(101 * 0.029))
+        f = AinputForm(gaityuu_text="外注", ai=True, remain="0")             # 合紙なし・Ai → 0.029 で数える
         r = hc(3, 3, 300, 100, form=f)
-        self.assertEqual((r.ais, f.ai_text), (0.0, ""))
+        self.assertEqual((r.ais, f.ai_text), (S(101 * 0.029), "通常2.929"))
+        f = AinputForm(gaityuu_text="外注", ai=False, remain="0")            # 合紙なし → 0、AiText = 0
+        r = hc(3, 3, 300, 100, form=f)
+        self.assertEqual((r.ais, f.ai_text), (0.0, "0"))
 
     def test_store_paper(self) -> None:
         f = AinputForm(remain="1")
         r = hc(3, 3, 300, 100, form=f)
-        self.assertEqual(r.ais, S(100 * S(0.042)))
-        self.assertTrue(f.ai_text.startswith("ストア"))
+        self.assertEqual(r.ais, S(101 * 0.042))
+        self.assertEqual(f.ai_text, "ストア4.242")
 
     def test_vc(self) -> None:
+        calls = []
+
+        def vc(code):
+            calls.append(code)
+            return S(0.09), []
         f = AinputForm(remain="0")
-        r = hc(15, 15, 300, 20, order="04077194", form=f)
+        r = ainput.height_check(15, 15, 300, 20, "04077194", f, HIST, vc=vc)
         self.assertEqual(r.vcs, S(S(S(0.09) + S(0.09)) * 20))
-        # ストアでも高精度用途なら加算、それ以外は加算しない(VCAB も変えない)
-        f = AinputForm(remain="1", youto="H191")
-        self.assertGreater(hc(15, 15, 300, 20, order="04077194", form=f).vcs, 0)
-        f = AinputForm(remain="1", youto="H174")
-        self.assertEqual((hc(15, 15, 300, 20, order="04077194", form=f).vcs, f.vcab), (0.0, ""))
+        self.assertEqual((f.vc_text, f.vcab), ("3.6", "3.6"))
+        self.assertEqual(len(calls), 4)                                    # Vcs と V1 で 2 回ずつ VcConv
+        # ストアなら用途(高精度)に関係なく 0・VCAB=0(Input:667-670)
+        for youto in ("H191", "H174"):
+            f = AinputForm(remain="1", youto=youto)
+            self.assertEqual((hc(15, 15, 300, 20, order="04077194", form=f).vcs, f.vcab), (0.0, "0"))
         f = AinputForm(remain="0", gaityuu_text="外注", vab=True)
         self.assertEqual(hc(15, 15, 300, 20, order="04077194", form=f).vcs, 0.0)
+        self.assertEqual(f.vc_text, "0")
         f = AinputForm(remain="0")
         hc(1, 1, 1, 1, form=f)
         self.assertEqual(f.vcab, "0")                                      # VC=0 の行
@@ -228,7 +247,8 @@ class InputCheckTest(unittest.TestCase):
         f = AinputForm(remain="1", youto="H279", order_no="04077194", amin="15", amax="15", mount_count="1",
                        heights=["15"] + [""] * 14, mai1="1", cou1="1", vc_text="1.2", vcab="1.2")
         ainput.recheck_height(f, HIST, vc=vc_stub)
-        self.assertEqual((f.vc_text, f.vcab), ("", ""))
+        # D20(旧版 Height_Check): ストアなら VC の分岐で VCAB.Caption = 0(Input:670)
+        self.assertEqual((f.vc_text, f.vcab), ("", "0"))
         # VcText がもともと "" なら Change は起きず、VCAB(Else 分岐の "0" など)はそのまま
         f = AinputForm(remain="1", youto="H279", order_no="04077194", amin="15", amax="15", mount_count="1",
                        heights=["15"] + [""] * 14, mai1="1", cou1="1", vc_text="", vcab="0")
@@ -326,7 +346,7 @@ class FilesTest(unittest.TestCase):
         (self.tmp / "nis").mkdir()
         self.form = AinputForm(line_name="Test", uf1_line="Test", lot="N456J52", ken_no="K650969",
                                order_no="57076309", atu="3.000", amin="2.995", amax="3.005", hiki_no="60524074",
-                               konno="01", mai1="50", cou1="1", mount_count="1")
+                               konno="01", mai1="50", cou1="1", mount_count="1", remain="0")
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)

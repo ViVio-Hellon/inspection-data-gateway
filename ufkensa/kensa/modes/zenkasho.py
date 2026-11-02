@@ -172,7 +172,9 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
         book.events_enabled = False
         book.resume(lambda: sh.al_ter_range(book, TR, TC, befor), "AlTerRange")
         if not sh.is_numeric(target.get(TR, TC)):
-            return                                     # EnableEvents は False のまま(VBA どおり)
+            if not quirks.reproduce("B79"):
+                book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
+            return                                # B79: EnableEvents は False のまま(VBA どおり)
         book.events_enabled = True
         if TC in (2, 4, 6, 8, 11, 13, 15, 17, 19, 20):
             book.resume(lambda: sh.kensa_hantei(book, TR, TC), "検査判定")
@@ -628,7 +630,7 @@ def max_min(book: Book, temp: str = ZEN) -> None:
         if f.min_text == "" or f.max_text == "":
             return
         n, k = vbx.clng(vbx.val(f.min_text) + 6), vbx.clng(vbx.val(f.max_text) + 6)
-        erow, ecol = 36, 13
+        erow, ecol = 76, 13              # D22(W12): VBA は Erow = 36(Mit:156)。31 枚以上もあるので下線の消去を全行に
     elif f.work_flag == "P_H494":
         if f.h494_min_text == "" or f.h494_max_text == "":
             return
@@ -639,6 +641,14 @@ def max_min(book: Book, temp: str = ZEN) -> None:
     ws = book.ws(temp)
     mx = lambda c: _wmax(ws, n, k, c)  # noqa: E731
     mn = lambda c: _wmin(ws, n, k, c)  # noqa: E731
+    # B80: 空の列の MIN は 0 になり、空セル(Empty=0)と一致して 0 が書かれる。直すと空の列は除き、空セルとは一致させない
+    fix80 = not quirks.reproduce("B80")
+
+    def cmin(*cols: int) -> float:
+        if fix80:
+            mins = [mn(c) for c in cols if _wvals(ws, n, k, c)]
+            return min(mins) if mins else 0.0
+        return min(mn(c) for c in cols)
     max_atu = vbx.single(max(mx(2), mx(4), mx(6), mx(8)))
     min_atu = vbx.single(min(mn(2), mn(4), mn(6), mn(8)))
     if min_atu == 0:
@@ -654,17 +664,19 @@ def max_min(book: Book, temp: str = ZEN) -> None:
         min_atu = vbx.single(srt[1])
         if min_atu == 0:
             min_atu = vbx.single(srt[2])
+        if min_atu == 0 and fix80:
+            min_atu = vbx.single(cmin(2, 4, 6, 8))          # 厚の列が 3 つ以上空でも、値のある列の最小
     if f.work_flag == "P1":
         max_haba = vbx.single(max(mx(11), mx(13)))
-        min_haba = vbx.single(min(mn(11), mn(13)))
+        min_haba = vbx.single(cmin(11, 13))
         max_take = vbx.single(max(mx(15), mx(17)))
-        min_take = vbx.single(min(mn(15), mn(17)))
+        min_take = vbx.single(cmin(15, 17))
         ta, th, tt = 23, 25, 27
     elif f.work_flag == "P_H494":
         max_haba = vbx.single(max(mx(11), mx(13), mx(15)))
-        min_haba = vbx.single(min(mn(11), mn(13), mn(15)))
+        min_haba = vbx.single(cmin(11, 13, 15))
         max_take = vbx.single(max(mx(17), mx(19)))
-        min_take = vbx.single(min(mn(17), mn(19)))
+        min_take = vbx.single(cmin(17, 19))
         ta, th, tt = 22, 23, 24
     else:
         max_haba = min_haba = max_take = min_take = 0.0
@@ -678,7 +690,10 @@ def max_min(book: Book, temp: str = ZEN) -> None:
     def mark(cols: range, target: float, out: tuple[int, int]) -> None:
         for i in range(n, k + 1):
             for a in cols:
-                if sh.eq_single(ws.get(i, a), target):
+                v = ws.get(i, a)
+                if fix80 and sh.blank(v):
+                    continue
+                if sh.eq_single(v, target):
                     ws.underline.add((i, a))
                     book.write(ws, out[0], out[1], target)
                     break

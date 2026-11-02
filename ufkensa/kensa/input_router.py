@@ -270,7 +270,9 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
         if _blank_vis(state, f"E{i}"):
             return _set_target(state, f"E{i}")
 
-    if f[6]:                                                    # F(F11 以降は無い → KeyError = VBA の実行時エラー)
+    # F(F11 以降は無い → KeyError = VBA の実行時エラー)
+    # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見てエラー。直す: 極厚には F 列が無いので見ない
+    if f[6] and (quirks.reproduce("B63") or not state.is_work("極厚")):
         for i in rows:
             if _blank_vis(state, f"F{i}"):
                 return _set_target(state, f"F{i}")
@@ -348,6 +350,8 @@ def look_s_blank(state: KensaState, a: int, n: int, ken_no: str) -> None:
             return
         if f[6] and scan("F", True):
             return
+        if not quirks.reproduce("B60"):
+            return            # B60: 外の F ループは厚2ヵ所(4回検査)用。厚4ヵ所で隠れた F3/F4 を選ばない
     elif thin and state.at_butt_caption == "厚2ヵ所":
         def scan2(p: str) -> bool:
             for i in range(a, n + 1):
@@ -366,7 +370,7 @@ def look_s_blank(state: KensaState, a: int, n: int, ken_no: str) -> None:
             return
         if scan2("E"):
             return
-    if f[6]:                                                    # Select の外。表示を見ない(FormRelat:1260-1270)
+    if f[6]:                                                    # Select の外。表示を見ない(FormRelat:1260-1270。B60)
         for i in range(a, n + 1):
             if _blank(state, f"F{i}"):
                 pick(f"F{i}")
@@ -444,7 +448,8 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
         if _blank(state, f"E{i}"):
             pick(f"E{i}")
             return
-    if yama_is(state, 4):
+    # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見て実行時エラー。直す: 極厚には F 列が無いので見ない
+    if yama_is(state, 4) and (quirks.reproduce("B63") or not state.is_work("極厚")):
         for i in rows:
             if _blank(state, f"F{i}"):
                 pick(f"F{i}")
@@ -486,7 +491,7 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
     """UF1.INP_Change (UF1:4565-4651)。受信した `state.inp` を入力先へ入れ、判定を呼び、次の入力欄を決める。
 
     中断(MsgBox のあと Exit Sub)は `Stop`。PucketMove の「〜検査済」は知らせて終わり(戻り値の Message)。
-    VBA どおり、入力先が決まらず抜けるとき(INP.Tag="")は FlagLabel を 0 のまま残す。
+    B55: VBA は入力先が決まらず抜けるとき(INP.Tag="")に FlagLabel を 0 のまま残す。
     """
     msgs: list[Message] = []
     if state.flag_label != 1:
@@ -506,8 +511,17 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
     youc = state.youto if state.youto != "" else ""
     if state.auto == "on":
         pucket_move(state, state.paked, ken_no, youc, hooks, msgs)
+        # B61: 「ﾊﾟｹｯﾄ無し」でも VBA は前回の INP.Tag の欄で LoopText・Posting まで進む。直す: そこで抜ける
+        if state.paked not in PACKETS and not quirks.reproduce("B61"):
+            state.inp = ""
+            state.flag_label = 1
+            return msgs
 
     if state.inp_tag == "":
+        # B55: VBA は FlagLabel=0 のまま抜け、フォームを押すまで次の伝送を受け付けない。直す: ほかの抜け方と同じく戻す
+        if not quirks.reproduce("B55"):
+            state.inp = ""
+            state.flag_label = 1
         return msgs
     st = state.inp_tag
     if maker(state.inp) in PACKETS:
@@ -619,9 +633,14 @@ def diagonal_erase(state: KensaState, name: str) -> None:
 
 
 def ng_erase(state: KensaState, name: str) -> None:
-    """FormRelat.NGErase (FormRelat:1548-1600)。その位置の列に NG 色が残っていなければ NG? を空にする。"""
+    """FormRelat.NGErase (FormRelat:1548-1600)。その位置の列に NG 色が残っていなければ NG? を空にする。
+
+    B87: VBA は S..E の行 1〜12 しか見ない(極厚の行 13・14 の NG を見落とす)。
+    """
     p = vbx.left(name, 1)
     count = 10 if p == "F" else 12
+    if p != "F" and not quirks.reproduce("B87"):
+        count = 14            # B87: 極厚の丈3・4(行13・14)も見る
     fl = False
     for i in range(1, count + 1):
         c = state.ctl(f"{p}{i}")

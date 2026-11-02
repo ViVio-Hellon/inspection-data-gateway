@@ -39,7 +39,7 @@ from typing import Any, Callable, Optional
 
 from .. import trace
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
-               paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
+               paths, quality, quirks, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .grid import KensaState
 from .store import HOZON, LOT_HISTORY, MIMI, LocalStore, line_sheet
@@ -1632,11 +1632,12 @@ def _picture_name(path: Optional[str]) -> str:
 
 
 def quirks_reproduce_diag_d() -> bool:
-    """UF1:1195-1196 DiagDKou_BeforeUpdate が変換結果を DiagSKou に書く(B 一覧に無い。judge の報告で発見)。
+    """B43: UF1:1195-1196 DiagDKou_BeforeUpdate が変換結果を DiagSKou に書く。
 
-    B 番号が無いので quirks のスイッチは使わず、VBA どおり常に再現する。
+    再現: S 欄は D の値の Format("0.0") で上書き、D は 0.5 刻みに変換されないまま判定。
+    直す: ほかの位置と同じく D 欄自身を 0.5 刻みに変換して判定する(S 欄は触らない)。
     """
-    return True
+    return quirks.reproduce("B43")
 
 
 _session: Optional[Session] = None

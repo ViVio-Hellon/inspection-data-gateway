@@ -159,6 +159,14 @@ class GaugeTest(unittest.TestCase):
         self.run_gauge("#L2053.0")
         self.assertTrue(self.st.proofread_ok)
 
+    def test_fail_b66_fix_logs_value(self) -> None:
+        quirks.set_for_test({"B66": "fix"})
+        r = self.run_gauge("#L2052.6")
+        self.assertEqual(r.logs[0].msg, "*L-1_ｹﾞｰｼﾞ測定:2052.6")            # 消す前の値をログに書く
+        self.assertEqual(self.st.sokutei, "")                            # 画面は VBA どおり消える
+        self.st = cal.CalibrationState("L-1", kname="阿部", mode=cal.WHITE)
+        self.assertEqual(self.run_gauge("#L2053.0").logs[0].msg, "*L-1_ｹﾞｰｼﾞ測定:2053.0")
+
     def test_fail_b14_fix_red(self) -> None:
         quirks.set_for_test({"B14": "fix"})
         r = self.run_gauge("#L2053.8")
@@ -258,6 +266,24 @@ class RankTest(unittest.TestCase):
         self.assertEqual(r.ranks, {1: "1位：　2026.10.04　値：2054.1　作業者：阿部",
                                    2: "2位：　2026.10.01　値：2053.9　作業者：阿部",
                                    4: "1位：　2026.10.02　値：2052.5　作業者：阿部"})
+
+    def test_rank_b67_fix_shows_new_records_at_once(self) -> None:
+        quirks.set_for_test({"B67": "fix"})
+        try:
+            c = kiroku(("2026.09.30", None, 2053.9), ("2026.10.01", None, 2053.9), ("2026.10.02", None, "2052.5"),
+                       ("2026.10.03", "1直", 2053.0), ("2026.10.04", None, 2054.1))
+            c[(2, 6)] = c[(3, 6)] = c[(4, 6)] = c[(6, 6)] = "阿部"
+            r = cal.calibration_rank(c, "L-1", now=at(10), red_rows={2, 3, 4, 6})
+            self.assertEqual(r.ranks, {1: "1位：　2026.10.04　値：2054.1　作業者：阿部",
+                                       2: "2位：　2026.10.01　値：2053.9　作業者：阿部",
+                                       4: "1位：　2026.10.02　値：2052.5　作業者：阿部"})
+            # 前回の写し(I:O)が今回より長く残っていても、消した後で数えるので古い行は数えない
+            c[(9, 10)] = 2060.0
+            c[(9, 9)] = "古い"
+            r = cal.calibration_rank(c, "L-1", now=at(10), red_rows={2, 3, 4, 6})
+            self.assertEqual(r.ranks[1], "1位：　2026.10.04　値：2054.1　作業者：阿部")
+        finally:
+            quirks.set_for_test(None)
 
     def test_hinsho_rank_exits_on_m6(self) -> None:
         r = cal.hinsho_rank(hinsho(), now=at(10))

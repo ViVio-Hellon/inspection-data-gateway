@@ -431,5 +431,125 @@ class BadTest(QuirkCase):
         self.assertEqual(s.bad["S"].value, "")
 
 
+class FixedQuirksTest(QuirkCase):
+    """B55・B60・B61・B63・B87 の「再現」(既定)と「直す」。"""
+
+    def test_b55_flag_restored(self) -> None:
+        # 作業未選択: PucketMove が何もせず INP.Tag="" で抜ける(UF1:4593)
+        s = KensaState(proofread_flag="ok")
+        ir.receive(s, "#L395.8", FakeHooks())
+        self.assertEqual((s.flag_label, s.inp), (0, "#L395.8"))          # 再現: FlagLabel=0 のまま
+        quirks.set_for_test({"B55": "fix"})
+        s = KensaState(proofread_flag="ok")
+        ir.receive(s, "#L395.8", FakeHooks())
+        self.assertEqual((s.flag_label, s.inp), (1, ""))
+        # 検査済(Auto="off")のあとも次の伝送で FlagLabel が戻る
+        s = ready()
+        fill(s, cells(FIVE, range(1, 5)))
+        ir.receive(s, "DT10002+0000021.712M", FakeHooks())
+        h = FakeHooks()
+        self.assertEqual(ir.receive(s, "DT10002+0000022.000M", h), [])
+        self.assertEqual((s.flag_label, s.inp, h.calls), (1, "", []))
+
+    def test_b61_unknown_packet(self) -> None:
+        s = ready(inp_tag="S3")
+        h = FakeHooks()
+        msgs = ir.receive(s, "ABC123", h)
+        self.assertEqual(msgs[0].text, "ﾊﾟｹｯﾄ無し:Exit Sub_PucketMove")
+        self.assertIn(("loop_text", "S3"), h.calls)                       # 再現: 前回の欄で判定が走る
+        quirks.set_for_test({"B61": "fix"})
+        s = ready(inp_tag="S3")
+        h = FakeHooks()
+        msgs = ir.receive(s, "ABC123", h)
+        self.assertEqual(msgs[0].text, "ﾊﾟｹｯﾄ無し:Exit Sub_PucketMove")
+        self.assertNotIn("loop_text", [c[0] for c in h.calls])
+        self.assertNotIn("posting", [c[0] for c in h.calls])
+        self.assertEqual((s.inp, s.flag_label, s.inp_tag, s.cells["S3"].value), ("", 1, "S3", ""))
+        # 正しい伝送はそのまま
+        ir.receive(s, "#〆1.5", h)
+        self.assertEqual(s.cells["S1"].value, "1.5")
+
+    def _b60_state(self) -> KensaState:
+        s = ready("薄板", at_butt_caption="厚4ヵ所", yama="4")
+        fill(s, cells(FIVE, range(1, 11)))
+        fill(s, [f"F{i}" for i in (1, 2, 5, 6, 7, 8, 9, 10)])
+        for i in range(1, 11):
+            s.cells[f"F{i}"].visible = True
+        s.cells["F3"].visible = False
+        s.cells["F4"].visible = False
+        return s
+
+    def test_b60_hidden_f3(self) -> None:
+        s = self._b60_state()
+        ir.look_s_blank(s, 1, 10, "L")
+        self.assertEqual(s.inp_tag, "F3")                                 # 再現
+        quirks.set_for_test({"B60": "fix"})
+        s = self._b60_state()
+        ir.look_s_blank(s, 1, 10, "L")
+        self.assertEqual(s.inp_tag, "")                                   # 入力先なし
+        s = self._b60_state()
+        s.cells["F6"].value = ""
+        ir.look_s_blank(s, 1, 10, "L")
+        self.assertEqual(s.inp_tag, "F6")                                 # 見える F はそのまま
+        # 厚2ヵ所(4 回検査)は外の F ループで F3 を選ぶ(変わらない)
+        s = self._b60_state()
+        s.at_butt_caption = "厚2ヵ所"
+        ir.look_s_blank(s, 1, 10, "L")
+        self.assertEqual(s.inp_tag, "F3")
+
+    def test_b63_gokuatsu_yama4(self) -> None:
+        s = ready("極厚", yama="4")
+        fill(s, cells(FIVE, range(1, 15)))
+        fill(s, [f"F{i}" for i in range(1, 11)])
+        with self.assertRaises(KeyError):                                 # 再現: F11 を見て実行時エラー
+            ir.look_blank(s, 1, 14)
+        quirks.set_for_test({"B63": "fix"})
+        ir.look_blank(s, 1, 14)
+        self.assertEqual(s.inp_tag, "")
+        s = ready("極厚", yama="4")
+        fill(s, cells(FIVE, range(1, 15)))
+        ir.look_blank(s, 1, 14)
+        self.assertEqual(s.inp_tag, "")                                   # 極厚では F を入力先にしない
+        s = ready("厚板", yama="4")                                         # 極厚以外は変わらない
+        fill(s, cells(FIVE, range(1, 11)))
+        ir.look_blank(s, 1, 10)
+        self.assertEqual(s.inp_tag, "F1")
+
+    def test_b63_pucket_move(self) -> None:
+        # 極厚・山数 4: 行 13 が非表示の空欄 → AllCheck は真、S..E の表示つき空欄なし → F ループで F11
+        s = ready("極厚", yama="4")
+        fill(s, cells(FIVE, range(1, 15)))
+        fill(s, [f"F{i}" for i in range(1, 11)])
+        s.cells["E13"].value = ""
+        s.cells["E13"].visible = False
+        with self.assertRaises(KeyError):
+            ir.pucket_move(s, "#〆", "L", "", FakeHooks())
+        quirks.set_for_test({"B63": "fix"})
+        ir.pucket_move(s, "#〆", "L", "", FakeHooks())
+        self.assertEqual(s.inp_tag, "")
+
+    def test_b87_rows_13_14(self) -> None:
+        def st() -> KensaState:
+            s = ready("極厚")
+            s.ng["S"].value = "許容"
+            s.cells["S13"].value = "2502.0"
+            s.cells["S13"].color = grid.COLOR_NG
+            return s
+        s = st()
+        ir.ng_erase(s, "S1")
+        self.assertEqual(s.ng["S"].value, "")                             # 再現: 行 13 の NG を見ない
+        quirks.set_for_test({"B87": "fix"})
+        s = st()
+        ir.ng_erase(s, "S1")
+        self.assertEqual(s.ng["S"].value, "許容")
+        s.cells["S13"].color = grid.COLOR_OK
+        ir.ng_erase(s, "S1")
+        self.assertEqual(s.ng["S"].value, "")
+        s = ready("薄板", yama="4")                                         # F は 1〜10 のまま
+        s.ng["F"].value = "NG"
+        ir.ng_erase(s, "F1")
+        self.assertEqual(s.ng["F"].value, "")
+
+
 if __name__ == "__main__":
     unittest.main()

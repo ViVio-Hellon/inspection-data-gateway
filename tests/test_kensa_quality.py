@@ -970,3 +970,69 @@ class VerifierEmptyFieldsTest(_DbCopy):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ------------------------------------------------------------------
+# 直した場合の分岐(B71・B72・B73・B74)
+# ------------------------------------------------------------------
+class FixBranchTest(unittest.TestCase):
+    def setUp(self) -> None:
+        kensa_fixture.use_offline()
+        q.clear_caches()
+
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+
+    def test_b71_boundary_same_precision(self) -> None:
+        args = ("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.6, 1217, 2438)
+        self.assertEqual(q.db_return_item(*args).items, "")          # 再現: Single(0.6) > 0.6 で外れる
+        quirks.set_for_test({"B71": "fix"})
+        r = q.db_return_item(*args)                                  # 直す: 管理番号1(0.6–0.6)に一致
+        self.assertEqual(r.items, ",フリー反り")
+        self.assertEqual((r.uf1["HURIS"], r.uf1["HizCome.Tag"]), ("40", "40mm以下"))
+        # 0.65–0.65(管理番号2、丈 2730)
+        self.assertEqual(q.db_return_item("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.65, 1217, 2730).items,
+                         ",フリー反り")
+        # 範囲の外はそのまま外れる
+        self.assertEqual(q.db_return_item("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.61, 1217, 2438).items, "")
+        # check_thickness の既定(他の表)は Single のまま
+        self.assertFalse(q.check_thickness(["0.6", "0.6", "0.6"], 1, 2, 3, 0.6))
+
+    def test_b72_lateral_tolerance_from_lateral_row(self) -> None:
+        args = ("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
+        self.assertEqual(q.db_return_item(*args).uf1["LateralText"], "1.0")   # 再現: 直角度の行の "1"
+        quirks.set_for_test({"B72": "fix"})
+        r = q.db_return_item(*args)
+        self.assertEqual(r.items, ",直角度,ラテラルボー")
+        # 直す: ラテラルボーが「要」の行(管理番号10)の公差 "等級" → 数でも別表でもないので書かない(QP:1366)
+        self.assertNotIn("LateralText", r.uf1)
+        self.assertEqual(r.uf1["Sumisei.Caption"], "ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ")
+
+    def test_b73_122_D_no_match(self) -> None:
+        # LX120J0: DIM_122_D に一致なし。再現は中耳4欄を「不問」で上書き(QDB:1366-1369)
+        f = qv.display_distortion(q.read_lot("LX120J0"), qv.QualityForm()).form
+        self.assertEqual((f.Mimi1, f.Naka1, f.Mimi2, f.Naka2), ("不問",) * 4)
+        quirks.set_for_test({"B73": "fix"})
+        f = qv.display_distortion(q.read_lot("LX120J0"), qv.QualityForm()).form
+        self.assertEqual((f.Mimi1, f.Naka1, f.Mimi2, f.Naka2), ("2.0", "2.0", "", ""))   # 等級表の値が残る
+        # 一致があれば今までどおり「不問」(N7120E1)
+        f = qv.display_distortion(q.read_lot("N7120E1"), qv.QualityForm()).form
+        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Naka1, f.Mimi1), ("1.5", "1.0", "不問", "不問"))
+
+    def test_b74_grade_not_3_4_in_skip_qp(self) -> None:
+        # L1099R0(0.5mm)は QP 表に一致なし → SkipQP。等級 5 だと TableN が空のまま表を開いて止まる
+        lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "5"})
+        from ufkensa.kensa import datasource
+        with self.assertRaises(datasource.TableMissing):
+            q.dbqp("L1099R0", "H", "x", "x", lot)
+        quirks.set_for_test({"B74": "fix"})
+        r = q.dbqp("L1099R0", "H", "x", "x", lot)
+        self.assertEqual([m.text for m in r.messages], ["歪等級が3,4以外です"])
+        self.assertEqual(r.kousa[0][q.K_NAKA:q.K_MIMI + 1], [None, None])         # 中耳は空のまま skipEnd
+        # 指示値があれば skipEnd で補う(QP:779-780)
+        lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "5", "指示_中歪_高さ": "2", "指示_耳歪_高さ": ""})
+        r = q.dbqp("L1099R0", "H", "x", "x", lot)
+        self.assertEqual(r.kousa[0][q.K_NAKA], "2")
+        # 等級 3/4 は変わらない
+        r = q.dbqp("L1099R0", "H", "x", "x", q.read_lot("L1099R0"))
+        self.assertEqual(r.messages, [])

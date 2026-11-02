@@ -252,6 +252,20 @@ class PackDbTest(unittest.TestCase):
         self.assertTrue(b2.fx.messages[-1].text.startswith("DBにデータが見つかりません。"))
 
 
+class EventsTest(unittest.TestCase):
+    def tearDown(self) -> None:
+        quirks.set_for_test(None)
+
+    def test_text_input_b79(self) -> None:                # KySh: IsNumeric で抜ける
+        b = cask_book()
+        b.user_edit(7, 28, "良")
+        self.assertFalse(b.events_enabled)
+        quirks.set_for_test({"B79": "fix"})
+        b = cask_book()
+        b.user_edit(7, 28, "良")
+        self.assertTrue(b.events_enabled)
+
+
 class MaxMinTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -280,6 +294,17 @@ class MaxMinTest(unittest.TestCase):
         cask.max_min(b)
         self.assertEqual(ws.get(4, 22), 36.0)
         self.assertIn((7, 8), ws.underline)
+
+    def test_b80_empty_column(self) -> None:
+        b = self.book("4")
+        quirks.set_for_test({"B28": "fix", "B80": "fix"})
+        cask.max_min(b)
+        ws = b.ws(sh.CASK)
+        self.assertEqual((ws.get(3, 23), ws.get(4, 23)), (1528.5, 1527.5))   # 空の M 列は除く
+        self.assertIn((9, 11), ws.underline)
+        self.assertNotIn((7, 13), ws.underline)
+        self.assertIn(ws.get(3, 24), (None, ""))               # 丈が全部空なら書かない
+        self.assertEqual(ws.get(4, 22), 36.0)
 
     def test_b28_count3_header_row(self) -> None:        # 3 点: 行 6 の「厚1」と Single を比べて型エラー(U1)
         b = self.book("3")

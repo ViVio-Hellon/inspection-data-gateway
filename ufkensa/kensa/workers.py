@@ -421,7 +421,9 @@ def get_worker_name(day_max: str, reg: WorkerRegistry) -> str:
     if t is None:
         return ""
     if t == "":
-        raise IndexError("GetWorkerName: 直の検査員が空(VBA の実行時エラー 9)")
+        if quirks.reproduce("B69"):
+            raise IndexError("GetWorkerName: 直の検査員が空(VBA の実行時エラー 9)")
+        return ""                                  # 直した側: 空なら名前なし(w = "" と同じ扱い)
     return t.split("_")[-1]
 
 
@@ -530,7 +532,9 @@ def name_match(cells: Cells, reg: WorkerRegistry) -> NameMatchResult:
     fix = not quirks.reproduce("B21")
     last_r, last_c = (8, 14) if fix else (7, 12)
     writes: list[CellWrite] = []
-    if fix:
+    # B86: R1 の "OUT"(起動時の不一致の印)は N:Q の外なので消えず、起動のたびに不一致の画面が出る。
+    # 直すと照合のたびに消し、まだ不一致があれば下で "OUT" を書き直す(B21 を直した場合も同じ)
+    if fix or not quirks.reproduce("B86"):
         writes.append(CellWrite(1, 18, ""))
     done: dict[str, int] = {}
     for c in range(1, last_c + 1):                 # 列 → 行の順(VBA の For i(列) / For a(行))
@@ -543,9 +547,13 @@ def name_match(cells: Cells, reg: WorkerRegistry) -> NameMatchResult:
     for j, (name, no) in enumerate(done.items(), start=2):
         writes += [CellWrite(j, 14, no), CellWrite(j, 15, name)]
     # 登録検査員: Split(Join(Split(T1,"_")) & " " & …)(名前に半角空白があると分かれる)
-    joined = " ".join(t.replace("_", " ") for t in (reg.t1, reg.t2, reg.t3))
+    if quirks.reproduce("B68"):
+        words = " ".join(t.replace("_", " ") for t in (reg.t1, reg.t2, reg.t3)).split(" ")
+    else:
+        # 直した側: 氏名の区切りの "_" だけで分ける(半角空白を含む氏名もそのまま照合)
+        words = [w for t in (reg.t1, reg.t2, reg.t3) for w in t.split("_")]
     registered: dict[str, int] = {}
-    for w in joined.split(" "):
+    for w in words:
         if w != "" and w not in registered:
             registered[w] = len(registered) + 1
     writes.append(CellWrite(1, 16, "登録検査員"))
@@ -638,7 +646,9 @@ def daily_report(n: int, ctx: DailyContext) -> list[CellWrite]:
     if not ctx.exists:
         return writes
     if ctx.history_rows is None:
-        raise IndexError("Lot情報履歴 がありません(VBA は空のシートを作り実行時エラー 9)")
+        if quirks.reproduce("B69"):
+            raise IndexError("Lot情報履歴 がありません(VBA は空のシートを作り実行時エラー 9)")
+        return writes                              # 直した側: 履歴が無い = ロットの一致なしと同じく何もしない
     cells = ctx.cells
 
     def put(r: int, c: int, v: Any) -> None:
@@ -655,8 +665,7 @@ def daily_report(n: int, ctx: DailyContext) -> list[CellWrite]:
         return writes
     now = ctx.now
     if n == 1:
-        put(1, 1, yea_dayr_check(hhmm(now), now=now, facility=ctx.facility, shifts=ctx.shifts) + "_"
-            + time_check(hhmmss(now), facility=ctx.facility, shifts=ctx.shifts))
+        put(1, 1, _daily_a1(now, ctx))
         b1 = _daily_line_b1(ctx)
         if b1 is not None:
             put(1, 2, b1)
@@ -735,15 +744,24 @@ class DailyCreateResult:
     writes: list[CellWrite]
 
 
+def _daily_a1(now: datetime, ctx: DailyContext) -> str:
+    """日報の A1「日付_直」(Worker:724-725, 783)。
+
+    B70: VBA は日付を YeaDayrCheck("hh:mm")、直を TimeCheck("hh:mm:ss") で出すので、7:00:01〜7:00:59 は
+    「前日_1直」になる。直すと両方 "hh:mm" で比べる(7:00 台の 1 分間は「前日_3直」。C1 の検査員=T3 と揃う)。
+    """
+    day = yea_dayr_check(hhmm(now), now=now, facility=ctx.facility, shifts=ctx.shifts)
+    shift_time = hhmmss(now) if quirks.reproduce("B70") else hhmm(now)
+    return day + "_" + time_check(shift_time, facility=ctx.facility, shifts=ctx.shifts)
+
+
 def daily_create(ctx: DailyContext) -> DailyCreateResult:
     """Worker.Daily_Create (Worker:719-743)。直が変わっていたら日報シートを作り直し、見出しと (1)(3) を書く。
 
     A1 との比較は YeaDayrCheck("hh:mm") と TimeCheck("hh:mm:ss") の組み合わせ(7:00 台の 1 分間は
     「前日_1直」になる)。シートがあっても毎回 (1)(3) を書く(VBA どおり)。
     """
-    day_return = yea_dayr_check(hhmm(ctx.now), now=ctx.now, facility=ctx.facility, shifts=ctx.shifts)
-    set_time = time_check(hhmmss(ctx.now), facility=ctx.facility, shifts=ctx.shifts)
-    recreate = (not ctx.exists) or _text(ctx.cells.get((1, 1))) != day_return + "_" + set_time
+    recreate = (not ctx.exists) or _text(ctx.cells.get((1, 1))) != _daily_a1(ctx.now, ctx)
     if recreate:
         ctx.cells.clear()
     ctx.exists = True

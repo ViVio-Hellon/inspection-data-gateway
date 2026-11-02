@@ -660,6 +660,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
     # VBA の For は上限を最初に決める。列番号(C)も最初の表のまま。配列だけ差し替わることがある(B27)
     arr, fields = rows, f
     itti = False
+    hit_any = False                 # 条件(調質・用途・納入先・厚)に当たった行があった(B73)
     for i in range(len(rows)):
         r = arr[i] if i < len(arr) else None
         if r is None:
@@ -672,6 +673,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
             continue
         if vbx.val(cell(r, C["オーダー板厚"])) != vbx.val_single(o_atu):
             continue
+        hit_any = True
         if vstr(cell(r, C["フラットネス品質等級"])) == "":
             form.HaHiz1 = vbx.fmt(cell(r, C["幅公差"]), "0.0")
             _zero_clear(form, "HaHiz1")
@@ -709,6 +711,8 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
             break
     _zero_clear(form, "HaHiz1")
     _zero_clear(form, "TaHiz1")
-    form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
+    if hit_any or quirks.reproduce("B73"):
+        # B73: VBA は一致が無くても中耳を「不問」で上書きする。直した場合は一致した行があったときだけ
+        form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
     dedupe()
     return res
