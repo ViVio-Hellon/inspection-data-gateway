@@ -61,9 +61,12 @@
             <b>仕掛台帳だけ</b>第1パス(台帳 = VBA の MainPath)と第2パス(控え = NextPath)を持ち、<b>モードはここにだけ効きます</b>:
             オンラインは第1を読み、第1に無いファイル・ロットだけ第2を読みます。オフラインは第2だけを読みます(無ければ「…がありません」)。
             仕掛の DB は手元へ写してから読みます(写せないファイルは読みません)。</p>
+          <p class="setup-note" id="pathsSetup" role="status" hidden></p>
           <p class="muted" id="pathsLock"></p>
           <div class="field">
             <button class="btn" type="button" id="checkAll">すべて確認</button>
+            <button class="btn" type="button" id="resetAll">すべて既定に戻す</button>
+            <small class="muted">既定 = VBA のオンラインの値(本番のフォルダ)。仕掛台帳は 第1・第2・2つ目の名前をまとめて戻します。ログの出力パスとモードは変えません。</small>
           </div>
           <div class="tablewrap">
             <table class="table" id="pathsTable">
@@ -116,20 +119,49 @@
     </section>
 
     <section class="tabpanel tabpanel--scroll" id="panel-rights" role="tabpanel" aria-labelledby="tab-rights" hidden>
+      <style>
+        #panel-rights > .card { flex-shrink: 0; }
+        #rightsKv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 8px; }
+        #rightsKv dt { color: var(--muted); }
+        #rightsKv dd { margin: 0; overflow-wrap: anywhere; }
+        #panel-rights th, #panel-rights td { text-align: left; white-space: normal; }
+        #rightsFindings { margin: 0; padding-left: 1.4em; line-height: 1.7; }
+        .setup-note { margin: 0 0 8px; padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); font-weight: 700; }
+      </style>
       <section class="card">
-        <header><h3>この人・この端末の権限</h3><span class="lv" id="rightsLevel"></span></header>
+        <header><h3>この人・この PC の権限</h3><span class="lv" id="rightsLevel"></span></header>
         <div class="pad">
+          <p class="setup-note" id="rightsSetup" role="status" hidden></p>
           <dl class="kv" id="rightsKv"></dl>
           <p class="muted" id="rightsReason"></p>
-          <div class="btn-row"><button class="btn" type="button" id="reloadRights">権限を読み直す</button></div>
+          <div class="btn-row">
+            <button class="btn" type="button" id="reloadRights">権限を読み直す</button>
+            <button class="btn" type="button" id="rightsToPaths">アクセス権限マスタの場所(使用パス)へ</button>
+          </div>
         </div>
       </section>
       <section class="card">
-        <header><h3>UF検査判定の権限コード</h3></header>
+        <header><h3>この PC に当たった行</h3><span class="lv lv--info" id="rightsMatchedCount"></span></header>
         <div class="pad">
-          <p class="muted">アクセス権限の表(梱包資材総合ツールと共通)の「権限」列に書きます。検査そのものは権限なしでできます。</p>
-          <div class="tablewrap"><table class="table" id="codesTable"><thead><tr><th>権限</th><th>できること</th><th>この端末</th></tr></thead><tbody></tbody></table></div>
-          <p class="muted" id="rightsTable"></p>
+          <p class="muted">ログインID と PC名 の<b>両方</b>がこの PC と同じ行です(空欄は問わない・両方空の行は誰の行でもない・大文字小文字と全角半角は問わない・<code>DOMAIN\user</code> は <code>user</code> でも当たる・有効が 0 / いいえ / 無効 の行は読まない)。</p>
+          <div class="tablewrap"><table class="table" id="rightsMatched"><thead><tr><th>行</th><th>管理番号</th><th>ログインID</th><th>PC名</th><th>権限</th><th>有効</th><th>備考</th></tr></thead><tbody></tbody></table></div>
+          <p class="muted" id="rightsIgnored"></p>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>「権限」列の書き方</h3></header>
+        <div class="pad">
+          <p class="muted">梱包資材マスタの「アクセス権限」表(all-tools 日報ツールと共通)の「権限」列に書きます。1つの欄に「,」「、」「/」「・」「;」で並べられます。ライン名は正規の呼び名だけを読みます(文字の幅だけ揃えます)。検査そのものは権限なしでできます。</p>
+          <div class="tablewrap"><table class="table" id="codesTable"><thead><tr><th>権限</th><th>意味</th><th>この PC</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>表ぜんぶの点検</h3><span class="lv" id="rightsFindCount"></span></header>
+        <div class="pad">
+          <p class="muted">この PC の行に限らず、表の全部の行を確かめます(ラインのつもりで読めない値・ログインIDもPC名も空の行・同じログインID・PC名にラインが2つ)。mode:field などラインでない値は言いません。</p>
+          <ul id="rightsFindings"></ul>
+          <h4 style="margin:12px 0 4px">管理者(Administrator)の行</h4>
+          <div class="tablewrap"><table class="table" id="rightsAdmins"><thead><tr><th>行</th><th>管理番号</th><th>ログインID</th><th>PC名</th><th>権限</th><th>有効</th><th>備考</th></tr></thead><tbody></tbody></table></div>
         </div>
       </section>
     </section>

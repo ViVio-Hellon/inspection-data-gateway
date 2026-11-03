@@ -7,6 +7,7 @@ import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import * as tabs from "../tabs.js";
 import { previewFile } from "../sound.js";
+import { confirmBox } from "../askbox.js";
 
 const $ = (id) => document.getElementById(id);
 let S = null;
@@ -37,11 +38,17 @@ function renderTerminal() {
   const maru = fac.value === "丸徳";
   no.hidden = !maru;
   $("lineNoLabel").hidden = !maru;
-  const canChange = t.unset || S.admin;
+  const canChange = t.unset || S.master_edit.possible;
   fac.disabled = no.disabled = $("saveTerminal").disabled = !canChange;
   $("termLevel").textContent = t.unset ? "未設定" : t.label;
   $("termLevel").className = "lv " + (t.unset ? "lv--ng" : "lv--ok");
-  $("termNote").textContent = canChange ? "" : "変えるには管理者の権限が要ります(権限 の面を見てください)。";
+  const ln = S.rights.line;
+  const notes = [];
+  if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタの値が変わったときだけ自動で当てます)。`);
+  else if (ln.problem) notes.push("アクセス権限マスタではラインが決まりません: " + ln.problem);
+  if (S.rights.applied) notes.push(S.rights.applied + "。");
+  if (!t.unset) notes.push(canChange ? "手で変えるときは管理者パスワードを聞きます。" : "変えるには管理者の権限と管理者パスワードが要ります(権限 の面を見てください)。");
+  $("termNote").textContent = notes.join(" ");
 
   const box = $("modeChoices");
   box.replaceChildren(...S.modes.map((m) => {
@@ -66,7 +73,7 @@ function pathInput(p, field, ariaLabel) {
   input.style.minWidth = "22em";
   input.value = p[field] ?? "";
   input.dataset.field = field;
-  input.disabled = !S.admin;
+  input.disabled = !S.master_edit.possible;
   input.setAttribute("aria-label", ariaLabel);
   if (p.key === "log") input.placeholder = "空ならこの端末のローカル(logs)";
   box.append(input);
@@ -75,6 +82,8 @@ function pathInput(p, field, ariaLabel) {
   if (p[changedKey]) {
     const s = document.createElement("small");
     s.className = "muted";
+    s.style.display = "block";
+    s.style.overflowWrap = "anywhere";
     s.textContent = "既定: " + (p[defKey] || (p.key === "log" ? "この端末のローカル(logs)" : "(空)"));
     box.append(s);
   }
@@ -105,7 +114,7 @@ function lotPathCell(p, td, inputs, names) {
     inp.style.width = "14em";
     inp.value = n.value;
     inp.placeholder = n.first;
-    inp.disabled = !S.admin;
+    inp.disabled = !S.master_edit.possible;
     inp.dataset.db = n.db;
     inp.dataset.orig = n.value;
     inp.setAttribute("aria-label", `2つ目の名前(${n.first} の代わり)`);
@@ -129,9 +138,16 @@ function lotPathCell(p, td, inputs, names) {
 function renderPaths() {
   const modeLabel = (S.modes.find((m) => m.key === S.mode) || {}).label;
   $("pathsMode").textContent = "いま: " + modeLabel;
-  $("pathsLock").textContent = S.admin
-    ? (S.master_edit.ok ? "編集できます(管理者パスワードを入れてあります)。" : "変えるときは管理者パスワードを聞きます。")
-    : "変えるには、アクセス権限の「管理者」と管理者パスワードが要ります。";
+  const me = S.master_edit;
+  const setup = $("pathsSetup");
+  setup.hidden = !me.setup;
+  setup.textContent = me.setup ? `${me.setup_reason}(設定 → 権限 で確かめられます)。` : "";
+  $("pathsLock").textContent = me.possible
+    ? (me.ok ? "編集できます(管理者パスワードを入れてあります)。" : "変えるときは管理者パスワードを聞きます。")
+    : "変えるには、アクセス権限の「管理者」(Administrator)と管理者パスワードが要ります。";
+  const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || p.second_names.some((n) => n.value))));
+  $("resetAll").disabled = !me.possible || !changed.length;
+  $("resetAll").title = changed.length ? `既定から変わっている項目: ${changed.map((p) => p.label).join("・")}` : "すべて既定のままです";
   const body = $("pathsTable").tBodies[0];
   body.replaceChildren(...S.paths.map((p) => {
     const tr = document.createElement("tr");
@@ -164,21 +180,23 @@ function renderPaths() {
     check.textContent = "確認";
     check.addEventListener("click", () => checkOne(p.key, status));
     act.append(check);
-    if (S.admin) {
+    if (p.key === "log" ? S.admin : S.master_edit.possible) {
       const save = document.createElement("button");
       save.className = "btn btn--primary";
       save.type = "button";
       save.textContent = "保存";
       save.addEventListener("click", () => saveRow(p, inputs, names));
       act.append(" ", save);
-      const resets = p.single ? (p.changed ? [["", "既定に戻す"]] : [])
-        : ["first", "second"].filter((f) => p[f + "_changed"]).map((f) => [f, (f === "first" ? "第1" : "第2") + "を既定に"]);
-      for (const [slot, text] of resets) {
+      const lotChanged = !p.single && (p.first_changed || p.second_changed || p.second_names.some((n) => n.value));
+      if (p.key === "log" ? p.changed : (p.single ? p.changed : lotChanged)) {
         const reset = document.createElement("button");
         reset.className = "btn";
         reset.type = "button";
-        reset.textContent = text;
-        reset.addEventListener("click", () => postPath({ key: p.key, slot, path: "", reset: true }, "既定に戻しました"));
+        reset.textContent = "既定に戻す";
+        reset.title = p.single ? "既定: " + (p.default || "(空)") : "第1・第2・2つ目の名前をまとめて既定に戻します";
+        reset.addEventListener("click", () => (p.key === "log"
+          ? postPath({ key: p.key, path: "", reset: true }, "ログの出力パスを既定に戻しました")
+          : resetPaths({ key: p.key })));
         act.append(" ", reset);
       }
     }
@@ -307,27 +325,69 @@ async function checkSoundDir() {
   loadSound();
 }
 
-function renderRights() {
-  const r = S.rights;
-  $("rightsLevel").textContent = r.label;
-  $("rightsLevel").className = "lv " + (S.admin ? "lv--ok" : "lv--info");
-  const kv = $("rightsKv");
-  kv.replaceChildren();
-  for (const [k, v] of [["ログインID", r.user], ["PC名", r.pc], ["読んだ表", r.table.path || "(なし)"]]) {
+function kvRows(el, rows) {
+  el.replaceChildren();
+  for (const [k, v, cls] of rows) {
     const dt = document.createElement("dt");
     dt.textContent = k;
     const dd = document.createElement("dd");
     dd.textContent = v;
-    kv.append(dt, dd);
+    if (cls) dd.className = cls;
+    el.append(dt, dd);
   }
-  $("rightsReason").textContent = r.reason;
-  $("codesTable").tBodies[0].replaceChildren(...r.known.map((c) => {
+}
+
+function rowsTable(table, rows) {
+  table.tBodies[0].replaceChildren(...rows.map((r) => {
     const tr = document.createElement("tr");
-    const on = c.code === "ufkensa:admin" ? S.admin : r.codes.includes(c.code) || r.source === "unset";
-    tr.append(cell(c.code, "mono"), cell(c.label), cell(on ? "あり" : "なし"));
+    for (const k of ["行", "管理番号", "ログインID", "PC名", "権限", "有効", "備考"]) tr.append(cell(r[k] == null ? "" : String(r[k])));
     return tr;
   }));
-  $("rightsTable").textContent = r.table.problem ? "表を読めませんでした: " + r.table.problem : "";
+}
+
+function renderRights() {
+  const r = S.rights;
+  const t = r.table;
+  $("rightsLevel").textContent = r.label;
+  $("rightsLevel").className = "lv " + (r.admin ? "lv--ok" : "lv--info");
+  const setup = $("rightsSetup");
+  setup.hidden = !r.setup;
+  setup.textContent = r.setup ? S.master_edit.setup_reason + "。使用パス「アクセス権限マスタ」に 梱包資材マスタ.sqlite3(またはそのフォルダ)を入れると、マスタの Administrator の行で決まるようになります。" : "";
+  const src = { unset: "未設定", master: "読めました", cache: "届かない(前回の結果)", unreachable: "読めません" }[r.source] || r.source;
+  kvRows($("rightsKv"), [
+    ["ログインID", r.user || "(不明)", "mono"],
+    ["PC名", r.pc || "(不明)", "mono"],
+    ["アクセス権限マスタ", t.configured ? t.text : "(未設定)", "mono"],
+    ["読むファイル", t.path || `(フォルダを入れたときは その中の ${t.default_file})`, "mono"],
+    ["読めたか", t.found ? `${src}(${t.rows} 行)` : `${src}${t.problem ? ": " + t.problem : ""}`, t.found ? "lv--ok" : "lv--ng"],
+    ["決まった権限", r.codes.length ? r.codes.join("・") : "なし(一般)"],
+    ["この PC のライン", r.line.text || (r.line.problem ? "決めません: " + r.line.problem : "マスタに書いてありません"), r.line.problem ? "lv--ng" : ""],
+  ]);
+  const notes = [r.reason, ...r.line.notes, r.applied ? r.applied + "。" : ""].filter(Boolean);
+  $("rightsReason").textContent = notes.join(" ");
+  $("rightsMatchedCount").textContent = `${r.matched.length} 行`;
+  rowsTable($("rightsMatched"), r.matched);
+  $("rightsIgnored").textContent = r.ignored.length ? "読まなかった権限: " + r.ignored.join("・") : "";
+  const codes = [
+    ...r.known.map((c) => [c.code, c.label, (c.code === "Administrator" ? r.admin : r.codes.includes(c.code) || r.source === "unset") ? "あり" : "なし"]),
+    ...r.aliases.map((a) => [a.code, `${a.same_as} と同じ(前の書き方。互換のため読みます)`, ""]),
+    ...r.lines.map((l) => [l.master, `この PC のライン → 設備名 ${l.facility}`, r.line.facility === l.facility ? "この PC" : ""]),
+    ["それ以外", "読みません(mode:field・機側・AIM など、ほかのツールの値)", ""],
+  ];
+  $("codesTable").tBodies[0].replaceChildren(...codes.map(([a, b, c]) => {
+    const tr = document.createElement("tr");
+    tr.append(cell(a, "mono"), cell(b), cell(c));
+    return tr;
+  }));
+  $("rightsFindCount").textContent = t.found ? `${t.findings.length} 件` : "-";
+  $("rightsFindCount").className = "lv " + (t.findings.length ? "lv--warn" : "lv--info");
+  const ul = $("rightsFindings");
+  ul.replaceChildren(...(t.found ? (t.findings.length ? t.findings : ["気になる行はありません。"]) : ["表を読めていません。"]).map((f) => {
+    const li = document.createElement("li");
+    li.textContent = f;
+    return li;
+  }));
+  rowsTable($("rightsAdmins"), t.admin_rows);
 }
 
 function renderQuirks() {
@@ -376,7 +436,10 @@ function renderBadges() {
   if (!S) return;
   const badges = {};
   if (S.terminal.unset) badges.terminal = { text: "未設定", level: "ng" };
-  if (!S.admin) badges.rights = { text: "一般", level: "info" };
+  if (S.rights.setup) badges.rights = { text: "設定の途中", level: "warn" };
+  else if (!S.admin) badges.rights = { text: "一般", level: "info" };
+  else if (S.rights.table.findings.length) badges.rights = { text: `点検 ${S.rights.table.findings.length}`, level: "warn" };
+  if (S.master_edit.setup) badges.paths = { text: "設定の途中", level: "warn" };
   if (SND && SND.dir_error) badges.sound = { text: "フォルダなし", level: "warn" };
   else if (SND && SND.sounds.some((r) => !r.off && !r.exists)) badges.sound = { text: "ないファイル", level: "warn" };
   tabs.setBadges($("settingsTabs"), badges);
@@ -441,6 +504,31 @@ async function postPath(body, done) {
   }
 }
 
+/* 「既定に戻す」(項目ごと)・「すべて既定に戻す」。鍵は使用パスの変更と同じ(403 locked なら窓) */
+async function resetPaths(body) {
+  try {
+    S = await withPathUnlock(() => api.post("/api/settings/path/reset", body));
+    render();
+    loadSound();
+    toast(S.reset ? S.reset.message : "既定に戻しました", "success");
+  } catch (e) {
+    toastError(e);
+  }
+}
+
+async function resetAll() {
+  const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || p.second_names.some((n) => n.value))));
+  if (!changed.length) {
+    toast("すべて既定のままです", "info");
+    return;
+  }
+  const list = changed.map((p) => "・" + p.label + (p.single ? `: ${p.path || "(空)"} → ${p.default || "(空)"}` : "(第1・第2・2つ目の名前)")).join("\n");
+  const ok = await confirmBox(`使用パスを、すべて既定(VBA のオンラインの値)に戻します。\n本番のフォルダを指すようになります。\n\n${list}\n\n(モードとログの出力パスは変えません)`,
+    { ok: "すべて既定に戻す", cancel: "やめる", danger: true });
+  if (!ok) return;
+  await resetPaths({ all: true });
+}
+
 async function saveRow(p, inputs, names) {
   const bodies = [];
   for (const input of inputs) {
@@ -499,6 +587,12 @@ function init() {
     ev.preventDefault();
     tabs.select($("settingsTabs"), "paths");
     const row = document.querySelector('#pathsTable tr[data-key="wav"]');
+    if (row) { row.scrollIntoView({ block: "center" }); const i = row.querySelector("input"); if (i && !i.disabled) i.focus(); }
+  });
+  $("resetAll").addEventListener("click", resetAll);
+  $("rightsToPaths").addEventListener("click", () => {
+    tabs.select($("settingsTabs"), "paths");
+    const row = document.querySelector('#pathsTable tr[data-key="access_master"]');
     if (row) { row.scrollIntoView({ block: "center" }); const i = row.querySelector("input"); if (i && !i.disabled) i.focus(); }
   });
   $("checkAll").addEventListener("click", () => {

@@ -90,7 +90,9 @@ ITEMS: tuple[PathItem, ...] = (
              r"\\nlmsrvngy03\NPS\全社研修会トレーナー教育\第36回NPSトレーナー教育（名古屋）2017年\梱包実績の見える化\三菱受託検査_履歴" "\\",
              "三菱受託の xlsx(→PDF+CSV)の写し", need="write"),
     PathItem("access_master", "アクセス権限マスタ", "(python-web-tools と共通)", "",
-             "「アクセス権限」表がある sqlite3(梱包資材マスタ)。空なら権限の表を読まない", kind="file"),
+             "「アクセス権限」表がある 梱包資材マスタ.sqlite3 のファイル、またはそのフォルダ(フォルダなら中の"
+             " 梱包資材マスタ.sqlite3)。管理者(Administrator)とこの PC のラインを決める(D30)。"
+             "空のあいだは設定の途中(管理者パスワードだけで設定できる)", kind="file"),
     PathItem("edge", "Edge(PDF 作成)", "(新規 D7)",
              r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
              "帳票の PDF をヘッドレス印刷で作る", need="exe", kind="file"),

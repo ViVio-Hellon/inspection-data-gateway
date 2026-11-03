@@ -4,9 +4,12 @@
   (VBA も未設定なら SF3 を自動で出していた)。決まったあとに変えるのは管理者だけ(D12)
 - 使用パス: VBA の Setting_Path と直書きのパス(ご依頼)。D26: 仕掛台帳だけ 第1パス / 第2パス(+ 2つ目の名前)、
   ほかはパス 1 つ。**変えるには `auth.master_edit_ok()`(管理者パスワード + アクセス権限の管理者)が要る**。
+  アクセス権限マスタから決まらないあいだ(未設定・読めない・管理者の行が無い)は管理者パスワードだけでよい(D30 設定の途中)。
   断るときは 403(code "locked" = パスワード待ち、"not_admin" = 管理者でない。文言は `auth.master_edit_reason()`)。
+  「既定に戻す」(項目ごと)・「すべて既定に戻す」も同じ鍵(`POST /api/settings/path/reset`。前後をログに残す)。
   オンライン/オフラインの切替(仕掛台帳の読み方。端末の設定)は管理者だけ
-- 権限: アクセス権限の表(python-web-tools と共通。D12)を読んだ結果
+- この端末: ラインはアクセス権限マスタで決まれば自動で当たる(D30)。決まったあとに手で変えるのは管理者パスワードで
+- 権限: アクセス権限マスタ(梱包資材マスタの「アクセス権限」。all-tools と共通。D12・D30)を読んだ結果と表ぜんぶの点検
 - 不具合の扱い: `config/quirks.json` の中身(D3)
 
 `GET /api/fs/list` はサーバ側のフォルダを一覧する(「参照…」。python-web-tools と同じ)。
@@ -50,16 +53,29 @@ def _state() -> dict:
         "mode": m,
         "modes": [{"key": k, "label": v} for k, v in paths.MODE_LABELS.items()],
         "paths": paths.overview() + [_log_path_row()],
-        "master_edit": {"ok": auth.master_edit_ok(), "reason": auth.master_edit_reason()},
+        "master_edit": {"ok": auth.master_edit_ok(), "reason": auth.master_edit_reason(),
+                        "setup": auth.setup_mode(), "setup_reason": d.setup_reason if d else "",
+                        "possible": auth.can_edit() or auth.setup_mode()},
         "rights": {
             "user": s.user_id,
             "pc": auth.pc_name(),
-            "label": s.label,
+            "label": "管理者(管理者パスワード・設定の途中)" if auth.can_edit() and not s.can_edit else s.label,
+            "admin": auth.can_edit(),
             "source": d.source if d else "",
             "reason": d.reason if d else "",
             "codes": d.codes if d else [],
+            "matched": d.matched if d else [],
+            "line": {"facility": d.facility if d else "", "line_no": d.line_no if d else "",
+                     "text": d.line_text() if d else "", "lines": d.lines if d else [],
+                     "problem": d.line_problem if d else "", "notes": d.line_notes if d else []},
+            "ignored": d.ignored if d else [],
+            "applied": auth.applied_note(),
+            "setup": d.setup if d else False,
             "table": access_rights.overview(),
             "known": [{"code": k, "label": v} for k, v in access_rights.CODES.items()],
+            "aliases": [{"code": access_rights.ADMIN_ALIAS, "same_as": access_rights.ADMINISTRATOR}],
+            "lines": [{"master": k + ("A1〜中板A11" if k == access_rights.MARU else ""), "facility": v}
+                      for k, v in access_rights.LINE_FACILITY.items()],
         },
         "quirks": {"fix": quirks.summary()["fix"], "titles": quirks.TITLES},
         "log": _log_state(),
@@ -121,14 +137,20 @@ def state():
 
 @bp.post("/api/settings/terminal")
 def save_terminal():
+    """未設定なら誰でも(VBA の SF3)。決まったあとに変えるのは管理者パスワード(all-tools「パスワードがあれば現行の通り変更可」)。"""
     body = request.get_json(silent=True) or {}
-    if terminal.line() is not None and not auth.can_edit():
-        return _err("not_admin", MSG_ADMIN, 403)
+    if terminal.line() is not None:
+        refused = _refuse_path_edit()
+        if refused:
+            return refused
+    before = terminal.line_label()
     try:
         terminal.set_facility(str(body.get("facility", "")), str(body.get("line_no", "") or ""))
     except ValueError as e:
         return _err("bad_value", str(e))
     log.info("この端末の設備名を %s(%s)にしました", terminal.facility(), terminal.line_no())
+    trace.event("settings.terminal", f"この端末のラインを {before or '(未設定)'} → {terminal.line_label()} にしました",
+                data={"before": before, "after": terminal.line_label()})
     return jsonify(_state())
 
 
@@ -146,10 +168,11 @@ def save_mode():
 
 
 def _refuse_path_edit():
-    """使用パスを変えてよいか(D26: 管理者パスワード + アクセス権限の管理者)。だめなら 403。"""
+    """使用パスを変えてよいか(D26: 管理者パスワード + アクセス権限の管理者。D30: 設定の途中はパスワードだけ)。だめなら 403。"""
+    auth.ensure()
     if auth.master_edit_ok():
         return None
-    return _err("locked" if auth.can_edit() else "not_admin", auth.master_edit_reason(), 403)
+    return _err("locked" if (auth.can_edit() or auth.setup_mode()) else "not_admin", auth.master_edit_reason(), 403)
 
 
 @bp.post("/api/settings/path")
@@ -183,14 +206,59 @@ def save_path():
     if key == paths.LOT and slot not in paths.SLOT_LABELS:
         return _err("bad_value", "仕掛台帳は第1パスか第2パスかを選んでください")
     s = slot if key == paths.LOT else paths.FIRST
+    before = paths.slot_value(key, s)
     if body.get("reset"):
         paths.reset_path(key, s)
     else:
         paths.set_path(key, str(body.get("path", "")), s)
     label = paths.BY_KEY[key].label + (f"({paths.SLOT_LABELS[s]})" if key == paths.LOT else "")
     log.info("使用パス %s を %s にしました", label, paths.slot_value(key, s))
-    trace.event("settings.path", f"使用パス {label} を {paths.slot_value(key, s)} にしました")
+    trace.event("settings.path", f"使用パス {label} を {paths.slot_value(key, s)} にしました",
+                data={"before": before, "after": paths.slot_value(key, s)})
+    if key == "access_master":                      # 権限の表の場所が変わったので読み直す(鍵は開けたまま)
+        auth.end()
+        auth.ensure()
     return jsonify(_state())
+
+
+@bp.post("/api/settings/path/reset")
+def reset_path():
+    """使用パスを既定(paths.py の既定 = VBA のオンラインの値)に戻す。body: {key} または {all: true}。
+
+    仕掛台帳は 第1・第2・2つ目の名前をまとめて戻す。ログの出力パスは「すべて」には入れない(設定 → ログ)。
+    前後の値をログ(trace)に残す。
+    """
+    refused = _refuse_path_edit()
+    if refused:
+        return refused
+    body = request.get_json(silent=True) or {}
+    if body.get("all"):
+        keys = [i.key for i in paths.ITEMS]
+        label = "すべての使用パス"
+    else:
+        key = str(body.get("key", ""))
+        if key not in paths.BY_KEY:
+            return _err("bad_value", "その項目はありません")
+        keys = [key]
+        label = "使用パス " + paths.BY_KEY[key].label
+    with trace.timed("settings.path_reset", f"{label}を既定に戻す", keys=keys) as info:
+        before = {k: paths.snapshot(k) for k in keys}
+        if body.get("all"):
+            paths.reset_all()
+        else:
+            paths.reset_item(keys[0])
+        after = {k: paths.snapshot(k) for k in keys}
+        diff = {k: {"before": before[k], "after": after[k]} for k in keys if before[k] != after[k]}
+        info.update(changed=list(diff))
+    trace.event("settings.path", f"{label}を既定に戻しました(変わった項目 {len(diff)})", data=diff)
+    log.info("%sを既定に戻しました: %s", label, ", ".join(diff) or "変わった項目なし")
+    if "access_master" in diff:                     # 権限の表の場所が変わったので読み直す
+        auth.end()
+        auth.ensure()
+    out = _state()
+    out["reset"] = {"keys": list(diff), "message": f"{label}を既定に戻しました"
+                    + (f"({len(diff)} 項目)" if body.get("all") else "")}
+    return jsonify(out)
 
 
 @bp.post("/api/settings/path/check")
@@ -207,6 +275,12 @@ def check_path():
         results = [one]
     elif key in paths.BY_KEY:
         results = ([paths.check(key, s) for s in paths.SLOT_LABELS] if key == paths.LOT else [paths.check(key)])
+        if key == "access_master" and results[0]["path"]:
+            # フォルダでもファイルでもよい。実際に読むファイルと「アクセス権限」表を確かめる
+            ov = access_rights.overview()
+            results[0].update(ok=ov["found"], readable=ov["found"], path=ov["path"],
+                              message=(f"読めます({ov['path']} の「{ov['table']}」{ov['rows']} 行)" if ov["found"]
+                                       else f"読めません: {ov['problem']}"))
     else:
         return _err("bad_value", "その項目はありません")
     m = paths.mode()

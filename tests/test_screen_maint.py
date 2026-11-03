@@ -272,9 +272,10 @@ class MaintRouteTest(MaintBase):
         self.assertEqual(self.post("/api/maint/terminal", {"action": "clear"}).status_code, 200)
 
     def test_admin_right_also_needed(self) -> None:
-        """パスワードを通していても、管理者の権限が無ければ編集できない(両方要る)。"""
+        """パスワードを通していても、管理者の権限が無ければ編集できない(両方要る。マスタで決まっているとき)。"""
         self.admin.stop()
-        with mock.patch.object(auth, "can_edit", return_value=False):
+        with mock.patch.object(auth, "can_edit", return_value=False), \
+                mock.patch.object(auth, "setup_mode", return_value=False):
             r = self.post("/api/maint/terminal", {"action": "clear"})
             self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
             self.assertIn("管理者", r.get_json()["error"]["message"])

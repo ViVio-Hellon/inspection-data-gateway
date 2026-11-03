@@ -194,8 +194,8 @@ def end() -> None:
 
 
 def level() -> int:
-    s = current()
-    return s.level if s else 0
+    """いまの権限の Level。まだ読んでいなければ読む(読み直したあとの最初の操作でも正しく決まるように)。"""
+    return ensure().level
 
 
 def setup_mode() -> bool:
