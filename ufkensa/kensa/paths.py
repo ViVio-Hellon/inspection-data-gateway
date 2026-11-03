@@ -470,7 +470,7 @@ GUARD_ENV = "UFKENSA_TEST_PATH_GUARD"
 
 def _guarded(path_text: str) -> Optional[Path]:
     guard = os.environ.get(GUARD_ENV)
-    if not guard or not path_text:
+    if not guard or not path_text or os.environ.get("UFKENSA_PATH_ROOT"):
         return None
     t = path_text.strip()
     unc = t.startswith(("\\\\", "//"))
