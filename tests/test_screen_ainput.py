@@ -36,7 +36,7 @@ class AinputScreenTest(SessionBase):
         self.nis = self.tmp / "nis"
         (self.nis / "SokuteiDataTrans").mkdir(parents=True)
         (self.nis / "SokuteiDataTrans" / "SokuteiDataTrans.exe").write_bytes(b"")
-        paths.set_path("nis", str(self.nis), paths.SECOND)
+        paths.set_path("nis", str(self.nis))
         session.reset_for_test(self.s)
         self.addCleanup(session.reset_for_test, None)
         self.launched = []

@@ -48,6 +48,13 @@ def open_ro(db: Union[str, Path]) -> sqlite3.Connection:
     p = resolve(db)
     if not p.is_file():
         raise DbMissing(f"DB ファイルが見つかりません: {p}")
+    if paths.is_copied(p):
+        # D26: 仕掛 DB は共有を直接開かず、手元へ写した写しを読む。写せなければ読まない
+        from . import lot_copy
+        c = lot_copy.local_copy(str(p))
+        if c is None:
+            raise DbMissing(f"DB ファイルを手元へ写せないので読みません: {p}")
+        p = c
     uri = "file:" + _urlquote(str(p.resolve()).replace("\\", "/"), safe="/:") + "?mode=ro"
     try:
         conn = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_MS / 1000)
@@ -142,7 +149,11 @@ def column_index(fields: Iterable[str], name: str) -> int:
 
 
 def exists(db: Union[str, Path]) -> bool:
+    """ファイルがあるか。仕掛 DB は手元へ写せたか(写せなければ読まないので「無い」。D26)。"""
     try:
-        return resolve(db).is_file()
+        p = resolve(db)
+        if paths.is_copied(p):
+            return p.is_file() and paths.lot_usable(str(p))
+        return p.is_file()
     except OSError:
         return False

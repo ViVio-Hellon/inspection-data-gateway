@@ -42,11 +42,12 @@ def build() -> Path:
 
 
 def use_offline(folder: Optional[Path] = None) -> Path:
-    """使用パスをオフライン・全部 `folder`(省くと基準データ)に向ける(第1・第2 とも同じフォルダ)。"""
+    """使用パスをオフライン・全部 `folder`(省くと基準データ)に向ける(仕掛台帳は第1・第2 とも同じフォルダ)。"""
     folder = folder or build()
     paths.set_mode(paths.OFFLINE)
-    one = {k: str(folder) + "/" for k in (paths.LOT, "quality", "packing", "history", "factory")}
-    user_settings.save(paths.KEY_PATHS, {paths.FIRST: dict(one), paths.SECOND: dict(one)})
+    f = str(folder) + "/"
+    user_settings.save(paths.KEY_PATHS, {paths.KEY_ITEMS: {k: f for k in ("quality", "packing", "history", "factory")},
+                                         paths.KEY_LOT: {paths.FIRST: f, paths.SECOND: f}})
     return folder
 
 

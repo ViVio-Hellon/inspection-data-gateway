@@ -5,8 +5,7 @@ VBA の対応(行番号は vba_src の各ファイル):
 | VBA                                   | ここ                       |
 |---------------------------------------|----------------------------|
 | 補助.ReadCheck (補助:454-464)          | `read_check`               |
-| 補助.TimeDesignation (補助:1027-1040)  | `time_designation`(B23)  |
-| 補助.FileDesignation (補助:1042-1053)  | `file_designation`         |
+| 補助.TimeDesignation / FileDesignation | 移さない(D26 改: 上流の作り直しの決まりは使わない) |
 | Worker.IsOver12Hours (Worker:328-349)  | `is_over_12_hours`(B19)  |
 | AccHIki.Arrbox (AccHIki:14-92)         | `arrbox`                   |
 | AccHIki.GetLotInfo (AccHIki:644-704)   | `get_lot_info`             |
@@ -17,11 +16,13 @@ VBA の対応(行番号は vba_src の各ファイル):
 | Input.VcConv (Input:753-800)            | `vc_conv`(VC厚 品名ｺｰﾄﾞ → 厚-係数) |
 
 【仕掛 DB の切替は 3 系統あり、条件が違う(G3 §3.1.1)。まとめずにそれぞれ書く】
-1. Arrbox: DBflag が空なら MainPath。MainPath のときは ReadCheck 失敗・時刻窓・PLEASE WAIT.txt の
-   どれかで NextPath へ(VBA の `Or` は短絡しないので、時刻窓と PLEASE WAIT の確認とログは毎回両方)
-2. AccReflec: PLEASE WAIT.txt → NextPath、DBflag → NextPath、それ以外 MainPath。時刻窓は見ない
-3. HistorySave: PLEASE WAIT.txt → NextPath、全ヵ所/キャスク検査の表示中 → MainPath、DBflag → NextPath、
-   それ以外 MainPath。そのあと ReadCheck・時刻窓・PLEASE WAIT で切替(NextPath を選んでいたら「ありません」で抜ける。B49)
+1. Arrbox: DBflag が空なら MainPath。MainPath のときは ReadCheck 失敗で NextPath へ
+2. AccReflec: DBflag → NextPath、それ以外 MainPath
+3. HistorySave: 全ヵ所/キャスク検査の表示中 → MainPath、DBflag → NextPath、それ以外 MainPath。
+   そのあと ReadCheck で切替(NextPath を選んでいたら「ありません」で抜ける。B49)
+【D26 改(2026-11-03 のご指示)】VBA の上流の作り直しの決まり(TimeDesignation = 毎時 59:46〜00:45、
+FileDesignation / AccReflec / HistorySave の PLEASE WAIT.txt)は**外した**。ReadCheck は仕掛 DB を
+手元へ写せたか(`paths.lot_usable`。写せなければ読まない)。第1にロットが無いときの第2は `lot_from_second`。
 4. SikaAtuCreate: MainPath で列名も行も取れなければ NextPath(ReadCheck・時刻窓は見ない)
 
 【パスの比べ方】VBA は `FPath = MainPath` を文字列で比べる。オフラインでは MainPath と NextPath が
@@ -48,7 +49,6 @@ from . import ado_filter, datasource, flow, paths, quirks, vbx
 from .flow import ERROR, INFO, Message
 
 TABLE = "仕掛"
-PLEASE_WAIT = "PLEASE WAIT.txt"
 VC_TABLE = "VC厚"
 DENSO = "伝送用ファイル"
 
@@ -207,49 +207,15 @@ def read_check(target: str, n: int = 1) -> bool:
     try:
         p = paths.to_local(target)
         if n == 1:
+            if paths.is_copied(target):
+                # D26: 仕掛 DB は手元へ写せたときだけ「ある」(写せなければ読まない)
+                return p.is_file() and paths.lot_usable(target)
             return p.is_file()
         if n == 2:
             return p.is_dir()
     except (OSError, ValueError):
         return False
     return False
-
-
-def time_designation(now: Optional[_dt.datetime] = None, logs: Optional[list[LogLine]] = None) -> bool:
-    """補助.TimeDesignation (補助:1027-1040)。毎時 59:46〜59:59 と 00:00〜00:45 で真。
-
-    真のときは `WriteLog(分 & ":" & 秒 & "_時間ﾁｪｯｸ", "", NextPath)` を `logs` に積む。
-
-    B23: VBA は `5945 < 分 & 秒`(文字列連結を数として比べる)。分=59・秒=0〜9 は "590" 等の 3 桁で偽。
-    直した場合は 分×100+秒 で比べる。0〜59 分×0〜59 秒のすべてで両者は同じ結果になる(試験で確認)。
-    """
-    t = _now(now)
-    m, s = t.minute, t.second
-    if quirks.reproduce("B23"):
-        hit = vbx.vcompare(5945, f"{m}{s}") < 0
-    else:
-        hit = m * 100 + s > 5945
-    if hit or ((1 > m) and (45 >= s)):
-        if logs is not None:
-            logs.append(LogLine(f"{m}:{s}_時間ﾁｪｯｸ", "", paths.get("next")))
-        return True
-    return False
-
-
-def file_designation(logs: Optional[list[LogLine]] = None) -> bool:
-    """補助.FileDesignation (補助:1042-1053)。MainPath に PLEASE WAIT.txt が**無ければ**真。
-
-    あるときは `WriteLog("PLEASE WAIT.txt_ﾁｪｯｸ*在る", "", NextPath)` を積む。
-    """
-    flag = read_check(paths.join(paths.get("main"), PLEASE_WAIT), 1)
-    if flag and logs is not None:
-        logs.append(LogLine(PLEASE_WAIT + "_ﾁｪｯｸ*在る", "", paths.get("next")))
-    return not flag
-
-
-def please_wait_exists() -> bool:
-    """`Dir(MainPath & "PLEASE WAIT.txt") <> ""`(AccReflec:101・HistorySave:1299)。"""
-    return read_check(paths.join(paths.get("main"), PLEASE_WAIT), 1)
 
 
 _DATE_FORMATS = ("%Y/%m/%d %H:%M:%S", "%Y/%m/%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
@@ -338,11 +304,8 @@ def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "
     fpath = main if path == "" else nxt
     file_path = db_path(fpath, target)
     if fpath == main:
-        # VBA の Or は短絡しない: 3 つとも評価する(ログも両方出る)
-        c1 = read_check(file_path, 1) is False
-        c2 = time_designation(now, res.logs)
-        c3 = file_designation(res.logs) is False
-        if c1 or c2 or c3:
+        # D26 改: 時刻窓・PLEASE WAIT は見ない(ReadCheck = 手元へ写せたか だけ)
+        if read_check(file_path, 1) is False:
             fpath = nxt
             file_path = db_path(fpath, target)
             if read_check(db_path(nxt, target), 1) is False:
@@ -412,7 +375,7 @@ def get_lot_info(sheet_rows: Optional[Sequence[Sequence[Any]]], lot: str) -> Opt
 def sika_atu_create(lot: str) -> Optional[list[str]]:
     """SaveLoad.SikaAtuCreate。SIKALOTNOW のロットの全行の `ｵｰﾀﾞｰ板厚`(文字列)。無ければ None。
 
-    MainPath で列名(表が空なら None)も行も取れなければ NextPath を見る。ReadCheck・時刻窓は見ない。
+    MainPath で列名(表が空なら None)も行も取れなければ NextPath を見る。ReadCheck は見ない。
     ファイルが無いときは VBA の End に当たる `datasource.DbMissing`。
     """
     if lot == "":
@@ -590,9 +553,7 @@ def _select_lot(file_path: str, cb_text: str) -> tuple[list[str], Optional[tuple
 
 
 def acc_reflec_path(dbflag: str) -> str:
-    """AccReflec の参照先 (SaveLoad:101-112)。PLEASE WAIT.txt > DBflag > MainPath。時刻窓は見ない。"""
-    if please_wait_exists():
-        return paths.get("next")
+    """AccReflec の参照先 (SaveLoad:101-112)。DBflag > MainPath(D26 改: PLEASE WAIT.txt は見ない)。"""
     if dbflag != "":
         return paths.get("next")
     return paths.get("main")
@@ -875,8 +836,6 @@ def history_delete_rows(sheet_rows: Sequence[Sequence[Any]], lot: Any) -> list[i
 
 def _history_path(env: HistoryEnv) -> str:
     """HistorySave の参照先 (SaveLoad:1299-1314)。"""
-    if please_wait_exists():
-        return paths.get("next")
     if env.zenkasho_visible:
         return paths.get("main")
     if env.cask_visible:
@@ -949,12 +908,10 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
     target = "SIKAHIKINOW"
     fpath = _history_path(env)
     file_path = db_path(fpath, target)
-    c1 = read_check(file_path, 1) is False
-    c2 = time_designation(env.now, res.logs)
-    c3 = file_designation(res.logs) is False
+    c1 = read_check(file_path, 1) is False          # D26 改: 時刻窓・PLEASE WAIT は見ない
     missing = Message("日稲:" + vba_target(target) + "がありません" + "_ReadCheck_HistorySave", ERROR,
                       source="SaveLoad:1322")
-    if c1 or c2 or c3:
+    if c1:
         if fpath == nxt:
             # 再現: 控え側を選んでいたら、控えのファイルがあっても抜ける(VBA どおり)
             # B49 を直す: 控えのファイルがあればそのまま控えを読む(無いときだけ抜ける)

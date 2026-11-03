@@ -1360,8 +1360,6 @@ def _split(s: str, sep: str) -> list[str]:
 def materials_msgbox(form: Form, ord_no: str, *,
                      arrbox: Optional[Arrbox] = None,
                      read_check: Optional[Callable[[str], bool]] = None,
-                     time_designation: Callable[[], bool] = lambda: False,
-                     file_designation: Callable[[], bool] = lambda: True,
                      packing_db: Union[str, Path, None] = None) -> Outcome:
     """包装仕様の注意文と先行データ票の案内 `Judg.MaterialsMsgBox` (J:1987-2122)。
 
@@ -1369,7 +1367,8 @@ def materials_msgbox(form: Form, ord_no: str, *,
     厚・巾・丈は画面の製造寸法(ATU/Hab/Tak)。PackagingSpecificationNo の結果を "_" で分け、
     コイルなら何も出さない。注意文は MsgError(…, 4) で出す。
     B11: 結果が "板_"(コメントなし)のとき、先行データ票の案内も出さずに終わる。
-    `read_check` / `time_designation` / `file_designation` は担当外(既定: ファイルがあるか / 偽 / 真)。
+    `read_check` は担当外(既定: ファイルがある = 仕掛 DB は手元へ写せた)。
+    D26 改: VBA の TimeDesignation / FileDesignation(上流の作り直しの決まり)は外した。
     """
     out = Outcome()
     if form.Lot == "":
@@ -1381,10 +1380,10 @@ def materials_msgbox(form: Form, ord_no: str, *,
     rc = read_check or (lambda p: datasource.exists(p))
 
     def file_of(base: str) -> str:
-        return paths.join(base, paths.DB_FILES["SIKAODRNOW"][1])
+        return paths.join(base, paths.lot_file_name("SIKAODRNOW", base))   # D26: 第2は 2つ目の名前
 
     file_path = file_of(fpath)
-    if (not rc(file_path)) or time_designation() or (not file_designation()):
+    if not rc(file_path):
         missing = "日稲:" + target + "がありません" + "_MaterialsMsgBox"
         if fpath == nxt:
             out.messages.append(flow.Message(missing, flow.ERROR, source="Judg:2004"))

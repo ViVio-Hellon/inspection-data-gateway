@@ -687,11 +687,8 @@ class RealHooks(Hooks):
         fpath = main if state.dbflag == "" else nxt
         file_path = lotmod.db_path(fpath, target)
         if fpath == main:
-            # VBA の Or は短絡しない(3 つとも評価する)
-            c1 = lotmod.read_check(file_path, 1) is False
-            c2 = lotmod.time_designation(self.env.now(), [])
-            c3 = lotmod.file_designation([]) is False
-            if c1 or c2 or c3:
+            # D26 改: 時刻窓・PLEASE WAIT は見ない(ReadCheck = 手元へ写せたか だけ)
+            if lotmod.read_check(file_path, 1) is False:
                 file_path = lotmod.db_path(nxt, target)
                 if lotmod.read_check(file_path, 1) is False:
                     return False, None

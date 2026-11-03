@@ -153,8 +153,8 @@ class SettingsApiRightsTest(unittest.TestCase):
             self.assertTrue(auth.unlock_master("nisk")[0])
             self.addCleanup(auth.lock_master)
             st = self.post("/api/settings/path", key="wav", slot="first", path=r"D:\音").get_json()
-            self.addCleanup(paths.reset_path, "wav", paths.FIRST)
-            self.assertEqual([p for p in st["paths"] if p["key"] == "wav"][0]["first"], r"D:\音")
+            self.addCleanup(paths.reset_path, "wav")
+            self.assertEqual([p for p in st["paths"] if p["key"] == "wav"][0]["path"], r"D:\音")
             self.assertEqual(st["terminal"]["label"], "中板A3")
             self.assertEqual(self.post("/api/settings/terminal", facility="無い").status_code, 400)
 

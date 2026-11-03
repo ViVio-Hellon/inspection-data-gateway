@@ -56,30 +56,72 @@ function renderTerminal() {
   }));
 }
 
-function pathInput(p, slot) {
-  const wrap = document.createElement("td");
-  if (p.single && slot === "second") {
-    wrap.textContent = "—(1つだけ)";
-    wrap.className = "muted";
-    return { td: wrap, input: null };
-  }
+function pathInput(p, field, ariaLabel) {
+  const box = document.createElement("div");
   const input = document.createElement("input");
   input.className = "input";
   input.style.width = "100%";
-  input.style.minWidth = "16em";
-  input.value = p[slot] ?? "";
-  input.dataset.slot = slot;
+  input.style.minWidth = "22em";
+  input.value = p[field] ?? "";
+  input.dataset.field = field;
   input.disabled = !S.admin;
-  input.setAttribute("aria-label", `${p.label} の${slot === "first" ? "第1" : "第2"}パス`);
+  input.setAttribute("aria-label", ariaLabel);
   if (p.key === "log") input.placeholder = "空ならこの端末のローカル(logs)";
-  wrap.append(input);
-  if (p[slot + "_changed"]) {
+  box.append(input);
+  const changedKey = field === "path" ? "changed" : field + "_changed";
+  const defKey = field === "path" ? "default" : field + "_default";
+  if (p[changedKey]) {
     const s = document.createElement("small");
     s.className = "muted";
-    s.textContent = "既定: " + (p[slot + "_default"] || (p.key === "log" ? "この端末のローカル(logs)" : "(空)"));
-    wrap.append(document.createElement("br"), s);
+    s.textContent = "既定: " + (p[defKey] || (p.key === "log" ? "この端末のローカル(logs)" : "(空)"));
+    box.append(s);
   }
-  return { td: wrap, input };
+  return { box, input };
+}
+
+function lotPathCell(p, td, inputs, names) {
+  for (const [field, label] of [["first", "第1パス(台帳 = MainPath)"], ["second", "第2パス(控え = NextPath)"]]) {
+    const head = document.createElement("small");
+    head.textContent = label;
+    head.style.fontWeight = "700";
+    const f = pathInput(p, field, `仕掛台帳の${label}`);
+    td.append(head, f.box);
+    inputs.push(f.input);
+  }
+  const box = document.createElement("div");
+  box.className = "muted";
+  box.style.marginTop = "4px";
+  const t = document.createElement("small");
+  t.textContent = "2つ目の名前(任意。空なら1つ目と同じ名前):";
+  box.append(t);
+  for (const n of p.second_names) {
+    const line = document.createElement("div");
+    const lab = document.createElement("small");
+    lab.textContent = n.first + " → ";
+    const inp = document.createElement("input");
+    inp.className = "input";
+    inp.style.width = "14em";
+    inp.value = n.value;
+    inp.placeholder = n.first;
+    inp.disabled = !S.admin;
+    inp.dataset.db = n.db;
+    inp.dataset.orig = n.value;
+    inp.setAttribute("aria-label", `2つ目の名前(${n.first} の代わり)`);
+    line.append(lab, inp);
+    box.append(line);
+    names.push(inp);
+  }
+  td.append(box);
+  const use = document.createElement("div");
+  use.style.marginTop = "4px";
+  for (const m of S.modes) {
+    const d = document.createElement("small");
+    d.style.display = "block";
+    d.textContent = `${m.label}: ${p.in_use[m.key]}`;
+    if (m.key === S.mode) d.style.fontWeight = "700";
+    use.append(d);
+  }
+  td.append(use);
 }
 
 function renderPaths() {
@@ -94,50 +136,22 @@ function renderPaths() {
     tr.dataset.key = p.key;
     const name = document.createElement("td");
     name.style.whiteSpace = "normal";
-    name.style.width = "26%";
+    name.style.width = "30%";
     const b = document.createElement("b");
     b.textContent = p.label;
     const small = document.createElement("small");
     small.className = "muted";
     small.textContent = ` ${p.vba} — ${p.use}`;
     name.append(b, document.createElement("br"), small);
-    const f = pathInput(p, "first");
-    const s2 = pathInput(p, "second");
+    const pathTd = document.createElement("td");
+    const inputs = [];
     const names = [];
-    if (p.second_names) {
-      const box = document.createElement("div");
-      box.className = "muted";
-      box.style.marginTop = "4px";
-      const t = document.createElement("small");
-      t.textContent = "2つ目の名前(任意。空なら1つ目と同じ名前):";
-      box.append(t);
-      for (const n of p.second_names) {
-        const line = document.createElement("div");
-        const lab = document.createElement("small");
-        lab.textContent = n.first + " → ";
-        const inp = document.createElement("input");
-        inp.className = "input";
-        inp.style.width = "14em";
-        inp.value = n.value;
-        inp.placeholder = n.first;
-        inp.disabled = !S.admin;
-        inp.dataset.db = n.db;
-        inp.dataset.orig = n.value;
-        inp.setAttribute("aria-label", `2つ目の名前(${n.first} の代わり)`);
-        line.append(lab, inp);
-        box.append(line);
-        names.push(inp);
-      }
-      s2.td.append(box);
-    }
-    const use = document.createElement("td");
-    use.style.whiteSpace = "nowrap";
-    for (const m of S.modes) {
-      const d = document.createElement("div");
-      const txt = p.in_use[m.key];
-      d.textContent = `${m.label}: ${txt}`;
-      if (m.key === S.mode) d.style.fontWeight = "700";
-      use.append(d);
+    if (p.single) {
+      const f = pathInput(p, "path", p.label + " のパス");
+      pathTd.append(f.box);
+      inputs.push(f.input);
+    } else {
+      lotPathCell(p, pathTd, inputs, names);
     }
     const status = cell("", "path-status");
     status.style.whiteSpace = "normal";
@@ -153,19 +167,20 @@ function renderPaths() {
       save.className = "btn btn--primary";
       save.type = "button";
       save.textContent = "保存";
-      save.addEventListener("click", () => saveRow(p, [f.input, s2.input].filter(Boolean), names));
+      save.addEventListener("click", () => saveRow(p, inputs, names));
       act.append(" ", save);
-      for (const slot of ["first", "second"]) {
-        if (!p[slot + "_changed"]) continue;
+      const resets = p.single ? (p.changed ? [["", "既定に戻す"]] : [])
+        : ["first", "second"].filter((f) => p[f + "_changed"]).map((f) => [f, (f === "first" ? "第1" : "第2") + "を既定に"]);
+      for (const [slot, text] of resets) {
         const reset = document.createElement("button");
         reset.className = "btn";
         reset.type = "button";
-        reset.textContent = (slot === "first" ? "第1" : "第2") + "を既定に";
+        reset.textContent = text;
         reset.addEventListener("click", () => postPath({ key: p.key, slot, path: "", reset: true }, "既定に戻しました"));
         act.append(" ", reset);
       }
     }
-    tr.append(name, f.td, s2.td, use, status, act);
+    tr.append(name, pathTd, status, act);
     return tr;
   }));
 }
@@ -298,8 +313,9 @@ async function postPath(body, done) {
 async function saveRow(p, inputs, names) {
   const bodies = [];
   for (const input of inputs) {
-    const slot = input.dataset.slot;
-    if (input.value !== (p[slot] ?? "")) bodies.push({ key: p.key, slot, path: input.value });
+    const field = input.dataset.field;
+    if (input.value === (p[field] ?? "")) continue;
+    bodies.push(field === "path" ? { key: p.key, path: input.value } : { key: p.key, slot: field, path: input.value });
   }
   for (const n of names) {
     if (n.value !== n.dataset.orig) bodies.push({ key: p.key, db: n.dataset.db, second_name: n.value });
@@ -319,18 +335,16 @@ async function checkOne(key, td) {
   try {
     const r = await api.post("/api/settings/path/check", { key });
     td.replaceChildren();
-    for (const [slot, label] of [["first", "第1"], ["second", "第2"]]) {
-      const x = r[slot];
-      if (!x) continue;
+    for (const x of r.results) {
       const d = document.createElement("div");
-      d.textContent = `${label}: ${x.message}`;
+      d.textContent = (x.label ? x.label.replace("パス", "") + ": " : "") + x.message;
       d.className = x.ok ? "lv--ok" : "lv--ng";
       td.append(d);
     }
     if (r.in_use) {
       const d = document.createElement("small");
       d.className = "muted";
-      d.textContent = "いま使う側: " + r.in_use;
+      d.textContent = "いま読む側: " + r.in_use;
       td.append(d);
     }
     td.className = "path-status";

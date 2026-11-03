@@ -104,7 +104,7 @@ class LogPathSettingTest(_LogDirCase):
         out = self.dir.parent / "共有" / "ログ"
         st = self.c.post("/api/settings/path", json={"key": "log", "path": str(out)}, headers=self.h).get_json()
         row = [p for p in st["paths"] if p["key"] == "log"][0]
-        self.assertEqual(row["first"], str(out))
+        self.assertEqual(row["path"], str(out))
         self.assertEqual(config.LOG_DIR, out / "ufkensa")                 # 直下ではなく ufkensa フォルダ
         self.assertEqual(st["log"]["dir"], str(out / "ufkensa"))          # ログの面と同じ設定
         chk = self.c.post("/api/settings/path/check", json={"key": "log"}, headers=self.h).get_json()
@@ -112,7 +112,7 @@ class LogPathSettingTest(_LogDirCase):
         trace.event("x", "y")
         self.assertTrue((out / "ufkensa").glob("ufkensa_記録_*.jsonl"))
         st = self.c.post("/api/settings/path", json={"key": "log", "reset": True}, headers=self.h).get_json()
-        self.assertEqual([p for p in st["paths"] if p["key"] == "log"][0]["first"], "")
+        self.assertEqual([p for p in st["paths"] if p["key"] == "log"][0]["path"], "")
 
     def test_unwritable_keeps_current(self):
         before = config.LOG_DIR

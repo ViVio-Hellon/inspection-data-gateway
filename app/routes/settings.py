@@ -2,10 +2,10 @@
 
 - この端末: VBA のレジストリ「設備名」と SF3(初期設定)の代わり。**未設定のときは誰でも決められる**
   (VBA も未設定なら SF3 を自動で出していた)。決まったあとに変えるのは管理者だけ(D12)
-- 使用パス: VBA の Setting_Path と直書きのパス(ご依頼)。項目ごとに 第1パス / 第2パス(D26)。
-  **変えるには `auth.master_edit_ok()`(管理者パスワード + アクセス権限の管理者)が要る**。断るときは 403
-  (code "locked" = パスワード待ち、"not_admin" = 管理者でない。文言は `auth.master_edit_reason()`)。
-  オンライン/オフラインの切替(端末の設定)は管理者だけ
+- 使用パス: VBA の Setting_Path と直書きのパス(ご依頼)。D26: 仕掛台帳だけ 第1パス / 第2パス(+ 2つ目の名前)、
+  ほかはパス 1 つ。**変えるには `auth.master_edit_ok()`(管理者パスワード + アクセス権限の管理者)が要る**。
+  断るときは 403(code "locked" = パスワード待ち、"not_admin" = 管理者でない。文言は `auth.master_edit_reason()`)。
+  オンライン/オフラインの切替(仕掛台帳の読み方。端末の設定)は管理者だけ
 - 権限: アクセス権限の表(python-web-tools と共通。D12)を読んだ結果
 - 不具合の扱い: `config/quirks.json` の中身(D3)
 
@@ -50,7 +50,6 @@ def _state() -> dict:
         "mode": m,
         "modes": [{"key": k, "label": v} for k, v in paths.MODE_LABELS.items()],
         "paths": paths.overview() + [_log_path_row()],
-        "slots": [{"key": k, "label": v} for k, v in paths.SLOT_LABELS.items()],
         "master_edit": {"ok": auth.master_edit_ok(), "reason": auth.master_edit_reason()},
         "rights": {
             "user": s.user_id,
@@ -76,10 +75,8 @@ def _log_path_row() -> dict:
     return {"key": LOG_KEY, "label": "ログの出力パス", "vba": "(新規。all-tools と同じ決まり)",
             "use": "この下に ufkensa フォルダを作り ufkensa_<PC名>_日付.log / ufkensa_記録_<PC名>_日付.jsonl を書く。"
                    "空ならこの端末のローカル(logs)。オンライン/オフライン共通",
-            "need": "write", "kind": "dir", "single": True,
-            "first": requested, "first_default": "", "first_changed": bool(requested),
-            "second": None, "second_default": None, "second_changed": False,
-            "in_use": {k: "この1つ" for k in paths.MODE_LABELS}}
+            "need": "write", "kind": "dir", "single": True, "path": requested, "default": "",
+            "changed": bool(requested)}
 
 
 def _set_log_dir(text: str):
@@ -157,8 +154,8 @@ def _refuse_path_edit():
 
 @bp.post("/api/settings/path")
 def save_path():
-    """使用パスを変える。body: {key, slot: "first"/"second", path, reset} または
-    仕掛台帳の 2つ目の名前 {key: "lot", db: "SIKALOTNOW" など, second_name}。"""
+    """使用パスを変える。body: {key, path, reset}(パス 1 つの項目)、
+    仕掛台帳は {key: "lot", slot: "first"/"second", path, reset} または {key: "lot", db, second_name}。"""
     body = request.get_json(silent=True) or {}
     key, slot = str(body.get("key", "")), str(body.get("slot", "") or "")
     if key == LOG_KEY:
@@ -183,38 +180,39 @@ def save_path():
         log.info("仕掛台帳の2つ目の名前 %s を %s にしました", db, paths.second_name(db))
         trace.event("settings.path", f"仕掛台帳の2つ目の名前 {db} を {paths.second_name(db)} にしました")
         return jsonify(_state())
-    if slot not in paths.SLOT_LABELS:
-        return _err("bad_value", "第1パスか第2パスかを選んでください")
+    if key == paths.LOT and slot not in paths.SLOT_LABELS:
+        return _err("bad_value", "仕掛台帳は第1パスか第2パスかを選んでください")
+    s = slot if key == paths.LOT else paths.FIRST
     if body.get("reset"):
-        paths.reset_path(key, slot)
+        paths.reset_path(key, s)
     else:
-        paths.set_path(key, str(body.get("path", "")), slot)
-    label = paths.SLOT_LABELS[slot]
-    log.info("使用パス %s(%s)を %s にしました", key, label, paths.slot_value(key, slot))
-    trace.event("settings.path", f"使用パス {paths.BY_KEY[key].label}({label})を {paths.slot_value(key, slot)} にしました")
+        paths.set_path(key, str(body.get("path", "")), s)
+    label = paths.BY_KEY[key].label + (f"({paths.SLOT_LABELS[s]})" if key == paths.LOT else "")
+    log.info("使用パス %s を %s にしました", label, paths.slot_value(key, s))
+    trace.event("settings.path", f"使用パス {label} を {paths.slot_value(key, s)} にしました")
     return jsonify(_state())
 
 
 @bp.post("/api/settings/path/check")
 def check_path():
-    """確認ボタン(誰でも): 第1パスと第2パスの両方を確かめる。`slot` を付けるとその側だけ。"""
+    """確認ボタン(誰でも)。仕掛台帳は第1パスと第2パスの両方を確かめる。"""
     body = request.get_json(silent=True) or {}
-    key, slot = str(body.get("key", "")), str(body.get("slot", "") or "")
+    key = str(body.get("key", ""))
     if key == LOG_KEY:
         target = logging_utils.resolve_log_dir(str(user_settings.get(config.KEY_LOG_DIR, "") or ""))
         why = logging_utils.probe_writable(target)
-        one = {"key": key, "slot": paths.FIRST, "path": str(target), "exists": target.is_dir(), "readable": not why,
-               "writable": not why, "ok": not why,
+        one = {"key": key, "slot": "", "label": "", "path": str(target), "exists": target.is_dir(),
+               "readable": not why, "writable": not why, "ok": not why,
                "message": f"書けます({target})" if not why else f"書けません: {why}"}
-        return jsonify({"key": key, paths.FIRST: one, paths.SECOND: None, "ok": one["ok"], "message": one["message"]})
-    if key not in paths.BY_KEY or (slot and slot not in paths.SLOT_LABELS):
+        results = [one]
+    elif key in paths.BY_KEY:
+        results = ([paths.check(key, s) for s in paths.SLOT_LABELS] if key == paths.LOT else [paths.check(key)])
+    else:
         return _err("bad_value", "その項目はありません")
-    slots = [slot] if slot else list(paths.SLOT_LABELS)
-    out = {s: paths.check(key, s) for s in slots}
     m = paths.mode()
-    return jsonify({"key": key, **out, "mode": m, "in_use": paths.in_use_text(key, m),
-                    "ok": any(r["ok"] for r in out.values()),
-                    "message": " / ".join(f"{paths.SLOT_LABELS[s]}: {r['message']}" for s, r in out.items())})
+    return jsonify({"key": key, "results": results, "mode": m, "in_use": paths.in_use_text(key, m),
+                    "ok": any(r["ok"] for r in results),
+                    "message": " / ".join((r["label"] + ": " if r["label"] else "") + r["message"] for r in results)})
 
 
 @bp.post("/api/settings/rights/reload")

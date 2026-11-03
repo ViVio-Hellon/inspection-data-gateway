@@ -42,13 +42,13 @@ class _Dirs:
         shutil.copy2(src / "伝送用ファイル.sqlite3", self.main)
         # D26: 仕掛台帳の第1 = MainPath(台帳)、第2 = NextPath(控え)。VBA の切替はオンラインで確かめる
         paths.set_mode(paths.ONLINE)
-        common = {"quality": str(self.main) + "/", "packing": str(self.pack) + "/",
-                  "history": str(self.root) + "/", "factory": str(self.root) + "/"}
-        user_settings.save(paths.KEY_PATHS, {paths.FIRST: {"lot": str(self.main) + "/", **common},
-                                             paths.SECOND: {"lot": str(self.next) + "/", **common}})
+        user_settings.save(paths.KEY_PATHS, {
+            paths.KEY_ITEMS: {"quality": str(self.main) + "/", "packing": str(self.pack) + "/",
+                              "history": str(self.root) + "/", "factory": str(self.root) + "/"},
+            paths.KEY_LOT: {paths.FIRST: str(self.main) + "/", paths.SECOND: str(self.next) + "/"}})
 
     def please_wait(self) -> None:
-        (self.main / lot.PLEASE_WAIT).write_text("x")
+        (self.main / "PLEASE WAIT.txt").write_text("x")             # D26 改: 置いても見ない
 
     def remove(self, where: Path, name: str) -> None:
         (where / kensa_fixture.file_name(name)).unlink()
@@ -72,43 +72,8 @@ class _Base(unittest.TestCase):
 
 
 # ------------------------------------------------------------------
-class TimeDesignationTest(_Base):
-    def test_window_bounds(self) -> None:
-        # 補助:1033 `5945 < 分 & 秒` / 補助:1036 `(1 > 分) And (45 >= 秒)`
-        cases = {(59, 45): False, (59, 46): True, (59, 59): True, (0, 0): True, (0, 45): True,
-                 (0, 46): False, (59, 5): False, (59, 9): False, (30, 0): False, (1, 0): False, (9, 59): False}
-        for (m, s), want in cases.items():
-            with self.subTest(m=m, s=s):
-                self.assertEqual(lot.time_designation(dt.datetime(2026, 1, 1, 7, m, s)), want)
-
-    def test_log_line(self) -> None:
-        logs: list = []
-        self.assertTrue(lot.time_designation(dt.datetime(2026, 1, 1, 7, 0, 5), logs))
-        # WriteLog(分 & ":" & 秒 & "_時間ﾁｪｯｸ", "", NextPath)。0 詰めしない
-        self.assertEqual(logs, [lot.LogLine("0:5_時間ﾁｪｯｸ", "", paths.get("next"))])
-        logs.clear()
-        lot.time_designation(T_NORMAL, logs)
-        self.assertEqual(logs, [])
-
-    def test_b23_both_branches_same(self) -> None:
-        # B23: 文字列連結の比較は 0〜59 分 × 0〜59 秒で数の比較と同じ結果になる
-        def all_results() -> list[bool]:
-            return [lot.time_designation(dt.datetime(2026, 1, 1, 7, m, s)) for m in range(60) for s in range(60)]
-        keep = all_results()
-        quirks.set_for_test({"B23": "fix"})
-        fixed = all_results()
-        self.assertEqual(keep, fixed)
-        self.assertEqual(sum(keep), 14 + 46)
-
-
-class FileDesignationTest(_Base):
-    def test_please_wait(self) -> None:
-        logs: list = []
-        self.assertTrue(lot.file_designation(logs))
-        self.assertEqual(logs, [])
-        self.d.please_wait()
-        self.assertFalse(lot.file_designation(logs))
-        self.assertEqual(logs, [lot.LogLine("PLEASE WAIT.txt_ﾁｪｯｸ*在る", "", paths.get("next"))])
+class ReadCheckTest(_Base):
+    """D26 改: VBA の TimeDesignation / FileDesignation(上流の作り直しの決まり)は外した。"""
 
     def test_read_check(self) -> None:
         self.assertTrue(lot.read_check(str(self.d.main / "SIKALOT.sqlite3"), 1))
@@ -153,17 +118,12 @@ class ArrboxTest(_Base):
         self.assertEqual(r.logs, [])
         self.assertEqual(r.messages, [])
 
-    def test_time_window_goes_next_and_logs(self) -> None:
-        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_WINDOW)
-        self.assertEqual(r.file_path, lot.db_path(paths.get("next"), "SIKAHIKINOW"))
-        self.assertEqual(r.logs, [lot.LogLine("59:50_時間ﾁｪｯｸ", "", paths.get("next"))])
-
-    def test_please_wait_goes_next_both_checks_evaluated(self) -> None:
+    def test_rebuild_rule_removed(self) -> None:
+        # D26 改: 時刻窓(毎時 59:46〜00:45)も PLEASE WAIT.txt も見ない → 第1(MainPath)のまま。ログも出ない
         self.d.please_wait()
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_WINDOW)
-        self.assertEqual(r.file_path, lot.db_path(paths.get("next"), "SIKAHIKINOW"))
-        # Or は短絡しないので両方のログが出る (AccHIki:28)
-        self.assertEqual([x.msg for x in r.logs], ["59:50_時間ﾁｪｯｸ", "PLEASE WAIT.txt_ﾁｪｯｸ*在る"])
+        self.assertEqual(r.file_path, lot.db_path(paths.get("main"), "SIKAHIKINOW"))
+        self.assertEqual(r.logs, [])
 
     def test_main_missing_then_next_missing(self) -> None:
         self.d.remove(self.d.main, "SIKAHIKINOW")
@@ -178,7 +138,6 @@ class ArrboxTest(_Base):
         self.assertEqual(r.messages, [])                                  # IsOver12Hours の間は出さない
 
     def test_dbflag_uses_next_without_checks(self) -> None:
-        self.d.please_wait()
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "1", now=T_WINDOW)
         self.assertEqual(r.file_path, lot.db_path(paths.get("next"), "SIKAHIKINOW"))
         self.assertEqual(r.logs, [])                                      # FPath<>MainPath なので確認しない
@@ -305,11 +264,11 @@ class AccReflecTest(_Base):
         self.assertEqual(found, 63)
 
     def test_path_rules(self) -> None:
-        # SaveLoad:101-112 PLEASE WAIT > DBflag > MainPath。時刻窓は見ない
+        # SaveLoad:101-112 DBflag > MainPath(D26 改: PLEASE WAIT は見ない)
         self.assertEqual(lot.acc_reflec_path(""), paths.get("main"))
         self.assertEqual(lot.acc_reflec_path("1"), paths.get("next"))
         self.d.please_wait()
-        self.assertEqual(lot.acc_reflec_path(""), paths.get("next"))
+        self.assertEqual(lot.acc_reflec_path(""), paths.get("main"))
 
     def test_db_missing(self) -> None:
         self.d.remove(self.d.main, "SIKALOTNOW")
@@ -434,23 +393,21 @@ class HistorySaveTest(_Base):
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_NORMAL, over12=True))
         self.assertEqual(res.messages, [])
 
-    def test_window_with_next_selected_exits(self) -> None:
-        # DBflag で NextPath を選んでいると、時刻窓に当たれば控えにファイルがあっても抜ける (SaveLoad:1321-1323)
+    def test_window_is_ignored(self) -> None:
+        # D26 改: 時刻窓は見ない。DBflag で控えを選んでいれば控えを読み、MainPath なら MainPath のまま
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
-        self.assertEqual([m.text for m in res.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_HistorySave"])
-        self.assertEqual(res.new_rows, [])
-        self.assertEqual([x.msg for x in res.logs], ["59:50_時間ﾁｪｯｸ"])
-        # MainPath なら控えへ切り替えて続ける
-        res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_WINDOW))
+        self.assertEqual((res.messages, res.logs), ([], []))
         self.assertEqual(res.file_path, lot.db_path(paths.get("next"), "SIKAHIKINOW"))
+        self.assertEqual(len(res.new_rows), 3)
+        res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_WINDOW))
+        self.assertEqual(res.file_path, lot.db_path(paths.get("main"), "SIKAHIKINOW"))
         self.assertEqual(len(res.new_rows), 3)
 
     def test_special_sheets_use_main(self) -> None:
+        # D26 改: PLEASE WAIT は見ない。全ヵ所/キャスク表示中は DBflag より MainPath が先 (SaveLoad:1303-1308)
         self.d.please_wait()
-        # PLEASE WAIT が最優先 → NextPath → 「ありません」で抜ける
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_NORMAL, cask_visible=True))
-        self.assertEqual(len(res.messages), 1)
-        (self.d.main / lot.PLEASE_WAIT).unlink()
+        self.assertEqual(res.messages, [])
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(dbflag="1", now=T_NORMAL, zenkasho_visible=True))
         self.assertEqual(res.file_path, lot.db_path(paths.get("main"), "SIKAHIKINOW"))
 
@@ -477,8 +434,8 @@ class HistorySaveTest(_Base):
     def test_offline_same_paths(self) -> None:
         # オフラインで MainPath = NextPath のときは `Case FPath = NextPath` が先に当たる
         kensa_fixture.use_offline(kensa_fixture.copy_to(self.d.root / "same"))
-        res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_WINDOW))
-        self.assertEqual(len(res.messages), 1)
+        res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_WINDOW))   # D26 改: 時刻窓は見ない
+        self.assertEqual(len(res.new_rows), 3)
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual(len(res.new_rows), 3)
 
@@ -608,32 +565,22 @@ class FixBranchTest(_Base):
         r = lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, work_time="T"), check_equipment=_ok)
         return r.past_hiki
 
-    def test_b49_next_selected_window(self) -> None:
+    def test_b49_next_selected_missing(self) -> None:
+        # D26 改で時刻窓・PLEASE WAIT を外したので、控えを選んで ReadCheck に落ちるのは控えのファイルが無いときだけ。
+        # そのときは再現も直すも「ありません」で抜ける(B49 の差は出なくなった)
         ph = self.ph()
-        # 再現: DBflag で控えを選び時刻窓に当たると、控えにファイルがあっても抜ける (SaveLoad:1321-1323)
-        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
-        self.assertEqual(res.new_rows, [])
-        quirks.set_for_test({"B49": "fix"})
-        # 直す: 控えのファイルがあればそのまま控えを読む
-        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
-        self.assertEqual(res.messages, [])
-        self.assertEqual(res.file_path, lot.db_path(paths.get("next"), "SIKAHIKINOW"))
-        self.assertEqual(len(res.new_rows), 3)
-        # PLEASE WAIT でも同じ
-        self.d.please_wait()
-        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
-        self.assertEqual(len(res.new_rows), 3)
-        # 控えのファイルが無いときは今までどおり「ありません」で抜ける
         self.d.remove(self.d.next, "SIKAHIKINOW")
-        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
-        self.assertEqual([m.text for m in res.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_HistorySave"])
-        self.assertFalse(res.completed)
+        for mode in ("reproduce", "fix"):
+            quirks.set_for_test({"B49": mode})
+            res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
+            self.assertEqual([m.text for m in res.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_HistorySave"])
+            self.assertFalse(res.completed)
 
     def test_b49_offline_same_paths(self) -> None:
-        # オフライン(MainPath = NextPath)で時刻窓: 再現は抜ける、直すと同じファイルを読む
+        # オフライン(MainPath = NextPath)で時刻窓: D26 改で時刻窓を見ないので、どちらも同じファイルを読む
         kensa_fixture.use_offline(kensa_fixture.copy_to(self.d.root / "same"))
         ph = self.ph()
-        self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).messages), 1)
+        self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).new_rows), 3)
         quirks.set_for_test({"B49": "fix"})
         self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).new_rows), 3)
 

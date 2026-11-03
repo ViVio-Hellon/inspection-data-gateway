@@ -180,7 +180,7 @@ class LinesTest(unittest.TestCase):
 class PathsTest(unittest.TestCase):
     def test_vba_defaults(self) -> None:
         self.assertEqual(paths.default("main", paths.ONLINE), "\\\\nlmsrvngy03\\Read\\【New】仕掛\\台帳\\")
-        self.assertEqual(paths.default("nis", paths.OFFLINE), "")              # VBA はオフライン時に空
+        self.assertEqual(paths.default("nis", paths.OFFLINE), r"C:\Tools\測定データ電子化")   # D26 改: パス1つ(モードによらない)
         self.assertTrue(paths.default("history", paths.OFFLINE).endswith(("/", "\\")))
         self.assertTrue(paths.db_file("梱包検査ﾃﾞｰﾀ", paths.ONLINE).endswith("【測定DB】梱包\\梱包検査ﾃﾞｰﾀ.sqlite3"))
 
