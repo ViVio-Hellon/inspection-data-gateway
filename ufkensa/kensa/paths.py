@@ -311,6 +311,46 @@ def reset_path(key: str, slot: Optional[str] = None) -> None:
         user_settings.save(KEY_PATHS, d)
 
 
+def snapshot(key: str) -> dict[str, str]:
+    """いまの値(ログに前後を残す形)。仕掛台帳は 第1・第2・2つ目の名前。"""
+    k = _key(key)
+    if k == LOT:
+        out = {SLOT_LABELS[FIRST]: slot_value(LOT, FIRST), SLOT_LABELS[SECOND]: slot_value(LOT, SECOND)}
+        out.update({f"2つ目の名前 {db}": second_name(db) for db in LOT_DBS})
+        return out
+    return {BY_KEY[k].label: slot_value(k)}
+
+
+def item_changed(key: str) -> bool:
+    """その項目のどこかが既定から変わっているか(仕掛台帳は 第1・第2・2つ目の名前のどれか)。"""
+    k = _key(key)
+    d = _saved()
+    if k == LOT:
+        return bool(d[KEY_LOT]) or bool(d[KEY_SECOND_NAMES])
+    return k in d[KEY_ITEMS]
+
+
+def reset_item(key: str) -> None:
+    """項目を既定に戻す(設定「既定に戻す」)。仕掛台帳は 第1・第2・2つ目の名前をまとめて戻す。"""
+    k = _key(key)
+    if k not in BY_KEY:
+        raise KeyError(key)
+    d = _saved()
+    if k == LOT:
+        d[KEY_LOT].clear()
+        d[KEY_SECOND_NAMES].clear()
+    else:
+        d[KEY_ITEMS].pop(k, None)
+    user_settings.save(KEY_PATHS, d)
+
+
+def reset_all() -> list[str]:
+    """すべての項目を既定(VBA のオンラインの値)に戻す。戻した項目の key を返す。モードは変えない。"""
+    done = [i.key for i in ITEMS if item_changed(i.key)]
+    user_settings.save(KEY_PATHS, {KEY_ITEMS: {}, KEY_LOT: {}, KEY_SECOND_NAMES: {}})
+    return done
+
+
 def changed(key: str, slot: str = FIRST) -> bool:
     k = _key(key)
     d = _saved()
@@ -423,8 +463,35 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
     return p2 if lot_usable(p2) else p1
 
 
+#: 試験の安全網(tests/_isolation.py が立てる)。立っていれば、共有(\\server\…)と、一時フォルダの外のドライブのパス
+#: (C:\検査履歴 など = 既定の本番のパス)を、この下へ読み替える。試験が本番のフォルダを読み書きしないように
+GUARD_ENV = "UFKENSA_TEST_PATH_GUARD"
+
+
+def _guarded(path_text: str) -> Optional[Path]:
+    guard = os.environ.get(GUARD_ENV)
+    if not guard or not path_text:
+        return None
+    t = path_text.strip()
+    unc = t.startswith(("\\\\", "//"))
+    drive = len(t) >= 3 and t[0].isalpha() and t[1] == ":" and t[2] in "\\/"
+    if not unc and not drive:
+        return None
+    if drive and os.name == "nt":
+        import tempfile
+        tmp = os.path.normcase(os.path.abspath(tempfile.gettempdir()))
+        if os.path.normcase(os.path.abspath(t)).startswith(tmp):
+            return None                                   # 試験が作った一時フォルダ(Windows)はそのまま
+    pw = PureWindowsPath(t.replace("/", "\\"))
+    parts = [p.replace(":", "").strip("\\") for p in pw.parts if p.strip("\\")]
+    return Path(guard, "本番のパス", *parts)
+
+
 def to_local(path_text: str) -> Path:
     """Windows のパス文字列 → この OS の Path(試験では UFKENSA_PATH_ROOT の下に読み替える)。"""
+    guarded = _guarded(path_text)
+    if guarded is not None:
+        return guarded
     root = os.environ.get("UFKENSA_PATH_ROOT")
     if not root and os.name != "nt" and "\\" in path_text and not path_text.startswith("\\\\"):
         return Path(path_text.replace("\\", "/"))             # 試験(Linux)で "…/fixtures\\品質基準.sqlite3" を読む
