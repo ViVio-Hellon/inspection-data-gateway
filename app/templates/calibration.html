@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}校正 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calibration.css') }}">
+<!--
+  校正画面(VBA の UF校正)。
+  上 = この直の校正が済んでいるか(D11: 毎回判定)。左 = いま測るもの・受信欄(常にフォーカス)・結果。
+  右 = 月の順位(中心値)と校正記録。判断はサーバ(calibration.py)。ここは描いて送るだけ。
+-->
+<div class="cal" id="cal">
+  <section class="cal__status" id="calStatus" data-ok="">
+    <div class="cal__status-main">
+      <span class="cal__badge" id="calBadge">-</span>
+      <div>
+        <b id="calStatusText">確認中</b>
+        <small id="calStatusSub"></small>
+      </div>
+    </div>
+    <dl class="cal__kv" id="calStatusKv"></dl>
+    <a class="btn btn--nav" href="/kensa" id="calBack">検査へ戻る</a>
+  </section>
+
+  <div class="cal__body">
+    <div class="cal__col">
+      <section class="card cal__step" id="calStep" data-step="1000">
+        <header>
+          <h3>測る</h3>
+          <ol class="cal__flow" aria-label="校正の手順">
+            <li data-k="1000">① 1000mm 直尺</li>
+            <li data-k="gauge">② ストレートエッヂ</li>
+            <li data-k="done">③ 記録</li>
+          </ol>
+        </header>
+        <div class="pad">
+          <p class="cal__gauge" id="calGauge">-</p>
+          <div class="cal__in">
+            <input class="input" id="calIn" autocomplete="off" aria-label="測定値(伝送文字列)"
+                   placeholder="測定器のボタンを押すと入ります(手入力は #L1000.0 の形で Enter)">
+          </div>
+          <div class="cal__meas">
+            <div><small>測定値</small><b id="calValue">-</b></div>
+            <div><small>合格の範囲</small><b id="calRange">-</b></div>
+          </div>
+          <p class="cal__ng" id="calNg" hidden></p>
+          <p class="cal__saiken" id="calSaiken" hidden>ｸﾘｱを押してもう1度測定してください</p>
+          <p class="cal__done" id="calDone" hidden>校正を記録しました。検査画面の入力止めは外れています。</p>
+          <dl class="kv-grid">
+            <dt>ライン</dt><dd id="calLine">-</dd>
+            <dt>検査員</dt><dd id="calKname">-</dd>
+          </dl>
+          <div class="btn-row">
+            <button class="btn" type="button" id="calClear">ｸﾘｱ＆ﾘｾｯﾄ</button>
+            <button class="btn" type="button" id="calSkip" hidden title="1000mm 直尺をとばしてストレートエッヂへ(VBA の「送り」)">1000mm を送る</button>
+            <button class="btn" type="button" id="calRestart">はじめから</button>
+          </div>
+          <p class="muted" id="calNote"></p>
+        </div>
+      </section>
+    </div>
+
+    <div class="cal__col">
+      <section class="card">
+        <header><h3>順位 <small class="muted" id="calMonth"></small></h3><span class="lv lv--info" id="calRankKind"></span></header>
+        <div class="pad">
+          <p class="muted" id="calCenter"></p>
+          <div class="cal__ranks">
+            <div><h4>ﾌﾟﾗｽ外れ</h4><ol id="calRankMax"></ol></div>
+            <div><h4>ﾏｲﾅｽ外れ</h4><ol id="calRankMin"></ol></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn--sm" type="button" id="calRankH">品証順位</button>
+            <button class="btn btn--sm" type="button" id="calRankK">校正順位</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>校正記録(最近)</h3><span class="lv lv--info" id="calRecCount"></span></header>
+        <div class="pad">
+          <div class="tablewrap cal__records">
+            <table class="table table--dense" id="calRecords">
+              <thead><tr><th>日付</th><th>直</th><th>時刻</th><th>測定値</th><th>検査員</th><th>ライン</th><th>結果</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/calibration.js') }}"></script>
+{% endblock %}

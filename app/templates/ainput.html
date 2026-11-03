@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Aインプット — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ainput.css') }}">
+<div class="ain" id="ain">
+  <!-- 開く前: 検査法を選ぶ(VBA は UF1 の Inspection1〜4) -->
+  <section class="card ain__open" id="openBox" hidden>
+    <header><h3>Aインプットを開く</h3></header>
+    <div class="pad">
+      <p class="muted" id="openNote">検査中のロットを Aインプット(梱包高さチェック・アイカス送信)に写します。検査法を選んでください。</p>
+      <div class="seg" id="kenSeg" role="group" aria-label="検査法"></div>
+      <dl class="kv-grid" id="openKv"></dl>
+      <div class="btn-row"><a class="btn" href="/kensa">検査画面へ戻る</a></div>
+    </div>
+  </section>
+
+  <div class="ain__body" id="body" hidden>
+    <!-- 左: ロットと、送る値(引当・梱包・枚数・包数) -->
+    <div class="ain__col">
+      <section class="card">
+        <header><h3>ロット</h3><span class="lv lv--info" id="kenLv"></span></header>
+        <div class="pad">
+          <dl class="kv-grid" id="lotKv"></dl>
+          <p class="ain__warn" id="lotWarn" hidden></p>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>引当・梱包</h3></header>
+        <div class="pad">
+          <div class="ain__form">
+            <label for="f_hiki_no">引当No</label>
+            <select class="input" id="f_hiki_no" data-field="hiki_no"></select>
+            <label for="f_konno">梱包No</label>
+            <input class="input input--num" id="f_konno" data-field="konno" inputmode="numeric" autocomplete="off">
+            <label for="f_remain">出荷.ｽﾄｱ</label>
+            <select class="input" id="f_remain" data-field="remain">
+              <option value="0">0 出荷</option><option value="1">1 ストア</option><option value="">(空)</option>
+            </select>
+            <label for="f_mai1" id="maiLabel">梱包枚数</label>
+            <div class="ain__pair">
+              <input class="input input--num" id="f_mai1" data-field="mai1" inputmode="numeric" autocomplete="off" aria-label="枚数1">
+              <span>×</span>
+              <input class="input input--num" id="f_cou1" data-field="cou1" inputmode="numeric" autocomplete="off" aria-label="包数1">
+              <span class="muted">包</span>
+            </div>
+            <label for="f_mai2" class="row2">2段目</label>
+            <div class="ain__pair row2">
+              <input class="input input--num" id="f_mai2" data-field="mai2" inputmode="numeric" autocomplete="off" aria-label="枚数2">
+              <span>×</span>
+              <input class="input input--num" id="f_cou2" data-field="cou2" inputmode="numeric" autocomplete="off" aria-label="包数2">
+              <span class="muted">包</span>
+            </div>
+            <span></span>
+            <div class="btn-row"><button class="btn btn--sm" type="button" id="maiSpin"></button></div>
+            <label for="f_material1" class="matl">風袋</label>
+            <div class="ain__pair matl">
+              <input class="input input--num" id="f_material1" data-field="material1" inputmode="numeric" autocomplete="off" aria-label="風袋1">
+              <input class="input input--num m2" id="f_material2" data-field="material2" inputmode="numeric" autocomplete="off" aria-label="風袋2">
+              <input class="input input--num m3" id="f_material3" data-field="material3" inputmode="numeric" autocomplete="off" aria-label="風袋3">
+              <button class="btn btn--sm" type="button" data-spin="material" data-dir="down" title="風袋の欄を増やす">＋</button>
+              <button class="btn btn--sm" type="button" data-spin="material" data-dir="up" title="風袋の欄を減らす">－</button>
+            </div>
+            <label for="f_gw" class="matl">総重量</label>
+            <input class="input input--num matl" id="f_gw" data-field="gw" inputmode="numeric" autocomplete="off">
+            <label for="f_pile_match_no">積合せ</label>
+            <div class="ain__pair">
+              <select class="input" id="f_pile_match_no" data-field="pile_match_no" aria-label="積合せｽﾀｰﾄｴﾝﾄﾞ">
+                <option value="">-</option><option value="1">1 スタート</option><option value="9">9 エンド</option>
+              </select>
+              <input class="input" id="f_pile_match" data-field="pile_match" autocomplete="off" aria-label="ストアカード・積合せNo" placeholder="ストアカードNo">
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="card" id="exCard" hidden>
+        <header><h3>輸出</h3><span class="lv lv--warn">Export</span></header>
+        <div class="pad">
+          <div class="ain__form">
+            <label for="f_ex_case_no">EXｹｰｽNo</label>
+            <input class="input input--num" id="f_ex_case_no" data-field="ex_case_no" inputmode="numeric" autocomplete="off">
+            <label for="f_ex_material1">EX風袋</label>
+            <div class="ain__pair">
+              <input class="input input--num" id="f_ex_material1" data-field="ex_material1" inputmode="numeric" autocomplete="off" aria-label="EX風袋1">
+              <input class="input input--num m2" id="f_ex_material2" data-field="ex_material2" inputmode="numeric" autocomplete="off" aria-label="EX風袋2">
+              <input class="input input--num m3" id="f_ex_material3" data-field="ex_material3" inputmode="numeric" autocomplete="off" aria-label="EX風袋3">
+              <button class="btn btn--sm" type="button" data-spin="ex_material" data-dir="down" title="EX風袋の欄を増やす">＋</button>
+              <button class="btn btn--sm" type="button" data-spin="ex_material" data-dir="up" title="EX風袋の欄を減らす">－</button>
+            </div>
+            <label for="f_ex_gw">EXGW</label>
+            <input class="input input--num" id="f_ex_gw" data-field="ex_gw" inputmode="numeric" autocomplete="off">
+            <label for="f_outside_atu">梱包外寸</label>
+            <div class="ain__pair">
+              <input class="input input--num" id="f_outside_atu" data-field="outside_atu" inputmode="numeric" autocomplete="off" placeholder="高さ" aria-label="外寸 高さ">
+              <input class="input input--num" id="f_outside_haba" data-field="outside_haba" inputmode="numeric" autocomplete="off" placeholder="奥行" aria-label="外寸 奥行">
+              <input class="input input--num" id="f_outside_take" data-field="outside_take" inputmode="numeric" autocomplete="off" placeholder="長さ" aria-label="外寸 長さ">
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 中央: 山ごとの高さ(理論値と実測、判定) -->
+    <div class="ain__col ain__center">
+      <section class="card">
+        <header>
+          <h3>山高さ</h3>
+          <span class="lv" id="deviceLv"></span>
+        </header>
+        <div class="pad">
+          <div class="ain__mount">
+            <label for="mountIn">山数</label>
+            <input class="input input--num" id="mountIn" type="number" min="1" max="15" autocomplete="off">
+            <span class="muted" id="perMount"></span>
+          </div>
+          <div class="ain__meas" id="measBox">
+            <input class="input" id="measIn" autocomplete="off" placeholder="測定器から自動で入ります(Depth: DT… / ｺﾝﾍﾞｯｸｽ: #L…)" aria-label="山高さの伝送文字列">
+            <p class="ain__hint" id="hint"></p>
+            <p class="muted" id="received"></p>
+          </div>
+          <table class="ain__heights" id="heights" aria-label="山ごとの高さ">
+            <thead><tr><th>山</th><th>理論値</th><th>実測</th><th></th></tr></thead>
+            <tbody></tbody>
+            <tfoot></tfoot>
+          </table>
+        </div>
+      </section>
+      <section class="card" id="checkCard" hidden>
+        <header><h3>梱包高さチェック</h3><span class="lv" id="checkLv"></span></header>
+        <div class="pad">
+          <p class="ain__checkmsg" id="checkMsg"></p>
+          <dl class="kv-grid" id="checkKv"></dl>
+          <table class="ain__heights" id="checkRows" aria-label="山ごとの外れ">
+            <thead><tr><th>山</th><th>実測</th><th>目安からの外れ</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>合紙・VC・外装紙</h3><button class="btn btn--sm" type="button" id="unlockBtn">外注出荷</button></header>
+        <div class="pad">
+          <div class="ain__extras">
+            <label class="checkline"><input type="checkbox" id="x_ai" data-field="ai"> 合紙 <b id="aisi"></b></label>
+            <label class="checkline"><input type="checkbox" id="x_vab" data-field="vab"> VCAB <b id="vcab"></b></label>
+            <label class="checkline"><input type="checkbox" id="x_ga" data-field="ga"> 個装外装紙 <b id="gaisousi"></b></label>
+          </div>
+          <div class="inbox" id="gaityuuBox" hidden>
+            <label for="f_gaityuu_text">外注</label>
+            <input class="input ain__red" id="f_gaityuu_text" data-field="gaityuu_text" autocomplete="off" placeholder="外 注 と入力">
+          </div>
+        </div>
+      </section>
+      <div class="ain__press">
+        <button class="btn btn--run ain__pressbtn" type="button" id="pressBtn">Icas出力</button>
+        <small id="pressText"></small>
+      </div>
+    </div>
+
+    <!-- 右: 送信の状態と結果 -->
+    <div class="ain__col">
+      <section class="card">
+        <header><h3>送信</h3><span class="lv" id="sendLv"></span></header>
+        <div class="pad">
+          <ol class="ain__steps" id="steps"></ol>
+          <p class="ain__result" id="sendLabel"></p>
+          <dl class="kv-grid" id="sendKv"></dl>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>結果コード</h3></header>
+        <div class="pad"><dl class="kv-grid ain__codes" id="codes"></dl></div>
+      </section>
+      <section class="card">
+        <header><h3>この画面での送信</h3></header>
+        <div class="pad">
+          <ul class="log-lines" id="sends"></ul>
+          <p class="muted" id="current"></p>
+          <div class="btn-row">
+            <a class="btn" href="/kensa">検査画面へ戻る</a>
+            <button class="btn" type="button" id="reopenBtn">開き直す</button>
+            <button class="btn btn--danger" type="button" id="resetBtn">Reset</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/ainput.js') }}"></script>
+{% endblock %}

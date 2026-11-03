@@ -1,0 +1,89 @@
+/* 全ヵ所・H494 画面。上=作業の切替、左=フォーム、中央=シートの上部と測定の表、右=次に入力する欄・入力・操作 */
+.zk { display: flex; flex-direction: column; gap: 8px; }
+.zk__top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.zk-modes { display: inline-flex; border: 2px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
+.zk-mode { border: 0; background: var(--surface); color: var(--accent); font-size: var(--fs-lg); font-weight: 700;
+           padding: 8px 22px; cursor: pointer; border-right: 1px solid var(--accent-line); }
+.zk-mode:last-child { border-right: 0; }
+.zk-mode[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.zk-mode[aria-selected="true"]::before { content: "● "; }
+.zk-line { color: var(--muted); font-size: var(--fs-sm); }
+.zk-notice { margin: 0; font-size: var(--fs-sm); background: var(--warn-bg); color: var(--warn-fg);
+             border-radius: var(--radius-sm); padding: 3px 10px; cursor: help; }
+.zk-stopped { display: flex; align-items: center; gap: 12px; background: var(--warn-bg); color: var(--state-error);
+              border: 2px solid var(--state-error); border-radius: var(--radius); padding: 6px 12px; font-weight: 600; }
+.zk-stopped[hidden], .zk-notice[hidden] { display: none; }
+
+.zk__body { display: grid; grid-template-columns: 240px minmax(0, 1fr) 260px; gap: 10px; align-items: start; }
+.zk__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.zk__center { position: relative; }
+
+.zk-form label { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); color: var(--muted); }
+.zk-form .input { font-family: var(--mono); color: var(--ink); }
+.zk-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.zk-seg { display: flex; flex-wrap: wrap; gap: 3px; }
+.zk-seg__b { border: 1px solid var(--rule); background: var(--surface); border-radius: var(--radius-xs);
+             padding: 3px 8px; cursor: pointer; font-size: var(--fs-sm); }
+.zk-seg__b[aria-checked="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.zk-kenh { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.zk-kenh label { flex-direction: row; align-items: center; gap: 4px; }
+.zk-kenh .input { width: 5em; }
+.zk-formula { font-family: var(--mono); font-size: var(--fs-xs); word-break: break-all; margin: 0; }
+
+/* シートの上部 */
+.zk-head { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 0; font-size: var(--fs-sm); }
+.zk-head__i { display: flex; gap: 4px; align-items: baseline; padding: 1px 6px; border-radius: var(--radius-xs);
+              background: var(--sunken); border: 2px solid transparent; }
+.zk-head__i[data-r] { cursor: pointer; }
+.zk-head__i.edit { border-color: var(--accent-line); }
+.zk-head__i.cur { border-color: var(--focus); background: #fff3a6; }
+.zk-head__i dt { color: var(--muted); }
+.zk-head__i dd { margin: 0; font-family: var(--mono); }
+.zk-head__i dd.red { color: var(--state-error); font-weight: 700; }
+
+/* 測定の表 */
+.zk-tablecard { padding: 0; }
+.zk-tablewrap { overflow: auto; max-height: calc(100vh - 290px); min-height: 280px; }
+.zk-table { border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-variant-numeric: tabular-nums;
+            font-size: var(--fs-sm); }
+.zk-table thead th { position: sticky; background: var(--surface); z-index: 2; font-family: var(--sans); font-weight: 600; }
+.zk-table thead tr.grp th { top: 0; height: 34px; border-bottom: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.zk-table thead tr.lab th { top: 34px; color: var(--muted); font-size: var(--fs-xs); border-bottom: 2px solid var(--rule); }
+.zk-table thead th.g b { display: block; font-size: var(--fs-sm); }
+.zk-table thead th.g small { display: block; font-weight: 400; color: var(--muted); font-size: var(--fs-2xs); white-space: nowrap; }
+body[data-zk-mode="5N"] .zk-table th.g--歪 small { color: var(--state-error); font-weight: 700; }
+.zk-table th.no { position: sticky; left: 0; background: var(--surface); z-index: 1; padding: 0 6px; color: var(--muted);
+                  text-align: right; min-width: 2.4em; }
+.zk-table thead th.no { z-index: 3; }
+.zk-table td { padding: 2px 4px; text-align: right; min-width: 3.9em; height: 1.7em; white-space: nowrap;
+               border-bottom: 1px solid var(--hairline); border-left: 1px solid var(--hairline); cursor: pointer; }
+.zk-table td.k-j { min-width: 1.5em; text-align: center; font-weight: 700; }
+.zk-table td.k-t, .zk-table td.k-l { text-align: left; min-width: 3.5em; }
+.zk-table td.k-c { color: var(--muted); }
+.zk-table td.ok { background: var(--ok-bg); color: var(--state-ok); }
+.zk-table td.ng { background: var(--warn-bg); color: var(--state-error); }
+.zk-table td.warn { background: #fff3a6; }
+.zk-table td.u { text-decoration: underline; }
+.zk-table tr.currow th.no { color: var(--ink); font-weight: 700; background: var(--info-bg); }
+.zk-table tr.currow td { background-color: color-mix(in srgb, var(--info-bg) 55%, transparent); }
+.zk-table td.cur { outline: 3px solid var(--focus); outline-offset: -3px; background: #fff3a6 !important; }
+
+.zk-flash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            font-size: 180px; font-weight: 900; pointer-events: none; }
+.zk-flash[data-kind="OK"] { color: color-mix(in srgb, var(--state-ok) 70%, transparent); }
+.zk-flash[data-kind="NG"] { color: color-mix(in srgb, var(--state-error) 70%, transparent); }
+.zk-flash[data-kind="diag"] { color: color-mix(in srgb, var(--accent) 70%, transparent); font-size: 140px; }
+.zk-flash[hidden] { display: none; }
+
+.next { border: 2px solid var(--focus); background: var(--info-bg); border-radius: var(--radius); padding: 10px; text-align: center; }
+.next b { display: block; font-size: var(--fs-xl); }
+.next small { color: var(--muted); }
+.zk-meas { width: 100%; font-family: var(--mono); font-size: var(--fs-lg); }
+.zk-files { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); word-break: break-all; }
+.log-lines { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); max-height: 9em; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.zk-pending { white-space: pre-line; font-size: var(--fs-xs); margin: 0; }
+
+@media (max-width: 1400px) { .zk__body { grid-template-columns: 210px minmax(0, 1fr) 220px; } .zk-mode { padding: 6px 14px; } }
+.zk-form .input { height: 30px; min-width: 0; width: 100%; box-sizing: border-box; }
+.zk-pair label { min-width: 0; }
+.zk-kenh .input { width: 5em; }

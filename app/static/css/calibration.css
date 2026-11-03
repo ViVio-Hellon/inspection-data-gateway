@@ -1,0 +1,58 @@
+/* 校正画面(VBA の UF校正)。上=この直の校正の状態、左=測る(受信欄)、右=順位・校正記録 */
+.cal { display: flex; flex-direction: column; gap: 10px; }
+.cal__body { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.cal__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* 状態の帯: 色だけに頼らず「済/未」の文字を大きく出す */
+.cal__status { display: flex; align-items: center; gap: 16px; padding: 10px 14px; border-radius: var(--radius);
+               background: var(--surface); box-shadow: var(--shadow-sm); border-left: 6px solid var(--rule); }
+.cal__status[data-ok="1"] { border-left-color: var(--state-ok); background: var(--ok-bg); }
+.cal__status[data-ok="0"] { border-left-color: var(--state-error); background: var(--warn-bg); }
+.cal__status-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.cal__status-main b { display: block; font-size: var(--fs-lg); }
+.cal__status-main small { color: var(--muted); }
+.cal__badge { display: inline-flex; align-items: center; justify-content: center; width: 2.4em; height: 2.4em;
+              border-radius: 50%; font-weight: 700; font-size: var(--fs-lg); background: var(--sunken); color: var(--ink); }
+.cal__status[data-ok="1"] .cal__badge { background: var(--state-ok); color: var(--on-accent); }
+.cal__status[data-ok="0"] .cal__badge { background: var(--state-error); color: var(--on-accent); }
+.cal__kv { display: grid; grid-template-columns: auto auto; gap: 2px 10px; margin: 0; font-size: var(--fs-sm); }
+.cal__kv dt { color: var(--muted); }
+.cal__kv dd { margin: 0; font-family: var(--mono); }
+
+/* 測る: VBA は 1000mm の間は緑、ストレートエッヂは白 */
+.cal__step[data-step="1000"] { background: var(--ok-bg); }
+.cal__step[data-step="done"] { background: var(--info-bg); }
+.cal__step header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cal__flow { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); }
+.cal__flow li { padding: 2px 8px; border-radius: var(--pill); background: var(--sunken); color: var(--muted); }
+.cal__flow li[data-state="now"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.cal__flow li[data-state="past"] { color: var(--state-ok); }
+.cal__flow li[data-state="past"]::before { content: "✓ "; }
+.cal__step .pad { display: flex; flex-direction: column; gap: 10px; }
+.cal__gauge { font-size: var(--fs-xl); font-weight: 700; margin: 0; line-height: var(--lh-tight); }
+.cal__in .input { width: 100%; font-family: var(--mono); font-size: var(--fs-lg); padding: 8px 10px; }
+.cal__meas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cal__meas div { background: var(--surface); border-radius: var(--radius-sm); padding: 8px 10px; }
+.cal__meas small { display: block; color: var(--muted); font-size: var(--fs-sm); }
+.cal__meas b { font-family: var(--mono); font-size: var(--fs-xl); font-variant-numeric: tabular-nums; }
+.cal__ng { margin: 0; padding: 6px 10px; border-radius: var(--radius-sm); background: var(--warn-bg);
+           color: var(--state-error); font-weight: 700; }
+.cal__saiken { margin: 0; color: var(--state-error); font-weight: 700; }
+.cal__done { margin: 0; color: var(--state-ok); font-weight: 700; font-size: var(--fs-lg); }
+.cal .kv-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: var(--fs-sm); margin: 0; }
+.cal .kv-grid dt { color: var(--muted); }
+.cal .kv-grid dd { margin: 0; }
+
+/* 順位 */
+.cal__ranks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cal__ranks h4 { margin: 0 0 4px; font-size: var(--fs-sm); color: var(--muted); }
+.cal__ranks ol { margin: 0; padding: 0; list-style: none; font-size: var(--fs-xs); font-family: var(--mono);
+                 display: flex; flex-direction: column; gap: 2px; }
+.cal__ranks li { background: var(--sunken); border-radius: var(--radius-xs); padding: 3px 6px; overflow-wrap: anywhere; }
+
+/* 校正記録 */
+.cal__records { max-height: 48vh; overflow: auto; }
+.cal__records td { font-family: var(--mono); font-size: var(--fs-sm); white-space: nowrap; }
+.cal__records tr[data-ng="1"] td { color: var(--state-error); }
+
+@media (max-width: 1280px) { .cal__body { grid-template-columns: minmax(0, 1fr); } }

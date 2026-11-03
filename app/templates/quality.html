@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}品質基準 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/quality.css') }}">
+<!--
+  品質基準画面(VBA の UF品質基準)。読み取り専用。
+  上 = どのロットか(いま検査中のロットが既定、ロットNo を入れて別のロットも)。
+  下 = 規格ごとのカード。各カードに参照元(Q-S-QA-… の表名)を必ず出す。判断はサーバ(quality_session.py)。
+-->
+<div class="qual" id="qual">
+  <section class="card qual__head">
+    <div class="pad">
+      <form class="qual__find" id="qFind" autocomplete="off">
+        <label for="qLot">ロットNo</label>
+        <input class="input" id="qLot" maxlength="20" placeholder="例 H7345B0">
+        <button class="btn btn--find" type="submit">見る</button>
+        <button class="btn" type="button" id="qCurrent">いま検査中のロット</button>
+        <span class="lv" id="qWhich"></span>
+      </form>
+      <p class="muted" id="qEmpty" hidden>検査中のロットがありません。ロットNo を入れて「見る」を押してください。</p>
+      <dl class="qual__hkv" id="qHeader"></dl>
+    </div>
+  </section>
+
+  <section class="card qual__kensa" id="qKensaBox" hidden>
+    <header><h3>検査画面に出ている規格</h3><span class="lv lv--info">いまのロット</span></header>
+    <div class="pad"><dl class="qual__hkv" id="qKensa"></dl></div>
+  </section>
+
+  <div class="qual__cards" id="qCards"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/quality.js') }}"></script>
+{% endblock %}

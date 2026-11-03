@@ -1,0 +1,118 @@
+"""仕掛 DB は手元へ写してから読む(判断事項 D26 改。python-web-tools の source_db と同じ考え方)
+
+- 仕掛(SIKALOT / SIKAHIKI / SIKAODR と 2つ目の名前のもの、SIKACOMP / SIKATWOYEAR)は、
+  **共有のファイルを直接開かない**。手元(`app_config.local_dir("cache")/kensa_lot`)へ写し、写しを読む
+  (共有のファイルを開いたままにすると上流が差し替えられないため)
+- 写せなければそのファイルは読まない(`local_copy` が None)。呼び手は「無い」として扱う:
+  オンラインは第2へ、オフラインは「…がありません」
+- 写し直すのは、元の 大きさ・更新時刻・inode が変わったときだけ
+- 書いている途中を写さないよう、読む鍵(BEGIN + SELECT)を取ってから写す。WAL なら -wal も一緒に写す
+"""
+from __future__ import annotations
+
+import hashlib
+import shutil
+import sqlite3
+import threading
+from pathlib import Path
+from typing import Optional
+from urllib.parse import quote as _urlquote
+
+from ..logging_utils import get_logger
+
+log = get_logger("kensa.lot_copy")
+
+BUSY_TIMEOUT_MS = 10_000
+_SIDECARS = ("-wal", "-shm", "-journal")
+_lock = threading.Lock()
+_copies: dict[str, tuple[tuple[int, int, int], Path]] = {}
+
+
+def copy_dir() -> Path:
+    from .. import app_config
+    d = app_config.local_dir("cache") / "kensa_lot"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _stamp(p: Path) -> tuple[int, int, int]:
+    st = p.stat()
+    return (st.st_size, st.st_mtime_ns, st.st_ino)
+
+
+def _uri(p: Path) -> str:
+    return "file:" + _urlquote(str(p.resolve()).replace("\\", "/"), safe="/:") + "?mode=ro"
+
+
+def _snapshot(src: Path, dst: Path) -> bool:
+    """読む鍵を取ってから写す(書き終わった姿だけが写る)。写せたら True。WAL は False(ファイルのまま写す)。"""
+    if Path(str(src) + "-wal").exists():
+        return False
+    try:
+        conn = sqlite3.connect(_uri(src), uri=True, timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None)
+    except sqlite3.Error:
+        return False
+    try:
+        conn.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
+        conn.execute("BEGIN")
+        conn.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()
+        shutil.copyfile(src, dst)
+        conn.execute("COMMIT")
+        return True
+    except (sqlite3.Error, OSError):
+        dst.unlink(missing_ok=True)
+        return False
+    finally:
+        conn.close()
+
+
+def _raw_copy(src: Path, dst: Path) -> None:
+    wal = Path(str(src) + "-wal")
+    if wal.exists():
+        shutil.copyfile(wal, Path(str(dst) + "-wal"))
+    shutil.copyfile(src, dst)
+
+
+def local_copy(path_text: str) -> Optional[Path]:
+    """仕掛 DB(Windows のパス文字列)を手元へ写した実体。写せなければ None(理由は trace に残す)。"""
+    from .. import trace
+    from . import paths
+    src = paths.to_local(path_text)
+    key = str(src)
+    try:
+        if not src.is_file():
+            return None
+        stamp = _stamp(src)
+    except OSError:
+        return None
+    with _lock:
+        known = _copies.get(key)
+        if known is not None and known[0] == stamp and known[1].is_file():
+            return known[1]
+        try:
+            dst = copy_dir() / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:16] + "_" + src.name)
+            for extra in _SIDECARS:
+                Path(str(dst) + extra).unlink(missing_ok=True)
+            tmp = dst.with_name(dst.name + ".part")
+            if not _snapshot(src, tmp):
+                _raw_copy(src, tmp)
+                if Path(str(tmp) + "-wal").exists():
+                    Path(str(tmp) + "-wal").replace(Path(str(dst) + "-wal"))
+            tmp.replace(dst)
+            after = _stamp(src)
+        except OSError as e:
+            trace.event("db.copy", f"仕掛 DB を手元へ写せなかったので読みません: {src}({e})", level="WARNING",
+                        data={"path": key})
+            log.warning("仕掛 DB を手元へ写せませんでした: %s (%s)", src, e)
+            _copies.pop(key, None)
+            return None
+        _copies[key] = (after if after == stamp else stamp, dst)
+        trace.note_used(src, "copy")
+        log.info("仕掛 DB を手元へ写しました: %s → %s", src, dst)
+        return dst
+
+
+def forget() -> None:
+    """覚えている写しを忘れる(試験用)。"""
+    with _lock:
+        _copies.clear()

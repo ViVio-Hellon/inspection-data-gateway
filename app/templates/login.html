@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}権限 — {{ display_name }}{% endblock %}
+{% block content %}
+<div class="pane">
+  <div class="pane__head">
+    <div><span class="eyebrow">この PC の権限</span><h2>{{ ribbon.db }}</h2></div>
+  </div>
+  <span class="dimline" aria-hidden="true"></span>
+  {# 0.16.0: パスワードは無い。この PC のログイン ID・PC 名で、設定ファイルの「アクセス権限」を引く(0.22.0) #}
+  <section class="card" style="max-width:36em; margin-top:12px" id="loginCard">
+    <header><i class="ib ib--sm" aria-hidden="true">権</i><h3>この PC の権限</h3></header>
+    <div class="pad">
+      <form id="loginForm" autocomplete="off">
+        <dl style="display:grid; grid-template-columns:8em 1fr; gap:4px 12px; margin:0">
+          <dt class="why" style="margin:0">ログイン ID</dt><dd style="margin:0"><b>{{ use_id }}</b></dd>
+          <dt class="why" style="margin:0">PC 名</dt><dd style="margin:0"><b>{{ use_pc }}</b></dd>
+          <dt class="why" style="margin:0">権限</dt><dd style="margin:0"><b id="rightsLabel">{{ rights.label if rights else "-" }}</b></dd>
+        </dl>
+        <p class="why" id="rightsReason">{{ rights.reason if rights else "" }}</p>
+        <p class="why">編集可 / 閲覧のみ は、設定ファイルの「アクセス権限」で決めます(この ID・PC に
+          権限 = <b>編集可</b> の行があれば 編集可。行が 1 つも無いうちは誰でも 編集可)。パスワードは要りません。</p>
+        <p class="status status--ng" id="loginProblem" hidden></p>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn--commit" type="submit" id="loginExe">使い始める</button>
+          <a class="btn btn--find" href="/settings?tab=easy">設定へ</a>
+          <a class="btn btn--find" href="/settings?tab=source">接続先(DB ファイル)</a>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import { start } from "{{ url_for('static', filename='js/views/login.js') }}";
+  start({{ next_url | tojson }});
+</script>
+{% endblock %}

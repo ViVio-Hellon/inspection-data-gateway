@@ -1,0 +1,337 @@
+"""使用パス(判断事項 D26。2026-11-02 決め、11-03 改)
+
+- 仕掛台帳だけ 第1 / 第2。オンラインは第1 → 無いファイル・ロットだけ第2、オフラインは第2だけ
+- 仕掛 DB は手元へ写してから読む。写せないファイルは読まない(第2へ / 「ありません」)
+- 上流の作り直しの決まり(PLEASE WAIT・時刻窓)は使わない
+- ほかの項目はパス 1 つ(モードによらない)。前の保存の読み替え
+- 設定画面の API: 変えるには管理者パスワード(auth.master_edit_ok)。断りは 403
+"""
+from __future__ import annotations
+
+import datetime as dt
+import shutil
+import sqlite3
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from tests import kensa_fixture
+from ufkensa import auth, user_settings
+from ufkensa.kensa import datasource, lot, lot_copy, paths
+
+T_NORMAL = dt.datetime(2026, 10, 30, 10, 30, 0)     # 時刻窓の外
+
+
+def _ok(*_a) -> str:
+    return "可"
+
+
+class _Saved(unittest.TestCase):
+    """使用パスとモードを試験の前後で戻す。"""
+
+    def setUp(self) -> None:
+        self._paths = user_settings.get(paths.KEY_PATHS, None)
+        self._mode = user_settings.get(paths.KEY_MODE, None)
+        self.root = Path(tempfile.mkdtemp(prefix="ufk_paths_"))
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.d1, self.d2 = self.root / "first", self.root / "second"
+        self.d1.mkdir()
+        self.d2.mkdir()
+
+    def tearDown(self) -> None:
+        for k, v in ((paths.KEY_PATHS, self._paths), (paths.KEY_MODE, self._mode)):
+            if v is None:
+                user_settings.delete(k)
+            else:
+                user_settings.save(k, v)
+
+    def use(self, mode: str, **extra) -> None:
+        paths.set_mode(mode)
+        items = {k: str(self.d1) + "/" for k in ("quality", "packing", "history", "factory")}
+        user_settings.save(paths.KEY_PATHS, {paths.KEY_ITEMS: items,
+                                             paths.KEY_LOT: {paths.FIRST: str(self.d1) + "/",
+                                                             paths.SECOND: str(self.d2) + "/"}, **extra})
+
+    def put(self, where: Path, name: str, as_name: str = "") -> None:
+        shutil.copy2(kensa_fixture.build() / kensa_fixture.file_name(name), where / (as_name or kensa_fixture.file_name(name)))
+
+
+# ------------------------------------------------------------------
+class SinglePathTest(_Saved):
+    """仕掛台帳でない項目はパス 1 つ。モードで変わらない・第2へも逃げない。"""
+
+    def test_mode_does_not_matter(self) -> None:
+        for mode in (paths.ONLINE, paths.OFFLINE):
+            self.use(mode)
+            self.assertEqual(paths.get("quality"), str(self.d1) + "/")
+            self.assertEqual(paths.db_file("品質基準"), str(self.d1) + "/品質基準.sqlite3")
+            self.assertEqual(paths.get("nis"), r"C:\Tools\測定データ電子化")         # 既定は VBA のオンラインの値
+        paths.set_path("wav", str(self.root / "無い") + "/")
+        self.assertEqual(paths.get("wav"), str(self.root / "無い") + "/")           # 無くても同じパス(落ち先なし)
+        with self.assertRaises(datasource.DbMissing):
+            datasource.get_fields("品質基準", "QA_022_01", "")
+        self.put(self.d1, "品質基準")
+        self.assertIsNotNone(datasource.get_fields("品質基準", "QA_022_01", ""))
+
+
+class LotFileTest(_Saved):
+    """仕掛台帳: ファイルごとの第2・写せないとき・2つ目の名前・SIKACOMP は第2。"""
+
+    def test_aliases(self) -> None:
+        self.use(paths.ONLINE)
+        self.assertEqual((paths.get("main"), paths.get("next")), (str(self.d1) + "/", str(self.d2) + "/"))
+        paths.set_mode(paths.OFFLINE)
+        self.assertEqual((paths.get("main"), paths.get("next")), (str(self.d2) + "/", str(self.d2) + "/"))
+
+    def test_per_file(self) -> None:
+        self.use(paths.ONLINE, second_names={"SIKALOTNOW": "SIKALOT_圧縮"})
+        self.put(self.d2, "SIKALOTNOW", "SIKALOT_圧縮.sqlite3")
+        self.put(self.d2, "SIKAHIKINOW")
+        self.put(self.d1, "SIKAHIKINOW")
+        self.assertEqual(paths.db_file("SIKALOTNOW"), str(self.d2) + "/SIKALOT_圧縮.sqlite3")    # 第1に無い → 第2の名前
+        self.assertEqual(paths.db_file("SIKAHIKINOW"), str(self.d1) + "/SIKAHIKI.sqlite3")       # 第1にある
+        (self.d1 / "PLEASE WAIT.txt").write_text("x")
+        self.assertEqual(paths.db_file("SIKAHIKINOW"), str(self.d1) + "/SIKAHIKI.sqlite3")       # D26 改: 見ない
+        self.assertEqual(paths.db_file("SIKACOMP"), str(self.d2) + "/SIKACOMP.sqlite3")          # VBA は NextPath
+        self.assertEqual(paths.db_file("SIKAODRNOW"), str(self.d1) + "/SIKAODR.sqlite3")         # どちらにも無い → 第1
+        paths.set_mode(paths.OFFLINE)
+        self.assertEqual(paths.db_file("SIKALOTNOW"), str(self.d2) + "/SIKALOT_圧縮.sqlite3")
+        self.assertEqual(lot.db_path(paths.get("main"), "SIKALOTNOW"), str(self.d2) + "/SIKALOT_圧縮.sqlite3")
+
+    def test_copy_failure_falls_back(self) -> None:
+        self.use(paths.ONLINE)
+        self.put(self.d1, "SIKAHIKINOW")
+        self.put(self.d2, "SIKAHIKINOW")
+        with mock.patch.object(lot_copy.shutil, "copyfile", side_effect=OSError("共有に届かない")):
+            lot_copy.forget()
+            self.assertFalse(lot.read_check(str(self.d1) + "/SIKAHIKI.sqlite3", 1))
+            self.assertEqual(paths.db_file("SIKAHIKINOW"), str(self.d1) + "/SIKAHIKI.sqlite3")   # 第2も写せない → 第1
+            with self.assertRaises(datasource.DbMissing):                                       # 共有を直接は開かない
+                datasource.get_fields(str(self.d1) + "/SIKAHIKI.sqlite3", "仕掛", "")
+            r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+            self.assertEqual([m.text for m in r.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox"])
+        lot_copy.forget()
+        real = shutil.copyfile
+
+        def only_second(src, dst, *a, **k):
+            if str(self.d1) in str(src):
+                raise OSError("第1に届かない")
+            return real(src, dst, *a, **k)
+        with mock.patch.object(lot_copy.shutil, "copyfile", side_effect=only_second):
+            self.assertEqual(paths.db_file("SIKAHIKINOW"), str(self.d2) + "/SIKAHIKI.sqlite3")   # 写せない第1 → 第2
+            r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+            self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
+            self.assertIsNotNone(r.value)
+        lot_copy.forget()
+
+    def test_reads_copy_and_recopies_on_change(self) -> None:
+        self.use(paths.ONLINE)
+        self.put(self.d1, "SIKAHIKINOW")
+        src = str(self.d1) + "/SIKAHIKI.sqlite3"
+        c1 = lot_copy.local_copy(src)
+        self.assertTrue(str(c1).startswith(str(lot_copy.copy_dir())))
+        with mock.patch.object(lot_copy.shutil, "copyfile", side_effect=AssertionError("写し直さない")):
+            self.assertEqual(lot_copy.local_copy(src), c1)                    # 変わっていなければ写し直さない
+        n = len(datasource.get_records(src, "仕掛", ""))
+        with sqlite3.connect(src) as c:
+            c.execute('DELETE FROM "仕掛" WHERE rowid = (SELECT MIN(rowid) FROM "仕掛")')
+        c.close()
+        self.assertEqual(len(datasource.get_records(src, "仕掛", "")), n - 1)   # 変わったら写し直して読む
+
+    def test_second_name_rules(self) -> None:
+        self.use(paths.ONLINE)
+        self.assertEqual(paths.second_name("SIKAHIKINOW"), "SIKAHIKI.sqlite3")
+        paths.set_second_name("SIKAHIKINOW", "HIKI2.db")
+        self.assertEqual(paths.second_name("SIKAHIKINOW"), "HIKI2.db")                          # 拡張子まで入れればそのまま
+        self.assertEqual(lot.db_path(paths.get("next"), "SIKAHIKINOW"), str(self.d2) + "/HIKI2.db")
+        self.assertEqual(lot.db_path(paths.get("main"), "SIKAHIKINOW"), str(self.d1) + "/SIKAHIKI.sqlite3")
+        self.assertTrue(paths.is_copied(str(self.d2) + "/HIKI2.db"))
+        with self.assertRaises(ValueError):
+            paths.set_second_name("SIKAHIKINOW", r"C:\x\HIKI.sqlite3")                          # フォルダは入れない
+        paths.set_second_name("SIKAHIKINOW", "")
+        self.assertEqual(paths.second_name("SIKAHIKINOW"), "SIKAHIKI.sqlite3")
+
+
+class PerLotTest(_Saved):
+    """ロットごとの第2: 第1の SIKAHIKI / SIKALOT / SIKAODR にロットが無ければ第2を見る。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        for name in ("SIKALOTNOW", "SIKAHIKINOW", "SIKAODRNOW"):
+            self.put(self.d1, name)
+            self.put(self.d2, name)
+
+    def delete(self, where: Path, name: str, col: str, values: list[str]) -> None:
+        with sqlite3.connect(where / kensa_fixture.file_name(name)) as c:
+            c.executemany(f'DELETE FROM "仕掛" WHERE "{col}" = ?', [(v,) for v in values])
+        c.close()
+
+    def reverse_columns(self, path: Path) -> None:
+        with sqlite3.connect(path) as c:
+            cols = [r[1] for r in c.execute('PRAGMA table_info("仕掛")')]
+            sel = ", ".join(f'"{x}"' for x in reversed(cols))
+            c.execute(f'CREATE TABLE t2 AS SELECT {sel} FROM "仕掛" ORDER BY rowid')
+            c.execute('DROP TABLE "仕掛"')
+            c.execute('ALTER TABLE t2 RENAME TO "仕掛"')
+        c.close()
+
+    def test_arrbox_lot_from_second(self) -> None:
+        self.use(paths.ONLINE)
+        base = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertEqual(base.file_path, str(self.d1) + "/SIKAHIKI.sqlite3")
+        self.delete(self.d1, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
+        self.assertEqual(r.value, base.value)
+        self.assertEqual(r.messages, [])
+        # 第2にも無い → VBA と同じく Empty(メッセージなし)
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.assertIsNone(lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL).value)
+
+    def test_second_with_other_name_and_column_order(self) -> None:
+        self.use(paths.ONLINE, second_names={"SIKAHIKINOW": "SIKAHIKI_圧縮.sqlite3"})
+        base = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL).value
+        (self.d2 / "SIKAHIKI.sqlite3").rename(self.d2 / "SIKAHIKI_圧縮.sqlite3")
+        self.reverse_columns(self.d2 / "SIKAHIKI_圧縮.sqlite3")
+        self.delete(self.d1, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI_圧縮.sqlite3")
+        self.assertEqual(r.value, base)                               # 第1の列の並びに直してある
+
+    def test_offline_reads_only_second(self) -> None:
+        self.use(paths.OFFLINE)
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
+        self.assertIsNone(r.value)                                    # 第1にあっても見ない
+        (self.d2 / "SIKAHIKI.sqlite3").unlink()
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertEqual([m.text for m in r.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox"])
+
+    def test_acc_reflec_lot_from_second(self) -> None:
+        self.use(paths.ONLINE)
+        screen = lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T")
+        base = lot.acc_reflec(screen, check_equipment=_ok)
+        self.delete(self.d1, "SIKALOTNOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.acc_reflec(screen, check_equipment=_ok)
+        self.assertEqual((r.status, r.db_path), ("ok", str(self.d2) + "/SIKALOT.sqlite3"))
+        self.assertEqual(r.past_hiki, base.past_hiki)
+        self.delete(self.d2, "SIKALOTNOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.assertEqual(lot.acc_reflec(screen, check_equipment=_ok).status, "not_found")
+
+    def test_history_save_odr_from_second(self) -> None:
+        self.use(paths.ONLINE)
+        ph = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T"), check_equipment=_ok).past_hiki
+        sheet = [list(lot.HISTORY_HEADER)]
+        base = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.delete(self.d1, "SIKAODRNOW", "受注番号", ["06017610", "06017503", "06019756"])
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(r.completed)
+        self.assertEqual(r.new_rows, base.new_rows)
+        # SIKAHIKI にロットが無い → VBA どおり控えへ(SaveLoad:1343-1352)
+        self.delete(self.d1, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
+        self.assertEqual(r.new_rows, base.new_rows)
+
+    def test_sika_atu_create_from_second(self) -> None:
+        self.use(paths.ONLINE)
+        base = lot.sika_atu_create("H2500K0")
+        self.delete(self.d1, "SIKALOTNOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.reverse_columns(self.d2 / "SIKALOT.sqlite3")
+        self.assertEqual(lot.sika_atu_create("H2500K0"), base)
+
+
+class MigrationTest(_Saved):
+    """前の保存 → 仕掛台帳は第1/第2、ほかはいまのモードで使っていた値。"""
+
+    OLD = {paths.ONLINE: {"main": r"\\a\台帳" "\\", "next": r"\\a\控え" "\\", "wav": r"D:\音1"},
+           paths.OFFLINE: {"main": r"C:\app" "\\", "next": r"C:\app" "\\", "wav": r"D:\音2", "nis": ""}}
+
+    def test_old_online_offline_in_online(self) -> None:
+        paths.set_mode(paths.ONLINE)
+        user_settings.save(paths.KEY_PATHS, self.OLD)
+        self.assertEqual(paths.slot_value(paths.LOT, paths.FIRST), r"\\a\台帳" "\\")
+        self.assertEqual(paths.slot_value(paths.LOT, paths.SECOND), r"\\a\控え" "\\")   # VBA オンラインの NextPath
+        self.assertEqual(paths.get("wav"), r"D:\音1")
+        self.assertEqual(paths.get("nis"), paths.slot_default("nis"))
+        stored = user_settings.get(paths.KEY_PATHS)
+        self.assertNotIn(paths.ONLINE, stored)                                          # 新しい形で保存し直す
+        self.assertEqual(stored[paths.KEY_ITEMS]["wav"], r"D:\音1")
+
+    def test_old_online_offline_in_offline(self) -> None:
+        paths.set_mode(paths.OFFLINE)
+        user_settings.save(paths.KEY_PATHS, self.OLD)
+        self.assertEqual((paths.get("wav"), paths.get("nis")), (r"D:\音2", ""))         # オフラインで使っていた値
+        self.assertEqual(paths.get("main"), r"\\a\控え" "\\")
+
+    def test_interim_first_second(self) -> None:
+        paths.set_mode(paths.OFFLINE)
+        user_settings.save(paths.KEY_PATHS, {paths.FIRST: {"lot": "/1/", "quality": "/q1/"},
+                                             paths.SECOND: {"lot": "/2/", "quality": "/q2/"},
+                                             "second_names": {"SIKALOTNOW": "L2"}})
+        self.assertEqual((paths.slot_value(paths.LOT, paths.FIRST), paths.slot_value(paths.LOT, paths.SECOND)),
+                         ("/1/", "/2/"))
+        self.assertEqual(paths.get("quality"), "/q2/")
+        self.assertEqual(paths.second_name("SIKALOTNOW"), "L2.sqlite3")
+
+    def test_old_call_style(self) -> None:
+        paths.set_path("wav", r"D:\x", paths.ONLINE)                 # slot はパス1つの項目では見ない
+        self.assertEqual(paths.get("wav"), r"D:\x")
+        paths.set_path("next", "/n/")
+        self.assertEqual(paths.slot_value(paths.LOT, paths.SECOND), "/n/")
+        paths.reset_path("next")
+        self.assertEqual(paths.slot_value(paths.LOT, paths.SECOND), paths.slot_default(paths.LOT, paths.SECOND))
+
+
+class SettingsApiTest(_Saved):
+    """設定画面の使用パス: 変えるには管理者パスワード(403 locked / not_admin)。確認は両方。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        from tests._web import make_client
+        self.c = make_client()
+        self.h = {"X-Tool-Token": self.c.application.config["TOKEN"]}
+        self.use(paths.ONLINE)
+
+    def post(self, url, **body):
+        return self.c.post(url, json=body, headers=self.h)
+
+    def test_locked_and_not_admin(self) -> None:
+        with mock.patch.object(auth, "can_edit", return_value=True), \
+                mock.patch.object(auth, "master_edit_ok", return_value=False):
+            r = self.post("/api/settings/path", key="wav", slot="first", path="x")
+            self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
+            r = self.post("/api/settings/path", key="lot", db="SIKALOTNOW", second_name="x")
+            self.assertEqual(r.status_code, 403)
+        with mock.patch.object(auth, "can_edit", return_value=False):
+            r = self.post("/api/settings/path", key="wav", slot="second", path="x")
+            self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "not_admin"))
+            self.assertEqual(r.get_json()["error"]["message"], "編集には、アクセス権限の「管理者」が要ります")
+        self.assertNotEqual(paths.slot_value("wav", paths.FIRST), "x")
+
+    def test_edit_when_unlocked(self) -> None:
+        with mock.patch.object(auth, "master_edit_ok", return_value=True):
+            st = self.post("/api/settings/path", key="wav", path=str(self.d2) + "/").get_json()
+            row = [p for p in st["paths"] if p["key"] == "wav"][0]
+            self.assertEqual((row["path"], row["changed"], row["single"]), (str(self.d2) + "/", True, True))
+            st = self.post("/api/settings/path", key="lot", slot="second", path=str(self.root) + "/").get_json()
+            lot_row = [p for p in st["paths"] if p["key"] == "lot"][0]
+            self.assertEqual((lot_row["second"], lot_row["second_changed"]), (str(self.root) + "/", True))
+            st = self.post("/api/settings/path", key="lot", db="SIKAHIKINOW", second_name="HIKI2").get_json()
+            lot_row = [p for p in st["paths"] if p["key"] == "lot"][0]
+            self.assertEqual([n["effective"] for n in lot_row["second_names"]],
+                             ["SIKALOT.sqlite3", "HIKI2.sqlite3", "SIKAODR.sqlite3"])
+            self.assertEqual(lot_row["in_use"][paths.OFFLINE], "第2だけ")
+            self.assertEqual(self.post("/api/settings/path", key="lot", path="x").status_code, 400)   # 仕掛は slot が要る
+
+    def test_check_both(self) -> None:
+        self.put(self.d2, "SIKALOTNOW")
+        d = self.post("/api/settings/path/check", key="lot").get_json()
+        first, second = d["results"]
+        self.assertTrue(first["ok"] and second["ok"])
+        self.assertEqual([f["copied"] for f in second["files"]][:3], [True, False, False])
+        self.assertIn("第1パス", d["message"])
+        d = self.post("/api/settings/path/check", key="quality").get_json()
+        self.assertEqual(len(d["results"]), 1)

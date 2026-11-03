@@ -1,0 +1,90 @@
+/* 保守画面。上=編集の鍵の帯、左=歪公差チェックと仮ロット(表が大きいので幅を取る)、右=単発の表引き・端末設定・管理者パスワード */
+.maint { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 10px; align-items: start; }
+.maint .maint__lockbar { grid-column: 1 / -1; display: flex; flex-direction: row; flex-wrap: wrap; text-align: left; align-items: center; gap: 12px; padding: 8px 14px; }
+.lockbadge { display: inline-flex; align-items: center; gap: 8px; }
+.lockbadge__why { font-size: var(--fs-xs); }
+.maint__main, .maint__side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.maint .pad { display: flex; flex-direction: column; gap: 10px; }
+
+.maint__dbs { display: flex; flex-direction: column; gap: 6px; }
+.maint__path { font-family: var(--mono); font-size: var(--fs-xs); background: var(--sunken); padding: 2px 6px;
+               border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.maint__altin { flex: 1; min-width: 28em; font-family: var(--mono); font-size: var(--fs-sm); }
+.maint__runs { display: flex; flex-wrap: wrap; gap: 8px 28px; padding-top: 6px; border-top: 1px solid var(--line, #ddd); }
+.maint__lot { width: 12em; font-family: var(--mono); text-transform: uppercase; }
+.maint__ck { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+
+/* 参照(/api/fs/list) */
+.maint__browser { padding: 6px 10px; }
+.maint__bhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--fs-xs); }
+.maint__blist { list-style: none; margin: 4px 0 0; padding: 0; max-height: 240px; overflow: auto; columns: 2; }
+.maint__blist button { background: none; border: 0; padding: 2px 4px; cursor: pointer; font: inherit; font-size: var(--fs-sm);
+                       text-align: left; color: inherit; }
+.maint__blist button:hover { background: var(--accent-soft); }
+.maint__blist .is-dir button::before { content: "📁 "; }
+.maint__blist .is-file button { font-weight: 700; }
+
+/* 結果 */
+.maint__summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: var(--fs-sm); min-height: 1.6em; }
+.maint__result { max-height: 46vh; overflow: auto; }
+.maint__one { width: auto; min-width: 560px; }
+.maint__one tbody th { text-align: left; color: var(--muted); font-weight: 600; white-space: nowrap; padding-right: 16px; }
+.maint__one tbody td { text-align: left; white-space: pre-line; font-family: var(--mono); height: auto; vertical-align: top; }
+.maint__all tbody td { height: auto; vertical-align: top; }
+.maint__all td.maint__wrap { text-align: left; white-space: pre-line; font-size: var(--fs-xs); min-width: 10em; max-width: 22em; }
+.maint__all thead th { position: sticky; top: 0; z-index: 1; }
+.maint__one thead th, .maint__all thead th { text-align: left; }
+.maint__all td.n { white-space: nowrap; }
+.maint__bmsg { column-span: all; font-size: var(--fs-xs); padding: 4px; }
+.maint tr.is-diff td, .maint td.is-diff { background: var(--warn-bg); }
+.maint tr.is-diffrow td:first-child { box-shadow: inset 3px 0 0 var(--state-error); }
+.maint__arrow { color: var(--muted); }
+.maint td.is-diff b { color: var(--state-error); }
+.maint__note { margin: 0; font-size: var(--fs-sm); background: var(--sunken); border-radius: var(--radius-sm); padding: 6px 8px; white-space: pre-line; }
+.maint__msg { margin: 0; font-size: var(--fs-xs); color: var(--state-error); }
+
+/* 右側 */
+.maint__num { width: 6em; }
+.maint__eq { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 6px 8px; align-items: center; font-size: var(--fs-sm); }
+.maint__eq label { color: var(--muted); }
+.maint__eq select, .maint__eq .input { width: 100%; }
+.maint__kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: var(--fs-sm); }
+.maint__kv:empty { display: none; }
+.maint__kv dt { color: var(--muted); white-space: nowrap; }
+.maint__kv dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; white-space: pre-line; }
+.maint__kv dd.is-warn { color: var(--state-error); font-weight: 700; }
+.maint__kv dd.is-diff { background: var(--warn-bg); }
+.maint__presets { flex-wrap: wrap; }
+.maint__small { font-size: var(--fs-xs); margin: 0; }
+
+/* 仮ロット */
+.maint__kari-chip { font-size: var(--fs-xs); }
+.maint tr.is-kari td:first-child { box-shadow: inset 3px 0 0 var(--accent, #2a6f97); }
+.maint .maint__kgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.maint__klist { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.maint__ktable { max-height: 420px; overflow: auto; }
+.maint__ktable td { height: auto; vertical-align: middle; font-size: var(--fs-sm); white-space: normal; text-align: left; }
+.maint__ktable td.n { white-space: nowrap; }
+.maint__ktable th { text-align: left; }
+.maint__ktable tr.is-current td { background: var(--accent-soft); }
+.maint__ktable td.maint__kops { white-space: nowrap; padding: 3px 4px; }
+.maint__kops .btn--sm { padding: 2px 7px; height: auto; min-height: 0; font-size: var(--fs-xs); margin-right: 3px; }
+.maint__kform { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.maint__khead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.maint__kcopy { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--muted); }
+.maint__kfields, .maint__kmain { display: grid; grid-template-columns: auto 1fr auto 1fr auto 1fr; gap: 5px 8px; align-items: center;
+                                 font-size: var(--fs-sm); }
+.maint__kmain { grid-column: 1 / -1; }
+.maint__kfields label, .maint__kmain label { color: var(--muted); white-space: nowrap; cursor: help; }
+.maint__kmain .input, .maint__kfields .input { width: 100%; min-width: 0; }
+.maint__kfields .maint__lot { width: 100%; }
+.maint__kken { display: inline-flex; align-items: center; gap: 8px; grid-column: span 3; }
+.maint__head { width: 3em !important; text-transform: uppercase; font-family: var(--mono); text-align: center; }
+.maint__kken code { font-family: var(--mono); background: var(--sunken); padding: 2px 6px; border-radius: var(--radius-sm); }
+.maint__kdetail summary { cursor: pointer; font-size: var(--fs-sm); color: var(--muted); margin-bottom: 6px; }
+.maint__kmsg { white-space: pre-line; min-height: 1em; }
+.maint .is-bad { outline: 2px solid var(--state-error); outline-offset: 1px; }
+
+/* 管理者パスワード */
+.maint__pw { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; font-size: var(--fs-sm); }
+.maint__pw label { color: var(--muted); }

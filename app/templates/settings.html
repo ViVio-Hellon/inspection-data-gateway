@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}設定 — {{ display_name }}{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h2>設定</h2>
+  <p class="muted">この端末のライン、使うフォルダとファイル、権限を確かめて決めます。変えられるのは管理者だけです(ラインが未設定のときは誰でも決められます。音は誰でも選べます)。</p>
+</section>
+
+<div class="tabs" data-tabs="settings" id="settingsTabs">
+  <div class="tabs__bar" role="tablist" aria-label="設定の面">
+    <button class="tab" type="button" role="tab" data-key="terminal" data-default="1" id="tab-terminal" aria-controls="panel-terminal" aria-selected="false">
+      <span class="tab__label">この端末</span><span class="tab__badge" hidden></span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="paths" id="tab-paths" aria-controls="panel-paths" aria-selected="false">
+      <span class="tab__label">使用パス</span><span class="tab__badge" hidden></span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="sound" id="tab-sound" aria-controls="panel-sound" aria-selected="false">
+      <span class="tab__label">音</span><span class="tab__badge" hidden></span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="rights" id="tab-rights" aria-controls="panel-rights" aria-selected="false">
+      <span class="tab__label">権限</span><span class="tab__badge" hidden></span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="log" id="tab-log" aria-controls="panel-log" aria-selected="false">
+      <span class="tab__label">ログ</span><span class="tab__badge" hidden></span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="quirks" id="tab-quirks" aria-controls="panel-quirks" aria-selected="false">
+      <span class="tab__label">不具合の扱い</span><span class="tab__badge" hidden></span>
+    </button>
+  </div>
+  <div class="tabs__panels">
+    <section class="tabpanel tabpanel--scroll" id="panel-terminal" role="tabpanel" aria-labelledby="tab-terminal" hidden>
+      <section class="card">
+        <header><h3>この端末のライン</h3><span class="lv" id="termLevel"></span></header>
+        <div class="pad">
+          <p class="muted">VBA のレジストリ「設備名」(初期設定 SF3)に当たります。検査の画面はこのラインで動きます。</p>
+          <div class="field">
+            <label for="facility">設備名</label>
+            <select class="input" id="facility"></select>
+            <label for="lineNo" id="lineNoLabel">号機</label>
+            <select class="input" id="lineNo"></select>
+            <button class="btn btn--primary" type="button" id="saveTerminal">決める</button>
+          </div>
+          <p class="muted" id="termNote"></p>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>モード</h3></header>
+        <div class="pad">
+          <p class="muted">仕掛台帳の読み方だけが変わります: オンラインは第1パス(台帳)を読み、無いファイル・ロットだけ第2パス(控え)を読みます。オフラインは第2パスだけを読みます(VBA の「モード」に当たります)。ほかのパスはモードによりません。</p>
+          <div class="field" id="modeChoices" role="radiogroup" aria-label="モード"></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-paths" role="tabpanel" aria-labelledby="tab-paths" hidden>
+      <section class="card">
+        <header><h3>使用パス</h3><span class="lv lv--info" id="pathsMode"></span></header>
+        <div class="pad">
+          <p class="muted">VBA の初期設定(Setting_Path)とコードに直書きされていたパスです。項目ごとにパスは1つです。
+            <b>仕掛台帳だけ</b>第1パス(台帳 = VBA の MainPath)と第2パス(控え = NextPath)を持ち、<b>モードはここにだけ効きます</b>:
+            オンラインは第1を読み、第1に無いファイル・ロットだけ第2を読みます。オフラインは第2だけを読みます(無ければ「…がありません」)。
+            仕掛の DB は手元へ写してから読みます(写せないファイルは読みません)。</p>
+          <p class="muted" id="pathsLock"></p>
+          <div class="field">
+            <button class="btn" type="button" id="checkAll">すべて確認</button>
+          </div>
+          <div class="tablewrap">
+            <table class="table" id="pathsTable">
+              <thead><tr><th>項目</th><th>パス</th><th>状態</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-sound" role="tabpanel" aria-labelledby="tab-sound" hidden>
+      <style>
+        #panel-sound > .card { flex-shrink: 0; }
+        #soundDirKv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+        #soundDirKv dt { color: var(--muted); }
+        #soundDirKv dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+        #soundTable th, #soundTable td { text-align: left; }
+        #soundTable td { white-space: normal; vertical-align: middle; }
+        #soundTable td:last-child { white-space: nowrap; text-align: right; }
+        #soundTable select { min-width: 16em; }
+      </style>
+      <section class="card">
+        <header><h3>音声フォルダ(いまどこを見ているか)</h3><span class="lv" id="soundDirLv"></span></header>
+        <div class="pad">
+          <p class="muted">鳴らす音声ファイルは、使用パスの「音声」(VBA の C:\VBAWAV\)のフォルダから選びます。フォルダを変えるのは
+            <a href="?tab=paths" id="soundToPaths">使用パス</a> の面です(同じ設定を2か所に置かないため)。</p>
+          <dl class="kv" id="soundDirKv"></dl>
+          <div class="field">
+            <button class="btn" type="button" id="soundCheck">確認</button>
+            <button class="btn" type="button" id="soundReload">読み直す</button>
+            <span class="path-status" id="soundCheckResult"></span>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>どこで何を鳴らすか</h3><span class="lv lv--info" id="soundCount"></span></header>
+        <div class="pad">
+          <p class="muted">出来事ごとに「鳴らさない」か、音声フォルダのファイルを選びます(選ぶとすぐ保存します。管理者パスワードは要りません ── 間違えても音が鳴らないだけです)。
+            既定は VBA が鳴らしていたファイルです。ファイルがフォルダに無いときも選択は残し、「フォルダにありません」と出します(音は鳴らず、画面の文言はいつもどおり出ます)。
+            受け付ける形式: <span id="soundSuffixes"></span>。</p>
+          <div class="tablewrap">
+            <table class="table" id="soundTable">
+              <thead><tr><th>場所</th><th>出来事</th><th>いつ</th><th>鳴らす音</th><th>状態</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-rights" role="tabpanel" aria-labelledby="tab-rights" hidden>
+      <section class="card">
+        <header><h3>この人・この端末の権限</h3><span class="lv" id="rightsLevel"></span></header>
+        <div class="pad">
+          <dl class="kv" id="rightsKv"></dl>
+          <p class="muted" id="rightsReason"></p>
+          <div class="btn-row"><button class="btn" type="button" id="reloadRights">権限を読み直す</button></div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>UF検査判定の権限コード</h3></header>
+        <div class="pad">
+          <p class="muted">アクセス権限の表(梱包資材総合ツールと共通)の「権限」列に書きます。検査そのものは権限なしでできます。</p>
+          <div class="tablewrap"><table class="table" id="codesTable"><thead><tr><th>権限</th><th>できること</th><th>この端末</th></tr></thead><tbody></tbody></table></div>
+          <p class="muted" id="rightsTable"></p>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+      <section class="card">
+        <header><h3>ログの置き場所</h3><span class="lv" id="logLv"></span></header>
+        <div class="pad">
+          <p class="muted">出力パスの下に <code>ufkensa</code> フォルダを作り、その中に <code id="logNames"></code> を書きます(ほかの業務ツールと同じ決まり)。決めていない・届かないときは、この端末のローカルに同じ形で書きます。</p>
+          <dl class="kv" id="logKv"></dl>
+          <div class="field">
+            <label for="logDir">出力パス</label>
+            <input class="input" id="logDir" style="min-width:30em" placeholder="空ならこの端末のローカル(logs)">
+            <label for="logKeep">残す日数</label>
+            <input class="input input--num" id="logKeep" style="width:6em">
+            <button class="btn btn--primary" type="button" id="saveLog">保存</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>最近の警告・エラー(7日)</h3><span class="lv lv--info" id="logCount"></span></header>
+        <div class="pad">
+          <div class="tablewrap"><table class="table" id="logTable"><thead><tr><th>日時</th><th>重さ</th><th>処理</th><th>内容</th><th>時間</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-quirks" role="tabpanel" aria-labelledby="tab-quirks" hidden>
+      <section class="card">
+        <header><h3>VBA の既存不具合の扱い</h3><span class="lv lv--info" id="quirksCount"></span></header>
+        <div class="pad">
+          <p class="muted">既定は「VBA どおり再現」です。直すと決まったものだけ <code>config/quirks.json</code> に書かれています(判断事項 D3)。</p>
+          <div class="tablewrap"><table class="table" id="quirksTable"><thead><tr><th>番号</th><th>内容</th><th>扱い</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/views/settings.js') }}"></script>
+{% endblock %}

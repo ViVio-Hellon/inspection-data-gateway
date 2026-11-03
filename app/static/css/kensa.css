@@ -1,0 +1,91 @@
+/* 検査画面(A案「計測コックピット」)。左=ロット・公差、中央=測定グリッド、右=次に測る・チェック・操作 */
+.kensa { display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 10px; align-items: start; }
+.kensa__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.kensa .card .pad { gap: 6px; }
+
+.kv-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: var(--fs-sm); }
+.kv-grid dt { color: var(--muted); }
+.kv-grid dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.inbox { display: flex; gap: 6px; align-items: center; }
+.inbox .input { flex: 1; min-width: 0; width: 100%; font-family: var(--mono); }
+.inbox label { color: var(--muted); font-size: var(--fs-sm); white-space: nowrap; }
+
+/* 測定グリッド */
+.mgrid { width: 100%; border-collapse: separate; border-spacing: 3px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.mgrid th { font-family: var(--sans); font-size: var(--fs-sm); color: var(--muted); font-weight: 600; text-align: center; }
+.mgrid th.rowh { text-align: left; white-space: nowrap; }
+.mgrid td { background: var(--sunken); border-radius: var(--radius-xs); text-align: right; padding: 4px 6px;
+            min-width: 4.5em; height: 1.9em; cursor: pointer; border: 2px solid transparent; }
+.mgrid td[data-color="OK"] { background: var(--ok-bg); color: var(--state-ok); }
+.mgrid td[data-color="NG"] { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.mgrid td[data-color="YELLOW"] { background: #fff3a6; color: #5a4a00; outline: 2px solid var(--focus); }
+.mgrid td[data-border="RED"] { border-color: var(--state-error); }
+.mgrid td[data-underline="1"] { text-decoration: underline; }
+.mgrid td[data-hidden="1"] { visibility: hidden; cursor: default; }
+.mgrid td.sub { cursor: default; font-size: var(--fs-sm); }
+.mgrid tr.sep td, .mgrid tr.sep th { padding-top: 8px; }
+
+.next { border: 2px solid var(--focus); background: var(--info-bg); border-radius: var(--radius); padding: 10px; text-align: center; }
+.next b { display: block; font-size: var(--fs-xl); }
+.next small { color: var(--muted); }
+
+.checks-list { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); display: flex; flex-direction: column; gap: 2px; }
+.checks-list li::before { display: inline-block; width: 1.3em; font-weight: 700; }
+.checks-list li[data-ok="1"]::before { content: "✓"; color: var(--state-ok); }
+.checks-list li[data-ok="0"]::before { content: "✕"; color: var(--state-error); }
+.checks-list li[data-ok=""]::before { content: "・"; color: var(--muted); }
+
+.log-lines { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); max-height: 9em; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.works { display: flex; flex-wrap: wrap; gap: 4px; }
+.works .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.blind { position: absolute; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center;
+         color: #fff; font-size: var(--fs-lg); border-radius: var(--radius); }
+.kensa__center { position: relative; }
+
+/* 手入力の欄(歪・直角度・ラテラル・外観・不良・検入高さ・BH)。セルの中の input / select */
+.mgrid td.in { padding: 1px 2px; cursor: default; }
+.mgrid .cellin { font-family: var(--mono); font-size: var(--fs-sm); padding: 2px 4px; border: 1px solid var(--field-line);
+                 border-radius: var(--radius-xs); background: var(--surface); color: var(--ink); width: 100%; min-width: 3.5em; }
+.mgrid td.in[data-color="OK"] .cellin { background: var(--ok-bg); color: var(--state-ok); }
+.mgrid td.in[data-color="NG"] .cellin { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.mgrid td.in[data-color="YELLOW"] .cellin { background: #fff3a6; color: #5a4a00; }
+/* TeColor / LcColor の水色 = 「反映」や外観の書く先として選んでいる欄 */
+.mgrid td[data-color="CYAN"], .mgrid td.in[data-color="CYAN"] .cellin { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.mgrid td.ng { cursor: pointer; }
+.mgrid td.lc { cursor: pointer; text-align: left; font-family: var(--sans); min-width: 6em; }
+.mgrid.strain th.rowh { min-width: 6.5em; }
+
+/* 歪・外観・不良…のタブ(VBA の MPEX のページ)。カードの見出しに並べる */
+.subtabs-head { gap: 8px; }
+.subtabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.subtabs button { border: 0; background: transparent; color: var(--muted); padding: 4px 10px; border-radius: var(--radius-xs);
+                  font: inherit; font-weight: 600; cursor: pointer; }
+.subtabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+.visual { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 10px; align-items: start; }
+.visual select { width: 100%; font-size: var(--fs-sm); }
+.kenh { display: flex; flex-wrap: wrap; gap: 6px; }
+.kenh table { width: auto; }
+.vc { display: flex; gap: 10px; flex-wrap: wrap; }
+.vc figure { margin: 0; }
+.vc img { max-height: 160px; max-width: 360px; display: block; border-radius: var(--radius-xs); }
+.vc figcaption { font-size: var(--fs-sm); color: var(--muted); }
+
+.tol-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; font-size: var(--fs-sm); }
+.tol-edit label { display: flex; flex-direction: column; color: var(--muted); }
+.tol-edit .input { font-family: var(--mono); padding: 2px 4px; }
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-sm); }
+#izyouBtn[data-on="1"] { background: var(--warn-bg); color: var(--state-error); border-color: var(--state-error); }
+#printBtn[data-printed="1"] { background: var(--warn-bg); color: var(--warn-fg); }
+.notice { border: 2px solid var(--state-error); background: var(--warn-bg); border-radius: var(--radius); padding: 8px;
+          display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.notice p { margin: 0; color: var(--state-error); font-weight: 700; }
+
+@media (max-width: 1280px) { .kensa { grid-template-columns: 220px minmax(0, 1fr) 230px; } }
+
+/* D28: ロットごとの「控え(第2)から読む」 */
+.lot-src__row { margin-top: 6px; display: flex; justify-content: flex-end; }
+.lot-src { white-space: nowrap; font-size: var(--fs-sm); }
+.lot-src[aria-pressed="true"] { background: var(--warn-bg); color: var(--state-warn); border-color: var(--state-warn); font-weight: 700; }
+.lot-src__note { margin: 6px 0 0; padding: 4px 8px; font-size: var(--fs-xs); background: var(--warn-bg); color: var(--state-warn); border-radius: 4px; }
