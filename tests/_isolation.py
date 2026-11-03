@@ -92,6 +92,22 @@ def ensure_isolated() -> list[str]:
         quirks.QUIRKS_FILE = _escape("quirks") / "quirks.json"
         moved.append("quirks.QUIRKS_FILE")
 
+    # ローカル領域(%LOCALAPPDATA%\…): アクセス権限の「前回の結果」(runtime\access_rights.json)・仕掛の写し・控え。
+    # `tests/__init__.py` が読まれない流しかたでも、本番の端末の記録と混ぜない
+    import os
+    local = os.environ.get("UFKENSA_LOCAL_DIR", "")
+    if not local or not _under(Path(local), Path(tempfile.gettempdir())):
+        os.environ["UFKENSA_LOCAL_DIR"] = str(_escape("local"))
+        moved.append("UFKENSA_LOCAL_DIR")
+
+    # 使用パス: 試験が保存していない項目は既定(本番の共有 \\nlmsrvngy03\… や C:\検査履歴)のまま。
+    # 共有と、一時フォルダの外のドライブのパスは、ここの下へ読み替える(`paths.to_local` の安全網)。
+    # 試験が kensa_fixture.use_offline などで一時フォルダへ向けた項目はそのまま
+    from ufkensa.kensa import paths
+    if not os.environ.get(paths.GUARD_ENV):
+        os.environ[paths.GUARD_ENV] = str(_escape("paths"))
+        moved.append(paths.GUARD_ENV)
+
     # Access.log: 本体と同じフォルダ(試験ではリポジトリ直下)に書いてしまうので止める
     from ufkensa import user_settings
     user_settings.save(config.KEY_ACCESS_LOG, False)

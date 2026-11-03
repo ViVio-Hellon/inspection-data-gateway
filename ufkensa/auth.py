@@ -1,9 +1,11 @@
 """誰が使っているか と、編集可 / 閲覧のみ(0.16.0)
 
 【0.16.0 から】VBA 版から続いていた「ID の表 + パスワード + Level 1〜5」をやめた。
-Windows の**ログインID**と**PC名**で、設定ファイルの `アクセス権限` 表(0.22.0)を引き、
-**編集可**(権限 = 編集可 の行がある)か **閲覧のみ** かを決める(`access_rights`)。パスワードは要らない。
-画面を開けば自動で入る(ログインの画面は無い)。
+Windows の**ログインID**と**PC名**で、アクセス権限マスタ(梱包資材マスタの `アクセス権限` 表。all-tools と共通)を引き、
+**管理者**(権限 = Administrator の行がある)か **一般** かを決める(`access_rights`)。
+画面を開けば自動で入る(ログインの画面は無い)。マスタで決まったラインはこの端末の設備名に当てる(D30)。
+マスタから決まらないあいだ(未設定・読めない・管理者の行が無い)は「設定の途中」(`setup_mode`)で、
+管理者パスワードだけでマスタ編集(使用パスなど)を開けられる。
 
 中の決まり(どの操作に何が要るか)は Level の数のまま持つ: 編集可 = 5、閲覧のみ = 1。
 閲覧のみは 新規・修正・削除・列の追加・設定の保存 ができない(ダブルクリックは参照で開く)。
@@ -32,8 +34,8 @@ DEVELOPER_PCS: tuple[str, ...] = ()
 
 EDIT_LEVEL = 5
 VIEW_LEVEL = 1
-MSG_NO_LEVEL = ("管理者の権限がありません。アクセス権限の表に、"
-                "この ID・PC で 権限 = ufkensa:admin の行を足してもらってください。")
+MSG_NO_LEVEL = ("管理者の権限がありません。アクセス権限マスタ(梱包資材マスタの「アクセス権限」)に、"
+                "この ログインID・PC名 で 権限 = Administrator の行を足してもらってください。")
 
 
 def network_id() -> str:
@@ -126,12 +128,33 @@ def start(result: LoginResult) -> Session:
         return _session
 
 
+_applied_note = ""
+
+
 def sign_in() -> Session:
-    """設定ファイルのアクセス権限を引いて、セッションを始める(画面を開けば自動で)。"""
+    """アクセス権限マスタを引いて、セッションを始める(画面を開けば自動で・「権限を読み直す」)。
+
+    マスタでこの PC のラインが決まれば、この端末の設備名に当てる(前に当てたものから変わったときだけ。
+    `access_rights.apply_line`)。裏の読み直し(`ensure`)では当てない ── 検査の途中でラインを変えないため。
+    """
+    global _applied_note
     result = rights_result()
     s = start(result)
+    if result.rights is not None:
+        try:
+            note = access_rights.apply_line(result.rights)
+        except Exception:                                # noqa: BLE001 - 当てられなくても使い始める
+            log.warning("アクセス権限のラインを当てられませんでした", exc_info=True)
+            note = ""
+        if note:
+            _applied_note = note
     log.info("権限: %s / %s → %s(%s)", s.user_id, pc_name(), s.label, result.rights.source if result.rights else "")
     return s
+
+
+def applied_note() -> str:
+    """最後にアクセス権限マスタからラインを当てたときの知らせ(設定の画面に出す)。"""
+    return _applied_note
 
 
 _refreshing = threading.Event()
@@ -171,17 +194,29 @@ def end() -> None:
 
 
 def level() -> int:
-    s = current()
-    return s.level if s else 0
+    """いまの権限の Level。まだ読んでいなければ読む(読み直したあとの最初の操作でも正しく決まるように)。"""
+    return ensure().level
+
+
+def setup_mode() -> bool:
+    """設定の途中か = アクセス権限マスタから決まらない(未設定・読めない・管理者の行が無い)。
+
+    このあいだは**管理者パスワードだけで**マスタ編集(使用パスなど)を開けられる。権限の表の場所が使用パスに
+    あるので、そうしないと新しい PC・試験用の PC で「パスを直すには権限、権限を読むにはパス」と詰む。
+    """
+    s = ensure()
+    return bool(s.rights is not None and s.rights.setup)
 
 
 def can_edit() -> bool:
-    """管理者(ufkensa:admin)か。"""
-    return level() >= EDIT_LEVEL
+    """管理者か(マスタの Administrator。設定の途中は 管理者パスワードを通したら 管理者として扱う)。"""
+    return level() >= EDIT_LEVEL or (_master_unlocked and setup_mode())
 
 
 def has(code: str) -> bool:
     """この人・この端末がその権限(`access_rights.CODES`)を持つか。"""
+    if code in (access_rights.ADMIN, access_rights.ADMIN_ALIAS):
+        return can_edit()
     s = current()
     if s is None or s.rights is None:
         return False
@@ -213,6 +248,7 @@ def check_mode(mode: str, lv: int, click_type: str = "ButtonClick") -> tuple[str
 # マスタ編集の認証(python-web-tools と同じ考え方)。2026-11-02 の決め:
 # マスタ管理・保守の画面は誰でも開けるが、編集は「管理者パスワード」と「アクセス権限の管理者」の両方が要る。
 # パスワードを入れるとこのアプリを閉じるまで(または lock_master まで)編集できる。
+# 2026-11-03: アクセス権限マスタから決まらないあいだ(setup_mode)は、管理者パスワードだけで開ける(D30)。
 # ------------------------------------------------------------------
 _master_unlocked = False
 
@@ -221,12 +257,13 @@ def unlock_master(password: str) -> tuple[bool, str]:
     """管理者パスワードで「マスタ編集」を開ける。(できたか, 断った理由)。"""
     global _master_unlocked
     from . import admin_password
-    if not can_edit():
+    ensure()
+    if not can_edit() and not setup_mode():
         return False, "この端末・この人にアクセス権限の「管理者」がありません(設定 → 権限 で確かめてください)"
     if not admin_password.verify(str(password or "")):
         return False, "管理者パスワードが違います"
     _master_unlocked = True
-    log.info("マスタ編集の認証を通りました: %s", network_id())
+    log.info("マスタ編集の認証を通りました: %s%s", network_id(), "(設定の途中: パスワードだけ)" if setup_mode() else "")
     return True, ""
 
 
@@ -240,14 +277,20 @@ def master_unlocked() -> bool:
 
 
 def master_edit_ok() -> bool:
-    """マスタ・保守の編集をしてよいか(パスワードを通した かつ 管理者の権限がある)。"""
-    return _master_unlocked and can_edit()
+    """マスタ・保守の編集をしてよいか(パスワードを通した かつ 管理者の権限がある。設定の途中はパスワードだけ)。"""
+    return _master_unlocked and (can_edit() or setup_mode())
 
 
 def master_edit_reason() -> str:
     """編集できない理由(できるなら "")。画面にそのまま出す。"""
+    if setup_mode():
+        if not _master_unlocked:
+            s = current()
+            why = s.rights.setup_reason if s and s.rights else access_rights.MSG_SETUP
+            return f"{why}。編集するには、管理者パスワードを入れてください"
+        return ""
     if not can_edit():
-        return "編集には、アクセス権限の「管理者」が要ります"
+        return "編集には、アクセス権限の「管理者」(Administrator)が要ります"
     if not _master_unlocked:
         return "編集するには、管理者パスワードを入れてください"
     return ""

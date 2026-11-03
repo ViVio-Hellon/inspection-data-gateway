@@ -299,6 +299,9 @@ class SettingsApiTest(_Saved):
         return self.c.post(url, json=body, headers=self.h)
 
     def test_locked_and_not_admin(self) -> None:
+        setup = mock.patch.object(auth, "setup_mode", return_value=False)      # マスタで決まっている(設定の途中でない)
+        setup.start()
+        self.addCleanup(setup.stop)
         with mock.patch.object(auth, "can_edit", return_value=True), \
                 mock.patch.object(auth, "master_edit_ok", return_value=False):
             r = self.post("/api/settings/path", key="wav", slot="first", path="x")
@@ -308,7 +311,7 @@ class SettingsApiTest(_Saved):
         with mock.patch.object(auth, "can_edit", return_value=False):
             r = self.post("/api/settings/path", key="wav", slot="second", path="x")
             self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "not_admin"))
-            self.assertEqual(r.get_json()["error"]["message"], "編集には、アクセス権限の「管理者」が要ります")
+            self.assertEqual(r.get_json()["error"]["message"], "編集には、アクセス権限の「管理者」(Administrator)が要ります")
         self.assertNotEqual(paths.slot_value("wav", paths.FIRST), "x")
 
     def test_edit_when_unlocked(self) -> None:

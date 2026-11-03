@@ -6,7 +6,8 @@
 
 - POST /api/admin/unlock   {password}                 → {ok, reason, state}(違っても 200。ok=false)
 - POST /api/admin/lock                                → {state}
-- GET  /api/admin/state                               → {unlocked, can_edit, admin, reason, custom, min_length}
+- GET  /api/admin/state                               → {unlocked, can_edit, admin, reason, setup, custom, min_length}
+  (setup = アクセス権限マスタから決まらない「設定の途中」。管理者パスワードだけで開けられる。D30)
 - POST /api/admin/password {current, new, confirm}    → {ok, message, state}(変えるには いまのパスワード が要る)
 
 **パスワードの値はログに残さない**(trace にも log にも渡さない)。続けて間違えたら少し待たせる。
@@ -33,7 +34,7 @@ _wait_until = 0.0
 
 def state_dict() -> dict:
     return {"unlocked": auth.master_unlocked(), "can_edit": auth.master_edit_ok(), "admin": auth.can_edit(),
-            "reason": auth.master_edit_reason(), "custom": admin_password.is_custom(),
+            "reason": auth.master_edit_reason(), "setup": auth.setup_mode(), "custom": admin_password.is_custom(),
             "min_length": admin_password.MIN_LENGTH}
 
 
@@ -78,7 +79,7 @@ def unlock():
     with _miss_lock:
         if ok:
             _misses = 0
-        elif auth.can_edit():                       # 権限が無くて断ったときは数えない
+        elif auth.can_edit() or auth.setup_mode():  # 権限が無くて断ったときは数えない
             _misses += 1
             if _misses >= admin_password.MAX_MISSES:
                 _misses, _wait_until = 0, time.monotonic() + admin_password.COOL_DOWN_SEC
