@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Optional, Union
 
 from .. import flow, quirks, vbx
+from .. import sound as snd
 from . import sheet as sh
 from . import zenkasho as zk
 from .sheet import H494, Book, Call, Effects, LogCall, VbaError
@@ -171,10 +172,10 @@ def print_and_save(book: Book, answers: Optional[dict] = None) -> Union[Effects,
     if f.kname == "" and f.h494_kname == "":
         fx.msg("検査員名と検査番号を入力してください", source="UFMit:149")
         return fx                                      # Tag は "off" のまま
-    fx.sounds.append("おまちください.wav")
+    fx.sounds.append(snd.ZENKASHO_WAIT)
     zk.kiki_tensou(book, zs, 2, 25, atu, haba, "H494")
     job = zk.zen_print_setup(book, H494)
-    fx.sounds.append("印刷.wav")
+    fx.sounds.append(snd.ZENKASHO_PRINT)
     a = (answers or {}).get("h494_print")
     if a is None:
         return flow.Question("h494_print", "印刷しますか？", source="UFMit:171", messages=list(fx.messages))
@@ -190,7 +191,7 @@ def print_and_save(book: Book, answers: Optional[dict] = None) -> Union[Effects,
         row = sh.history_row(book, zs, "H494")
         if row is not None:
             fx.history.append(row)
-        fx.sounds.append("完了.wav")
+        fx.sounds.append(snd.ZENKASHO_DONE)
     else:
         fx.msg("ｷｬﾝｾﾙ処理", source="UFMit:222")
     f.tag = ""

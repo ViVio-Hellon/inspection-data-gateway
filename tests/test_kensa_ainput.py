@@ -223,7 +223,7 @@ class HeightInputTest(unittest.TestCase):
         ainput.accept_height(f, "DT10002+0000075.512M", "10003")                # 機器番号が違う → 入れない
         self.assertEqual(f.heights[0], "")
         m = ainput.accept_height(f, "DT10002+0000075.512M", "10002")
-        self.assertEqual((f.heights[0], m[0].sound), ("75.512", "chimes.wav"))
+        self.assertEqual((f.heights[0], m[0].sound), ("75.512", "ainput_height"))
         f = AinputForm(line_name="L-1", atu="10", mai1="70", cou1="1", mount_count="2")
         self.assertEqual(ainput.l1_caption(ainput.l_height(f)), "ｺﾝﾍﾞｯｸｽ測定")   # 350 > 300
         ainput.accept_height(f, "DT10002+0000075.512M", "10002")

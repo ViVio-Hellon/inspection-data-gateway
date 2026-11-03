@@ -49,6 +49,7 @@ from typing import Any, Callable, Optional, Sequence
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
 from .. import trace
+from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import Ctl, Hooks, KensaState
 from .store import LOT_HISTORY, ROW_TABLES, LocalStore, cell_text, line_sheet
@@ -332,8 +333,9 @@ class Env:
         if self.write_logs:
             entry.write(now=self.now())
 
-    def sound(self, wav: str, source: str = "") -> None:
-        self.messages.append(Message("", INFO, sound=wav, source=source))
+    def sound(self, key: str, source: str = "") -> None:
+        """音を鳴らす(出来事の鍵 `sound.SOUNDS`。鳴らすファイルは 設定 →「音」で決まる D29)。"""
+        self.messages.append(Message("", INFO, sound=key, source=source))
 
 
 def _msg_error(env: Env, state: KensaState, text: str, n: int, temp: str = "") -> None:
@@ -733,6 +735,8 @@ class RealHooks(Hooks):
             ws = line_sheet(records.WORK_SAVE, state.lname)
             row1 = self.store.sheet(ws).read_range(1, 2, 1, 10)[0] if self.store.exists(ws) else [""] * 9
             form = checks.abnormal_form_text(row1)
+            if state.form_tag != "STOP":                                # UF異常値発見.Activate → 音楽異常値(:29。STOP 中は鳴らさない)
+                env.sound(snd.KENSA_ABNORMAL, "UF異常値発見:29")
             env.messages.append(Message(hit.value + "\r\n" + "\r\n".join(form.values()), WARN, title="異常",
                                         source="OutTolerance:796"))
             act = checks.ng_back_tb(hit.name)                           # UF異常値発見 の唯一のボタン

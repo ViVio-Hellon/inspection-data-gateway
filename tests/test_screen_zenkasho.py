@@ -84,7 +84,7 @@ class SessionTest(ZenBase):
         self.assertEqual(row[0:2], [["25.012", ""], ["○", "ok"]])
         self.assertEqual(d["view"]["active"]["label"], "No.1 厚2")      # 判定記号の入れ子の Change で次へ
         self.assertEqual(d["view"]["flash"], "OK")
-        self.assertIn("chime2.wav", [m["sound"] for m in d["messages"]])
+        self.assertIn("zenkasho_ok", [m["sound"] for m in d["messages"]])
         d = self.s.receive("DT10002+0000026.000M").to_dict()            # 公差外
         self.assertEqual(d["view"]["rows"][0]["cells"][3], ["×", "ng"])
         self.assertEqual(d["view"]["flash"], "NG")

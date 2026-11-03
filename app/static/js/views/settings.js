@@ -1,14 +1,16 @@
 /*
-  設定画面(この端末・使用パス・権限・不具合の扱い)。
+  設定画面(この端末・使用パス・音・権限・不具合の扱い)。
   判断はサーバが済ませてある(`app/routes/settings.py`)。ここは受け取ったものを並べて、押されたら送るだけ。
 */
 
 import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import * as tabs from "../tabs.js";
+import { previewFile } from "../sound.js";
 
 const $ = (id) => document.getElementById(id);
 let S = null;
+let SND = null;       // 音の面(`/api/sound/state`)
 
 function option(value, label, selected) {
   const o = document.createElement("option");
@@ -185,6 +187,126 @@ function renderPaths() {
   }));
 }
 
+/* ---- 音(D29)。出来事ごとに「鳴らさない」か音声フォルダのファイル。選ぶとすぐ保存(管理者パスワードは要らない) ---- */
+function soundSelect(r) {
+  const sel = document.createElement("select");
+  sel.className = "input";
+  sel.setAttribute("aria-label", `${r.place}・${r.label} の音`);
+  const opts = [option(SND.off, SND.off, r.off)];
+  const names = [...SND.files];
+  if (!r.off && !names.includes(r.file)) opts.push(option(r.file, `${r.file}(フォルダにありません)`, true));
+  for (const n of names) opts.push(option(n, n === r.default_file ? `${n}(既定)` : n, !r.off && n === r.file));
+  sel.replaceChildren(...opts);
+  sel.addEventListener("change", () => saveSound({ key: r.key, file: sel.value }, `${r.place}・${r.label}: ${sel.value}`));
+  return sel;
+}
+
+function renderSound() {
+  if (!SND) return;
+  const kv = $("soundDirKv");
+  kv.replaceChildren();
+  const rows = [["使用パス「音声」", SND.dir || "(空)"],
+    ["中の音声ファイル", SND.dir_error ? SND.dir_error : `${SND.files.length} 個`]];
+  for (const [k, v] of rows) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    kv.append(dt, dd);
+  }
+  $("soundDirLv").textContent = SND.dir_error ? "見つかりません" : "読めます";
+  $("soundDirLv").className = "lv " + (SND.dir_error ? "lv--ng" : "lv--ok");
+  $("soundSuffixes").textContent = SND.suffixes.join(" / ");
+  const missing = SND.sounds.filter((r) => !r.off && !r.exists).length;
+  const off = SND.sounds.filter((r) => r.off).length;
+  $("soundCount").textContent = `${SND.sounds.length} か所 / 鳴らさない ${off} / フォルダにない ${missing}`;
+  let lastPlace = "";
+  $("soundTable").tBodies[0].replaceChildren(...SND.sounds.map((r) => {
+    const tr = document.createElement("tr");
+    tr.dataset.key = r.key;
+    const place = cell(r.place === lastPlace ? "" : r.place);
+    if (r.place !== lastPlace) place.style.fontWeight = "700";
+    lastPlace = r.place;
+    const name = document.createElement("td");
+    const b = document.createElement("b");
+    b.textContent = r.label;
+    const small = document.createElement("small");
+    small.className = "muted";
+    small.textContent = ` ${r.key} — VBA ${r.source}`;
+    name.append(b, document.createElement("br"), small);
+    const when = cell(r.when);
+    when.style.whiteSpace = "normal";
+    const pick = document.createElement("td");
+    pick.append(soundSelect(r));
+    if (r.custom) {
+      const d = document.createElement("small");
+      d.className = "muted";
+      d.style.display = "block";
+      d.textContent = "既定: " + r.default_file;
+      pick.append(d);
+    }
+    const state = cell(r.off ? "鳴らしません" : (r.exists ? "鳴らせます" : "フォルダにありません"),
+      r.off ? "muted" : (r.exists ? "lv--ok" : "lv--ng"));
+    state.style.whiteSpace = "normal";
+    const act = document.createElement("td");
+    const listen = document.createElement("button");
+    listen.className = "btn";
+    listen.type = "button";
+    listen.textContent = "試聴";
+    listen.disabled = r.off || !r.exists;
+    listen.addEventListener("click", async () => {
+      const name = tr.querySelector("select").value;
+      if (!(await previewFile(name))) toast(`鳴らせませんでした: ${name}(フォルダにありません)`, "warn");
+    });
+    act.append(listen);
+    if (r.custom) {
+      const reset = document.createElement("button");
+      reset.className = "btn";
+      reset.type = "button";
+      reset.textContent = "既定に戻す";
+      reset.addEventListener("click", () => saveSound({ key: r.key, reset: true }, `${r.place}・${r.label}: 既定(${r.default_file})に戻しました`));
+      act.append(" ", reset);
+    }
+    tr.append(place, name, when, pick, state, act);
+    return tr;
+  }));
+}
+
+async function loadSound() {
+  try {
+    SND = await api.get("/api/sound/state");
+  } catch (e) {
+    SND = null;
+    toastError(e);
+  }
+  renderSound();
+  renderBadges();
+}
+
+async function saveSound(body, done) {
+  try {
+    SND = await api.post("/api/settings/sound", body);
+    renderSound();
+    renderBadges();
+    toast("保存しました: " + done, "success");
+  } catch (e) {
+    toastError(e);
+    renderSound();
+  }
+}
+
+async function checkSoundDir() {
+  const out = $("soundCheckResult");
+  out.textContent = "確かめています…";
+  try {
+    const r = await api.post("/api/settings/path/check", { key: SND ? SND.folder_key : "wav" });
+    out.textContent = r.message;
+    out.className = "path-status " + (r.ok ? "lv--ok" : "lv--ng");
+  } catch (e) {
+    out.textContent = "";
+    toastError(e);
+  }
+  loadSound();
+}
+
 function renderRights() {
   const r = S.rights;
   $("rightsLevel").textContent = r.label;
@@ -247,16 +369,24 @@ function render() {
   renderRights();
   renderQuirks();
   renderLog();
-  const root = $("settingsTabs");
+  renderBadges();
+}
+
+function renderBadges() {
+  if (!S) return;
   const badges = {};
   if (S.terminal.unset) badges.terminal = { text: "未設定", level: "ng" };
   if (!S.admin) badges.rights = { text: "一般", level: "info" };
-  tabs.setBadges(root, badges);
+  if (SND && SND.dir_error) badges.sound = { text: "フォルダなし", level: "warn" };
+  else if (SND && SND.sounds.some((r) => !r.off && !r.exists)) badges.sound = { text: "ないファイル", level: "warn" };
+  tabs.setBadges($("settingsTabs"), badges);
 }
 
 async function load() {
   S = await api.get("/api/settings/state");
   render();
+  // 使用パス「音声」を変えたあとも音の面が古くならないよう、設定を読むたびに読み直す
+  loadSound();
 }
 
 async function saveTerminal() {
@@ -302,6 +432,7 @@ async function postPath(body, done) {
   try {
     S = await withPathUnlock(() => api.post("/api/settings/path", body));
     render();
+    if (body.key === "wav") loadSound();
     if (done) toast(done, "success");
     return true;
   } catch (e) {
@@ -362,6 +493,14 @@ function init() {
     $("lineNoLabel").hidden = !maru;
   });
   $("saveTerminal").addEventListener("click", saveTerminal);
+  $("soundCheck").addEventListener("click", checkSoundDir);
+  $("soundReload").addEventListener("click", loadSound);
+  $("soundToPaths").addEventListener("click", (ev) => {
+    ev.preventDefault();
+    tabs.select($("settingsTabs"), "paths");
+    const row = document.querySelector('#pathsTable tr[data-key="wav"]');
+    if (row) { row.scrollIntoView({ block: "center" }); const i = row.querySelector("input"); if (i && !i.disabled) i.focus(); }
+  });
   $("checkAll").addEventListener("click", () => {
     for (const tr of $("pathsTable").tBodies[0].rows) checkOne(tr.dataset.key, tr.querySelector(".path-status"));
   });

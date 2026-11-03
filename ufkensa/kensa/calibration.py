@@ -20,13 +20,14 @@ from datetime import datetime
 from typing import Any, Mapping, Optional
 
 from . import legacy_log, lines, quirks, vbx
+from . import sound as snd
 from .flow import ERROR, INFO, Message, Stop
 from .workers import (CellWrite, ShiftTimes, WorkerRegistry, _seconds, hhmm, last_row, time_check,
                       worke_day_max, yea_dayr_check)
 
 Cells = Mapping[tuple[int, int], Any]
 GREEN, WHITE = "1000", "gauge"                  # 背景 &H80FF80(1000mm)/ &HFFFFFF(ストレートエッヂ)
-PASS_SOUND, FAIL_SOUND = "chime2.wav", "tada.wav"   # 音楽合格 / 音楽不合格
+PASS_SOUND, FAIL_SOUND = snd.CALIBRATION_OK, snd.CALIBRATION_NG   # 音楽合格 / 音楽不合格(D29: 出来事の鍵)
 DEFAULT_GAUGE = "1000mm直尺の全長を測定してください"   # Gauge の設計時の Caption(G6)
 NG_1000_TEXT = "999.5 ≦" + "測定値" + "≦ 1000.5 になっていません"   # Proofreading:365(Test でも同じ文)
 RED = "red"                                      # RGB(255,128,128) の赤字

@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from . import datasource, legacy_log, lines, paths, quirks, vbx
+from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .workers import AinputValues, DailyContext, WorkerRegistry, daily_report, workers_text
 
@@ -32,7 +33,7 @@ SENDER_DIR, SENDER_EXE = "SokuteiDataTrans", "SokuteiDataTrans.exe"
 SUCCESS_TEXT = "正常に送信が行われました。"
 VC_DEFAULT = 0.08406977              # 登録 VC 全平均厚(2022.12.19)Input:796
 HIGH_PRECISION = ("H191", "H242", "H241")   # Input:512
-CHIMES, WAIT_SOUND, DONE_SOUND = "chimes.wav", "お待ちください.wav", "完了.wav"
+CHIMES, WAIT_SOUND, DONE_SOUND = snd.AINPUT_HEIGHT, snd.AINPUT_WAIT, snd.AINPUT_DONE   # D29: 出来事の鍵
 CSV_ENCODING = "cp932"
 
 

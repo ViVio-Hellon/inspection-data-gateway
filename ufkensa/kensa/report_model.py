@@ -34,6 +34,7 @@ from datetime import datetime, timedelta, time as dtime
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
 from . import flow, quirks, vbx
+from . import sound as snd
 from .flow import Message, Question, Stop
 from .records import (FACES, KensaSnapshot, cmp_str_num, end_time_register, uf_array, uf_tag_array, vb_cdate,
                       vb_cstr_date, vb_format_date, vb_isdate, variant_eq)
@@ -630,7 +631,7 @@ def print_only(store: LocalStore, lname: str, lot: str, answers: Mapping[str, bo
     「再印刷しますか？」が はい なら成績票の D2 に「再印刷」と書いて、成績票と不良要因票をそのまま返す
     (データの作り直し・保存・CSV・PDF はしない。W8: 別 LOT の内容が残っていればそれが出る)。
     """
-    msgs = [Message("", sound="印刷.wav", source="UF1:3578")]
+    msgs = [Message("", sound=snd.KENSA_REPRINT, source="UF1:3578")]
     ans = answers.get("reprint")
     if ans is None:
         return Question("reprint", "このLOTは印刷済みです。再印刷しますか？", buttons="yesno", source="UF1:3579",
@@ -648,7 +649,7 @@ def print_only(store: LocalStore, lname: str, lot: str, answers: Mapping[str, bo
     store.save_report(line_sheet(PRINT_SHEET, lname), report.to_json())
     defect = render_defect_sheet(store, lname)
     set_printed(store, lot, lname, now)
-    msgs += [Message("", sound="完了.wav", source="UF1:3592"),
+    msgs += [Message("", sound=snd.KENSA_REPRINT_DONE, source="UF1:3592"),
              Message("再印刷が完了しました", level=flow.INFO, source="UF1:3593")]
     return PrintResult(stopped=False, report=report, defect=defect, messages=msgs)
 

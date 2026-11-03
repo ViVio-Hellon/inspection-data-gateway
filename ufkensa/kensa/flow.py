@@ -33,11 +33,17 @@ class Message:
     text: str                      # VBA の原文
     level: str = INFO              # info / warn / error(VBA の vbInformation / vbExclamation / vbCritical)
     title: str = ""                # MsgBox のタイトル
-    sound: str = ""                # 鳴らす音(C:\VBAWAV の .wav 名)
+    sound: str = ""                # 鳴らす音の出来事の鍵(`sound.SOUNDS`。ファイル名は設定で決まる D29)
     source: str = ""               # VBA の場所(例 "Judg:471")
 
     def to_dict(self) -> dict[str, Any]:
-        return {"text": self.text, "level": self.level, "title": self.title, "sound": self.sound, "source": self.source}
+        d = {"text": self.text, "level": self.level, "title": self.title, "sound": "", "source": self.source}
+        if self.sound:
+            from . import sound as _sound                 # 鳴らさないと決めた出来事は画面へ渡さない(D29)
+            if _sound.enabled(self.sound):
+                d["sound"] = self.sound
+                d["sound_text"] = _sound.message_text(self.sound)
+        return d
 
 
 @dataclass

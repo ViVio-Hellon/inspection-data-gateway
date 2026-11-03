@@ -4,22 +4,15 @@
   返り値: { view, messages, question, stop }(検査画面と同じ形。question は使わない)
 */
 
-import { api, tokenUrl } from "../api.js";
+import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
+import { playMessage } from "../sound.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 let V = null;
 
 function text(el, t) { el.textContent = t ?? ""; }
-
-/** VBA の音声(合格 chime2.wav / 不合格 tada.wav)。無ければ鳴らないだけ。 */
-function play(name) {
-  try {
-    const a = new Audio(tokenUrl(`/api/kensa/sound/${encodeURIComponent(name)}`));
-    a.play().catch(() => {});
-  } catch (e) { /* 鳴らせなくても止めない */ }
-}
 
 async function op(name, body = {}) {
   let res;
@@ -30,7 +23,7 @@ async function op(name, body = {}) {
     return null;
   }
   for (const m of res.messages || []) {
-    if (m.sound) play(m.sound);
+    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
     if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
   }
   if (res.view) render(res.view);

@@ -529,11 +529,12 @@ def _register_static_version(app: Flask) -> None:
 # ------------------------------------------------------------------
 def _register_routes(app: Flask) -> None:
     from .routes import auth as auth_routes
-    from .routes import health, history, importing, pending, settings
+    from .routes import health, history, importing, pending, settings, sound
     from .routes import log as log_routes
 
     app.register_blueprint(health.bp)
     app.register_blueprint(settings.bp)
+    app.register_blueprint(sound.bp)               # 音(D29。どの画面も /api/sound/<出来事> で鳴らす)
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(log_routes.bp)
     app.register_blueprint(importing.bp)

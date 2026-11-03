@@ -176,9 +176,9 @@ class EndToEndTest(SessionBase):
         self.assertTrue(all(c["ok"] in (True, None) for c in r.view["checks"]))
         r = s.print_commit()
         self.assertEqual((r.question.key, r.question.text), ("print", "印刷する？"))   # UF1:3764
-        self.assertIn("印刷.wav", [m.sound for m in r.messages])
+        self.assertIn("kensa_print", [m.sound for m in r.messages])
         r = self.ok(s.print_commit({"print": True}))
-        self.assertIn("完了.wav", [m.sound for m in r.messages])
+        self.assertIn("kensa_done", [m.sound for m in r.messages])
         rep = r.view["report"]
         self.assertEqual(rep["saved"]["mode"], "ADDNEW")
 
@@ -237,7 +237,7 @@ class NgTest(SessionBase):
         st = s.state
         r = self.ok(s.receive("DT10001+0000015.500M"))                  # 上限 15.350 を超える(Judg.AHTJudg)
         self.assertEqual((st.cells["S1"].value, st.cells["S1"].color), ("15.500", "NG"))           # NumDig で "0.000"
-        self.assertIn("tada.wav", [m.sound for m in r.messages])         # 音楽不合格
+        self.assertIn("kensa_ng", [m.sound for m in r.messages])         # 音楽不合格(既定 tada.wav)
         for _ in range(3):
             r = self.ok(s.receive("DT10001+0000015.012M"))
         # S4 を入れた時点で Out_Tolerance → UFConfi(厚板は Rig 4 と 10。O:888-892)

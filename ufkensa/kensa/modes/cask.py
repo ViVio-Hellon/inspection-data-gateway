@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Any, Optional, Union
 
 from .. import datasource, flow, paths, quirks, vbx
+from .. import sound as snd
 from . import sheet as sh
 from .sheet import CASK, Book, Call, Effects, LogCall, PrintJob, SavePlan, SaveStep, VbaError
 
@@ -1049,7 +1050,7 @@ def print_and_save(book: Book, answers: Optional[dict] = None, *, u6_raises: boo
         job = print_setup(book)
     else:
         return fx                                   # Tag は "off" のまま
-    fx.sounds.append("印刷.wav")
+    fx.sounds.append(snd.CASK_PRINT)
     try:
         yes = _ask(answers, "cask_print", "キャスク検査を印刷しますか？", "UFCask:139", fx)
     except _Ask as a:
@@ -1062,7 +1063,7 @@ def print_and_save(book: Book, answers: Optional[dict] = None, *, u6_raises: boo
         row = sh.history_row(book, book.ws(CASK), "ｷｬｽｸ", cask_bug=True)
         if row is not None:
             fx.history.append(row)
-        fx.sounds.append("完了.wav")
+        fx.sounds.append(snd.CASK_DONE)
     else:
         fx.msg("ｷｬﾝｾﾙ処理", source="UFCask:169")
     f.tag = ""

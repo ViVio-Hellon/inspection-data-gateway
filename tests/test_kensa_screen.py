@@ -117,6 +117,7 @@ class KensaScreenTest(SessionBase):
 
 class SoundTest(unittest.TestCase):
     def test_sound_route(self):
+        """D29: 検査の音は共通の /api/sound/<出来事> で配る(旧 /api/kensa/sound/<名前> は無い)。"""
         import tempfile
         from pathlib import Path
         from tests._web import make_client
@@ -127,6 +128,6 @@ class SoundTest(unittest.TestCase):
         self.addCleanup(paths.reset_path, "wav")
         c = make_client()
         h = {"X-Tool-Token": c.application.config["TOKEN"]}
-        self.assertEqual(c.get("/api/kensa/sound/完了.wav", headers=h).status_code, 200)
-        self.assertEqual(c.get("/api/kensa/sound/無い.wav", headers=h).status_code, 404)
-        self.assertEqual(c.get("/api/kensa/sound/..%2Fx.txt", headers=h).status_code, 400)
+        self.assertEqual(c.get("/api/sound/kensa_done", headers=h).status_code, 200)
+        self.assertEqual(c.get("/api/sound/kensa_ok", headers=h).status_code, 404)          # chime2.wav が無い
+        self.assertEqual(c.get("/api/kensa/sound/完了.wav", headers=h).status_code, 404)

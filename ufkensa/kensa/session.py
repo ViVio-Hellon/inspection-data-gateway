@@ -45,6 +45,7 @@ from typing import Any, Callable, Optional
 from .. import trace
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, quirks, records, report_html, report_model, terminal, view, vbx, workers, wiring)
+from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .grid import KensaState
 from .store import HOZON, LOT_HISTORY, MIMI, LocalStore, line_sheet
@@ -333,7 +334,7 @@ class Session:
                     self.store.ensure_sheet("校正記録")
                 if chk.uncalibrated:
                     self.calibration_required = True                     # 校正_Open(校正画面へ)
-                    env.sound("確認作業.wav", "UF1:4116")
+                    env.sound(snd.KENSA_CALIBRATION, "UF1:4116")
         return None
 
     # ------------------------------------------------------------------
@@ -1375,7 +1376,7 @@ class Session:
         if judge.advance_check(st.lot, st.dbflag, arrbox=hooks._arrbox_fn(st)):
             ans = answers.get("advance_sheet")
             if ans is None:
-                env.sound("ありますか.wav", "UF1:3647")
+                env.sound(snd.KENSA_ADVANCE_SHEET, "UF1:3647")
                 return Question("advance_sheet", "先行データ票はありますか？", source="UF1:3648")
             items.append({"label": "先行データ票", "ok": bool(ans)})
             if not ans:
@@ -1407,7 +1408,7 @@ class Session:
             wiring._msg_error(env, st, pre.text, 1)
             self.checks = items + [{"label": "検査員の照合", "ok": None}, {"label": "梱包枚数", "ok": None}]
             return None
-        env.sound("おまちください.wav", "UF1:3717")
+        env.sound(snd.KENSA_WAIT, "UF1:3717")
         # Name_Match
         wt = line_sheet(records.WORKER_TIME, lname)
         nm = workers.name_match(wiring.sheet_cells(self.store, wt) or {}, wiring.registry(st))
@@ -1460,7 +1461,7 @@ class Session:
             return None
         ans = answers.get("print")
         if ans is None:
-            env.sound("印刷.wav", "UF1:3763")
+            env.sound(snd.KENSA_PRINT, "UF1:3763")
             return Question("print", "印刷する？", source="UF1:3764")
         if not ans:
             env.messages.append(Message("ｷｬﾝｾﾙ処理", INFO, source="UF1:3840"))
@@ -1493,7 +1494,7 @@ class Session:
             info["files"] = len(csvs)
         self.report["csv"] = [str(p) for p in csvs]
         report_model.set_printed(self.store, st.lot, lname, env.now())
-        env.sound("完了.wav", "UF1:3832")
+        env.sound(snd.KENSA_DONE, "UF1:3832")
         self.print_ready = False
         return None
 

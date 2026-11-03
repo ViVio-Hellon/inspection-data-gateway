@@ -13,6 +13,7 @@ import unicodedata
 from typing import Any, Callable, Optional, Union
 
 from .. import datasource, flow, paths, quirks, vbx
+from .. import sound as snd
 from . import cask as ck
 from . import sheet as sh
 from .sheet import H494, ZEN, Book, Call, Effects, LogCall, PrintJob, SavePlan, SaveStep, VbaError
@@ -1279,10 +1280,10 @@ def ippan_print(book: Book, answers: Optional[dict] = None) -> Union[Effects, fl
     if f.kname == "" and f.ken_no == "":
         fx.msg("検査員名と検査番号を入力してください", source="UFMit:1690")
         return fx
-    fx.sounds.append("おまちください.wav")
+    fx.sounds.append(snd.ZENKASHO_WAIT)
     zen_transfer(book)
     job = zen_print_setup(book)
-    fx.sounds.append("印刷.wav")
+    fx.sounds.append(snd.ZENKASHO_PRINT)
     a = (answers or {}).get("zen_print")
     if a is None:
         return flow.Question("zen_print", "印刷しますか？", source="UFMit:1712", messages=list(fx.messages))
@@ -1297,7 +1298,7 @@ def ippan_print(book: Book, answers: Optional[dict] = None) -> Union[Effects, fl
         row = sh.history_row(book, book.ws(ZEN), "全ヵ所")
         if row is not None:
             fx.history.append(row)
-        fx.sounds.append("完了.wav")
+        fx.sounds.append(snd.ZENKASHO_DONE)
     else:
         fx.msg("ｷｬﾝｾﾙ処理", source="UFMit:1764")
     f.tag = ""
@@ -1325,10 +1326,10 @@ def fiven_print(book: Book, answers: Optional[dict] = None) -> Union[Effects, fl
         fx.msg("検査員名と検査番号を入力してください", source="UFMit:1394")
         return fx
     f.tag = "off"
-    fx.sounds.append("おまちください.wav")
+    fx.sounds.append(snd.ZENKASHO_WAIT)
     zen_transfer(book)
     job = zen_print_setup(book)
-    fx.sounds.append("印刷.wav")
+    fx.sounds.append(snd.ZENKASHO_PRINT)
     a = (answers or {}).get("zen_print")
     if a is None:
         return flow.Question("zen_print", "印刷しますか？", source="UFMit:1427", messages=list(fx.messages))
@@ -1345,7 +1346,7 @@ def fiven_print(book: Book, answers: Optional[dict] = None) -> Union[Effects, fl
         row = sh.history_row(book, book.ws(ZEN), "全ヵ所")
         if row is not None:
             fx.history.append(row)
-        fx.sounds.append("完了.wav")
+        fx.sounds.append(snd.ZENKASHO_DONE)
     else:
         fx.msg("ｷｬﾝｾﾙ処理", source="UFMit:1492")
     f.tag = ""
@@ -1360,7 +1361,7 @@ def mitsubishi_print(book: Book, answers: Optional[dict] = None) -> Union[Effect
     fx = book.begin()
     f = book.mit
     f.tag = "off"
-    fx.sounds.append("おまちください.wav")
+    fx.sounds.append(snd.ZENKASHO_WAIT)
     if ZEN in book.sheets:
         book.activate_sheet(ZEN)
     f.work, f.inflag = "ON", "flagon"
@@ -1376,7 +1377,7 @@ def mitsubishi_print(book: Book, answers: Optional[dict] = None) -> Union[Effect
         return fx
     zen_transfer(book)
     job = genshi_print_setup(book)
-    fx.sounds.append("印刷.wav")
+    fx.sounds.append(snd.ZENKASHO_PRINT)
     a = (answers or {}).get("zen_print")
     if a is None:
         return flow.Question("zen_print", "印刷しますか？", source="UFMit:1560", messages=list(fx.messages))
@@ -1391,7 +1392,7 @@ def mitsubishi_print(book: Book, answers: Optional[dict] = None) -> Union[Effect
         row = sh.history_row(book, book.ws(ZEN), "三菱受託")
         if row is not None:
             fx.history.append(row)
-        fx.sounds.append("完了.wav")
+        fx.sounds.append(snd.ZENKASHO_DONE)
     else:
         fx.msg("ｷｬﾝｾﾙ処理", source="UFMit:1597")
     f.tag = ""

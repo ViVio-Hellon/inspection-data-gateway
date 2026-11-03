@@ -114,13 +114,13 @@ class CaskScreenTest(SessionBase):
         d = self.post("receive", text="DT10002+0000036.000M")
         self.assertEqual(self.cell(d, 7, 2)[:2], ["36", "○"])
         self.assertIn("ok", self.cell(d, 7, 2)[2])
-        self.assertIn("chime2.wav", [m["sound"] for m in d["messages"]])           # 音楽合格
+        self.assertIn("cask_ok", [m["sound"] for m in d["messages"]])           # 音楽合格
         self.assertEqual(d["view"]["flash"]["mark"], "○")                          # UFcount
         self.assertEqual((d["view"]["next"]["row"], d["view"]["next"]["col"]), (7, 4))
         self.assertIn("sel", self.cell(d, 7, 4)[2])
         d = self.post("receive", text="DT10002+0000035.500M")
         self.assertEqual(self.cell(d, 7, 4)[:2], ["35.5", "×"])
-        self.assertIn("tada.wav", [m["sound"] for m in d["messages"]])
+        self.assertIn("cask_ng", [m["sound"] for m in d["messages"]])
         self.assertTrue(d["view"]["header"]["start"].startswith("2026/11/02"))     # D7 を選んだので開始日時
         # 作業中保存: 手元DB の ｷｬｽｸ作業中保存 に値、開き直すと読み戻す(フォームは Initialize でシートから)
         self.assertEqual(self.store.sheet(cask_session.WORK_SAVE).get(7, 2), 36.0)

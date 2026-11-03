@@ -49,6 +49,7 @@ from typing import Any, Callable, Optional, Union
 from .. import trace
 from ..logging_utils import get_logger
 from . import datasource, legacy_log, lot as lotmod, packing, paths, quality, report_html, terminal, vbx, wiring, workers
+from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .modes import cask
 from .modes import sheet as sh
@@ -61,8 +62,8 @@ log = get_logger("kensa.cask_session")
 SCREEN = "cask"
 STATE_TABLE = "画面状態"                       # この画面が持つ状態(シートの全部)。1 画面 1 行
 WORK_SAVE = "ｷｬｽｸ作業中保存"                   # VBA の作業中保存シート(値だけの写し)
-#: VBA の音の手続き → C:\VBAWAV の wav(補助:282-358)
-SOUNDS = {"音楽合格": "chime2.wav", "音楽不合格": "tada.wav", "音楽対角": "chimes.wav"}
+#: VBA の音の手続き(補助:282-358)→ キャスクの出来事(D29。ファイルは 設定 →「音」)
+SOUNDS = snd.by_procedure(snd.CASK_OK, snd.CASK_NG, snd.CASK_DIAG)
 #: 保護中のシートのロックされたセルに打ち込んだときの Excel の警告
 PROTECTED_TEXT = ("変更しようとしているセルやグラフは保護されているシート上にあります。"
                   "変更するには、[校閲] タブの [シート保護の解除] をクリックします (パスワードの入力が必要な場合もあります)。")

@@ -83,7 +83,7 @@ class NameTest(unittest.TestCase):
     def test_unregistered(self) -> None:
         name, msgs = workers.name_conv("1234567890123")
         self.assertEqual(name, "")
-        self.assertEqual(msgs[0].sound, "ナンバーNO.wav")
+        self.assertEqual(msgs[0].sound, "kensa_worker_unregistered")
         self.assertEqual(workers.name_conv(""), ("", []))
 
     def test_register_card(self) -> None:

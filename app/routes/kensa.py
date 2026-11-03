@@ -67,21 +67,6 @@ def page():
     return render_template("kensa.html", **shell_context("kensa"))
 
 
-@bp.get("/api/kensa/sound/<path:name>")
-def sound(name: str):
-    """判定音・案内の音声(VBA の C:\\VBAWAV\\*.wav。使用パス「音声」)。無ければ 404(VBA も鳴らないだけ)。"""
-    from pathlib import Path
-    from flask import send_file
-    from ufkensa.kensa import paths
-    safe = Path(name).name
-    if not safe.lower().endswith(".wav"):
-        return jsonify({"error": {"code": "bad_value", "message": "wav だけ鳴らせます"}}), 400
-    f = paths.to_local(paths.join(paths.get("wav"), safe))
-    if not f.is_file():
-        return jsonify({"error": {"code": "not_found", "message": f"音声がありません: {safe}"}}), 404
-    return send_file(f, mimetype="audio/wav", max_age=3600)
-
-
 @bp.get("/api/kensa/picture/<kind>/<path:name>")
 def picture(kind: str, name: str):
     """VC 画像・包装仕様書の画像(使用パスの下のフォルダの <名前>.JPG)。無ければ 404(VBA は出さないだけ)。"""

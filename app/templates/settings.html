@@ -4,7 +4,7 @@
 {% block content %}
 <section class="page-head">
   <h2>設定</h2>
-  <p class="muted">この端末のライン、使うフォルダとファイル、権限を確かめて決めます。変えられるのは管理者だけです(ラインが未設定のときは誰でも決められます)。</p>
+  <p class="muted">この端末のライン、使うフォルダとファイル、権限を確かめて決めます。変えられるのは管理者だけです(ラインが未設定のときは誰でも決められます。音は誰でも選べます)。</p>
 </section>
 
 <div class="tabs" data-tabs="settings" id="settingsTabs">
@@ -14,6 +14,9 @@
     </button>
     <button class="tab" type="button" role="tab" data-key="paths" id="tab-paths" aria-controls="panel-paths" aria-selected="false">
       <span class="tab__label">使用パス</span><span class="tab__badge" hidden></span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="sound" id="tab-sound" aria-controls="panel-sound" aria-selected="false">
+      <span class="tab__label">音</span><span class="tab__badge" hidden></span>
     </button>
     <button class="tab" type="button" role="tab" data-key="rights" id="tab-rights" aria-controls="panel-rights" aria-selected="false">
       <span class="tab__label">権限</span><span class="tab__badge" hidden></span>
@@ -65,6 +68,46 @@
           <div class="tablewrap">
             <table class="table" id="pathsTable">
               <thead><tr><th>項目</th><th>パス</th><th>状態</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-sound" role="tabpanel" aria-labelledby="tab-sound" hidden>
+      <style>
+        #panel-sound > .card { flex-shrink: 0; }
+        #soundDirKv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+        #soundDirKv dt { color: var(--muted); }
+        #soundDirKv dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+        #soundTable th, #soundTable td { text-align: left; }
+        #soundTable td { white-space: normal; vertical-align: middle; }
+        #soundTable td:last-child { white-space: nowrap; text-align: right; }
+        #soundTable select { min-width: 16em; }
+      </style>
+      <section class="card">
+        <header><h3>音声フォルダ(いまどこを見ているか)</h3><span class="lv" id="soundDirLv"></span></header>
+        <div class="pad">
+          <p class="muted">鳴らす音声ファイルは、使用パスの「音声」(VBA の C:\VBAWAV\)のフォルダから選びます。フォルダを変えるのは
+            <a href="?tab=paths" id="soundToPaths">使用パス</a> の面です(同じ設定を2か所に置かないため)。</p>
+          <dl class="kv" id="soundDirKv"></dl>
+          <div class="field">
+            <button class="btn" type="button" id="soundCheck">確認</button>
+            <button class="btn" type="button" id="soundReload">読み直す</button>
+            <span class="path-status" id="soundCheckResult"></span>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>どこで何を鳴らすか</h3><span class="lv lv--info" id="soundCount"></span></header>
+        <div class="pad">
+          <p class="muted">出来事ごとに「鳴らさない」か、音声フォルダのファイルを選びます(選ぶとすぐ保存します。管理者パスワードは要りません ── 間違えても音が鳴らないだけです)。
+            既定は VBA が鳴らしていたファイルです。ファイルがフォルダに無いときも選択は残し、「フォルダにありません」と出します(音は鳴らず、画面の文言はいつもどおり出ます)。
+            受け付ける形式: <span id="soundSuffixes"></span>。</p>
+          <div class="tablewrap">
+            <table class="table" id="soundTable">
+              <thead><tr><th>場所</th><th>出来事</th><th>いつ</th><th>鳴らす音</th><th>状態</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>

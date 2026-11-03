@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import datasource, flow, paths, quirks, vbx
+from . import sound as snd
 
 # ------------------------------------------------------------------
 # 定数
@@ -44,11 +45,12 @@ RED = "赤"                                   # 枠線(LookingYellow の赤枠)�
 POSITIONS = ("S", "U", "C", "D", "E", "F")   # 検査位置(LoopJudg の a = 1..6)
 POS5 = POSITIONS[:5]                         # S〜E は 1〜14 行、F は 1〜10 行
 
-SOUND_OK = "chime2.wav"                      # 音楽合格(補助:305)
-SOUND_NG = "tada.wav"                        # 音楽不合格(補助:357)
-SOUND_DIAG = "chimes.wav"                    # 音楽対角(補助:282)
-SOUND_NEED = "必要です.wav"                   # MaterialsMsgBox(J:2072)
-SOUND_RIGHT_ANGLE = "直角度.wav"              # MaterialsMsgBox(J:2105)
+# 音は出来事の鍵(D29。ファイルは 設定 →「音」で決まる。既定は VBA のファイル)
+SOUND_OK = snd.KENSA_OK                      # 音楽合格(補助:305 chime2.wav)
+SOUND_NG = snd.KENSA_NG                      # 音楽不合格(補助:357 tada.wav)
+SOUND_DIAG = snd.KENSA_DIAG                  # 音楽対角(補助:282 chimes.wav)
+SOUND_NEED = snd.KENSA_NEED                  # MaterialsMsgBox(J:2072 必要です.wav)
+SOUND_RIGHT_ANGLE = snd.KENSA_RIGHT_ANGLE    # MaterialsMsgBox(J:2105 直角度.wav)
 
 IMAGE_OK, IMAGE_NG, IMAGE_NEKO = "Y", "N", "Neko"   # Judg_ImageSize の引数
 

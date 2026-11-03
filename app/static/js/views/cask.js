@@ -8,6 +8,7 @@
 
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
+import { playMessage } from "../sound.js";
 import { confirmBox } from "../askbox.js";
 import { packDialog } from "./pack_dialog.js";
 
@@ -29,7 +30,7 @@ async function op(name, body = {}, answers = {}, { refocus = true } = {}) {
     return null;
   }
   for (const m of res.messages || []) {
-    if (m.sound) play(m.sound);
+    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
     if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
   }
   if (res.view) render(res.view);
@@ -42,14 +43,6 @@ async function op(name, body = {}, answers = {}, { refocus = true } = {}) {
   if (res.stop) toast(res.stop.text, "error");
   if (refocus) focusInput();
   return res;
-}
-
-/** VBA の音声(C:\VBAWAV)。検査画面の音の経路を使う。無ければ鳴らないだけ。 */
-function play(name) {
-  try {
-    const a = new Audio(tokenUrl(`/api/kensa/sound/${encodeURIComponent(name)}`));
-    a.play().catch(() => {});
-  } catch (e) { /* 鳴らせなくても検査は止めない */ }
 }
 
 function focusInput() {

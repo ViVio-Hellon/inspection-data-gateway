@@ -133,7 +133,7 @@ class AinputScreenTest(SessionBase):
         self.assertIn("10006", d["view"]["mount"]["received"]["reason"])
         d = self.ok(self.post("receive", text="DT10006+0000150.000M"))
         self.assertEqual(d["view"]["mount"]["heights"][0]["value"], "150")
-        self.assertEqual(d["messages"][0]["sound"], "chimes.wav")
+        self.assertEqual(d["messages"][0]["sound"], "ainput_height")
         self.assertEqual(d["view"]["press"]["phase"], "second")
         d = self.post("press")
         self.assertEqual(d["question"]["key"], "ainput_send")

@@ -17,12 +17,13 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, Mapping, Optional
 
 from . import datasource, legacy_log, lines, paths, quirks, vbx
+from . import sound as snd
 from .flow import ERROR, INFO, Message
 
 Cells = Mapping[tuple[int, int], Any]
 SHIFT_FACILITIES = ("L-1", "LVC", "HVC", "Test")       # Worker:150, 217, 258
 DEFAULT_FACILITY = "存在なし"                           # GetSetting の既定値
-UNREGISTERED_SOUND = "ナンバーNO.wav"                    # 音楽未登録(補助:343)
+UNREGISTERED_SOUND = snd.KENSA_WORKER_UNREGISTERED   # 音楽未登録(補助:343 ナンバーNO.wav。D29: 出来事の鍵)
 DAILY_FIELDS = ("ﾛｯﾄNo", "材・調質", "製品寸法", "梱包No", "検入枚数", "開始時", "開始分", "終了時", "終了分",
                 "作業人数", "合紙", "枚数", "包数", "VC種別", "etc", " 停止①記号", " 停止①時間", " 停止②記号",
                 " 停止②時間", " 停止③記号", " 停止③時間", " 実績枚数", " 実績重量", " 作業時間", " 単重")   # Worker:736-737

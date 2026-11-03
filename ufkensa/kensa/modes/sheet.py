@@ -398,7 +398,7 @@ class FormShow:
 class Effects:
     messages: list = field(default_factory=list)     # flow.Message
     logs: list = field(default_factory=list)         # LogCall
-    sounds: list = field(default_factory=list)       # "音楽合格" / "音楽不合格" / "音楽対角" / "印刷.wav" …
+    sounds: list = field(default_factory=list)       # "音楽合格" / "音楽不合格" / "音楽対角"(画面の出来事へ読み替える)か、出来事の鍵(D29)
     forms: list = field(default_factory=list)        # FormShow
     calls: list = field(default_factory=list)        # Call
     errors: list = field(default_factory=list)       # On Error Resume Next で握りつぶされた実行時エラー

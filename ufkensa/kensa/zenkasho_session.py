@@ -27,7 +27,7 @@
     pack_select(i)             包装仕様書の窓(UF_PackNo)の引当の行をクリック(LabelCls → JPGLoad)
     pack_close(confirmed)      UF_PackNo の「閉じる」(CommandButton2。確認の印が要る)
 
-**Effects の後始末**: 音(音楽合格 → chime2.wav など)・ログ(WriteLog)・UFOK/UFNG(画面の大きな ○/×)・
+**Effects の後始末**: 音(音楽合格 → 出来事 zenkasho_ok など)・ログ(WriteLog)・UFOK/UFNG(画面の大きな ○/×)・
 印刷(PrintJob → 帳票の HTML。D8 でブラウザから印刷)・保存(SavePlan → D7 で xlsx の代わりに HTML/PDF + CSV)・
 `保存用` への履歴行。他モジュールの呼び出し(`Effects.calls`)は、部品が積んだその場で処理する
 (DrawListBoxContent・DistArray/FormReflectDist・LogOut など。VBA と同じ順番で効くように)。
@@ -63,6 +63,7 @@ from .. import trace
 from . import checks, datasource, judge, legacy_log, packing, paths, quality, quirks, report_html, report_model, \
     terminal, vbx, workers
 from . import lot as lotmod
+from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .modes import h494 as hm
 from .modes import sheet as sh
@@ -83,7 +84,8 @@ NEED_WORKER = "検査員登録をして下さい"
 #: Excel の既定(Enter で下へ)。Change が選択を動かさなかったとき(ラテラル・歪・外観など)に効く
 ENTER_MOVES_DOWN = True
 
-SOUNDS = {"音楽合格": judge.SOUND_OK, "音楽不合格": judge.SOUND_NG, "音楽対角": judge.SOUND_DIAG}
+#: VBA の音の手続き(補助:282-358)→ 全ヵ所の出来事(D29。ファイルは 設定 →「音」)
+SOUNDS = snd.by_procedure(snd.ZENKASHO_OK, snd.ZENKASHO_NG, snd.ZENKASHO_DIAG)
 YAMA_LIST = ("1", "2", "3", "4", "5", "6", "枚数")          # YamaLB.List (UFMit:2305)
 METHODS = ("L1", "L2", "M6")                               # Inspection1〜3 / op1〜3 の Caption
 MODES = (("一般", "一般"), ("5N", "5N"), ("三菱", "三菱受託"), ("H494", "H494"))

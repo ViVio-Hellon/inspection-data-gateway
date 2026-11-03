@@ -67,7 +67,7 @@ class CalibrationSessionTest(CalBase):
     def test_full_pass_unblocks_kensa(self) -> None:
         self.c.open()
         r = self.c.receive("#L1000.2")
-        self.assertEqual([m.sound for m in r.messages], ["chime2.wav"])
+        self.assertEqual([m.sound for m in r.messages], ["calibration_ok"])
         self.assertEqual(r.view["step"], "gauge")
         self.assertEqual(r.view["gauge"], "[HVC]:直尺「S-1」の全長を測定してください")
         hs = self.store.sheet(cs.HINSHO)
@@ -87,7 +87,7 @@ class CalibrationSessionTest(CalBase):
         self.c.open()
         self.c.skip_1000()
         r = self.c.receive("#L2060.0")
-        self.assertEqual([m.sound for m in r.messages], ["tada.wav"])
+        self.assertEqual([m.sound for m in r.messages], ["calibration_ng"])
         self.assertEqual(r.view["ng_value"], "測定値 2060.0 mm")                         # Proofreading:131
         self.assertTrue(r.view["saiken"])
         self.assertFalse(r.view["accepting"])
@@ -170,7 +170,7 @@ class CalibrationRouteTest(CalBase):
         self.assertEqual(d["view"]["step"], "1000")
         self.assertIsNone(d["stop"])
         d = self.post("receive", text="#L1000.0")
-        self.assertEqual(d["messages"][0]["sound"], "chime2.wav")
+        self.assertEqual(d["messages"][0]["sound"], "calibration_ok")
         d = self.post("receive", text="#L2053.7")                                       # 上限ちょうどは合格
         self.assertEqual(d["view"]["step"], "done")
         st = self.client.get("/api/calibration/state", headers=self.h).get_json()

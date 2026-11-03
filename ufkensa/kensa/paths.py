@@ -85,7 +85,7 @@ ITEMS: tuple[PathItem, ...] = (
     PathItem("local_history", "手元の検査履歴", "C:\\検査履歴(直書き)", r"C:\検査履歴",
              "帳票 PDF の手元保存", need="write"),
     PathItem("wav", "音声", "C:\\VBAWAV(直書き)", r"C:\VBAWAV" "\\",
-             "判定音・案内の音声(.wav)"),
+             "判定音・案内の音声のフォルダ(何を鳴らすかは 設定 → 音。D29)"),
     PathItem("nps_mitsubishi", "三菱受託検査 履歴(NPS)", "直書き(Mitsubishi)",
              r"\\nlmsrvngy03\NPS\全社研修会トレーナー教育\第36回NPSトレーナー教育（名古屋）2017年\梱包実績の見える化\三菱受託検査_履歴" "\\",
              "三菱受託の xlsx(→PDF+CSV)の写し", need="write"),
