@@ -246,7 +246,7 @@ class DefectTest(Base):
     def test_template_and_sums(self) -> None:
         sh = self.defect()
         self.assertEqual(sh.get(2, 3), "フクレ")
-        page = rm.defect_print_range(self.store, "Test", "河合", "H7372A0", now=NOW, start_time="2024/11/02 05:29:10",
+        page = rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", now=NOW, start_time="2024/11/02 05:29:10",
                                      start1="7:00", end3="6:50", end_time_caption="2024/11/02 8:55:03")
         self.assertEqual(page["print_area"], "$A$1:$Y$12")
         self.assertEqual(page["footer_right"], " 2024/11/02  5:29～2024/11/02  8:55 印刷")
@@ -258,34 +258,34 @@ class DefectTest(Base):
     def test_b35_rerun(self) -> None:
         sh = self.defect()
         args = dict(now=NOW, start1="7:00", end3="6:50", end_time_caption="x")
-        rm.defect_print_range(self.store, "Test", "河合", "H7372A0", **args)
+        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
         sh.write(6, 3, "1")
-        rm.defect_print_range(self.store, "Test", "河合", "H7372A0", **args)
+        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
         self.assertIsNone(sh.get(3, 3))                            # 囲み数字は数でない → 空になる(B35)
         self.assertEqual(sh.get(10, 3), "①")                       # やり直した後の数だけ
         quirks.set_for_test({"B35": "fix"})
         sh2 = self.defect()
-        rm.defect_print_range(self.store, "Test", "河合", "H7372A0", **args)
+        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
         sh2.write(6, 3, "1")
-        rm.defect_print_range(self.store, "Test", "河合", "H7372A0", **args)
+        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
         self.assertEqual(sh2.get(3, 3), "②")
         self.assertEqual(sh2.get(10, 3), "⑥")
 
     def test_b38_footer(self) -> None:
         self.defect()
         night = datetime(2024, 11, 2, 6, 30, 0)
-        p = rm.defect_print_range(self.store, "Test", "河合", "L", now=night, start1="7:00", end3="6:50",
+        p = rm.defect_print_range(self.store, "Test", "検査員01", "L", now=night, start1="7:00", end3="6:50",
                                   end_time_caption="2024/11/02 6:30:00")
         self.assertTrue(p["footer_right"].endswith("～2024/11/01  6:30 印刷"))     # End3 まで前日扱い
         self.assertTrue(p["footer_right"].startswith(" 1899/12/30  0:00"))         # 開始なし = Date の 0
         quirks.set_for_test({"B38": "fix"})
-        p2 = rm.defect_print_range(self.store, "Test", "河合", "L", now=night, start1="7:00", end3="6:50",
+        p2 = rm.defect_print_range(self.store, "Test", "検査員01", "L", now=night, start1="7:00", end3="6:50",
                                    end_time_caption="2024/11/02 6:30:00")
         self.assertTrue(p2["footer_right"].endswith("～2024/11/02  6:30 印刷"))
 
     def test_mitsubishi_no_footer(self) -> None:
         self.defect()
-        p = rm.defect_print_range(self.store, "Test", "河合", "L", now=NOW, start1="7:00", end3="6:50",
+        p = rm.defect_print_range(self.store, "Test", "検査員01", "L", now=NOW, start1="7:00", end3="6:50",
                                   mitsubishi=True)
         self.assertEqual(p["footer_right"], "")
 
