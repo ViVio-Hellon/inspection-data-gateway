@@ -16,9 +16,11 @@
       </div>
     </section>
     <section class="card">
-      <header><h3>ロット</h3></header>
+      <header><h3>ロット</h3><span class="lv lv--warn" id="lotSrcLv" hidden>控えから読んでいます</span></header>
       <div class="pad">
         <div class="inbox"><label for="lotIn">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
+        <div class="lot-src__row"><button class="btn lot-src" type="button" id="lotSrcBtn" aria-pressed="false" title="このロットだけ、モードによらず控え(第2パス)の仕掛台帳から読みます。台帳にロットが無い・引当が足りない・台帳が古いときに使います">控え(第2)から読む</button></div>
+        <p class="lot-src__note" id="lotSrcNote" hidden></p>
         <dl class="kv-grid" id="lotKv"></dl>
       </div>
     </section>

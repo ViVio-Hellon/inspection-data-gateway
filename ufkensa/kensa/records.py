@@ -128,6 +128,7 @@ class KensaSnapshot:
     last_hot: str = ""; qf: str = ""; at_count: str = ""                                 # noqa: E702
     at_butt_visible: bool = False; inspe_butt_visible: bool = False; inspe_butt_caption: str = ""  # noqa: E702
     lateral_text_backcolor: int = 0; lateral_text_backstyle: int = 0                     # noqa: E702
+    lot_source_lot: str = ""                # D28: 「控え(第2)から読む」を選んだロット(選んでいなければ "")
 
     def m(self, face: str, i: int) -> str:
         items = self.measure.get(face) or []
@@ -625,12 +626,28 @@ def posting(store: LocalStore, snap: KensaSnapshot, need_right: Optional[bool]) 
     sh.write(1, 41, snap.huris)
     sh.write(1, 42, snap.lateral_text_tag)
     sh.write(9, 10, snap.height_formula)
+    if snap.lot_source_lot != "":                      # D28(VBA には無い。VBA の列と重ならない 1 行目 60 列目)
+        sh.write(LOT_SOURCE_CELL[0], LOT_SOURCE_CELL[1], snap.lot_source_lot)
     if need_right is None:
         return sh
     if not need_right:
         for r in range(2, 8):
             sh.set(r, 18, None)
     return sh
+
+
+#: D28: 作業保存_<L> に「控え(第2)から読む」を選んだロットを置くセル(VBA の Posting は 1 行目 42 列目まで)
+LOT_SOURCE_CELL = (1, 60)
+
+
+def load_lot_source(store: LocalStore, lname: str) -> str:
+    """作業保存_<L> から「控え(第2)から読む」を選んだロット(D28)。保存のロット(A1)と同じときだけ返す。無ければ ""。"""
+    name = line_sheet(WORK_SAVE, lname)
+    if lname == "" or not store.exists(name):
+        return ""
+    sh = store.sheet(name)
+    lot = cell_text(sh.get(*LOT_SOURCE_CELL))
+    return lot if lot != "" and lot == cell_text(sh.get(1, 1)) else ""
 
 
 @dataclass

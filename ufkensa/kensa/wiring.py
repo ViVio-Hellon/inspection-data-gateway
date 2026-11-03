@@ -480,7 +480,29 @@ def to_snapshot(state: KensaState, store: LocalStore) -> records.KensaSnapshot:
     s.last_hot, s.qf = v("LastHot"), v("QF")
     s.lateral_text_backcolor = quality.rgb(51, 204, 204) if state.lateral_text_colored else 0
     s.lateral_text_backstyle = 1 if state.lateral_text_colored else 0
+    s.lot_source_lot = state.lot_source_lot if state.lot_source == LOT_SECOND else ""     # D28
     return s
+
+
+#: D28: 「控え(第2)から読む」(state.lot_source の値)
+LOT_SECOND = "second"
+
+
+def reads_second(state: Any, lot: str) -> bool:
+    """D28: このロットを控え(第2)だけから読むか(検査画面でそのロットに「控えから読む」を選んでいるとき)。"""
+    if state is None or lot is None:
+        return False
+    lot = str(lot).strip().upper()
+    return (getattr(state, "lot_source", "") == LOT_SECOND and lot != ""
+            and getattr(state, "lot_source_lot", "") == lot)
+
+
+def restore_lot_source(state: KensaState, lot: str) -> None:
+    """D28: 作業保存から読んだ「控えから読む」のロットを状態へ戻す("" なら いつもの読み方)。"""
+    if lot:
+        state.lot_source, state.lot_source_lot = LOT_SECOND, lot
+    else:
+        state.lot_source, state.lot_source_lot = "", ""
 
 
 def apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
@@ -906,6 +928,7 @@ class RealHooks(Hooks):
     def load_text(self, state: KensaState, n: str = "") -> None:
         r = records.load_text(self.store, state.lname, n, current_option=state.work)
         if r is not None:
+            restore_lot_source(state, records.load_lot_source(self.store, state.lname))   # D28: 読み戻しの前に
             apply_restore(state, r, self)
 
     def worker_load(self, state: KensaState) -> None:

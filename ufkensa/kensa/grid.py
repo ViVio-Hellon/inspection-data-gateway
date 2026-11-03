@@ -271,6 +271,9 @@ class KensaState:
     tmin: str = ""                # TMin
     tmax: str = ""                # TMax
     dbflag: str = ""              # DBflag(TextBox。"" 以外で仕掛 DB を NextPath に・校正スキップ)
+    # D28: ロットごとの「控え(第2)から読む」(DBflag の代わり。校正・Min/Max には効かない)
+    lot_source: str = ""          # "" = いつもの読み方(モードどおり) / "second" = 控え(第2)だけから読む
+    lot_source_lot: str = ""      # その選択をしたロット(このロットを読むときだけ効く)
 
     # --- 作業選択・検査回数 -------------------------------------------
     work: str = ""                # 厚板/薄板/少枚数/極厚/スラブ の OptionButton のうち True のもの("" = 未選択)

@@ -375,8 +375,18 @@ class CaskSession:
             s.conn.executemany('INSERT INTO "セル" ("シート", "行", "列", "値") VALUES (?, ?, ?, ?)', rows)
 
     # -- 操作の通し方 -------------------------------------------------
+    def _reads_second(self) -> bool:
+        """D28: キャスクのロットが、通常検査で「控え(第2)から読む」を選んだロットなら第2だけから読む。"""
+        book = self.book
+        if book is None:
+            return False
+        try:
+            return wiring.reads_second(self.uf1_state(), book.cask.lot_box)
+        except Exception:                                  # noqa: BLE001 - 通常検査が無ければ いつもの読み方
+            return False
+
     def _run(self, fn: Callable[..., Any], *args: Any) -> Result:
-        with self._lock:
+        with self._lock, paths.lot_source(self._reads_second):
             book = self._ensure_book()
             book.begin()
             self._lot_error = False

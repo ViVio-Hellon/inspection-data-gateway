@@ -275,7 +275,23 @@ function renderPack(v) {
   if (was && !v.pack) refocus();
 }
 
+// D28: ロットごとの「控え(第2)から読む」。決めるのはサーバ。ここは押された・入力欄の LotNo を送るだけ
+function renderLotSource(v) {
+  const s = v.lot_source || {};
+  const btn = $("lotSrcBtn");
+  btn.setAttribute("aria-pressed", String(!!s.on));
+  btn.textContent = s.on ? "控え(第2)から読む: 入" : "控え(第2)から読む";
+  $("lotSrcLv").hidden = !s.active;
+  $("lotSrcLv").textContent = s.active ? `控えから読んでいます(${s.lot})` : "";
+  const note = $("lotSrcNote");
+  note.hidden = !s.on;
+  note.textContent = !s.on ? "" : s.active
+    ? `Lot ${s.lot} は、モード(いま ${s.mode})によらず控え(第2パス)の仕掛台帳から読みます。新規検査・別のロットの登録で外れます。`
+    : `次に Lot登録 する ${s.lot} を控え(第2パス)から読みます。`;
+}
+
 function renderLeft(v) {
+  renderLotSource(v);
   const h = v.header, t = v.tolerance;
   kv($("lotKv"), [["ライン", h.line + (h.line_no || "")], ["Lot", h.lot], ["検査No", h.ken_no], ["用途", h.youto],
                   ["材質/調質", [h.zai, h.tyu].filter(Boolean).join(" ")], ["コメント", h.comment]]);
@@ -467,6 +483,10 @@ function init() {
   initTabs();
   onEnter("cardIn", (card) => op("worker", { card }));
   onEnter("lotIn", (lot) => op("lot", { lot }));
+  $("lotSrcBtn").addEventListener("click", () => {
+    const on = !(V && V.lot_source && V.lot_source.on);
+    op("lot-source", { on, lot: $("lotIn").value });
+  });
   onEnter("measIn", async (t) => { remember(t); await op("receive", { text: t }); refocus(); });
   onEnter("manualIn", async (t) => { remember(`手入力 ${t}`); await op("value", { name: "Manual", value: t }); refocus(); });
   $("yamaSel").addEventListener("change", () => op("yama", { yama: $("yamaSel").value }));

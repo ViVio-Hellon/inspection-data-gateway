@@ -806,8 +806,17 @@ class ZenkashoSession:
     # ------------------------------------------------------------------
     # 実行の枠
     # ------------------------------------------------------------------
+    def _reads_second(self) -> bool:
+        """D28: 全ヵ所 / H494 のロットが、通常検査で「控え(第2)から読む」を選んだロットなら第2だけから読む。"""
+        b = self.book
+        if b is None:
+            return False
+        from . import wiring
+        lot = b.mit.h494_lot if self.page == "P_H494" else b.mit.lot_box
+        return wiring.reads_second(self._kstate(), lot)
+
     def _run(self, fn: Callable[..., Any], *args: Any) -> Result:
-        with self._lock:
+        with self._lock, paths.lot_source(self._reads_second):
             b = self._ensure()
             self._acc, self._msgs = [], []
             self.flash, self.reports, self.saved, self.ainput, self.pending, self.errors = "", [], [], None, [], []

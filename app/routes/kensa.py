@@ -34,6 +34,7 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "print-check": ("print_check", ("answers",)),
     "print-commit": ("print_commit", ("answers",)),
     "new": ("new_inspection", ("answers",)),
+    "lot-source": ("set_lot_source", ("on", "lot", "answers")),     # D28 控え(第2)から読む
     # 外観・不良要因・検入高さ(MPEX の各ページ)
     "visual": ("visual", ("lc", "items")),
     "visual-clear": ("visual_clear", ("lc",)),

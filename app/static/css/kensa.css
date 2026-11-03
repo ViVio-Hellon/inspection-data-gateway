@@ -83,3 +83,9 @@
 .notice p { margin: 0; color: var(--state-error); font-weight: 700; }
 
 @media (max-width: 1280px) { .kensa { grid-template-columns: 220px minmax(0, 1fr) 230px; } }
+
+/* D28: ロットごとの「控え(第2)から読む」 */
+.lot-src__row { margin-top: 6px; display: flex; justify-content: flex-end; }
+.lot-src { white-space: nowrap; font-size: var(--fs-sm); }
+.lot-src[aria-pressed="true"] { background: var(--warn-bg); color: var(--state-warn); border-color: var(--state-warn); font-weight: 700; }
+.lot-src__note { margin: 6px 0 0; padding: 4px 8px; font-size: var(--fs-xs); background: var(--warn-bg); color: var(--state-warn); border-radius: 4px; }

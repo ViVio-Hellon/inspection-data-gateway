@@ -15,6 +15,8 @@ VBA の `初期設定.Setting_Path` の 7 本と、コードに直書きされ�
 - ほかの項目(品証やり取り・参照用ファイル・検査履歴・工場共有・測定データ電子化・手元の検査履歴・音声・
   NPS・アクセス権限マスタ・Edge)は**パス 1 つ**。モードによらない
 
+【D28】ロットごとの「控え(第2)から読む」(`lot_source`)の中は、モードによらずオフラインと同じ読み方(第2だけ)。
+
 `get("main")` / `get("next")` は残す(呼び手が多く、VBA の `FPath = MainPath` の比べ方をそのまま使うため):
     main … オンラインは第1、オフラインは第2      next … いつも第2
 
@@ -24,11 +26,13 @@ VBA の `初期設定.Setting_Path` の 7 本と、コードに直書きされ�
 """
 from __future__ import annotations
 
+import contextvars
 import os
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
-from typing import Any, Optional
+from typing import Any, Callable, Iterator, Optional, Union
 
 from .. import config, user_settings
 from ..logging_utils import get_logger
@@ -124,6 +128,44 @@ def set_mode(m: str) -> None:
     if m not in (ONLINE, OFFLINE):
         raise ValueError(m)
     user_settings.save(KEY_MODE, m)
+
+
+# ------------------------------------------------------------------
+# ロットごとの「控え(第2)から読む」(判断事項 D28)
+# ------------------------------------------------------------------
+#: いまの操作で仕掛台帳を第2だけから読むか。真偽、または読むたびに決める関数(検査画面の状態を見る)
+_lot_second: contextvars.ContextVar[Union[bool, Callable[[], bool]]] = contextvars.ContextVar(
+    "kensa_lot_second", default=False)
+
+
+@contextmanager
+def lot_source(second: Union[bool, Callable[[], bool]]) -> Iterator[None]:
+    """この中の仕掛台帳の読みを、真なら**モードによらず第2(控え)だけ**にする(オフラインと同じ読み方)。
+
+    `second` に関数を渡すと読むたびに呼ぶ(操作の途中でロットが変わっても、そのロットの選択に従う)。
+    VBA の DBflag の代わり(D27 で DBflag は使わない)。校正・Min/Max の確かめには効かない。
+    """
+    token = _lot_second.set(second)
+    try:
+        yield
+    finally:
+        _lot_second.reset(token)
+
+
+def lot_second_forced() -> bool:
+    """いま仕掛台帳を第2だけから読む指定があるか。"""
+    v = _lot_second.get()
+    try:
+        return bool(v()) if callable(v) else bool(v)
+    except Exception:                                   # noqa: BLE001 - 決められなければ いつもの読み方
+        return False
+
+
+def lot_mode(m: Optional[str] = None) -> str:
+    """仕掛台帳の読み方に使うモード。指定があればそれ、「控えから読む」中はオフライン、ほかは設定のモード。"""
+    if m:
+        return m
+    return OFFLINE if lot_second_forced() else mode()
 
 
 # ------------------------------------------------------------------
@@ -231,7 +273,7 @@ def which(key: str, m: Optional[str] = None) -> str:
     """仕掛台帳でどちらの側を使うか。main / 仕掛台帳 = オンライン第1・オフライン第2、next = 第2。"""
     if key == "next":
         return SECOND
-    return FIRST if (m or mode()) == ONLINE else SECOND
+    return FIRST if lot_mode(m) == ONLINE else SECOND
 
 
 def default(key: str, m: Optional[str] = None) -> str:
@@ -318,7 +360,7 @@ def lot_file_name(db: str, base: str, m: Optional[str] = None) -> str:
     VBA の切替(lot.py)は FPath を文字列で比べるので、ここもフォルダの文字列で見分ける。
     オフラインは main も next も第2なので 2つ目の名前。オンラインで第1と第2が同じフォルダなら 1つ目の名前。
     """
-    m = m or mode()
+    m = lot_mode(m)
     second = slot_value(LOT, SECOND)
     if base == second and (m == OFFLINE or base != slot_value(LOT, FIRST)):
         return second_name(db)
@@ -364,7 +406,7 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
     (呼び手が VBA どおり「…がありません」と出す)。オフラインは第2だけ。
     SIKACOMP / SIKATWOYEAR(next)はいつも第2。ほかの DB はその項目のパス 1 つ。`write` は前の呼び方の名残。
     """
-    m = m or mode()
+    m = lot_mode(m)
     where, file = DB_FILES[name]
     key = base_key or where
     if key == "next":

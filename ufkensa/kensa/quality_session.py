@@ -392,6 +392,15 @@ def build(lot_no: str, *, store: LocalStore, kensa: Any = None, facility: Option
     if lot_no == "":
         return out
     fac = facility if facility is not None else terminal.facility()
+    from . import paths, wiring
+    second = wiring.reads_second(st, lot_no)             # D28: 検査画面でこのロットを控え(第2)から読んでいるなら同じく
+    out["lot_source_second"] = second
+    with paths.lot_source(second):
+        return _build_lot(out, lot_no, st, kensa, store, fac)
+
+
+def _build_lot(out: dict[str, Any], lot_no: str, st: Any, kensa: Any, store: Optional[LocalStore],
+               fac: str) -> dict[str, Any]:
     current = out["current"]
     lv = read_lot(lot_no, dbflag=st.dbflag if current else "", facility=fac,
                   ken_no=st.ken_no_caption if current else "")

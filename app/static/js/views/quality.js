@@ -42,6 +42,10 @@ function renderHeader(d) {
   const which = $("qWhich");
   which.textContent = d.lot ? (d.current ? "検査中のロット" : "別のロット") : "";
   which.className = "lv " + (d.current ? "lv--ok" : "lv--info");
+  if (d.lot_source_second) {                    // D28: 検査画面でこのロットを控え(第2)から読んでいる
+    which.textContent += "・控えから読んでいます";
+    which.className = "lv lv--warn";
+  }
   $("qEmpty").hidden = !!d.lot;
   if (!d.lot) { $("qHeader").replaceChildren(); return; }
   if (!d.found) {

@@ -25,6 +25,11 @@
     print_check(answers)          PrintB_Click の前半(先行データ票・必須チェック・検査員照合・梱包枚数)
     print_commit(answers)         PrintB_Click の後半(帳票・保存用への追記・測定DBへの登録・履歴・CSV・PDF)
     new_inspection(answers)       NewKen_Click
+    set_lot_source(on, lot)       (新規 D28)ロットごとの「控え(第2)から読む」。VBA の DBflag の運用の代わり
+
+D28: 「控え(第2)から読む」を選んだロットを読むあいだ(`_reads_second`)、操作はすべて
+`paths.lot_source(...)` の中で動かす。仕掛台帳の読み(Arrbox・AccReflec・HistorySave・SikaAtuCreate・
+LSelect / Atu_OPselect の引当・引当の読み・オーダーNo など)は paths を通るので、モードによらず第2だけになる。
 
 D11: 校正の要否は入力のたびに `calibration.input_blocked` で判定する。権限 ufkensa:calibration_skip を持つ端末は
 VBA の WorkButton.Tag="jump" と同じ扱い。
@@ -134,11 +139,18 @@ class Session:
         for t, day, label in ((reg.t1, reg.day1, "T1"), (reg.t2, reg.day2, "T2"), (reg.t3, reg.day3, "T3")):
             if t != "" or day != "":
                 workers_list.append(f"{label}: {t}" + (f"({day})" if day else ""))
-        return {**self._extra_more(), "workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
+        return {**self._extra_more(), "lot_source": self._lot_source_view(), "workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
                 "confi": self.confi, "calibration_required": self.calibration_required and not self._calibrated(),
                 "report": self.report or None, "proofread": "ok" if self._calibrated() else "",
                 "range": {"ops": st.ops, "ope": st.ope,
                           "labels": [st.v(f"OPS{i}").value if st.v(f"OPS{i}").visible else "" for i in range(1, 7)]}}
+
+    def _lot_source_view(self) -> dict[str, Any]:
+        """D28: 「控え(第2)から読む」の表示。active = いま出しているロットがそれ(バッジを出す)。"""
+        st = self.state
+        on = st.lot_source == wiring.LOT_SECOND
+        return {"on": on, "lot": st.lot_source_lot if on else "", "active": wiring.reads_second(st, st.lot),
+                "mode": paths.MODE_LABELS.get(paths.mode(), "")}
 
     def _view(self) -> dict[str, Any]:
         st = self.state
@@ -155,8 +167,12 @@ class Session:
                                              shifts=env.shift_times(), jump=self.calibration_skip(),
                                              db_flag=st.dbflag)
 
+    def _reads_second(self) -> bool:
+        """D28: いまのロットを控え(第2)だけから読むか(読むたびに状態を見る)。"""
+        return wiring.reads_second(self.state, self.state.lot)
+
     def _run(self, fn: Callable[..., Any], *args: Any, posting: bool = True) -> Result:
-        with self._lock:
+        with self._lock, paths.lot_source(self._reads_second):
             env = self._env()
             env.messages, env.confi, env.reason, env.proofread = [], [], None, None
             try:
@@ -195,7 +211,7 @@ class Session:
 
     def current(self) -> Result:
         """いまの画面の値だけ(操作をしない。画面を開いたときの最初の描画)。"""
-        with self._lock:
+        with self._lock, paths.lot_source(self._reads_second):
             try:
                 return Result(self._view())
             except (datasource.DbMissing, datasource.TableMissing) as e:
@@ -363,6 +379,8 @@ class Session:
         if len(text) != 7:
             return None
         st.lot = text
+        if st.lot_source != "" and st.lot_source_lot != text:            # D28: 別のロットは いつもの読み方に戻す
+            self._set_lot_source("", "", f"別のロット({text})を登録したので")
         # Lot_Change
         if st.form_tag != "STOP":
             if self.write_logs:
@@ -370,7 +388,13 @@ class Session:
             self._log("Lot登録:" + text + ":" + st.lname)
             st.machin = ""
             self._log("Lot登録:" + text + ":" + st.lname, legacy_log.MEASURED_LOG)
-        # CB_Change
+        return self._cb_change(answers)
+
+    def _cb_change(self, answers: dict[str, bool]) -> Optional[Question]:
+        """UF1.CB_Change (UF1:4494-4535)。ロットの読み込み(Lot登録と「控えから読む」の切替から呼ぶ)。"""
+        st, env, hooks = self.state, self._env(), self.hooks
+        assert hooks is not None
+        text = st.lot
         if st.load == "off":
             return None
         rows = wiring.sheet_rows(self.store, HOZON) or []
@@ -1554,6 +1578,57 @@ class Session:
             raise Stop(r.messages[-1].text if r.messages else "該当する履歴がありません", source="UF管理:622")
         wiring.apply_restore(st, r, hooks)
 
+    # ------------------------------------------------------------------
+    # D28: ロットごとの「控え(第2)から読む」
+    # ------------------------------------------------------------------
+    def set_lot_source(self, on: Any = True, lot: str = "", answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._lot_source, on in (True, "true", "True", "1", 1, "on"), lot, answers or {})
+
+    def _set_lot_source(self, source: str, lot: str, why: str) -> None:
+        st = self.state
+        before = (st.lot_source, st.lot_source_lot)
+        st.lot_source, st.lot_source_lot = (wiring.LOT_SECOND, lot) if source else ("", "")
+        if before != (st.lot_source, st.lot_source_lot):
+            trace.event("kensa.lot_source", ("控え(第2)から読む: " + lot) if source else
+                        f"控え(第2)から読むのをやめました({why})",
+                        data={"lot": lot or before[1], "on": bool(source), "before": before[1] if before[0] else "",
+                              "why": why, "mode": paths.mode(), "line": st.lname})
+            self._log(("控えから読む:" + lot if source else "控えから読む解除:" + before[1]) + ":" + st.lname)
+
+    def _lot_source(self, on: bool, lot: str, answers: dict[str, bool]) -> Optional[Question]:
+        """「控え(第2)から読む」の切替(新規 D28。VBA で DBflag に文字を入れて CB_Change を起こしていた運用の代わり)。
+
+        - 入れる: 入力欄の LotNo(空ならいまのロット)に選ぶ。いまのロットならすぐ控えから読み直す(CB_Change)。
+          別のロットならそのロットを Lot登録 する(確認は いつもの Lot登録 と同じ)
+        - 外す: いまのロットなら いつもの読み方(モードどおり)で読み直す
+        DBflag と違い、校正・Min/Max の確かめは飛ばさない。
+        """
+        self._require_line()
+        st = self.state
+        text = "".join(ch.upper() if "a" <= ch <= "z" else ch for ch in str(lot or "")
+                       if ch.isascii() and ch.isalnum())
+        if not on:
+            prev = st.lot_source_lot if st.lot_source else ""
+            if prev == "":
+                return None
+            self._set_lot_source("", "", "画面で外した")
+            if prev == st.lot and st.lot != "":
+                layout_cache_forget(st)
+                self.env.messages.append(Message("Lot " + st.lot + " を いつもの読み方(" +
+                                                 paths.MODE_LABELS.get(paths.mode(), "") + ")で読み直します",
+                                                 INFO, source="D28"))
+                return self._cb_change(answers)
+            return None
+        target = text if len(text) == 7 else st.lot
+        if target == "":
+            raise Stop("控え(第2)から読むロットの LotNo(7桁)を入れてください", level=WARN, source="D28")
+        self._set_lot_source(wiring.LOT_SECOND, target, "画面で選んだ")
+        if target == st.lot:
+            layout_cache_forget(st)
+            self.env.messages.append(Message("Lot " + target + " を控え(第2)から読み直します", INFO, source="D28"))
+            return self._cb_change(answers)
+        return self._register_lot(target, answers)
+
     def new_inspection(self, answers: Optional[dict[str, bool]] = None) -> Result:
         return self._run(self._new_inspection, answers or {})
 
@@ -1591,6 +1666,8 @@ class Session:
                                   shifts=env.shift_times(), n="新規"):
             self.store.add_sheet(line_sheet("検査員", lname))
         layout.clear_lselect_cache(st)
+        if st.lot_source != "":
+            self._set_lot_source("", "", "新規検査なので")                   # D28
         for p in grid.POSITIONS:
             st.v("LZ" + p).value = "定盤:"
             st.v("LG" + p).value = "ｹﾞｰｼﾞ"
@@ -1622,6 +1699,28 @@ class Session:
         st.load = "on"
         self.confi, self.checks, self.print_ready, self.report = None, [], False, {}
         return None
+
+
+def layout_cache_forget(st: KensaState) -> None:
+    """D28: 読み先を変えたので、LSelect の控え(g_CacheLotNo など。いまのロットの検番・コース・厚)を使わせない。
+
+    ClearLSelectCache と違い「該当ロットがありません」を 1 回黙らせる印(g_SkipLotNotFoundMsg)は立てない。
+    """
+    c = st.cache
+    c.lot_no = c.ken_no = c.cours = c.c_course = ""
+    c.ord_atu = 0.0
+
+
+def lot_reads_second(lot: str, kensa: Optional["Session"] = None) -> bool:
+    """D28: ほかの画面(品質基準・キャスク・全ヵ所)が、このロットを控え(第2)だけから読むべきか。
+
+    通常検査でそのロットに「控え(第2)から読む」を選んでいるときだけ真(状態は読むだけ)。
+    """
+    try:
+        st = (kensa or get()).state
+    except Exception:                                    # noqa: BLE001 - 通常検査が無ければ いつもの読み方
+        return False
+    return wiring.reads_second(st, lot)
 
 
 def _picture_name(path: Optional[str]) -> str:
