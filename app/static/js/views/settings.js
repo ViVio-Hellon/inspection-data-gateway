@@ -9,7 +9,6 @@ import * as tabs from "../tabs.js";
 
 const $ = (id) => document.getElementById(id);
 let S = null;
-let viewMode = null;
 
 function option(value, label, selected) {
   const o = document.createElement("option");
@@ -57,41 +56,91 @@ function renderTerminal() {
   }));
 }
 
+function pathInput(p, slot) {
+  const wrap = document.createElement("td");
+  if (p.single && slot === "second") {
+    wrap.textContent = "—(1つだけ)";
+    wrap.className = "muted";
+    return { td: wrap, input: null };
+  }
+  const input = document.createElement("input");
+  input.className = "input";
+  input.style.width = "100%";
+  input.style.minWidth = "16em";
+  input.value = p[slot] ?? "";
+  input.dataset.slot = slot;
+  input.disabled = !S.admin;
+  input.setAttribute("aria-label", `${p.label} の${slot === "first" ? "第1" : "第2"}パス`);
+  if (p.key === "log") input.placeholder = "空ならこの端末のローカル(logs)";
+  wrap.append(input);
+  if (p[slot + "_changed"]) {
+    const s = document.createElement("small");
+    s.className = "muted";
+    s.textContent = "既定: " + (p[slot + "_default"] || (p.key === "log" ? "この端末のローカル(logs)" : "(空)"));
+    wrap.append(document.createElement("br"), s);
+  }
+  return { td: wrap, input };
+}
+
 function renderPaths() {
-  viewMode = viewMode || S.mode;
-  const pick = $("pathsModePick");
-  pick.replaceChildren(...S.modes.map((m) => option(m.key, m.label + (m.key === S.mode ? "(いま使っている)" : ""), m.key === viewMode)));
-  $("pathsMode").textContent = "いま: " + (S.modes.find((m) => m.key === S.mode) || {}).label;
+  const modeLabel = (S.modes.find((m) => m.key === S.mode) || {}).label;
+  $("pathsMode").textContent = "いま: " + modeLabel;
+  $("pathsLock").textContent = S.admin
+    ? (S.master_edit.ok ? "編集できます(管理者パスワードを入れてあります)。" : "変えるときは管理者パスワードを聞きます。")
+    : "変えるには、アクセス権限の「管理者」と管理者パスワードが要ります。";
   const body = $("pathsTable").tBodies[0];
-  body.replaceChildren(...S.paths[viewMode].map((p) => {
+  body.replaceChildren(...S.paths.map((p) => {
     const tr = document.createElement("tr");
     tr.dataset.key = p.key;
     const name = document.createElement("td");
     name.style.whiteSpace = "normal";
-    name.style.width = "38%";
+    name.style.width = "26%";
     const b = document.createElement("b");
     b.textContent = p.label;
     const small = document.createElement("small");
     small.className = "muted";
     small.textContent = ` ${p.vba} — ${p.use}`;
     name.append(b, document.createElement("br"), small);
-    const pathTd = document.createElement("td");
-    const input = document.createElement("input");
-    input.className = "input";
-    input.style.width = "100%";
-    input.style.minWidth = "22em";
-    input.value = p.path;
-    input.disabled = !S.admin;
-    input.setAttribute("aria-label", p.label + " のパス");
-    if (p.key === "log") input.placeholder = "空ならこの端末のローカル(logs)";
-    pathTd.append(input);
-    if (p.changed) {
-      const s = document.createElement("small");
-      s.className = "muted";
-      s.textContent = "既定: " + (p.default || (p.key === "log" ? "この端末のローカル(logs)" : "(空)"));
-      pathTd.append(document.createElement("br"), s);
+    const f = pathInput(p, "first");
+    const s2 = pathInput(p, "second");
+    const names = [];
+    if (p.second_names) {
+      const box = document.createElement("div");
+      box.className = "muted";
+      box.style.marginTop = "4px";
+      const t = document.createElement("small");
+      t.textContent = "2つ目の名前(任意。空なら1つ目と同じ名前):";
+      box.append(t);
+      for (const n of p.second_names) {
+        const line = document.createElement("div");
+        const lab = document.createElement("small");
+        lab.textContent = n.first + " → ";
+        const inp = document.createElement("input");
+        inp.className = "input";
+        inp.style.width = "14em";
+        inp.value = n.value;
+        inp.placeholder = n.first;
+        inp.disabled = !S.admin;
+        inp.dataset.db = n.db;
+        inp.dataset.orig = n.value;
+        inp.setAttribute("aria-label", `2つ目の名前(${n.first} の代わり)`);
+        line.append(lab, inp);
+        box.append(line);
+        names.push(inp);
+      }
+      s2.td.append(box);
+    }
+    const use = document.createElement("td");
+    use.style.whiteSpace = "nowrap";
+    for (const m of S.modes) {
+      const d = document.createElement("div");
+      const txt = p.in_use[m.key];
+      d.textContent = `${m.label}: ${txt}`;
+      if (m.key === S.mode) d.style.fontWeight = "700";
+      use.append(d);
     }
     const status = cell("", "path-status");
+    status.style.whiteSpace = "normal";
     const act = document.createElement("td");
     const check = document.createElement("button");
     check.className = "btn";
@@ -104,18 +153,19 @@ function renderPaths() {
       save.className = "btn btn--primary";
       save.type = "button";
       save.textContent = "保存";
-      save.addEventListener("click", () => savePath(p.key, input.value));
+      save.addEventListener("click", () => saveRow(p, [f.input, s2.input].filter(Boolean), names));
       act.append(" ", save);
-      if (p.changed) {
+      for (const slot of ["first", "second"]) {
+        if (!p[slot + "_changed"]) continue;
         const reset = document.createElement("button");
         reset.className = "btn";
         reset.type = "button";
-        reset.textContent = "既定に戻す";
-        reset.addEventListener("click", () => savePath(p.key, "", true));
+        reset.textContent = (slot === "first" ? "第1" : "第2") + "を既定に";
+        reset.addEventListener("click", () => postPath({ key: p.key, slot, path: "", reset: true }, "既定に戻しました"));
         act.append(" ", reset);
       }
     }
-    tr.append(name, pathTd, status, act);
+    tr.append(name, f.td, s2.td, use, status, act);
     return tr;
   }));
 }
@@ -207,7 +257,6 @@ async function saveTerminal() {
 async function saveMode(mode) {
   try {
     S = await api.post("/api/settings/mode", { mode });
-    viewMode = S.mode;
     render();
     toast("モードを変えました", "success");
   } catch (e) {
@@ -216,22 +265,75 @@ async function saveMode(mode) {
   }
 }
 
-async function savePath(key, path, reset = false) {
+/* 使用パスの変更は管理者パスワードが要る(D26)。403 code "locked" なら鍵の窓(admin_unlock.js)を出して 1 回だけ呼び直す */
+async function withPathUnlock(fn) {
   try {
-    S = await api.post("/api/settings/path", { key, path, mode: viewMode, reset });
+    return await fn();
+  } catch (e) {
+    if (e.status !== 403 || e.code !== "locked") throw e;
+    let mod = null;
+    try {
+      mod = await import("../admin_unlock.js");
+    } catch (_) {
+      mod = null;
+    }
+    if (!mod || typeof mod.ensureUnlocked !== "function") throw e;
+    if (!(await mod.ensureUnlocked(e.message))) throw e;
+    return await fn();
+  }
+}
+
+async function postPath(body, done) {
+  try {
+    S = await withPathUnlock(() => api.post("/api/settings/path", body));
     render();
-    toast(reset ? "既定に戻しました" : "保存しました", "success");
+    if (done) toast(done, "success");
+    return true;
   } catch (e) {
     toastError(e);
+    return false;
   }
+}
+
+async function saveRow(p, inputs, names) {
+  const bodies = [];
+  for (const input of inputs) {
+    const slot = input.dataset.slot;
+    if (input.value !== (p[slot] ?? "")) bodies.push({ key: p.key, slot, path: input.value });
+  }
+  for (const n of names) {
+    if (n.value !== n.dataset.orig) bodies.push({ key: p.key, db: n.dataset.db, second_name: n.value });
+  }
+  if (!bodies.length) {
+    toast("変わったところはありません", "info");
+    return;
+  }
+  for (const b of bodies) {
+    if (!(await postPath(b, ""))) return;
+  }
+  toast("保存しました", "success");
 }
 
 async function checkOne(key, td) {
   td.textContent = "確かめています…";
   try {
-    const r = await api.post("/api/settings/path/check", { key, mode: viewMode });
-    td.textContent = r.message;
-    td.className = "path-status " + (r.ok ? "lv--ok" : "lv--ng");
+    const r = await api.post("/api/settings/path/check", { key });
+    td.replaceChildren();
+    for (const [slot, label] of [["first", "第1"], ["second", "第2"]]) {
+      const x = r[slot];
+      if (!x) continue;
+      const d = document.createElement("div");
+      d.textContent = `${label}: ${x.message}`;
+      d.className = x.ok ? "lv--ok" : "lv--ng";
+      td.append(d);
+    }
+    if (r.in_use) {
+      const d = document.createElement("small");
+      d.className = "muted";
+      d.textContent = "いま使う側: " + r.in_use;
+      td.append(d);
+    }
+    td.className = "path-status";
   } catch (e) {
     td.textContent = "";
     toastError(e);
@@ -246,7 +348,6 @@ function init() {
     $("lineNoLabel").hidden = !maru;
   });
   $("saveTerminal").addEventListener("click", saveTerminal);
-  $("pathsModePick").addEventListener("change", () => { viewMode = $("pathsModePick").value; renderPaths(); });
   $("checkAll").addEventListener("click", () => {
     for (const tr of $("pathsTable").tBodies[0].rows) checkOne(tr.dataset.key, tr.querySelector(".path-status"));
   });

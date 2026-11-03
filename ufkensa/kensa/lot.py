@@ -97,8 +97,59 @@ def vba_target(name: str) -> str:
 
 
 def db_path(base: str, name: str) -> str:
-    """VBA の `FPath & "SIKA….accdb"`(D4 でファイルは .sqlite3)。"""
+    """VBA の `FPath & "SIKA….accdb"`(D4 でファイルは .sqlite3)。
+
+    D26: 仕掛の 3 ファイルは、第2(控え)のフォルダなら設定「2つ目の名前」で探す(`paths.lot_file_name`)。
+    """
+    if name in paths.LOT_DBS:
+        return paths.join(base, paths.lot_file_name(name, base))
     return paths.join(base, paths.DB_FILES[name][1] if name in paths.DB_FILES else name + ".sqlite3")
+
+
+def _remap(rows: list, src: Optional[list], dst: Optional[list]) -> list:
+    """第2の行を第1の列の並びに直す(2つ目は列の数・並びが違うことがある。無い列は "")。"""
+    if not src or not dst or list(src) == list(dst):
+        return rows
+    idx = [list(src).index(c) if c in src else -1 for c in dst]
+    return [[r[i] if 0 <= i < len(r) else "" for i in idx] for r in rows]
+
+
+def lot_from_second(target: str, flt: str, first_file: str) -> tuple[Optional[list], str]:
+    """D26(ロットごとの第2): 第1の仕掛にロット(条件の行)が無いとき、第2(控え)から同じ条件で読む。
+
+    VBA には無い(VBA は第1にファイルがあればそこで「該当なし」)。第1と第2が同じフォルダ
+    (オフライン・1 か所に置いたとき)は何もしない。行は第1の列の並びに直して返す。
+    戻り値は (行 / None, 読んだ第2のファイル)。
+    """
+    main, nxt = paths.get("main"), paths.get("next")
+    if main == nxt:
+        return None, ""
+    second_file = db_path(nxt, target)
+    if not read_check(second_file, 1):
+        return None, ""
+    try:
+        rows = datasource.get_records(second_file, TABLE, flt)
+        if rows is None:
+            return None, second_file
+        src = datasource.get_fields(second_file, TABLE, "")
+        dst = datasource.get_fields(first_file, TABLE, "") if read_check(first_file, 1) else None
+    except (datasource.DbMissing, datasource.TableMissing, sqlite3.Error):
+        return None, ""
+    return _remap(rows, src, dst), second_file
+
+
+def fields_from_second(target: str) -> tuple[Optional[list], str]:
+    """D26: 第1の仕掛の表が空(列名が取れない)とき、第2の列名。"""
+    main, nxt = paths.get("main"), paths.get("next")
+    if main == nxt:
+        return None, ""
+    second_file = db_path(nxt, target)
+    if not read_check(second_file, 1):
+        return None, ""
+    try:
+        return datasource.get_fields(second_file, TABLE, ""), second_file
+    except (datasource.DbMissing, datasource.TableMissing, sqlite3.Error):
+        return None, ""
 
 
 def subpath(base: str, *parts: str) -> str:
@@ -305,6 +356,14 @@ def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "
         res.value = datasource.get_records(file_path, TABLE, arrbox_filter(sql_filter))
     else:
         res.value = datasource.get_fields(file_path, TABLE, "")
+    if res.value is None and fpath == main:
+        # D26: 第1にロット(行・列名)が無ければ第2を見る(VBA の L60 以降は到達しないので VBA には無い動き)
+        if use == "Record":
+            rows, second = lot_from_second(target, arrbox_filter(sql_filter), file_path)
+        else:
+            rows, second = fields_from_second(target)
+        if rows is not None:
+            res.value, res.file_path = rows, second
     return res
 
 
@@ -373,6 +432,8 @@ def sika_atu_create(lot: str) -> Optional[list[str]]:
         rows = datasource.get_records(file_path, TABLE, flt)
         if rows is None:
             return None
+        # D26: 第2は列の並びが違うことがある(2つ目の名前の圧縮版など)。第1の列の並びに直す(同じなら VBA と同じ)
+        rows = _remap(rows, datasource.get_fields(file_path, TABLE, ""), fields)
     if col < 0:
         raise SubscriptOutOfRange("SikaAtuCreate: ｵｰﾀﾞｰ板厚 の列が無い (SaveLoad:51)")
     return [r[col] for r in rows]
@@ -561,8 +622,12 @@ def acc_reflec(screen: LotScreen, *,
         out.status = "db_missing"
         out.messages.append(Message("DBファイルが見つかりません:" + "\r\n" + file_path, ERROR, source="SaveLoad:116"))
         return out
+    # D26: 第1(MainPath)で読むときは、ロットが無ければ第2(控え)の SIKALOT も見る
+    second = ""
+    if base == paths.get("main") and base != paths.get("next"):
+        second = db_path(paths.get("next"), "SIKALOTNOW")
     try:
-        _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env)
+        _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env, second)
     except flow.Stop:
         raise
     except (vbx.TypeMismatch, SubscriptOutOfRange, DbReadError, sqlite3.Error) as e:
@@ -575,11 +640,16 @@ def acc_reflec(screen: LotScreen, *,
 def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
                      check_equipment: Callable[[str, str, float, float, float, float], str],
                      history_rows: Optional[Sequence[Sequence[Any]]],
-                     history_env: Optional["HistoryEnv"]) -> None:
+                     history_env: Optional["HistoryEnv"], second: str = "") -> None:
     if "'" in screen.cb_text:
         # VBA は SQL に値をそのまま埋める(SaveLoad:120)→ 構文エラーで ErrHandler
         raise DbReadError("クエリ式の構文エラー")
     cols, values = _select_lot(file_path, screen.cb_text)
+    if values is None and second and read_check(second, 1):
+        # D26: ロットごとの第2(列は名前で読むので並びが違っても同じ)
+        cols, values = _select_lot(second, screen.cb_text)
+        if values is not None:
+            out.db_path = second
     if values is None:
         out.status = "not_found"
         for k in CLEAR_ON_NOT_FOUND:
@@ -974,6 +1044,13 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
             return res
     r = {n: datasource.column_index(vc, n)
          for n in ("受注番号", "VC_表", "VC_裏", "製品単重", "合紙", "取引先名称", "納入先名称", "送り先名称", "包装仕様NO")}
+    if fpath == main and main != nxt and r["受注番号"] >= 0 and h["受注番号"] >= 0:
+        # D26(ロットごとの第2): 引当の受注が第1の SIKAODR に無ければ、第2の SIKAODR の行を後ろに足す
+        have = {v[r["受注番号"]] for v in vcr}
+        want = {x[h["受注番号"]] for x in temp_hiki} - have
+        if want:
+            extra, _second = lot_from_second("SIKAODRNOW", "", odr_path)
+            vcr = list(vcr) + [v for v in (extra or []) if v[r["受注番号"]] in want]
 
     now = _now(env.now)
     base = list(past_hiki) + [None] * max(0, 19 - len(past_hiki))

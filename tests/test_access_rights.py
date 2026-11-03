@@ -135,7 +135,10 @@ class SettingsApiRightsTest(unittest.TestCase):
         self.assertEqual(self.post("/api/settings/terminal", facility="LVC").status_code, 200)   # 未設定なら誰でも
         self.assertEqual(self.post("/api/settings/terminal", facility="HVC").status_code, 403)   # 変えるのは管理者
         self.assertEqual(self.post("/api/settings/mode", mode="offline").status_code, 403)
-        self.assertEqual(self.post("/api/settings/path", key="wav", path=r"D:\\x").status_code, 403)
+        r = self.post("/api/settings/path", key="wav", slot="first", path=r"D:\\x")
+        self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "not_admin"))
+        auth.unlock_master("nisk")                     # 管理者でなければパスワードを入れても開かない
+        self.assertEqual(self.post("/api/settings/path", key="wav", slot="first", path="x").status_code, 403)
         self.assertEqual(self.post("/api/settings/path/check", key="wav").status_code, 200)       # 確認は誰でも
 
     def test_admin(self):
@@ -143,9 +146,15 @@ class SettingsApiRightsTest(unittest.TestCase):
             auth.end()
             self.assertTrue(self.c.get("/api/settings/state", headers=self.h).get_json()["admin"])
             self.assertEqual(self.post("/api/settings/terminal", facility="丸徳", line_no="A3").status_code, 200)
-            st = self.post("/api/settings/path", key="wav", path=r"D:\音").get_json()
-            self.addCleanup(paths.reset_path, "wav")
-            self.assertEqual([p for p in st["paths"][st["mode"]] if p["key"] == "wav"][0]["path"], r"D:\音")
+            # 使用パスは管理者パスワードも要る(D26)。開けるまでは 403 locked
+            r = self.post("/api/settings/path", key="wav", slot="first", path=r"D:\音")
+            self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
+            self.assertEqual(r.get_json()["error"]["message"], auth.master_edit_reason())
+            self.assertTrue(auth.unlock_master("nisk")[0])
+            self.addCleanup(auth.lock_master)
+            st = self.post("/api/settings/path", key="wav", slot="first", path=r"D:\音").get_json()
+            self.addCleanup(paths.reset_path, "wav", paths.FIRST)
+            self.assertEqual([p for p in st["paths"] if p["key"] == "wav"][0]["first"], r"D:\音")
             self.assertEqual(st["terminal"]["label"], "中板A3")
             self.assertEqual(self.post("/api/settings/terminal", facility="無い").status_code, 400)
 

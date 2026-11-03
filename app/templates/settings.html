@@ -44,7 +44,7 @@
       <section class="card">
         <header><h3>モード</h3></header>
         <div class="pad">
-          <p class="muted">オンラインはサーバーの共有フォルダ、オフラインはアプリのフォルダを使います(VBA の「モード」と同じ)。</p>
+          <p class="muted">オンラインは第1パス(サーバーの共有フォルダ)を読み、無いものだけ第2パスを読みます。オフラインは第2パスだけを使います(VBA の「モード」に当たります。使用パス の面を見てください)。</p>
           <div class="field" id="modeChoices" role="radiogroup" aria-label="モード"></div>
         </div>
       </section>
@@ -54,15 +54,17 @@
       <section class="card">
         <header><h3>使用パス</h3><span class="lv lv--info" id="pathsMode"></span></header>
         <div class="pad">
-          <p class="muted">VBA の初期設定(Setting_Path)とコードに直書きされていたパスです。「確認」で、あるか・読めるか・書けるかを確かめます。</p>
+          <p class="muted">VBA の初期設定(Setting_Path)とコードに直書きされていたパスです。どの項目も<b>第1パス</b>と<b>第2パス</b>を持ちます。
+            <b>オンライン</b>は第1を読み、第1に無いものだけ第2を読みます。<b>オフライン</b>は第2だけを読みます(無ければ「…がありません」)。
+            書く項目(検査履歴など)はオンライン = 第1、オフライン = 第2 に書きます(書けなくてももう一方へは書きません)。
+            仕掛台帳は第1 = 台帳(VBA の MainPath)、第2 = 控え(NextPath)。ファイルごと・ロットごとに第2を見ます。</p>
+          <p class="muted" id="pathsLock"></p>
           <div class="field">
-            <label for="pathsModePick">表示するモード</label>
-            <select class="input" id="pathsModePick"></select>
             <button class="btn" type="button" id="checkAll">すべて確認</button>
           </div>
           <div class="tablewrap">
             <table class="table" id="pathsTable">
-              <thead><tr><th>項目</th><th>パス</th><th>状態</th><th></th></tr></thead>
+              <thead><tr><th>項目</th><th>第1パス</th><th>第2パス</th><th>使う側</th><th>状態</th><th></th></tr></thead>
               <tbody></tbody>
             </table>
           </div>

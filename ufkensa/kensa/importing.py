@@ -41,14 +41,14 @@ class PlanRow:
 
 def default_source(name: str) -> str:
     """取り込み元の既定: 取り込み先と同じ場所・同じ名前の .accdb(VBA が読んでいたファイル)。"""
-    target = paths.db_file(name)
+    target = paths.db_file(name, write=True)
     return target[: -len(".sqlite3")] + ".accdb"
 
 
 def plan() -> list[PlanRow]:
     rows = []
     for name in TARGETS:
-        src, dst = default_source(name), paths.db_file(name)
+        src, dst = default_source(name), paths.db_file(name, write=True)
         sp, dp = paths.to_local(src), paths.to_local(dst)
         try:
             mtime = dp.stat().st_mtime if dp.is_file() else None
@@ -70,7 +70,7 @@ def run(name: str, source: str = "", progress: Optional[Callable[[int, str], Non
     if name not in TARGETS:
         raise KeyError(f"{name} は取り込む DB の一覧にありません")
     src = paths.to_local(source or default_source(name))
-    dst = paths.to_local(paths.db_file(name))
+    dst = paths.to_local(paths.db_file(name, write=True))
     from .. import trace
     trace.note_used(src, "accdb")
     trace.note_used(dst, "save")

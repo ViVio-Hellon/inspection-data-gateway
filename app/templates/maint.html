@@ -4,13 +4,19 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/maint.css') }}">
 <!--
-  保守画面(管理者だけ)。VBA の Test フォームは移植しない(D9)が、業務で要る 2 つをここに置く。
-  左 = 歪公差チェック(品質基準の表を変えたあとの確認。Test.CommandButton34)。結果の表が大きいので幅を取る。
-  右 = 表引きの単発チェック(ソリ公差・設備仕様)と、端末設定のセット(初期設定.AIM / HVC / DelSet)。
-  判断・書式はサーバ(ufkensa/kensa/maint.py)。ここは描いて送るだけ。
+  保守画面。VBA の Test フォームは移植しない(D9)が、業務で要る 2 つをここに置く。
+  誰でも開けて、読むだけの確かめ(歪公差・ソリ・設備仕様)は誰でも使える。編集(端末設定・仮ロット)は
+  管理者パスワード + アクセス権限の管理者(2026-11-02)。いちばん上の帯に鍵の状態を出す。
+  左 = 歪公差チェック(結果の表が大きいので幅を取る)と、その下に 仮ロット(歪公差を確かめるための自分のロット)。
+  右 = 表引きの単発チェック(ソリ公差・設備仕様)、端末設定のセット、管理者パスワードの変更。
+  判断・書式はサーバ(ufkensa/kensa/maint.py・kari_lot.py)。ここは描いて送るだけ。
 -->
 <div class="maint" id="maint">
-  <p class="maint__deny card" id="mDeny" hidden>管理者の権限がありません。この画面は管理者だけが使えます。</p>
+  <div class="maint__lockbar card">
+    <b>編集の鍵</b>
+    <span id="mLock"></span>
+    <span class="muted maint__small">見る・引くだけなら鍵は要りません。端末設定のセットと仮ロットの保存・削除には、管理者パスワードとアクセス権限の「管理者」が要ります。</span>
+  </div>
 
   <div class="maint__main">
     <section class="card maint__dist">
@@ -36,13 +42,14 @@
         <div class="maint__runs">
           <form class="field" id="mOne" autocomplete="off">
             <label for="mLot">ロットNo</label>
-            <input class="input maint__lot" id="mLot" maxlength="20" placeholder="例 H9022K1">
+            <input class="input maint__lot" id="mLot" maxlength="20" placeholder="例 H9022K1 / 仮ロット">
             <button class="btn btn--find" type="submit">1ロット引く</button>
           </form>
           <form class="field" id="mAll" autocomplete="off">
             <label for="mPrefix">仕掛の全ロット</label>
             <input class="input maint__lot" id="mPrefix" maxlength="20" placeholder="ロットNo の頭(任意)">
             <label class="maint__ck"><input type="checkbox" id="mPlate" checked> 板のみ</label>
+            <label class="maint__ck"><input type="checkbox" id="mWithKari" checked> 仮ロットも</label>
             <button class="btn btn--run" type="submit">まとめて引く</button>
             <label class="maint__ck"><input type="checkbox" id="mOnlyDiff"> 違いのあるロットだけ表示</label>
           </form>
@@ -52,6 +59,51 @@
         <div class="tablewrap maint__result" id="mResult">
           <p class="muted">ロットNo を入れて「1ロット引く」、または「まとめて引く」を押してください。VBA の Test フォーム(歪公差)と同じ 8 項目を同じ書式で出します。</p>
         </div>
+      </div>
+    </section>
+
+    <section class="card maint__kari" id="mKariCard">
+      <header><h3>仮ロット</h3><span class="lv lv--info">歪公差を確かめるための自分のロット・手元DB に保存・本物の DB には書かない</span></header>
+      <div class="pad maint__kgrid">
+        <div class="maint__klist">
+          <div class="btn-row">
+            <button class="btn btn--select" type="button" id="mKNew">新しく作る</button>
+            <span class="muted maint__small" id="mKCount"></span>
+          </div>
+          <div class="tablewrap maint__ktable">
+            <table class="table table--dense">
+              <thead><tr><th></th><th>ロットNo</th><th>検番</th><th>用途</th><th>材質/調質</th><th>オーダー寸法</th><th>納入先</th></tr></thead>
+              <tbody id="mKRows"></tbody>
+            </table>
+          </div>
+        </div>
+        <form class="maint__kform" id="mKForm" autocomplete="off">
+          <div class="maint__khead">
+            <b id="mKMode">新しい仮ロット</b>
+            <span class="maint__kcopy">
+              <label for="mKSource">本物のロットから写す</label>
+              <input class="input maint__lot" id="mKSource" maxlength="20" placeholder="例 H9022K1">
+              <button class="btn btn--sm" type="button" id="mKCopy">写す</button>
+            </span>
+          </div>
+          <div class="maint__kfields">
+            <label for="mKLot">ロットNo</label>
+            <input class="input maint__lot" id="mKLot" maxlength="7" placeholder="A111A11" data-key="lot">
+            <label for="mKHead">検番の頭</label>
+            <span class="maint__kken"><input class="input maint__head" id="mKHead" maxlength="1" placeholder="H" data-key="ken_head"><code id="mKKen">-</code></span>
+            <div id="mKMain" class="maint__kmain"></div>
+          </div>
+          <details class="maint__kdetail">
+            <summary>詳しい欄(歪等級など。DBQP が読む列)</summary>
+            <div id="mKDetail" class="maint__kmain"></div>
+          </details>
+          <p class="maint__kmsg muted maint__small" id="mKNote"></p>
+          <div class="btn-row">
+            <button class="btn btn--commit" type="submit" id="mKSave">保存</button>
+            <button class="btn btn--find" type="button" id="mKRun">この値で歪公差を引く</button>
+            <button class="btn" type="button" id="mKClear">空にする</button>
+          </div>
+        </form>
       </div>
     </section>
   </div>
@@ -97,6 +149,20 @@
           <a class="btn" href="/settings?tab=terminal" id="mToSettings">設定「この端末」を開く</a>
         </div>
         <p class="muted maint__small">消すと、次に検査画面を開いたとき VBA の初期設定(SF3)と同じく「この端末」の設定を求めます。</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><h3>管理者パスワード</h3><span class="lv" id="mPwLv"></span></header>
+      <div class="pad">
+        <p class="muted maint__small">編集の鍵を開けるパスワードです(この PC だけ)。変えるには、いまのパスワードとアクセス権限の「管理者」が要ります。値そのものは画面にもファイルにも出ません。</p>
+        <form class="maint__pw" id="mPw" autocomplete="off">
+          <label for="mPwCur">いまの</label><input class="input" type="password" id="mPwCur" autocomplete="current-password">
+          <label for="mPwNew">新しい</label><input class="input" type="password" id="mPwNew" autocomplete="new-password">
+          <label for="mPwConf">もう一度</label><input class="input" type="password" id="mPwConf" autocomplete="new-password">
+          <span></span><button class="btn btn--commit" type="submit">変える</button>
+        </form>
+        <p class="maint__msg" id="mPwErr"></p>
       </div>
     </section>
   </div>

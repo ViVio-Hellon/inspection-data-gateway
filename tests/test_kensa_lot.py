@@ -40,10 +40,12 @@ class _Dirs:
             if nxt:
                 shutil.copy2(src / kensa_fixture.file_name(name), self.next)
         shutil.copy2(src / "伝送用ファイル.sqlite3", self.main)
-        paths.set_mode(paths.OFFLINE)
-        user_settings.save(paths.KEY_PATHS, {paths.OFFLINE: {
-            "main": str(self.main) + "/", "next": str(self.next) + "/", "quality": str(self.main) + "/",
-            "packing": str(self.pack) + "/", "history": str(self.root) + "/", "factory": str(self.root) + "/"}})
+        # D26: 仕掛台帳の第1 = MainPath(台帳)、第2 = NextPath(控え)。VBA の切替はオンラインで確かめる
+        paths.set_mode(paths.ONLINE)
+        common = {"quality": str(self.main) + "/", "packing": str(self.pack) + "/",
+                  "history": str(self.root) + "/", "factory": str(self.root) + "/"}
+        user_settings.save(paths.KEY_PATHS, {paths.FIRST: {"lot": str(self.main) + "/", **common},
+                                             paths.SECOND: {"lot": str(self.next) + "/", **common}})
 
     def please_wait(self) -> None:
         (self.main / lot.PLEASE_WAIT).write_text("x")

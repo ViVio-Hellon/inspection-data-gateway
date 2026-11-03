@@ -2,7 +2,10 @@
 
 - この端末: VBA のレジストリ「設備名」と SF3(初期設定)の代わり。**未設定のときは誰でも決められる**
   (VBA も未設定なら SF3 を自動で出していた)。決まったあとに変えるのは管理者だけ(D12)
-- 使用パス: VBA の Setting_Path と直書きのパス(ご依頼)。オンライン/オフラインの切替も。変えるのは管理者だけ
+- 使用パス: VBA の Setting_Path と直書きのパス(ご依頼)。項目ごとに 第1パス / 第2パス(D26)。
+  **変えるには `auth.master_edit_ok()`(管理者パスワード + アクセス権限の管理者)が要る**。断るときは 403
+  (code "locked" = パスワード待ち、"not_admin" = 管理者でない。文言は `auth.master_edit_reason()`)。
+  オンライン/オフラインの切替(端末の設定)は管理者だけ
 - 権限: アクセス権限の表(python-web-tools と共通。D12)を読んだ結果
 - 不具合の扱い: `config/quirks.json` の中身(D3)
 
@@ -46,7 +49,9 @@ def _state() -> dict:
         },
         "mode": m,
         "modes": [{"key": k, "label": v} for k, v in paths.MODE_LABELS.items()],
-        "paths": {k: paths.overview(k) + [_log_path_row()] for k in paths.MODE_LABELS},
+        "paths": paths.overview() + [_log_path_row()],
+        "slots": [{"key": k, "label": v} for k, v in paths.SLOT_LABELS.items()],
+        "master_edit": {"ok": auth.master_edit_ok(), "reason": auth.master_edit_reason()},
         "rights": {
             "user": s.user_id,
             "pc": auth.pc_name(),
@@ -71,7 +76,10 @@ def _log_path_row() -> dict:
     return {"key": LOG_KEY, "label": "ログの出力パス", "vba": "(新規。all-tools と同じ決まり)",
             "use": "この下に ufkensa フォルダを作り ufkensa_<PC名>_日付.log / ufkensa_記録_<PC名>_日付.jsonl を書く。"
                    "空ならこの端末のローカル(logs)。オンライン/オフライン共通",
-            "need": "write", "kind": "dir", "path": requested, "default": "", "changed": bool(requested)}
+            "need": "write", "kind": "dir", "single": True,
+            "first": requested, "first_default": "", "first_changed": bool(requested),
+            "second": None, "second_default": None, "second_changed": False,
+            "in_use": {k: "この1つ" for k in paths.MODE_LABELS}}
 
 
 def _set_log_dir(text: str):
@@ -140,38 +148,73 @@ def save_mode():
     return jsonify(_state())
 
 
+def _refuse_path_edit():
+    """使用パスを変えてよいか(D26: 管理者パスワード + アクセス権限の管理者)。だめなら 403。"""
+    if auth.master_edit_ok():
+        return None
+    return _err("locked" if auth.can_edit() else "not_admin", auth.master_edit_reason(), 403)
+
+
 @bp.post("/api/settings/path")
 def save_path():
-    if not auth.can_edit():
-        return _err("not_admin", MSG_ADMIN, 403)
+    """使用パスを変える。body: {key, slot: "first"/"second", path, reset} または
+    仕掛台帳の 2つ目の名前 {key: "lot", db: "SIKALOTNOW" など, second_name}。"""
     body = request.get_json(silent=True) or {}
-    key, mode = str(body.get("key", "")), str(body.get("mode", "") or paths.mode())
+    key, slot = str(body.get("key", "")), str(body.get("slot", "") or "")
     if key == LOG_KEY:
+        # ログの出力パスは 設定 → ログ と同じ設定なので、同じく管理者だけ(パスワードは要らない)
+        if not auth.can_edit():
+            return _err("not_admin", MSG_ADMIN, 403)
         refused = _set_log_dir("" if body.get("reset") else str(body.get("path", "")))
         return refused or jsonify(_state())
-    if key not in paths.BY_KEY or mode not in paths.MODE_LABELS:
+    refused = _refuse_path_edit()
+    if refused:
+        return refused
+    if key not in paths.BY_KEY:
         return _err("bad_value", "その項目はありません")
+    if "db" in body:
+        db = str(body.get("db", ""))
+        if key != paths.LOT or db not in paths.LOT_DBS:
+            return _err("bad_value", "2つ目の名前を決められるのは仕掛台帳の SIKALOT / SIKAHIKI / SIKAODR だけです")
+        try:
+            paths.set_second_name(db, "" if body.get("reset") else str(body.get("second_name", "")))
+        except ValueError as e:
+            return _err("bad_value", str(e))
+        log.info("仕掛台帳の2つ目の名前 %s を %s にしました", db, paths.second_name(db))
+        trace.event("settings.path", f"仕掛台帳の2つ目の名前 {db} を {paths.second_name(db)} にしました")
+        return jsonify(_state())
+    if slot not in paths.SLOT_LABELS:
+        return _err("bad_value", "第1パスか第2パスかを選んでください")
     if body.get("reset"):
-        paths.reset_path(key, mode)
+        paths.reset_path(key, slot)
     else:
-        paths.set_path(key, str(body.get("path", "")), mode)
-    log.info("使用パス %s(%s)を %s にしました", key, mode, paths.get(key, mode))
+        paths.set_path(key, str(body.get("path", "")), slot)
+    label = paths.SLOT_LABELS[slot]
+    log.info("使用パス %s(%s)を %s にしました", key, label, paths.slot_value(key, slot))
+    trace.event("settings.path", f"使用パス {paths.BY_KEY[key].label}({label})を {paths.slot_value(key, slot)} にしました")
     return jsonify(_state())
 
 
 @bp.post("/api/settings/path/check")
 def check_path():
+    """確認ボタン(誰でも): 第1パスと第2パスの両方を確かめる。`slot` を付けるとその側だけ。"""
     body = request.get_json(silent=True) or {}
-    key, mode = str(body.get("key", "")), str(body.get("mode", "") or paths.mode())
+    key, slot = str(body.get("key", "")), str(body.get("slot", "") or "")
     if key == LOG_KEY:
         target = logging_utils.resolve_log_dir(str(user_settings.get(config.KEY_LOG_DIR, "") or ""))
         why = logging_utils.probe_writable(target)
-        return jsonify({"key": key, "path": str(target), "exists": target.is_dir(), "readable": not why,
-                        "writable": not why, "ok": not why,
-                        "message": f"書けます({target})" if not why else f"書けません: {why}"})
-    if key not in paths.BY_KEY or mode not in paths.MODE_LABELS:
+        one = {"key": key, "slot": paths.FIRST, "path": str(target), "exists": target.is_dir(), "readable": not why,
+               "writable": not why, "ok": not why,
+               "message": f"書けます({target})" if not why else f"書けません: {why}"}
+        return jsonify({"key": key, paths.FIRST: one, paths.SECOND: None, "ok": one["ok"], "message": one["message"]})
+    if key not in paths.BY_KEY or (slot and slot not in paths.SLOT_LABELS):
         return _err("bad_value", "その項目はありません")
-    return jsonify(paths.check(key, mode))
+    slots = [slot] if slot else list(paths.SLOT_LABELS)
+    out = {s: paths.check(key, s) for s in slots}
+    m = paths.mode()
+    return jsonify({"key": key, **out, "mode": m, "in_use": paths.in_use_text(key, m),
+                    "ok": any(r["ok"] for r in out.values()),
+                    "message": " / ".join(f"{paths.SLOT_LABELS[s]}: {r['message']}" for s, r in out.items())})
 
 
 @bp.post("/api/settings/rights/reload")

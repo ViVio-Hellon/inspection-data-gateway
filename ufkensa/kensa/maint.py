@@ -1,4 +1,4 @@
-"""保守画面(管理者だけ)の組み立て ── VBA の Test フォームと 初期設定.bas のうち、業務で要る 2 つ
+"""保守画面の組み立て(開く・読むだけの確かめは誰でも。編集は管理者パスワード + 管理者の権限。2026-11-02) ── VBA の Test フォームと 初期設定.bas のうち、業務で要る 2 つ
 
 Test フォームそのものは移植しない(D9)。ただし持ち主の依頼で、次の 2 つは Web 版にも置く:
 
@@ -12,6 +12,7 @@ Test フォームそのものは移植しない(D9)。ただし持ち主の依�
    レジストリ「起動設定」の代わりは user_settings(terminal.py・paths.set_mode。docs/06 レジストリ→user_settings)。
 
 **読み取り専用**: 1 は DB を読むだけ(datasource は mode=ro で開く)。書くのは 2 の端末設定だけ。
+仮ロット(kari_lot.py。手元DB に保存した利用者のロット)も 1 で引ける。仮ロットは仕掛の行と引当をメモリで組むだけ。
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ from pathlib import Path
 from typing import Any, Iterator, Optional
 
 from .. import user_settings
-from . import datasource, lot as lotmod, paths, quality, quality_session, terminal, vbx
+from . import datasource, kari_lot, lot as lotmod, paths, quality, quality_session, terminal, vbx
 from .flow import Stop
 
 #: Test フォームの表示欄(QpArryD の 1〜8 列。Test:96-105)と、参考に出す 9 列目
@@ -141,7 +142,7 @@ def dist_check(lot_no: str, alt: Optional[Path] = None) -> dict[str, Any]:
     """ロット 1 つの歪公差。alt を渡すと、その品質基準で引いた結果も並べる。"""
     lot_no = lot_no.strip().upper()
     ctx = _lot_context(lot_no)
-    row: dict[str, Any] = {"lot": lot_no, "ken_no": ctx["ken_no"], "found": ctx["found"],
+    row: dict[str, Any] = {"lot": lot_no, "ken_no": ctx["ken_no"], "found": ctx["found"], "kari": False,
                            "hiki": [list(h) for h in (ctx["hiki"] or [])], "messages": ctx["messages"]}
     if not ctx["found"] and ctx["hiki"] is None:
         row["current"] = {"status": "not_found", "values": {}, "note": "仕掛(SIKALOTNOW・SIKAHIKINOW)にロットがありません",
@@ -153,6 +154,20 @@ def dist_check(lot_no: str, alt: Optional[Path] = None) -> dict[str, Any]:
     if alt is not None:
         with quality_db(alt):
             row["alt"] = _run_dist(lot_no, ctx["ken_no"], ctx["hiki"], ctx["data"])
+    row["diff"] = diff_keys(row["current"], row["alt"])
+    return row
+
+
+def dist_check_kari(k: kari_lot.KariLot, alt: Optional[Path] = None) -> dict[str, Any]:
+    """仮ロットの歪公差。本物のロットと同じ部品(dist_array)に、メモリで組んだ仕掛の行と引当を渡す。"""
+    data, hiki = k.lot_data(), k.hiki()
+    row: dict[str, Any] = {"lot": k.lot, "ken_no": k.ken_no, "found": True, "kari": True, "source": k.source,
+                           "hiki": [list(h) for h in hiki], "messages": []}
+    row["current"] = _run_dist(k.lot, k.ken_no, hiki, data)
+    row["alt"] = None
+    if alt is not None:
+        with quality_db(alt):
+            row["alt"] = _run_dist(k.lot, k.ken_no, hiki, data)
     row["diff"] = diff_keys(row["current"], row["alt"])
     return row
 
@@ -169,13 +184,22 @@ def lot_numbers(*, plate_only: bool = True, prefix: str = "") -> list[str]:
     return list(dict.fromkeys(x for x in lots if x and x.upper().startswith(prefix)))
 
 
-def dist_check_all(alt: Optional[Path] = None, *, plate_only: bool = True, prefix: str = "") -> dict[str, Any]:
-    """仕掛の全ロット(またはロットNo の頭で絞ったもの)の歪公差。表を変えたあとの確認用。"""
+def dist_check_all(alt: Optional[Path] = None, *, plate_only: bool = True, prefix: str = "",
+                   kari_lots: Optional[list[kari_lot.KariLot]] = None) -> dict[str, Any]:
+    """仕掛の全ロット(またはロットNo の頭で絞ったもの)の歪公差。表を変えたあとの確認用。
+
+    kari_lots を渡すと、ロットNo の頭が合う仮ロットも後ろに足す(行に kari=True)。
+    """
     t0 = time.perf_counter()
-    rows = [dist_check(lot, alt) for lot in lot_numbers(plate_only=plate_only, prefix=prefix)]
+    prefix_u = prefix.strip().upper()
+    kari = [k for k in (kari_lots or []) if k.lot.startswith(prefix_u)]
+    kari_set = {k.lot for k in kari}
+    rows = [dist_check(lot, alt) for lot in lot_numbers(plate_only=plate_only, prefix=prefix) if lot not in kari_set]
+    rows += [dist_check_kari(k, alt) for k in kari]
     count = {s: sum(1 for r in rows if r["current"]["status"] == s) for s in ("ok", "none", "error", "not_found")}
     return {"rows": rows, "count": len(rows), "by_status": count,
             "diffs": sum(1 for r in rows if r["diff"]), "alt": str(alt) if alt else "",
+            "kari_used": [k.lot for k in kari],
             "sec": round(time.perf_counter() - t0, 1)}
 
 

@@ -1,7 +1,8 @@
 """保守画面 /maint と /api/maint/*(app/routes/maint.py → ufkensa/kensa/maint.py)
 
 歪公差の照合そのものは test_kensa_quality が見ている。ここは Test フォームと同じ 8 項目・書式への組み立て、
-別の品質基準との比べ方(このスレッドだけ差し替える)、ソリ公差・設備仕様の表引き、端末設定のセット、管理者の制限を見る。
+別の品質基準との比べ方(このスレッドだけ差し替える)、ソリ公差・設備仕様の表引き、端末設定のセット、
+編集の鍵(2026-11-02: 開く・読むは誰でも、編集は 管理者パスワード + 管理者の権限)、仮ロット、管理者パスワードの変更を見る。
 基準データ(tests/kensa_fixture.py)のロット: H9022K1(別表B 管理番号 25。巾 2.5 / 丈 3.5)。
 """
 from __future__ import annotations
@@ -17,8 +18,8 @@ from unittest import mock
 
 from tests import kensa_fixture
 from tests._web import make_client
-from ufkensa import auth, user_settings
-from ufkensa.kensa import maint, paths, quality, terminal
+from ufkensa import admin_password, auth, config, user_settings
+from ufkensa.kensa import kari_lot, maint, paths, quality, store as st, terminal
 
 
 def _make_alt(src: Path, dst: Path, no: int = 25, value: str = "9") -> Path:
@@ -177,9 +178,17 @@ class MaintRouteTest(MaintBase):
         self.addCleanup(self.admin.stop)
         self.client = make_client()
         app = self.client.application
+        from app.routes import admin_auth, maint as maint_routes
         if "maint" not in app.blueprints:
-            from app.routes import maint as maint_routes
             app.register_blueprint(maint_routes.bp)
+        if "admin_auth" not in app.blueprints:
+            app.register_blueprint(admin_auth.bp)
+        admin_auth.reset_misses()
+        p = mock.patch.object(maint_routes, "_store", lambda: st.LocalStore(self.tmp / "local.sqlite3"))
+        p.start()
+        self.addCleanup(p.stop)
+        auth.unlock_master(admin_password.DEFAULT_PASSWORD)              # 既定は鍵を開けた状態で試す
+        self.addCleanup(auth.lock_master)
         self.h = {"X-Tool-Token": app.config["TOKEN"]}
 
     def post(self, url: str, body: dict):
@@ -226,16 +235,284 @@ class MaintRouteTest(MaintBase):
         self.assertTrue(d["terminal"]["unset"])
         self.assertEqual(self.post("/api/maint/terminal", {"action": "x"}).status_code, 400)
 
-    def test_not_admin(self) -> None:
+    def test_reads_open_to_everyone(self) -> None:
+        """2026-11-02: 管理者でなくても、鍵を開けていなくても、読むだけの確かめは使える。"""
+        auth.lock_master()
         self.admin.stop()
         with mock.patch.object(auth, "can_edit", return_value=False):
-            for url, body in (("/api/maint/dist", {"lot": "H9022K1"}), ("/api/maint/dist_all", {}),
-                              ("/api/maint/sori", {}), ("/api/maint/equipment", {}),
-                              ("/api/maint/terminal", {"action": "clear"})):
-                self.assertEqual(self.post(url, body).status_code, 403, url)
-            self.assertFalse(self.client.get("/api/maint/state", headers=self.h).get_json()["admin"])
-        self.assertEqual(terminal.facility(), "HVC")                      # 変わっていない
+            self.assertEqual(self.client.get("/maint", headers=self.h).status_code, 200)
+            for url, body in (("/api/maint/dist", {"lot": "H9022K1"}), ("/api/maint/dist_all", {"prefix": "H9"}),
+                              ("/api/maint/sori", {"atu": "3", "haba": "1200", "take": "1500"}),
+                              ("/api/maint/equipment", {"line": "LVC", "zai": "5NB", "atu": "2", "haba": "730",
+                                                        "take": "1500", "wei": "225"})):
+                self.assertEqual(self.post(url, body).status_code, 200, url)
+            self.assertEqual(self.client.get("/api/maint/kari", headers=self.h).status_code, 200)
+            d = self.client.get("/api/maint/state", headers=self.h).get_json()
+            self.assertFalse(d["admin"])
+            self.assertFalse(d["lock"]["can_edit"])
         self.admin.start()
+
+    def test_edit_needs_unlock(self) -> None:
+        """編集は 403 {code: locked}(理由は master_edit_reason)。鍵を開けると通る。"""
+        auth.lock_master()
+        r = self.post("/api/maint/terminal", {"action": "clear"})
+        self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
+        self.assertEqual(r.get_json()["error"]["message"], auth.master_edit_reason())
+        self.assertIn("管理者パスワード", r.get_json()["error"]["message"])
+        self.assertEqual(self.post("/api/maint/kari", _kari_body()).status_code, 403)
+        self.assertEqual(self.post("/api/maint/kari/delete", {"lot": "A111A11"}).status_code, 403)
+        self.assertEqual(terminal.facility(), "HVC")                      # 変わっていない
+        # 間違ったパスワード → 開かない。正しいパスワード → 開いて呼び直せる(JS の withUnlock と同じ流れ)
+        d = self.post("/api/admin/unlock", {"password": "chigau"}).get_json()
+        self.assertEqual((d["ok"], d["reason"]), (False, "管理者パスワードが違います"))
+        self.assertFalse(d["state"]["can_edit"])
+        d = self.post("/api/admin/unlock", {"password": admin_password.DEFAULT_PASSWORD}).get_json()
+        self.assertTrue(d["ok"])
+        self.assertTrue(d["state"]["can_edit"])
+        self.assertEqual(self.post("/api/maint/terminal", {"action": "clear"}).status_code, 200)
+
+    def test_admin_right_also_needed(self) -> None:
+        """パスワードを通していても、管理者の権限が無ければ編集できない(両方要る)。"""
+        self.admin.stop()
+        with mock.patch.object(auth, "can_edit", return_value=False):
+            r = self.post("/api/maint/terminal", {"action": "clear"})
+            self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
+            self.assertIn("管理者", r.get_json()["error"]["message"])
+            auth.lock_master()
+            d = self.post("/api/admin/unlock", {"password": admin_password.DEFAULT_PASSWORD}).get_json()
+            self.assertFalse(d["ok"])
+            self.assertIn("管理者", d["reason"])
+        self.admin.start()
+        self.assertFalse(auth.master_unlocked())
+
+
+def _kari_body(lot: str = "A111A11", **values: str) -> dict:
+    v = {f.key: f.default for f in kari_lot.FIELDS}
+    v.update({"用途コード": "C1", "製造材質": "5NB", "オーダー材質": "5NB", "製造調質": "H32", "オーダー調質": "H32",
+              "オーダー板厚": "3", "オーダー板幅": "1250", "オーダー板丈": "2500",
+              "製造板厚": "3", "製造板幅": "1250", "製造板丈": "2500"})
+    v.update(values)
+    return {"lot": lot, "ken_head": "H", "values": v}
+
+
+class KariLotTest(MaintBase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.store = st.LocalStore(self.tmp / "local.sqlite3")
+        self.addCleanup(self.store.close)
+
+    def make(self, lot: str = "A111A11", **values: str) -> kari_lot.KariLot:
+        b = _kari_body(lot, **values)
+        return kari_lot.validate(b["lot"], b["ken_head"], b["values"])
+
+    def test_validate_lot_and_ken(self) -> None:
+        k = kari_lot.validate("ａ１２３ｂ４５", "h", _kari_body()["values"])     # 全角・小文字は直して受ける
+        self.assertEqual((k.lot, k.ken_head, k.ken_no), ("A123B45", "H", "H111111"))
+        # 検番の長さは本物(SIKAHIKINOW・SIKALOTNOW の 検査番号 H6X1176 など)と同じ 7
+        self.assertEqual(len(k.ken_no), len(maint.dist_check("H9022K1")["ken_no"]))
+        for bad in ("A11A11", "A1111A1", "1111A11", "A111111", "A111AA1", "A111A1", "A111A111", "", "A111A1-"):
+            with self.assertRaises(kari_lot.KariError, msg=bad) as cm:
+                kari_lot.validate(bad, "H", _kari_body()["values"])
+            self.assertEqual(cm.exception.field, "lot")
+        for bad in ("", "1", "HH", "-"):
+            with self.assertRaises(kari_lot.KariError, msg=bad) as cm:
+                kari_lot.validate("A111A11", bad, _kari_body()["values"])
+            self.assertEqual(cm.exception.field, "ken_head")
+
+    def test_validate_numbers_and_defaults(self) -> None:
+        for v in ("", "abc", "1.2.3"):
+            with self.assertRaises(kari_lot.KariError) as cm:
+                self.make(**{"オーダー板幅": v})
+            self.assertEqual(cm.exception.field, "オーダー板幅")
+        k = self.make(**{"製造板丈": "0", "オーダー板厚": " 0.5 "})
+        self.assertEqual((k.values["製造板丈"], k.values["オーダー板厚"]), ("0", "0.5"))
+        k = kari_lot.validate("A111A11", "H", {"オーダー板厚": "1", "オーダー板幅": "1", "オーダー板丈": "1",
+                                               "製造板厚": "1", "製造板幅": "1", "製造板丈": "1"})
+        self.assertEqual(k.values["歪等級"], "4")                          # 品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ の既定
+        self.assertEqual(k.values["納入先"], "")
+
+    def test_lot_data_and_hiki_mapping(self) -> None:
+        k = self.make(**{"納入先": "ﾆﾎﾝ", "取引先": "ﾄﾘ", "送り先コード": "S9", "歪等級": "3"})
+        d = k.lot_data()
+        self.assertEqual((d.value("ﾛｯﾄ番号"), d.value("検査番号")), ("A111A11", "H111111"))
+        self.assertEqual((d.value("ｵｰﾀﾞｰ板幅"), d.value("納入先名"), d.value("送り先ｺｰﾄﾞ")), ("1250", "ﾆﾎﾝ", "S9"))
+        self.assertEqual(d.value("品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ"), "3")
+        self.assertEqual(d.value("実績_設備ｺｰｽ"), "")                       # 指定の無い列は空
+        self.assertEqual(k.hiki(), [("ﾆﾎﾝ", "ﾄﾘ")])                         # HikiArrCreate の (受注_納入先名称, 受注_取引先名称)
+
+    def test_crud(self) -> None:
+        self.assertEqual(kari_lot.list_all(self.store), [])
+        self.assertEqual(kari_lot.save(self.store, self.make())[0], "作成")
+        self.assertEqual(kari_lot.save(self.store, self.make("B222B22", **{"用途名": "テスト"}))[0], "作成")
+        self.assertEqual([k.lot for k in kari_lot.list_all(self.store)], ["A111A11", "B222B22"])
+        with self.assertRaises(kari_lot.KariError):                         # 同じロットNo は作れない
+            kari_lot.save(self.store, self.make())
+        # 直す(ロットNo も変えられる)
+        action, k = kari_lot.save(self.store, self.make("C333C33", **{"オーダー板幅": "1000"}), "A111A11")
+        self.assertEqual(action, "変更")
+        self.assertIsNone(kari_lot.get(self.store, "A111A11"))
+        got = kari_lot.get(self.store, "c333c33")
+        self.assertEqual((got.values["オーダー板幅"], got.ken_no), ("1000", "H111111"))
+        self.assertTrue(got.updated)
+        with self.assertRaises(kari_lot.KariError):
+            kari_lot.save(self.store, self.make("D444D44"), "ZZZZZZZ")      # 直す元が無い
+        self.assertTrue(kari_lot.delete(self.store, "B222B22"))
+        self.assertFalse(kari_lot.delete(self.store, "B222B22"))
+        self.assertEqual([k.lot for k in kari_lot.list_all(self.store)], ["C333C33"])
+        st2 = st.LocalStore(self.tmp / "local.sqlite3")                     # 保存されている(開き直しても同じ)
+        self.addCleanup(st2.close)
+        self.assertEqual(kari_lot.get(st2, "C333C33").values["オーダー板幅"], "1000")
+
+    def test_real_lot_number_refused(self) -> None:
+        with self.assertRaises(kari_lot.KariError) as cm:
+            kari_lot.save(self.store, self.make("L726M50"))                   # 仕掛にあるロット(A111A11 の形)
+        self.assertIn("仕掛に同じロットNo", str(cm.exception))
+
+    def test_from_real(self) -> None:
+        d = kari_lot.from_real("h9022k1")
+        self.assertEqual((d["source"], d["ken_no"], d["ken_head"]), ("H9022K1", "H6X1176", "H"))
+        hiki = quality.hiki_arr_create("H9022K1")
+        self.assertEqual((d["values"]["納入先"], d["values"]["取引先"]), hiki[0])
+        data = quality.read_lot("H9022K1")
+        self.assertEqual(d["values"]["オーダー板幅"], data.value("ｵｰﾀﾞｰ板幅"))
+        self.assertEqual(d["values"]["歪等級"], data.value("品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ"))
+        with self.assertRaises(kari_lot.KariError):
+            kari_lot.from_real("ZZZZZZZ")
+
+    def test_same_result_as_real_lot(self) -> None:
+        """本物のロットと同じ値の仮ロットは、歪公差も同じになる(引当のある仕掛の全ロット)。"""
+        checked = 0
+        for lot in maint.lot_numbers():
+            if not quality.hiki_arr_create(lot):
+                continue                                                     # 本物は引当が無いと引かない
+            d = kari_lot.from_real(lot)
+            k = kari_lot.validate("A111A11", d["ken_head"], d["values"], d["hiki_extra"], lot)
+            real, kari = maint.dist_check(lot), maint.dist_check_kari(k)
+            self.assertEqual(kari["current"]["status"], real["current"]["status"], lot)
+            self.assertEqual(kari["current"]["values"], real["current"]["values"], lot)
+            self.assertEqual(kari["current"]["messages"], real["current"]["messages"], lot)
+            checked += 1
+        self.assertGreaterEqual(checked, 20)
+        r = maint.dist_check_kari(kari_lot.validate("A111A11", "H", kari_lot.from_real("H9022K1")["values"]))
+        self.assertEqual((r["kari"], r["ken_no"], r["current"]["values"]["HaHiz"]), (True, "H111111", "2.5"))
+
+    def test_kari_with_alt_and_all(self) -> None:
+        d = kari_lot.from_real("H9022K1")
+        k = kari_lot.validate("H902K21", d["ken_head"], d["values"], d["hiki_extra"], "H9022K1")
+        r = maint.dist_check_kari(k, self.alt())
+        self.assertEqual(r["diff"], ["HaHiz", "TaHiz"])                     # 変更後の表で 9.0
+        out = maint.dist_check_all(prefix="H9", kari_lots=[k, self.make()])
+        self.assertEqual(out["kari_used"], ["H902K21"])                     # 頭 H9 に合う仮ロットだけ
+        kari_rows = [x for x in out["rows"] if x["kari"]]
+        self.assertEqual([x["lot"] for x in kari_rows], ["H902K21"])
+        self.assertEqual(out["count"], len(out["rows"]))
+        self.assertFalse(any(x["kari"] for x in maint.dist_check_all(prefix="H9")["rows"]))
+
+
+class KariRouteTest(MaintRouteTest):
+    """仮ロットの API(MaintRouteTest の試験も、この setUp でもう一度通る)。"""
+
+    def test_kari_api_flow(self) -> None:
+        d = self.client.get("/api/maint/kari", headers=self.h).get_json()
+        self.assertEqual((d["rows"], d["ken_len"]), ([], 7))
+        self.assertIn({"key": "納入先", "column": "納入先名", "hiki": "受注_納入先名称"},
+                      [{k: f[k] for k in ("key", "column", "hiki")} for f in d["fields"]])
+        r = self.post("/api/maint/kari", _kari_body("A11A11"))
+        self.assertEqual((r.status_code, r.get_json()["error"]["field"]), (400, "lot"))
+        src = self.client.get("/api/maint/kari/from_real?lot=H9022K1", headers=self.h).get_json()
+        self.assertEqual(src["ken_head"], "H")
+        self.assertEqual(self.client.get("/api/maint/kari/from_real?lot=ZZZZZZZ", headers=self.h).status_code, 404)
+        body = {"lot": "H902K21", "ken_head": src["ken_head"], "values": src["values"],
+                "hiki_extra": src["hiki_extra"], "source": "H9022K1"}
+        # 保存の前でも欄の値で引ける(読むだけなので鍵は要らない)
+        auth.lock_master()
+        d = self.post("/api/maint/kari/dist", body).get_json()
+        self.assertEqual((d["row"]["kari"], d["row"]["current"]["values"]["HaHiz"]), (True, "2.5"))
+        auth.unlock_master(admin_password.DEFAULT_PASSWORD)
+        d = self.post("/api/maint/kari", body).get_json()
+        self.assertEqual((d["action"], d["row"]["ken_no"], len(d["rows"])), ("作成", "H111111", 1))
+        self.assertEqual(self.post("/api/maint/kari", body).status_code, 400)           # 同じロットNo
+        # 歪公差チェックのロット欄に仮ロットを入れられる
+        d = self.post("/api/maint/dist", {"lot": "h902k21"}).get_json()
+        self.assertTrue(d["row"]["kari"])
+        self.assertEqual(d["row"]["current"]["values"],
+                         self.post("/api/maint/dist", {"lot": "H9022K1"}).get_json()["row"]["current"]["values"])
+        # まとめて引く: 仮ロットも(既定)/ 外す
+        d = self.post("/api/maint/dist_all", {"prefix": "H9"}).get_json()
+        self.assertEqual(d["kari_used"], ["H902K21"])
+        d = self.post("/api/maint/dist_all", {"prefix": "H9", "include_kari": False}).get_json()
+        self.assertEqual(d["kari_used"], [])
+        # 直す・消す
+        body2 = dict(body, original="H902K21", values=dict(body["values"], **{"オーダー板幅": "999"}))
+        self.assertEqual(self.post("/api/maint/kari", body2).get_json()["action"], "変更")
+        self.assertEqual(self.post("/api/maint/kari/delete", {"lot": "H902K21"}).get_json()["rows"], [])
+        self.assertEqual(self.post("/api/maint/kari/delete", {"lot": "H902K21"}).status_code, 404)
+
+
+class AdminAuthTest(MaintRouteTest):
+    """/api/admin/*(app/routes/admin_auth.py)。"""
+
+    def tearDown(self) -> None:
+        user_settings.delete(config.KEY_ADMIN_PASSWORD)
+        super().tearDown()
+
+    def test_state_lock_unlock(self) -> None:
+        d = self.client.get("/api/admin/state", headers=self.h).get_json()
+        self.assertEqual((d["unlocked"], d["can_edit"], d["admin"], d["reason"]), (True, True, True, ""))
+        self.assertFalse(d["custom"])
+        self.assertEqual(d["min_length"], admin_password.MIN_LENGTH)
+        d = self.post("/api/admin/lock", {}).get_json()["state"]
+        self.assertEqual((d["unlocked"], d["can_edit"]), (False, False))
+        self.assertEqual(d["reason"], auth.master_edit_reason())
+
+    def test_password_not_logged(self) -> None:
+        from ufkensa import trace
+        auth.lock_master()
+        secret = "himitsu-XYZ"
+        with mock.patch.object(trace, "event", wraps=trace.event) as ev, self.assertLogs(level="DEBUG") as logs:
+            self.post("/api/admin/unlock", {"password": secret})
+            self.post("/api/admin/password", {"current": secret, "new": secret + "2", "confirm": secret + "2"})
+        self.assertNotIn(secret, repr(ev.call_args_list))
+        self.assertNotIn(secret, "\n".join(logs.output))
+        self.assertTrue(any(c.kwargs.get("proc") == "admin.unlock" for c in ev.call_args_list))
+
+    def test_cool_down(self) -> None:
+        auth.lock_master()
+        for _ in range(admin_password.MAX_MISSES):
+            self.assertFalse(self.post("/api/admin/unlock", {"password": "x"}).get_json()["ok"])
+        d = self.post("/api/admin/unlock", {"password": admin_password.DEFAULT_PASSWORD}).get_json()
+        self.assertFalse(d["ok"])
+        self.assertIn("待って", d["reason"])
+        from app.routes import admin_auth
+        admin_auth.reset_misses()
+        self.assertTrue(self.post("/api/admin/unlock", {"password": admin_password.DEFAULT_PASSWORD}).get_json()["ok"])
+
+    def test_change_password(self) -> None:
+        dflt = admin_password.DEFAULT_PASSWORD
+        cases = ((("chigau", "abcd", "abcd"), "wrong_password", "current"),
+                 ((dflt, "abc", "abc"), "too_short", "new"),
+                 ((dflt, "abcd", "abce"), "mismatch", "confirm"),
+                 ((dflt, dflt, dflt), "same", "new"))
+        for (cur, new, conf), code, field in cases:
+            r = self.post("/api/admin/password", {"current": cur, "new": new, "confirm": conf})
+            self.assertEqual((r.status_code, r.get_json()["error"]["code"], r.get_json()["error"]["field"]),
+                             (400, code, field), code)
+        self.assertFalse(admin_password.is_custom())
+        d = self.post("/api/admin/password", {"current": dflt, "new": "atarashii", "confirm": "atarashii"}).get_json()
+        self.assertTrue(d["ok"])
+        self.assertTrue(d["state"]["custom"])
+        self.assertNotIn("atarashii", str(user_settings.get(config.KEY_ADMIN_PASSWORD)))   # 平文で持たない
+        auth.lock_master()
+        self.assertFalse(self.post("/api/admin/unlock", {"password": dflt}).get_json()["ok"])
+        self.assertTrue(self.post("/api/admin/unlock", {"password": "atarashii"}).get_json()["ok"])
+
+    def test_change_password_needs_admin_right(self) -> None:
+        self.admin.stop()
+        with mock.patch.object(auth, "can_edit", return_value=False):
+            r = self.post("/api/admin/password", {"current": admin_password.DEFAULT_PASSWORD, "new": "abcd", "confirm": "abcd"})
+            self.assertEqual(r.status_code, 403)
+        self.admin.start()
+        self.assertFalse(admin_password.is_custom())
 
 
 if __name__ == "__main__":

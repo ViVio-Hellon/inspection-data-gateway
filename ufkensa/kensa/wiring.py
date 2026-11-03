@@ -696,7 +696,11 @@ class RealHooks(Hooks):
                 if lotmod.read_check(file_path, 1) is False:
                     return False, None
         flt = "[ﾛｯﾄ番号]='" + lot + "'"
-        return True, datasource.get_records(file_path, lotmod.TABLE, flt)
+        rows = datasource.get_records(file_path, lotmod.TABLE, flt)
+        if rows is None and file_path == lotmod.db_path(main, target):
+            # D26(ロットごとの第2): 第1の SIKAHIKI にロットが無ければ第2(控え)を見る
+            rows, _second = lotmod.lot_from_second(target, flt, file_path)
+        return True, rows
 
     # --- 値を返さないもの ---------------------------------------------
     def loop_text(self, state: KensaState, st: str) -> None:

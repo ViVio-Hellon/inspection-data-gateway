@@ -1,7 +1,8 @@
-/* 保守画面(管理者だけ)。左=歪公差チェック(結果の表が大きいので幅を取る)、右=単発の表引きと端末設定 */
+/* 保守画面。上=編集の鍵の帯、左=歪公差チェックと仮ロット(表が大きいので幅を取る)、右=単発の表引き・端末設定・管理者パスワード */
 .maint { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 10px; align-items: start; }
-.maint__deny { grid-column: 1 / -1; margin: 0; padding: 10px 14px; color: var(--state-error); font-weight: 700; }
-.maint[data-admin="0"] .maint__main, .maint[data-admin="0"] .maint__side { opacity: .55; }
+.maint .maint__lockbar { grid-column: 1 / -1; display: flex; flex-direction: row; flex-wrap: wrap; text-align: left; align-items: center; gap: 12px; padding: 8px 14px; }
+.lockbadge { display: inline-flex; align-items: center; gap: 8px; }
+.lockbadge__why { font-size: var(--fs-xs); }
 .maint__main, .maint__side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .maint .pad { display: flex; flex-direction: column; gap: 10px; }
 
@@ -25,7 +26,7 @@
 
 /* 結果 */
 .maint__summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: var(--fs-sm); min-height: 1.6em; }
-.maint__result { max-height: calc(100vh - 360px); overflow: auto; }
+.maint__result { max-height: 46vh; overflow: auto; }
 .maint__one { width: auto; min-width: 560px; }
 .maint__one tbody th { text-align: left; color: var(--muted); font-weight: 600; white-space: nowrap; padding-right: 16px; }
 .maint__one tbody td { text-align: left; white-space: pre-line; font-family: var(--mono); height: auto; vertical-align: top; }
@@ -55,3 +56,35 @@
 .maint__kv dd.is-diff { background: var(--warn-bg); }
 .maint__presets { flex-wrap: wrap; }
 .maint__small { font-size: var(--fs-xs); margin: 0; }
+
+/* 仮ロット */
+.maint__kari-chip { font-size: var(--fs-xs); }
+.maint tr.is-kari td:first-child { box-shadow: inset 3px 0 0 var(--accent, #2a6f97); }
+.maint .maint__kgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.maint__klist { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.maint__ktable { max-height: 420px; overflow: auto; }
+.maint__ktable td { height: auto; vertical-align: middle; font-size: var(--fs-sm); white-space: normal; text-align: left; }
+.maint__ktable td.n { white-space: nowrap; }
+.maint__ktable th { text-align: left; }
+.maint__ktable tr.is-current td { background: var(--accent-soft); }
+.maint__ktable td.maint__kops { white-space: nowrap; padding: 3px 4px; }
+.maint__kops .btn--sm { padding: 2px 7px; height: auto; min-height: 0; font-size: var(--fs-xs); margin-right: 3px; }
+.maint__kform { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.maint__khead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.maint__kcopy { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--muted); }
+.maint__kfields, .maint__kmain { display: grid; grid-template-columns: auto 1fr auto 1fr auto 1fr; gap: 5px 8px; align-items: center;
+                                 font-size: var(--fs-sm); }
+.maint__kmain { grid-column: 1 / -1; }
+.maint__kfields label, .maint__kmain label { color: var(--muted); white-space: nowrap; cursor: help; }
+.maint__kmain .input, .maint__kfields .input { width: 100%; min-width: 0; }
+.maint__kfields .maint__lot { width: 100%; }
+.maint__kken { display: inline-flex; align-items: center; gap: 8px; grid-column: span 3; }
+.maint__head { width: 3em !important; text-transform: uppercase; font-family: var(--mono); text-align: center; }
+.maint__kken code { font-family: var(--mono); background: var(--sunken); padding: 2px 6px; border-radius: var(--radius-sm); }
+.maint__kdetail summary { cursor: pointer; font-size: var(--fs-sm); color: var(--muted); margin-bottom: 6px; }
+.maint__kmsg { white-space: pre-line; min-height: 1em; }
+.maint .is-bad { outline: 2px solid var(--state-error); outline-offset: 1px; }
+
+/* 管理者パスワード */
+.maint__pw { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; font-size: var(--fs-sm); }
+.maint__pw label { color: var(--muted); }

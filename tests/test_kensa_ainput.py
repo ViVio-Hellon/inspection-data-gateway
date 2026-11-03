@@ -342,10 +342,8 @@ class FilesTest(unittest.TestCase):
     def setUp(self) -> None:
         kensa_fixture.use_offline()
         self.tmp = Path(tempfile.mkdtemp(prefix="ufk_ain_"))
-        d = user_settings.get(paths.KEY_PATHS)
-        d[paths.OFFLINE]["history"] = str(self.tmp / "hist") + "/"
-        d[paths.OFFLINE]["nis"] = str(self.tmp / "nis")
-        user_settings.save(paths.KEY_PATHS, d)
+        paths.set_path("history", str(self.tmp / "hist") + "/", paths.SECOND)
+        paths.set_path("nis", str(self.tmp / "nis"), paths.SECOND)
         (self.tmp / "nis").mkdir()
         self.form = AinputForm(line_name="Test", uf1_line="Test", lot="N456J52", ken_no="K650969",
                                order_no="57076309", atu="3.000", amin="2.995", amax="3.005", hiki_no="60524074",
