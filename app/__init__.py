@@ -554,6 +554,8 @@ def _register_routes(app: Flask) -> None:
     if "cask" in READY_SCREENS:
         from .routes import cask
         app.register_blueprint(cask.bp)
+    from .routes import admin_auth
+    app.register_blueprint(admin_auth.bp)
     if "maint" in READY_SCREENS:
         from .routes import maint
         app.register_blueprint(maint.bp)
