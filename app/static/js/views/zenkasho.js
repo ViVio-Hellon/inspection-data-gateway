@@ -59,6 +59,8 @@ function el(tag, cls, text) {
 }
 
 function focusMeas() {
+  // 画面は入れ替え式(nav.js)なので、ほかの画面へ移ったあとも document の click から呼ばれる。入力欄が無ければ何もしない
+  if (!$("measIn")) return;
   const a = document.activeElement;
   if (document.querySelector("dialog[open]")) return;
   if (!a || !a.matches("input, select, textarea") || a === $("measIn")) $("measIn").focus();

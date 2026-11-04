@@ -18,7 +18,7 @@ from typing import Any, Callable, Mapping, Optional
 
 from . import datasource, legacy_log, lines, paths, quirks, vbx
 from . import sound as snd
-from .flow import ERROR, INFO, Message
+from .flow import ERROR, INFO, Message, Stop
 
 Cells = Mapping[tuple[int, int], Any]
 SHIFT_FACILITIES = ("L-1", "LVC", "HVC", "Test")       # Worker:150, 217, 258
@@ -123,11 +123,20 @@ def load_shift_times(base: ShiftTimes = ShiftTimes()) -> ShiftTimes:
 
     品証やり取りの DB ファイル自体が無いときは VBA は End(D10)→ `datasource.DbMissing` が上がる。
     """
+    def fields_of(path: str) -> Optional[list[str]]:
+        try:
+            return datasource.get_fields(path, "時間用")
+        except datasource.TableMissing:          # 表そのものが無い = 空の表と同じ(参照用ファイルを見る)
+            return None
+
     db = paths.db_file("伝送用ファイル")
-    fields = datasource.get_fields(db, "時間用")
+    fields = fields_of(db)
     if fields is None:
         db = paths.db_file("伝送用ファイル", base_key="packing")
-        fields = datasource.get_fields(db, "時間用")
+        try:
+            fields = fields_of(db)
+        except datasource.DbMissing:
+            fields = None
         if fields is None:
             return base
     return shift_from_records(fields, datasource.get_records(db, "時間用"), base)
@@ -152,6 +161,16 @@ def _seconds(text: Any) -> int:
 _2359 = 23 * 3600 + 59 * 60
 
 
+class ShiftTimesMissing(Stop, vbx.TypeMismatch):
+    """直の時刻(伝送用ファイルの表「時間用」)が読めていない。VBA は CDate("") の実行時エラー 13 で止まる。
+    Web 版は理由と確かめる場所を出して止める(D10。型エラーとしても扱える)。"""
+
+
+SHIFT_TIMES_MISSING = ("直の時刻が読めません。伝送用ファイル.sqlite3 の表「時間用」が見つかりません。"
+                       "設定 → 使用パス の「品証やり取り」「参照用ファイル」のフォルダに 伝送用ファイル.sqlite3 が"
+                       "あるか確かめてください(.accdb は取り込み画面で .sqlite3 に変換します)")
+
+
 def _shift_branch(dtime: str, shifts: ShiftTimes) -> int:
     """YeaDayrCheck / DayCheck / TimeCheck 共通の If…ElseIf(Worker:153-163)。
 
@@ -159,6 +178,8 @@ def _shift_branch(dtime: str, shifts: ShiftTimes) -> int:
     VBA の And は両辺を評価するので、各分岐の 2 つの CDate は両方読む。
     """
     t = _seconds(dtime)
+    if not any((shifts.start1, shifts.end1, shifts.start2, shifts.end2, shifts.start3, shifts.end3)):
+        raise ShiftTimesMissing(SHIFT_TIMES_MISSING, source="Worker.Set_Shift")
     a, b = _seconds(shifts.start1), _seconds(shifts.end1)
     if t > a and t < b:
         return 1

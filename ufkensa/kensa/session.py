@@ -164,9 +164,13 @@ class Session:
             return False
         env = self._env()
         cells = wiring.sheet_cells(self.store, "校正記録")
-        return not calibration.input_blocked(cells, now=env.now(), facility=env.facility() or workers.DEFAULT_FACILITY,
-                                             shifts=env.shift_times(), jump=self.calibration_skip(),
-                                             db_flag=st.dbflag)
+        try:
+            return not calibration.input_blocked(cells, now=env.now(),
+                                                 facility=env.facility() or workers.DEFAULT_FACILITY,
+                                                 shifts=env.shift_times(), jump=self.calibration_skip(),
+                                                 db_flag=st.dbflag)
+        except (workers.ShiftTimesMissing, datasource.DbMissing, datasource.TableMissing):
+            return False      # 直の時刻が読めない(画面を描くために校正済みとはしない。理由は操作のときに出る)
 
     def _reads_second(self) -> bool:
         """D28: いまのロットを控え(第2)だけから読むか(読むたびに状態を見る)。"""
