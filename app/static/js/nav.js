@@ -32,6 +32,9 @@
 */
 
 
+/** 中身だけ差し替える移動を使うか。UF検査判定では使わない(start の説明) */
+const SOFT_NAV = false;
+
 /** 差し替えたい要素。この順に上から入れ替える。 */
 const SWAP = ["header.ribbon", "nav.rail", "main#main"];
 
@@ -218,6 +221,10 @@ function focusMain() {
  *   ここから app.js を呼ばないのは、輪になった読み込みを作らないため。
  */
 export function start(hooks = {}) {
+  // 2026-11-04 実機: UF検査判定の画面は <script type="module" src> で、モジュールは一度しか動かない。
+  // 差し替えで戻ってくると画面の処理が付かず、入力しても何も起きない・設定が真っ白になった。
+  // 画面ごとの持ち物(測定器の入力欄・作業中の状態)が多いので、レールの移動は普通に読み込み直す。
+  if (!SOFT_NAV) return;
   if (!window.history || !window.DOMParser) return;
   if (hooks.onSwap) afterSwap = hooks.onSwap;
   document.addEventListener("click", onClick);
