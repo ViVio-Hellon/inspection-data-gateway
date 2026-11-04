@@ -49,7 +49,7 @@ async function op(name, body = {}, answers = {}) {
   return res;
 }
 
-const refocus = () => $("measIn").focus();
+const refocus = () => $("measIn")?.focus();   // 画面を移ったあと(入れ替え式)でも落ちない
 
 function text(el, t) { el.textContent = t ?? ""; }
 

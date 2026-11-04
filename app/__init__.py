@@ -517,11 +517,21 @@ def _register_static_version(app: Flask) -> None:
     必ず変わります**(上げ方は docs/変更履歴.md)。
     """
     stamp = app.config["VERSION"]
+    static_dir = Path(app.static_folder or "")
+
+    def _file_stamp(filename: str) -> str:
+        """版 + ファイルの更新時刻と大きさ。**版を上げ忘れても、中身を入れ替えれば URL が変わる**
+        (2026-11-04: 版 0.1.0 のまま入れ替えて、古い settings.js が出続けた)。"""
+        try:
+            st = (static_dir / filename).stat()
+        except (OSError, ValueError):
+            return stamp
+        return f"{stamp}.{int(st.st_mtime)}.{st.st_size}"
 
     @app.url_defaults
     def _stamp(endpoint, values):               # noqa: ANN202 - Flaskのフック
         if endpoint == "static" and "v" not in values:
-            values["v"] = stamp
+            values["v"] = _file_stamp(str(values.get("filename", "")))
 
 
 # ------------------------------------------------------------------

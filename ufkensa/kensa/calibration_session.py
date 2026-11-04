@@ -246,6 +246,9 @@ class CalibrationSession:
                     msgs = fn(*args)
                 except datasource.DbMissing as e:              # VBA は End(D10: 止めるが状態は保つ)
                     raise Stop(str(e), source="datasource") from e
+                st = self.view().get("status") or {}
+                if st.get("error"):                              # 直の時刻が読めない(時間用が無い)
+                    raise Stop(st["error"], source="Worker.Set_Shift")
             except Stop as e:
                 return CalResult(self.view(), list(e.messages), stop=e)
             return CalResult(self.view(), msgs)
@@ -379,6 +382,14 @@ class CalibrationSession:
         cells = self._cells(KIROKU)
         skip = self.skip()
         db_flag = self._kstate().dbflag
+        try:
+            return self._status(now, fac, shifts, cells, skip, db_flag)
+        except workers.ShiftTimesMissing as e:
+            # 画面は描けるように空の値で返し、理由は error に入れる(_run が止めて知らせる)
+            return {"calibrated": False, "skip": skip, "skip_text": "", "date": "", "shift": "",
+                    "last_date": "", "last_shift": "", "now": now.strftime("%Y/%m/%d %H:%M"), "error": e.text}
+
+    def _status(self, now, fac, shifts, cells, skip, db_flag) -> dict[str, Any]:  # noqa: ANN001
         chk = calibration.check_calibration(workers.hhmm(now), cells, now=now, facility=fac, shifts=shifts,
                                             jump=skip, db_flag=db_flag)
         last_d, last_t = calibration.last_record(cells) if cells else (None, None)

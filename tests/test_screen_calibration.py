@@ -19,7 +19,7 @@ from tests import kensa_fixture
 from tests._web import make_client
 from ufkensa import user_settings
 from ufkensa.kensa import calibration_session as cs
-from ufkensa.kensa import quirks, session, store, terminal
+from ufkensa.kensa import quirks, session, store, terminal, workers
 
 
 class Clock:
@@ -184,3 +184,37 @@ class CalibrationRouteTest(CalBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ShiftTimesMissingTest(CalBase):
+    """2026-11-04 実機: 伝送用ファイル.sqlite3(表「時間用」)が無いと 500 になっていた。理由を出して止める。"""
+
+    def test_open_without_time_table(self) -> None:
+        (self.tmp / "db" / "伝送用ファイル.sqlite3").unlink()
+        from unittest import mock
+        with mock.patch.object(workers, "load_shift_times", return_value=workers.ShiftTimes()):
+            r = self.c.open()
+        self.assertIsNotNone(r.stop)
+        self.assertIn("時間用", r.stop.text)
+        self.assertIn("error", r.view["status"])
+
+
+class StaticStampTest(unittest.TestCase):
+    """2026-11-04 実機: 版 0.1.0 のまま入れ替えて、古い settings.js が出続けた。ファイルが変われば URL が変わる。"""
+
+    def test_stamp_follows_file(self) -> None:
+        import os
+        from tests._web import make_client
+        app = make_client().application
+        with app.test_request_context():
+            from flask import url_for
+            u1 = url_for("static", filename="js/views/settings.js")
+            path = Path(app.static_folder) / "js/views/settings.js"
+            st = path.stat()
+            os.utime(path, (st.st_atime, st.st_mtime + 5))
+            try:
+                u2 = url_for("static", filename="js/views/settings.js")
+            finally:
+                os.utime(path, (st.st_atime, st.st_mtime))
+        self.assertNotEqual(u1, u2)
+        self.assertIn("v=", u1)
