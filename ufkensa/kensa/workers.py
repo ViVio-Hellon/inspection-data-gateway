@@ -18,7 +18,7 @@ from typing import Any, Callable, Mapping, Optional
 
 from . import datasource, legacy_log, lines, paths, quirks, vbx
 from . import sound as snd
-from .flow import ERROR, INFO, Message, Stop
+from .flow import ERROR, INFO, WARN, Message, Stop
 
 Cells = Mapping[tuple[int, int], Any]
 SHIFT_FACILITIES = ("L-1", "LVC", "HVC", "Test")       # Worker:150, 217, 258
@@ -275,7 +275,9 @@ def name_conv(card: str, *, test_line: bool = False) -> tuple[str, list[Message]
         return "", msgs
     c_name = datasource.column_index(cols, "名前")
     if records is None:
-        msgs.append(Message("", INFO, sound=UNREGISTERED_SOUND, source="Worker:74"))
+        # VBA は音(ナンバーNO)だけ。音が鳴らない端末では何も起きないように見えるので文字も出す
+        msgs.append(Message(f"このカード({card})は名簿にありません。伝送用ファイルの「名簿」を確かめてください",
+                            WARN, sound=UNREGISTERED_SOUND, source="Worker:74"))
         return "", msgs
     if c_name < 0:
         raise IndexError("名簿 に 名前 列がありません(VBA の実行時エラー 9)")

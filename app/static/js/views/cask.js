@@ -259,6 +259,8 @@ function init() {
     e.preventDefault();
     op("lot", { lot: $("lotIn").value });
   });
+  // VBA の UFCask.LotBox_Change と同じく、7 桁まで打ったら Enter を待たずに読む
+  $("lotIn").addEventListener("input", () => { if ($("lotIn").value.trim().length === 7) op("lot", { lot: $("lotIn").value }); });
   for (const el of document.querySelectorAll("[data-field]")) {
     el.addEventListener("change", () => op("field", { name: el.dataset.field, value: el.value }, {}, { refocus: false }));
     el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); focusInput(); } });
