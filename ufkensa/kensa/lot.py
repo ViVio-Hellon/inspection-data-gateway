@@ -1090,7 +1090,9 @@ def vc_picture(sheet_rows: Sequence[Sequence[Any]], lot: Any, order_no: str = ""
     - 画像は `PackingPath & "VC種類画像\\" & 品名ｺｰﾄﾞ & ".JPG"`
     """
     v = VcView()
-    vc_path = subpath(_denso_base_for_picture(), "VC種類画像")
+    # 使用パス「VC種類画像」(2026-11-05)。決めていなければ VBA と同じ PackingPath & "VC種類画像"
+    vc_path = (subpath(_denso_base_for_picture(), "VC種類画像") if paths._saved_value("vc_images") is None
+               else paths.get("vc_images").rstrip("\\/"))
     if len(sheet_rows) >= 2:
         body = list(sheet_rows[1:])
     else:

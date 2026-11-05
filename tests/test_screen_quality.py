@@ -138,3 +138,28 @@ class QualityRouteTest(QualityBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QualityPhotoTest(unittest.TestCase):
+    """品質写真(VBA 補助.LoadImagesIntoMultiPageFromTemp)。使用パス「品質写真」のサブフォルダごとに写真を出す。"""
+
+    def test_list_and_serve(self) -> None:
+        import tempfile
+        from tests._web import TOKEN, make_client
+        from ufkensa.kensa import paths
+        d = Path(tempfile.mkdtemp())
+        (d / "AL付着跡").mkdir()
+        (d / "AL付着跡" / "a.jpg").write_bytes(b"\xff\xd8\xff")
+        (d / "AL付着跡" / "memo.txt").write_text("x")
+        paths.set_path("quality_photo", str(d) + "/")
+        self.addCleanup(paths.reset_path, "quality_photo")
+        c = make_client()
+        if "quality" not in c.application.blueprints:
+            from app.routes import quality
+            c.application.register_blueprint(quality.bp)
+        h = {"X-Tool-Token": TOKEN}
+        r = c.get("/api/quality/photos", headers=h).get_json()
+        self.assertEqual(r["tabs"], [{"name": "AL付着跡", "images": ["a.jpg"]}])
+        self.assertEqual(c.get("/api/quality/photo?dir=AL付着跡&name=a.jpg", headers=h).status_code, 200)
+        self.assertEqual(c.get("/api/quality/photo?dir=..&name=a.jpg", headers=h).status_code, 400)
+        self.assertEqual(c.get("/api/quality/photo?dir=AL付着跡&name=memo.txt", headers=h).status_code, 404)

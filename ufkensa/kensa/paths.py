@@ -75,6 +75,12 @@ ITEMS: tuple[PathItem, ...] = (
     PathItem("packing", "参照用ファイル", "PackingPath",
              r"\\nlmfangyshrd\各課共有\0130_日軽稲沢\梱包課\AIM\【■】_参照用ファイル" "\\",
              "伝送用ファイルの代替・VC種類画像"),
+    PathItem("pack_spec", "包装仕様書(画像)", "QualityPath & \"包装仕様書\"", "",
+             "包装仕様書の図(<包装仕様No>.JPG)。空なら 品証やり取り\\包装仕様書"),
+    PathItem("vc_images", "VC種類画像", "PackingPath & \"VC種類画像\"", "",
+             "VC の種類の画像(<品名ｺｰﾄﾞ>.JPG)。空なら 参照用ファイル\\VC種類画像"),
+    PathItem("quality_photo", "品質写真", "QualityPath & \"品質写真\"", "",
+             "品質基準画面の写真(フォルダごとにタブ、中の .jpg)。空なら 品証やり取り\\品質写真"),
     PathItem("history", "検査履歴", "HistoryPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
@@ -254,10 +260,24 @@ def _lot_slot(key: str, slot: Optional[str]) -> str:
 # ------------------------------------------------------------------
 # 値を引く
 # ------------------------------------------------------------------
+#: 画像のフォルダ(2026-11-05 依頼で使用パスに出した)。決めていなければ VBA と同じく元のフォルダの下
+DERIVED = {"pack_spec": ("quality", "包装仕様書"), "vc_images": ("packing", "VC種類画像"),
+           "quality_photo": ("quality", "品質写真")}
+
+
 def slot_default(key: str, slot: str = FIRST) -> str:
-    """既定値。仕掛台帳は第1 / 第2、ほかは slot によらず 1 つ。"""
+    """既定値。仕掛台帳は第1 / 第2、ほかは slot によらず 1 つ。画像のフォルダは元のフォルダの下。"""
     item = BY_KEY[_key(key)]
+    if item.key in DERIVED:
+        base, sub = DERIVED[item.key]
+        return join(slot_value(base), sub) + "\\"
     return item.second if (item.key == LOT and slot == SECOND) else item.path
+
+
+def _saved_value(key: str) -> Optional[str]:
+    """その項目を利用者が決めているか(決めていなければ None)。"""
+    v = _saved()[KEY_ITEMS].get(_key(key))
+    return None if v is None else str(v)
 
 
 def slot_value(key: str, slot: str = FIRST) -> str:
