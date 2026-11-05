@@ -446,14 +446,21 @@ function remember(line) {
   $("recent").replaceChildren(...recent.map((l) => el("li", { textContent: l })));
 }
 
-function onEnter(id, fn) {
-  $(id).addEventListener("keydown", (e) => {
+function onEnter(id, fn, autoLen = 0) {
+  const box = $(id);
+  const send = () => {
+    const val = box.value;
+    box.value = "";
+    if (val) fn(val);
+  };
+  box.addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const val = $(id).value;
-    $(id).value = "";
-    if (val) fn(val);
+    send();
   });
+  // VBA と同じく、決まった桁数まで打った(読み取った)ら Enter を待たずに受け付ける
+  // (UF1.Worker_Change: 13 桁 / Lot_Change: 7 桁)
+  if (autoLen) box.addEventListener("input", () => { if (box.value.trim().length === autoLen) send(); });
 }
 
 const selected = (sel) => [...sel.selectedOptions].map((o) => Number(o.value));
@@ -474,8 +481,8 @@ function initTabs() {
 function init() {
   buildExtras();
   initTabs();
-  onEnter("cardIn", (card) => op("worker", { card }));
-  onEnter("lotIn", (lot) => op("lot", { lot }));
+  onEnter("cardIn", (card) => op("worker", { card }), 13);
+  onEnter("lotIn", (lot) => op("lot", { lot }), 7);
   $("lotSrcBtn").addEventListener("click", () => {
     const on = !(V && V.lot_source && V.lot_source.on);
     op("lot-source", { on, lot: $("lotIn").value });

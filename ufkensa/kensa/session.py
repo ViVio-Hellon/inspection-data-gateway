@@ -461,6 +461,14 @@ class Session:
             raise
         env.messages.extend(r.messages)
         wiring.apply_lot_reflect(st, r)
+        if r.status == "not_found":
+            # VBA は何も言わずに欄を空にするだけ(SkipNoItti)。画面では「何も起きない」に見えるので知らせる
+            where = getattr(r, "db_path", "") or ""
+            env.messages.append(Message(
+                f"LotNo {st.lot} は仕掛台帳(SIKALOT)にありません。"
+                + (f"読んだファイル: {where}。" if where else "")
+                + "設定 → この端末 のモード(オンライン=台帳→控え、オフライン=控えだけ)と、使用パスの「仕掛台帳」を確かめてください",
+                WARN, source="SaveLoad.AccReflec"))
         if r.status != "ok":
             return
         wiring._tolerance_text(st, r)
