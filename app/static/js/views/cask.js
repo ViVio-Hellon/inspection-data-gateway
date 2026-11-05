@@ -73,7 +73,12 @@ function renderTop(v) {
   text($("lineLv"), f.line_name);
   setField("lotIn", f.lot_box);
   for (const k of ["ken_no", "kname", "cno", "mno", "seri_no", "tai", "min_text", "max_text"]) setField(`f_${k}`, f[k]);
-  kv($("lotKv"), [["LotNo(D2)", h.lot], ["開始", h.start]]);
+  // 決まったロット(D2)を大きく。入力欄は控えめ
+  $("lotReg").hidden = !h.lot;
+  $("lotEmpty").hidden = !!h.lot;
+  $("lotRegNo").textContent = h.lot || "";
+  kv($("lotRegKv"), [["検査番号", f.ken_no], ["開始", h.start]]);
+  kv($("lotKv"), []);
 
   const sel = v.next ? `${v.next.row},${v.next.col}` : "";
   const t = $("tolTable");

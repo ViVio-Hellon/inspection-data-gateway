@@ -7,6 +7,7 @@ import sqlite3
 import tempfile
 import time
 import unittest
+from ufkensa.kensa import paths
 from pathlib import Path
 
 from tests import kensa_fixture
@@ -672,7 +673,7 @@ class PackagingTest(QuirkCase):
         os.remove(self.tmp / "SIKAODR.sqlite3")
         out = self.msgbox(flag=True)
         # オフラインでは MainPath = NextPath なので Case FPath = NextPath で止まる
-        self.assertEqual([m.text for m in out.messages], ["日稲:SIKAODRNOW.accdbがありません_MaterialsMsgBox"])
+        self.assertEqual([m.text for m in out.messages], [paths.missing_text("SIKAODRNOW")])
 
     def test_materials_no_lot(self) -> None:
         self.add(コメント="注意A")

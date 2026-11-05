@@ -110,7 +110,7 @@ class LotFileTest(_Saved):
             with self.assertRaises(datasource.DbMissing):                                       # 共有を直接は開かない
                 datasource.get_fields(str(self.d1) + "/SIKAHIKI.sqlite3", "仕掛", "")
             r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
-            self.assertEqual([m.text for m in r.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox"])
+            self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAHIKINOW")])
         lot_copy.forget()
         real = shutil.copyfile
 
@@ -199,6 +199,53 @@ class PerLotTest(_Saved):
         self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI_圧縮.sqlite3")
         self.assertEqual(r.value, base)                               # 第1の列の並びに直してある
 
+    def rename_columns(self, path: Path, mapping: dict[str, str], drop: tuple[str, ...] = ()) -> None:
+        with sqlite3.connect(path) as c:
+            for a, b in mapping.items():
+                c.execute(f'ALTER TABLE "仕掛" RENAME COLUMN "{a}" TO "{b}"')
+            for d in drop:
+                c.execute(f'ALTER TABLE "仕掛" DROP COLUMN "{d}"')
+        c.close()
+
+    def test_second_with_other_column_names_offline(self) -> None:
+        """2つ目のファイルの列名が全角カナなど書き方違い(python-web-tools と同じ見比べ方)でも、第1の名前で読める。"""
+        self.use(paths.ONLINE)
+        base = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL).value
+        self.use(paths.OFFLINE, second_names={"SIKAHIKINOW": "SIKAHIKI_2"})
+        (self.d2 / "SIKAHIKI.sqlite3").rename(self.d2 / "SIKAHIKI_2.sqlite3")
+        self.rename_columns(self.d2 / "SIKAHIKI_2.sqlite3", {"ﾛｯﾄ番号": "ロット番号", "引当番号": "引当番号 "})
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI_2.sqlite3")
+        self.assertEqual(r.value, base)
+        f = lot.arrbox("SIKAHIKINOW", "", "Fields", "", now=T_NORMAL).value
+        self.assertIn("ﾛｯﾄ番号", f)
+
+    def test_acc_reflec_second_other_column_names(self) -> None:
+        """ロット登録(AccReflec の SELECT)も 2つ目の列名の書き方違いで読める(オフライン = 第2だけ)。"""
+        screen = lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T")
+        self.use(paths.OFFLINE)
+        base = lot.acc_reflec(screen, check_equipment=_ok)
+        self.use(paths.OFFLINE, second_names={"SIKALOTNOW": "LOT2"})
+        (self.d2 / "SIKALOT.sqlite3").rename(self.d2 / "LOT2.sqlite3")
+        self.rename_columns(self.d2 / "LOT2.sqlite3", {"ﾛｯﾄ番号": "ロット番号", "ｵｰﾀﾞｰ板丈": "オーダー板丈"})
+        r = lot.acc_reflec(screen, check_equipment=_ok)
+        self.assertEqual((r.status, r.db_path), ("ok", str(self.d2) + "/LOT2.sqlite3"))
+        self.assertEqual(r.past_hiki, base.past_hiki)
+
+    def test_check_typed_values_and_missing_columns(self) -> None:
+        """確認ボタン: 保存前に入力中のパス・2つ目の名前を確かめ、2つ目の足りない列を出す。"""
+        self.use(paths.ONLINE)
+        (self.d2 / "SIKALOT.sqlite3").rename(self.d2 / "LOT2.sqlite3")
+        self.rename_columns(self.d2 / "LOT2.sqlite3", {"ﾛｯﾄ番号": "ロット番号"}, drop=("製造材質",))
+        saved = paths.check(paths.LOT, paths.SECOND)
+        self.assertIn("SIKALOT.sqlite3 なし", saved["message"])
+        r = paths.check(paths.LOT, paths.SECOND, text=str(self.d2), names={"SIKALOTNOW": "LOT2"})
+        f = r["files"][0]
+        self.assertEqual((f["name"], f["copied"], f["lacking"]), ("LOT2.sqlite3", True, ["製造材質"]))
+        self.assertIn("足りない列", r["message"])
+        r = paths.check(paths.LOT, paths.FIRST, text=str(self.d2 / "無い"))
+        self.assertEqual(r["message"], "見つかりません")
+
     def test_offline_reads_only_second(self) -> None:
         self.use(paths.OFFLINE)
         self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
@@ -207,7 +254,7 @@ class PerLotTest(_Saved):
         self.assertIsNone(r.value)                                    # 第1にあっても見ない
         (self.d2 / "SIKAHIKI.sqlite3").unlink()
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
-        self.assertEqual([m.text for m in r.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox"])
+        self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAHIKINOW")])
 
     def test_acc_reflec_lot_from_second(self) -> None:
         self.use(paths.ONLINE)
@@ -338,3 +385,9 @@ class SettingsApiTest(_Saved):
         self.assertIn("第1パス", d["message"])
         d = self.post("/api/settings/path/check", key="quality").get_json()
         self.assertEqual(len(d["results"]), 1)
+        # 保存前に入力中の値を確かめる(画面の「確認」は入力欄の値を送る)
+        d = self.post("/api/settings/path/check", key="quality", path=str(self.root / "無い")).get_json()
+        self.assertEqual((d["results"][0]["path"], d["results"][0]["message"]), (str(self.root / "無い"), "見つかりません"))
+        d = self.post("/api/settings/path/check", key="lot", first=str(self.root / "無い"), second=str(self.d2),
+                      second_names={"SIKALOTNOW": ""}).get_json()
+        self.assertEqual([r["ok"] for r in d["results"]], [False, True])

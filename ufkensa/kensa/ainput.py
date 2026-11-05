@@ -293,7 +293,7 @@ def vc_conv(code: str, *, test_line: bool = False) -> tuple[float, list[Message]
     msgs: list[Message] = []
     db = paths.db_file("伝送用ファイル", base_key="packing" if test_line else "quality")
     if not datasource.exists(db):
-        msgs.append(Message("日稲:" + "伝送用ファイル.accdb" + "がありません" + "_ReadCheck_VcConv", ERROR,
+        msgs.append(Message(paths.missing_text("伝送用ファイル", [db]), ERROR,
                             source="Input:771"))
         return 0.0, msgs
     temp = datasource.get_records(db, "VC厚", f"[品名ｺｰﾄﾞ]='{code}'")
@@ -954,7 +954,7 @@ def no_search(lot: str, history: Optional[list[list[Any]]]) -> HikiResult:
     res = HikiResult(None, db_flag=True)
     db = paths.db_file("SIKACOMP")
     if not datasource.exists(db):
-        res.messages.append(Message("日稲:" + "SIKACOMP.accdb" + "がありません" + "_ReadCheck_No_Search", ERROR,
+        res.messages.append(Message(paths.missing_text("SIKACOMP", [db]), ERROR,
                                     source="Input:154"))
         return res
     recs = datasource.get_records(db, "仕掛", f"[ﾛｯﾄ番号]='{lot}'")
@@ -1093,7 +1093,7 @@ def startup(temp: str, ken_m: str, history: Optional[list[list[Any]]], *, workin
                                     + "_Ainput_Startup", INFO, source="Input:283"))
         db = paths.join(paths.get("next"), "SIKATWOYEAR.sqlite3")
         if not datasource.exists(db):
-            res.messages.append(Message("日稲" + "SIKATWOYEAR.accdb" + "がありません" + "_ReadCheck_Ainput_Startup",
+            res.messages.append(Message(paths.missing_text("SIKATWOYEAR", [db]),
                                         ERROR, source="Input:297"))
             return res
         recs = datasource.get_records(db, "仕掛", f"[ﾛｯﾄ番号]='{working_lot}'")

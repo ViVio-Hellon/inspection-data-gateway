@@ -485,6 +485,49 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
     return p2 if lot_usable(p2) else p1
 
 
+#: 「…がありません」で言う DB の呼び名(現場の言い方)
+DB_LABELS = {"SIKALOTNOW": "仕掛台帳(ロット)", "SIKAHIKINOW": "仕掛台帳(引当)", "SIKAODRNOW": "仕掛台帳(受注)",
+             "SIKACOMP": "仕掛台帳(完了)", "SIKATWOYEAR": "仕掛台帳(完了2年)",
+             "品質基準": "品質基準", "伝送用ファイル": "伝送用ファイル"}
+
+
+def looked_files(name: str, m: Optional[str] = None) -> list[str]:
+    """`name`(SIKALOTNOW など)を探した実際のファイル(探す順)。仕掛の 3 ファイルはオンラインが第1 → 第2、
+    オフラインは第2だけ(第2は「2つ目の名前」)。"""
+    name = name[:-6] if name.endswith(".accdb") else name
+    if name not in DB_FILES:
+        return []
+    where, file = DB_FILES[name]
+    if name in LOT_DBS:
+        p2 = join(slot_value(LOT, SECOND), second_name(name))
+        if lot_mode(m) == OFFLINE:
+            return [p2]
+        p1 = join(slot_value(LOT, FIRST), file)
+        return [p1] if p1 == p2 else [p1, p2]
+    return [db_file(name, m)]
+
+
+def missing_text(name: str, files: Optional[list[str]] = None, m: Optional[str] = None) -> str:
+    """「ファイルが見つからない(読めない)」の知らせ。VBA の「日稲:SIKALOTNOW.accdbがありません_ReadCheck_…」の代わりに、
+    実際に探したファイル名とフォルダを言う(このアプリは .accdb を読まない)。"""
+    name = name[:-6] if name.endswith(".accdb") else name
+    files = [f for f in (files if files is not None else looked_files(name, m)) if f]
+    label = DB_LABELS.get(name, name)
+    if not files:
+        return f"{label} のファイルの場所が設定されていません。設定 → 使用パス で決めてください。"
+    parts = []
+    for f in files:
+        cut = max(f.rfind("\\"), f.rfind("/"))
+        folder, fname = f[:cut].rstrip("\\/"), f[cut + 1:]
+        parts.append(f"{fname}(フォルダ {folder or '(空)'})")
+    mode_note = ""
+    if name in LOT_DBS:
+        mode_note = "オフラインなので第2パスだけを見ました。" if lot_mode(m) == OFFLINE else ""
+    what = "見つからないか、手元へ写せません" if name in COPIED_DBS else "見つかりません"
+    return (f"{label} のファイルが{what}: " + " / ".join(parts) + "。"
+            + mode_note + "設定 → 使用パス の「確認」で場所と名前を確かめてください。")
+
+
 #: 試験の安全網(tests/_isolation.py が立てる)。立っていれば、共有(\\server\…)と、一時フォルダの外のドライブのパス
 #: (C:\検査履歴 など = 既定の本番のパス)を、この下へ読み替える。試験が本番のフォルダを読み書きしないように
 GUARD_ENV = "UFKENSA_TEST_PATH_GUARD"
@@ -553,12 +596,17 @@ def exists(path_text: str, kind: str = "any") -> bool:
 # ------------------------------------------------------------------
 # 確認ボタン・一覧
 # ------------------------------------------------------------------
-def check(key: str, slot: Optional[str] = None) -> dict[str, Any]:
-    """確認ボタン: ある・読める・書けるか。仕掛台帳はその側(第1 / 第2)と、各ファイルを手元へ写せるか。"""
+def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
+          names: Optional[dict[str, str]] = None) -> dict[str, Any]:
+    """確認ボタン: ある・読める・書けるか。仕掛台帳はその側(第1 / 第2)と、各ファイルを手元へ写せるか。
+
+    `text` / `names` は画面で入力中(保存前)の値。渡せば保存した値の代わりにそれを確かめる
+    (names は 2つ目の名前 {DB名: 名前}。空は1つ目と同じ名前)。第2のファイルは足りない列も見る。
+    """
     k = _key(key)
     item = BY_KEY[k]
     s = _lot_slot(key, slot) if k == LOT else ""
-    text = slot_value(k, s or FIRST)
+    text = slot_value(k, s or FIRST) if text is None else str(text).strip().strip('"')
     out: dict[str, Any] = {"key": k, "slot": s, "label": SLOT_LABELS.get(s, ""), "path": text, "exists": False,
                            "readable": False, "writable": False, "ok": False, "message": "", "files": []}
     if not text:
@@ -588,13 +636,40 @@ def check(key: str, slot: Optional[str] = None) -> dict[str, Any]:
         dbs = list(LOT_DBS) + (["SIKACOMP", "SIKATWOYEAR"] if s == SECOND else [])
         have = []
         for db in dbs:
-            fname = second_name(db) if s == SECOND else first_name(db)
+            if s == SECOND and names is not None and db in LOT_DBS:
+                fname = _name_of(names.get(db, ""), db)
+            else:
+                fname = second_name(db) if s == SECOND else first_name(db)
             there = exists(join(text, fname), "file")
             ok = there and lot_usable(join(text, fname))
-            out["files"].append({"db": db, "name": fname, "exists": there, "copied": ok})
-            have.append(f"{fname} " + ("あり" if ok else ("写せません" if there else "なし")))
+            lack = _lacking(join(text, fname), db) if ok and db in LOT_DBS else []
+            out["files"].append({"db": db, "name": fname, "exists": there, "copied": ok, "lacking": lack})
+            have.append(f"{fname} " + ("あり" if ok else ("写せません" if there else "なし"))
+                        + (f"(足りない列 {len(lack)}: {_short(lack)})" if lack else ""))
         out["message"] += "(" + "・".join(have) + ")"
     return out
+
+
+def _name_of(value: str, db: str) -> str:
+    """入力中の「2つ目の名前」→ 探すファイル名(second_name と同じ決まり)。"""
+    v = str(value or "").strip().strip('"')
+    if not v:
+        return first_name(db)
+    return v if "." in v else v + ".sqlite3"
+
+
+def _lacking(path_text: str, db: str) -> list[str]:
+    """そのファイルの表「仕掛」に足りない列(列名の書き方の違いは直してから見る。python-web-tools「足りない列」)。"""
+    from . import datasource, lot_columns
+    try:
+        cols, _rows = datasource.get_table(path_text, "仕掛")
+    except Exception:                                   # noqa: BLE001 - 読めないことは別に出る
+        return []
+    return lot_columns.missing(db, cols) if cols else []
+
+
+def _short(cols: list[str], n: int = 8) -> str:
+    return "、".join(cols[:n]) + (f" ほか {len(cols) - n} 列" if len(cols) > n else "")
 
 
 def in_use_text(key: str, m: str) -> str:

@@ -266,16 +266,23 @@ def check_path():
     """確認ボタン(誰でも)。仕掛台帳は第1パスと第2パスの両方を確かめる。"""
     body = request.get_json(silent=True) or {}
     key = str(body.get("key", ""))
+    # 画面で入力中(保存前)の値。送られて来なければ保存した値を確かめる
+    typed = {f: str(body[f]) for f in ("path", "first", "second") if body.get(f) is not None}
+    names = body.get("second_names") if isinstance(body.get("second_names"), dict) else None
     if key == LOG_KEY:
-        target = logging_utils.resolve_log_dir(str(user_settings.get(config.KEY_LOG_DIR, "") or ""))
+        log_text = typed.get("path", str(user_settings.get(config.KEY_LOG_DIR, "") or ""))
+        target = logging_utils.resolve_log_dir(log_text.strip().strip('"'))
         why = logging_utils.probe_writable(target)
         one = {"key": key, "slot": "", "label": "", "path": str(target), "exists": target.is_dir(),
                "readable": not why, "writable": not why, "ok": not why,
                "message": f"書けます({target})" if not why else f"書けません: {why}"}
         results = [one]
     elif key in paths.BY_KEY:
-        results = ([paths.check(key, s) for s in paths.SLOT_LABELS] if key == paths.LOT else [paths.check(key)])
-        if key == "access_master" and results[0]["path"]:
+        if key == paths.LOT:
+            results = [paths.check(key, s, text=typed.get(s), names=names) for s in paths.SLOT_LABELS]
+        else:
+            results = [paths.check(key, text=typed.get("path"))]
+        if key == "access_master" and results[0]["path"] and typed.get("path", "").strip() in ("", paths.slot_value(key)):
             # フォルダでもファイルでもよい。実際に読むファイルと「アクセス権限」表を確かめる
             ov = access_rights.overview()
             results[0].update(ok=ov["found"], readable=ov["found"], path=ov["path"],

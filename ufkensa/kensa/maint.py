@@ -17,6 +17,7 @@ Test フォームそのものは移植しない(D9)。ただし持ち主の依�
 from __future__ import annotations
 
 import contextlib
+import re
 import threading
 import time
 from pathlib import Path
@@ -302,3 +303,94 @@ def clear_terminal() -> dict[str, Any]:
     user_settings.delete(terminal.KEY_LINE_NO)
     user_settings.delete(paths.KEY_MODE)
     return terminal_state()
+
+
+# ------------------------------------------------------------------
+# 測定機器の伝送テスト(数値が飛ぶか)。検査画面と同じ部品で、受け取ったら何が起きるかを見せる
+# ------------------------------------------------------------------
+_ST_RE = re.compile(r"^([SUCDEF])(\d{1,2})$")
+
+
+def device_test(text: str, line: str, atu: str = "", hab: str = "", youto: str = "", st: str = "S1",
+                tak: str = "") -> dict[str, Any]:
+    """伝送文字列 1 本の受け取りを、検査画面と同じ関数でなぞる(書き込みはしない)。
+
+    - 種別と値: input_router.maker / conv、入力欄に入る値は `CStr(Val(Conv(INP)))`(UF1.INP_Change UF1:4604)
+    - 機器: instruments.machin_text(DT の 3〜7 文字目 = 出力テキスト)→ 測定機器ID のどの行か
+    - 正しい機器か: instruments.micro_juge(FormRelat.LoopText で呼ぶもの)。厚・幅・用途・入力先で決まる
+    - 帳票の機器欄: instruments.machine_transfer の (行, 列) は帳票側なので、書く文字だけ出す
+    """
+    from . import input_router, instruments, lines
+    text = text or ""
+    st = (st or "").strip().upper()
+    m = _ST_RE.match(st)
+    if not m:
+        raise ValueError("入力先は S1〜E14・F1〜F10 の形で入れてください")
+    row_no = int(m.group(2))
+    vba_line = lines.vba_name(line)
+    kind = input_router.maker(text)
+    out: dict[str, Any] = {"text": text, "kind": kind, "line": vba_line, "st": st,
+                           "st_label": f"{m.group(1)}列 {row_no}行目(" + ("厚" if row_no <= 4 else "幅・丈・対角") + ")",
+                           "accepted": kind in input_router.PACKETS, "notes": []}
+    if not out["accepted"]:
+        out["notes"].append("頭が DT / #L / #〆 ではないので、検査画面は「ﾊﾟｹｯﾄ無し」として値を入れません"
+                            "(3 文字未満も同じ)。")
+        out["raw"], out["value"] = "", ""
+    else:
+        out["raw"] = input_router.conv(text)
+        out["value"] = vbx.cstr(vbx.val(out["raw"]))
+        if vbx.val(out["raw"]) == 0.0 and out["raw"].strip("0. +-") != "":
+            out["notes"].append(f"「{out['raw']}」は数として読めないので 0 になります(VBA の Val と同じ)。")
+    code = instruments.machin_text(text, "")
+    out["code"] = code
+    # 測定機器ID の行(このラインで、出力テキストが同じもの / ほかのラインで同じもの)
+    try:
+        master = instruments._master()
+    except (datasource.DbMissing, datasource.TableMissing, vbx.TypeMismatch) as e:
+        master = None
+        out["notes"].append(f"測定機器ID を読めません: {e}")
+    hits, others = [], []
+    if master is not None and code:
+        fields, rows, _ = master
+        ci = {k: datasource.column_index(fields, k) for k in ("ライン", "出力テキスト")}
+        for r in rows:
+            d = dict(zip(fields, r))
+            if ci["出力テキスト"] >= 0 and r[ci["出力テキスト"]] == code:
+                (hits if lines.matches(r[ci["ライン"]], vba_line) else others).append(d)
+    out["hits"], out["others"] = hits, others
+    if kind == "DT" and not hits:
+        out["notes"].append(f"このライン({vba_line})の測定機器ID に 出力テキスト {code} の行がありません。")
+    elif kind in ("#L", "#〆"):
+        out["notes"].append("#L / #〆 は機器の番号を持たないので、使用機器は前の値のまま(機器の確かめは前の機器で行います)。")
+    # 正しい機器(厚・用途で引く)と、受け取ったら止まるか
+    try:
+        atu_s = vbx.single(vbx.cdbl(atu))
+        out["expect"] = {"text": instruments.db_return_micro(vba_line, atu_s, youto),
+                         "name": instruments.db_return_micro(vba_line, atu_s, youto, "機器名")}
+    except (vbx.TypeMismatch, ValueError):
+        out["expect"] = None
+        out["notes"].append("厚が数でないので、正しい機器を引けません(検査画面では実行時エラー 13)。")
+    except (datasource.DbMissing, datasource.TableMissing, lotmod.SubscriptOutOfRange) as e:
+        out["expect"] = None
+        out["notes"].append(f"測定機器ID を引けません: {e}")
+    judge: dict[str, Any] = {"ok": None, "text": ""}
+    if kind == "DT" and out["expect"] is not None:
+        try:
+            mj = instruments.micro_juge(instruments.MicroInput(st=st, machin=code, atu=atu, hab=hab, youto=youto,
+                                                               lname=vba_line))
+            judge = {"ok": mj.ok, "text": mj.stop.text if mj.stop else ""}
+        except (vbx.TypeMismatch, ValueError) as e:
+            judge = {"ok": False, "text": f"厚・幅が数でないので、検査画面では実行時エラーになります({e})"}
+    out["judge"] = judge
+    try:
+        w = instruments.machine_transfer(instruments.TransferInput(x=0, y=0, atu=atu, haba=hab, yout=youto,
+                                                                   line=vba_line, tak=tak, hab=hab))
+        out["report"] = [v for _, _, v in w]
+    except (vbx.TypeMismatch, ValueError, datasource.DbMissing, datasource.TableMissing, lotmod.SubscriptOutOfRange):
+        out["report"] = []
+    return out
+
+
+def device_lines() -> list[str]:
+    from . import lines
+    return [ln.vba for ln in lines.LINES]

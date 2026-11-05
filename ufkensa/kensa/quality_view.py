@@ -12,7 +12,7 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from . import datasource, quirks, vbx
+from . import datasource, paths, quirks, vbx
 from .flow import ERROR, Message
 from .quality import (NUM, STR, VAR, LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
                       csng, find_indices, loop_array, rgb, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
@@ -173,7 +173,7 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
     res = ViewResult(form)
     if lot is None:
         if not quiet:
-            res.messages.append(Message("日稲:SIKALOTNOW.accdbがありません_ReadCheck_DBdisplay", ERROR, source="QDB:103"))
+            res.messages.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QDB:103"))
         return res
     if lot.fields is None:
         return res
@@ -313,7 +313,7 @@ def display_appearance_s(lot: Optional[LotData], out_name: str, form: QualityFor
     form = copy.deepcopy(form)
     res = ViewResult(form)
     if lot is None:
-        res.messages.append(Message("日稲:SIKALOTNOW.accdbがありません_ReadCheck_DBdisplay", ERROR, source="QDB:476"))
+        res.messages.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QDB:476"))
         return res
     form.L2_visible = True
     if lot.fields is None:
@@ -410,7 +410,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
     res = ViewResult(form)
     msgs = res.messages
     if lot is None:
-        msgs.append(Message("日稲:SIKALOTNOW.accdbがありません_ReadCheck_DBdisplay", ERROR, source="QDB:716"))
+        msgs.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QDB:716"))
         return res
     if lot.fields is None:
         return res

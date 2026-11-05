@@ -286,8 +286,14 @@ function renderLotSource(v) {
 function renderLeft(v) {
   renderLotSource(v);
   const h = v.header, t = v.tolerance;
-  kv($("lotKv"), [["ライン", h.line + (h.line_no || "")], ["Lot", h.lot], ["検査No", h.ken_no], ["用途", h.youto],
-                  ["材質/調質", [h.zai, h.tyu].filter(Boolean).join(" ")], ["コメント", h.comment]]);
+  // 決まった値(登録済みのロット)を大きく。入力欄は「別のロット」用に控えめ
+  const hasLot = !!h.lot;
+  $("lotReg").hidden = !hasLot;
+  $("lotEmpty").hidden = hasLot;
+  $("lotInLabel").textContent = hasLot ? "別のロット" : "LotNo";
+  text($("lotRegNo"), h.lot || "");
+  kv($("lotRegKv"), [["検査No", h.ken_no], ["用途", h.youto], ["材質/調質", [h.zai, h.tyu].filter(Boolean).join(" ")]]);
+  kv($("lotKv"), [["ライン", h.line + (h.line_no || "")], ["コメント", h.comment]]);
   kv($("tolKv"), [["厚", t.atu && `${t.atu}  +${t.ap}/-${t.am}  (${t.amk}〜${t.apk})`],
                   ["巾", t.hab && `${t.hab}  +${t.hp}/-${t.hm}  (${t.hmk}〜${t.hpk})`],
                   ["丈", t.tak && `${t.tak}  +${t.tp}/-${t.tm}  (${t.tmk}〜${t.tpk})`],
@@ -329,7 +335,16 @@ function renderLeft(v) {
   $("proofLv").className = "lv " + (h.proofread ? "lv--ok" : "lv--ng");
   $("workerLv").hidden = !v.worker_needed;
   $("calibLink").hidden = !v.calibration_required;   // 校正_Open: 校正が要るときだけ校正画面への入口を出す
-  $("workers").replaceChildren(...(v.workers || []).map((w) => el("li", { textContent: w })));
+  // 登録済みの検査員(サーバの "T1: 名前(日付)")を大きく出す
+  const ws = v.workers || [];
+  $("workers").replaceChildren(...ws.map((w) => {
+    const m = /^(T\d):\s*(.*?)(?:\(([^()]*)\))?$/.exec(w) || [null, "", w, ""];
+    return el("li", {}, el("span", { class: "reg-badge", textContent: m[1] ? `${m[1]} 登録済` : "登録済" }),
+      el("b", { class: "reg-workers__name", textContent: m[2] }), m[3] ? el("small", { class: "muted", textContent: m[3] }) : null);
+  }));
+  $("workerOk").hidden = !ws.length;
+  $("workerOk").textContent = ws.length ? `登録済 ${ws.length}名` : "";
+  $("cardIn").placeholder = ws.length ? "もう1人追加するとき(社員カード)" : "社員カード(13桁)";
 }
 
 function renderRight(v) {

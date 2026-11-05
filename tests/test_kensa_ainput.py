@@ -314,7 +314,7 @@ class HikiTest(unittest.TestCase):
         kensa_fixture.use_offline()
         r = ainput.no_search("ZZZ", [HEAD] + HIST)
         self.assertTrue(r.db_flag)
-        self.assertEqual(r.messages[0].text, "日稲:SIKACOMP.accdbがありません_ReadCheck_No_Search")
+        self.assertEqual(r.messages[0].text, paths.missing_text("SIKACOMP"))
 
     def test_hiki_no_change(self) -> None:
         rows = [["61029053", "04093803", "RX021T0", "T6X1913", "0", "0"],

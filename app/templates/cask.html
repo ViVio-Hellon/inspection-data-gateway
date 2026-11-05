@@ -11,7 +11,12 @@
     <section class="card">
       <header><h3>ロット</h3><span class="lv" id="lineLv"></span></header>
       <div class="pad">
-        <div class="inbox"><label for="lotIn">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
+        <div class="reg-lot" id="lotReg" hidden>
+          <div class="reg-lot__head"><span class="reg-badge">登録済</span><span class="reg-lot__label">Lot</span><b class="reg-lot__no" id="lotRegNo"></b></div>
+          <dl class="reg-lot__kv" id="lotRegKv"></dl>
+        </div>
+        <p class="reg-empty" id="lotEmpty">ロット未登録 — LotNo を入れて Enter</p>
+        <div class="inbox inbox--sub"><label for="lotIn">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
         <div class="inbox"><label for="f_ken_no">検査番号</label><input class="input" id="f_ken_no" data-field="ken_no" autocomplete="off"></div>
         <dl class="kv-grid" id="lotKv"></dl>
       </div>
