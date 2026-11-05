@@ -272,7 +272,9 @@ a.role-chip .gl { font-size: var(--fs-sm); opacity: 0.8; }
 /* 本体も**1枚のカード**。レールと同じ持ち上げ方をすると、
    「道具の並び」と「作業する面」が対等な2枚に見える */
 .work {
-  min-width: 0; min-height: 0; overflow: hidden;
+  /* 2026-11-05 実機: 画面が中に .pane を持たないと下が切れて見えなかった(保守の仮ロット・使用パス)。
+     中身が収まらないときはここで縦に送る(収まる画面は変わらない) */
+  min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto;
   display: flex; flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--rule);

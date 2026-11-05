@@ -42,13 +42,15 @@ class PackingError(Exception):
 
 
 def folder_path() -> str:
-    """`QualityPath & "包装仕様書"`(使用パスの文字。ローカルの実体は `paths.to_local`)。"""
-    return paths.join(paths.get("quality"), FOLDER)
+    """`QualityPath & "包装仕様書"`(使用パス「包装仕様書(画像)」。決めていなければ VBA と同じ場所)。"""
+    if paths._saved_value("pack_spec") is None:
+        return paths.join(paths.get("quality"), FOLDER)
+    return paths.get("pack_spec").rstrip("\\/")
 
 
 def picture_path(n: str) -> str:
     """`QualityPath & "包装仕様書\\" & n & ".JPG"`(O:524-525)。"""
-    return paths.join(paths.get("quality"), FOLDER, n + ".JPG")
+    return paths.join(folder_path(), n + ".JPG")
 
 
 def picture_file(n: str) -> Optional[Path]:

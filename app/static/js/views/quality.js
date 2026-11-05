@@ -3,7 +3,7 @@
   カードの中身・参照元・該当の有無はサーバ(ufkensa/kensa/quality_session.py)が決める。ここは並べるだけ。
 */
 
-import { api } from "../api.js";
+import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 
 const $ = (id) => document.getElementById(id);
@@ -126,3 +126,37 @@ $("qFind").addEventListener("submit", (e) => {
 $("qCurrent").addEventListener("click", () => { $("qLot").value = ""; load(""); });
 
 load("");
+
+
+// --- 品質写真(使用パス「品質写真」のサブフォルダごとのタブ。VBA の UF品質基準.MPH) ---
+async function loadPhotos() {
+  const box = document.getElementById("qPhotoBox");
+  if (!box) return;
+  let r;
+  try { r = await api.get("/api/quality/photos"); } catch (e) { toastError(e); return; }
+  document.getElementById("qPhotoFolder").textContent = r.folder || "";
+  document.getElementById("qPhotoMsg").textContent = r.message || "";
+  const tabs = document.getElementById("qPhotoTabs");
+  const area = document.getElementById("qPhotos");
+  const show = (t) => {
+    for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.name === t.name));
+    area.replaceChildren(...t.images.map((n) => {
+      const fig = document.createElement("figure");
+      const img = document.createElement("img");
+      img.loading = "lazy"; img.alt = n;
+      img.src = tokenUrl("/api/quality/photo?dir=" + encodeURIComponent(t.name) + "&name=" + encodeURIComponent(n));
+      const cap = document.createElement("figcaption"); cap.textContent = n;
+      fig.append(img, cap);
+      return fig;
+    }));
+    if (!t.images.length) area.textContent = "このフォルダに写真がありません";
+  };
+  tabs.replaceChildren(...(r.tabs || []).map((t) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn btn--sm"; b.role = "tab"; b.dataset.name = t.name; b.textContent = t.name;
+    b.addEventListener("click", () => show(t));
+    return b;
+  }));
+  if (r.tabs && r.tabs.length) show(r.tabs[0]);
+}
+loadPhotos();

@@ -396,9 +396,10 @@ class SettingsApiTest(_Env):
         for i in paths.ITEMS:
             self.assertFalse(paths.item_changed(i.key), i.key)
             if i.key != "lot":
-                self.assertEqual(paths.get(i.key), i.path, i.key)
+                self.assertEqual(paths.get(i.key), paths.slot_default(i.key), i.key)   # 画像のフォルダは元のフォルダの下
         self.assertEqual(paths.mode(), paths.OFFLINE)                        # モードは変えない
-        self.assertEqual(set(st["reset"]["keys"]), {"quality", "history", "lot", "access_master"})
+        # 包装仕様書・品質写真は 品証やり取り の下(決めていなければ)なので、品証やり取りを戻すと一緒に変わる
+        self.assertEqual(set(st["reset"]["keys"]), {"quality", "history", "lot", "access_master", "pack_spec", "quality_photo"})
         data = [c.kwargs.get("data") for c in ev.call_args_list if c.args and c.args[0] == "settings.path"][-1]
         self.assertEqual(data["quality"]["before"], {"品証やり取り": t})
         # アクセス権限マスタも既定(空)に戻ったので、設定の途中に戻る

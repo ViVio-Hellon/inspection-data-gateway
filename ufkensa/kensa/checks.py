@@ -1495,7 +1495,8 @@ def uftag_array(tags: dict[str, str], x: int, y: int) -> dict[int, tuple[str, st
 
 def pack_picture_path(n: str) -> str:
     """包装仕様書の画像。`UFPack_Open (O:524-525)`: `QualityPath & "包装仕様書\\" & n & ".JPG"`"""
-    return paths.join(paths.get("quality"), "包装仕様書", n + ".JPG")
+    from .packing import folder_path                            # 使用パス「包装仕様書(画像)」
+    return paths.join(folder_path(), n + ".JPG")
 
 
 @dataclass(frozen=True)
