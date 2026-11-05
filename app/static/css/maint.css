@@ -213,3 +213,4 @@
 .maint__devtbl tbody tr.is-warn td { color: var(--state-error); font-weight: 700; }
 /* 面の中身は縮めない(縮むと重なって見えた)。入りきらないぶんは面が縦に送る */
 .maint .tabpanel--scroll > * { flex-shrink: 0; }
+.maint__tvrow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }

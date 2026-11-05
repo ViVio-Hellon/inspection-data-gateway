@@ -77,7 +77,7 @@ for (const b of document.querySelectorAll("[data-dmode]")) b.addEventListener("c
 function renderAltChip() {
   const a = altText();
   $("mAltChip").hidden = !a;
-  $("mAltChip").textContent = a ? `比べる: ${a.split(/[\\/]/).pop()}` : "";
+  $("mAltChip").textContent = a ? `比べる: ${a.split(/[\\/]/).slice(-2).join("/")}` : "";
 }
 
 /* ---------- 歪公差: 1 ロット(大きな札。比べるときだけ 変更前 → 変更後) ---------- */
@@ -86,7 +86,9 @@ function tileValue(box, a, b, diff) {
     box.append(el("span", "maint__tv", a || "—"));
     return;
   }
-  box.append(el("span", "maint__tv maint__tv--old", a || "(空)"), el("span", "maint__arrow", "→"), el("span", "maint__tv maint__tv--new", b || "(空)"));
+  const row = el("span", "maint__tvrow");
+  row.append(el("span", "maint__tv maint__tv--old", a || "(空)"), el("span", "maint__arrow", "→"), el("span", "maint__tv maint__tv--new", b || "(空)"));
+  box.append(row);
 }
 
 function renderOne(d) {
