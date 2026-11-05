@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from ufkensa.kensa import paths
 
 from tests import kensa_fixture
 from tests.test_kensa_grid import FakeHooks, QuirkCase, cells
@@ -416,7 +417,7 @@ class AtuOpSelectTest(unittest.TestCase):
         h.hiki_path_ok = False
         msgs = []
         layout.atu_opselect(s, 6.5, h, 0.0, msgs)
-        self.assertEqual([m.text for m in msgs], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheckAtu_OPselect"])
+        self.assertEqual([m.text for m in msgs], [paths.missing_text("SIKAHIKINOW")])
         self.assertEqual(msgs[0].level, "error")
         self.assertEqual(s.comment, "")                      # "ｵｰﾀﾞｰ厚参照_6.000" を消す
         self.assertEqual((s.work, s.at_butt_visible, s.ken_no_caption), ("厚板", True, "前"))
@@ -676,8 +677,8 @@ class AtuOpSelectRealHooksTest(unittest.TestCase):
         (self.folder / "SIKAHIKI.sqlite3").unlink()
         s, texts = self.run_atu(datetime(2026, 11, 2, 10, 30, 0))
         # 列名の Arrbox(6221)が「…_ReadCheck_Arrbox」、行は自前の判定で「…_ReadCheckAtu_OPselect」→ Exit Sub
-        self.assertEqual(texts, ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox",
-                                 "日稲:SIKAHIKINOW.accdbがありません_ReadCheckAtu_OPselect"])
+        self.assertEqual(texts, [paths.missing_text("SIKAHIKINOW"),
+                                 paths.missing_text("SIKAHIKINOW")])
         self.assertEqual((s.comment, s.work, s.at_butt_visible), ("", "厚板", True))
 
     def test_found_in_time_window(self) -> None:

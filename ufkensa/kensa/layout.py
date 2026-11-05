@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from . import quirks, vbx
+from . import paths, quirks, vbx
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, hab_lt_300, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -1049,7 +1049,7 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
         # FormRelat:6227-6247: Arrbox を通さず、自前で MainPath/NextPath を選んで GetRecordsArr(Filter は Lot が空でも付く)
         found, ken_acc = hooks.atu_hiki_records(state, state.lot)
         if not found:
-            msgs.append(Message("日稲:" + "SIKAHIKINOW.accdb" + "がありません" + "_ReadCheckAtu_OPselect", ERROR,
+            msgs.append(Message(paths.missing_text("SIKAHIKINOW"), ERROR,
                                 source="FormRelat:6238"))
             state.comment = ""
             return                                          # Exit Sub(SkipA のリセットは走らない)

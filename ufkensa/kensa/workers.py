@@ -265,7 +265,7 @@ def name_conv(card: str, *, test_line: bool = False) -> tuple[str, list[Message]
         if fpath == paths.get("quality"):
             db = paths.db_file("伝送用ファイル", base_key="packing")
         if not datasource.exists(db):
-            msgs.append(Message("日稲:" + "伝送用ファイル.accdb" + "がありません" + "_ReadCheck_NameConv",
+            msgs.append(Message(paths.missing_text("伝送用ファイル", [db]),
                                 ERROR, source="Worker:52"))
             return "", msgs
     col, cols, n = _resolve_col(db, "名簿", "No")

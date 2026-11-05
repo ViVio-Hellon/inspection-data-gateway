@@ -89,3 +89,20 @@
 .lot-src { white-space: nowrap; font-size: var(--fs-sm); }
 .lot-src[aria-pressed="true"] { background: var(--warn-bg); color: var(--state-warn); border-color: var(--state-warn); font-weight: 700; }
 .lot-src__note { margin: 6px 0 0; padding: 4px 8px; font-size: var(--fs-xs); background: var(--warn-bg); color: var(--state-warn); border-radius: 4px; }
+
+/* 登録済みの値(検査員・ロット)を主役に。入力欄は控えめ(ご依頼 2026-11-05: 入力欄のほうが大きく、登録されていないように見えた) */
+.reg-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--state-ok); color: #fff; font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
+.reg-workers { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.reg-workers li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 10px; border-radius: 8px; background: var(--ok-bg); }
+.reg-workers__name { font-size: 1.5rem; line-height: 1.2; font-weight: 800; word-break: keep-all; overflow-wrap: anywhere; }
+.reg-lot { padding: 8px 10px; border-radius: 8px; background: var(--ok-bg); margin-bottom: 8px; }
+.reg-lot__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.reg-lot__label { color: var(--muted); font-weight: 700; }
+.reg-lot__no { font-family: var(--mono); font-size: 1.9rem; line-height: 1.1; font-weight: 800; }
+.reg-lot__kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 6px 0 0; font-size: 1.15rem; }
+.reg-lot__kv dd { overflow-wrap: anywhere; }
+.reg-lot__kv dt { color: var(--muted); font-size: var(--fs-sm); align-self: center; }
+.reg-lot__kv dd { margin: 0; font-weight: 700; font-family: var(--mono); }
+.reg-empty { margin: 0 0 8px; color: var(--state-error); font-weight: 700; }
+.inbox--sub .input { min-height: 30px; padding: 3px 8px; font-size: var(--fs-sm); }
+.inbox--sub label { font-size: var(--fs-xs); }

@@ -115,25 +115,37 @@ def _filtered(cols: list[str], rows: list[list[str]], expr: str) -> list[list[st
     return [r for r in rows if f(dict(zip(cols, r)))]
 
 
-def get_records(db: Union[str, Path], table: str, sql_filter: str = "") -> Optional[list[list[str]]]:
-    """VBA `GetRecordsArr`。0 件なら None。"""
+def _read(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]:
+    """表を読む。仕掛台帳(手元へ写して読むファイル)は、列名の書き方の違い(2つ目の名前のファイル。
+    半角/全角カナなど)を第1の名前に直す(`lot_columns.canonical`)。"""
     with open_ro(db) as conn:
         cols, rows = read_table(conn, table)
+    try:
+        lot = paths.is_copied(resolve(db))
+    except (OSError, ValueError):
+        lot = False
+    if lot:
+        from . import lot_columns
+        cols = lot_columns.canonical(cols)
+    return cols, rows
+
+
+def get_records(db: Union[str, Path], table: str, sql_filter: str = "") -> Optional[list[list[str]]]:
+    """VBA `GetRecordsArr`。0 件なら None。"""
+    cols, rows = _read(db, table)
     out = _filtered(cols, rows, sql_filter)
     return out or None
 
 
 def get_fields(db: Union[str, Path], table: str, sql_filter: str = "") -> Optional[list[str]]:
     """VBA `GetFieldsArr`。**表が空・該当なしでも None**(VBA の EOF チェックがフィールド取得より先)。"""
-    with open_ro(db) as conn:
-        cols, rows = read_table(conn, table)
+    cols, rows = _read(db, table)
     return cols if _filtered(cols, rows, sql_filter) else None
 
 
 def get_table(db: Union[str, Path], table: str, sql_filter: str = "") -> tuple[list[str], list[list[str]]]:
     """列名と行を一度に(列名は 0 件でも返す。呼び手が VBA の Empty を再現するときは上の2つを使う)。"""
-    with open_ro(db) as conn:
-        cols, rows = read_table(conn, table)
+    cols, rows = _read(db, table)
     return cols, _filtered(cols, rows, sql_filter)
 
 

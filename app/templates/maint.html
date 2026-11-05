@@ -4,165 +4,228 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/maint.css') }}">
 <!--
-  保守画面。VBA の Test フォームは移植しない(D9)が、業務で要る 2 つをここに置く。
-  誰でも開けて、読むだけの確かめ(歪公差・ソリ・設備仕様)は誰でも使える。編集(端末設定・仮ロット)は
-  管理者パスワード + アクセス権限の管理者(2026-11-02)。いちばん上の帯に鍵の状態を出す。
-  左 = 歪公差チェック(結果の表が大きいので幅を取る)と、その下に 仮ロット(歪公差を確かめるための自分のロット)。
-  右 = 表引きの単発チェック(ソリ公差・設備仕様)、端末設定のセット、管理者パスワードの変更。
-  判断・書式はサーバ(ufkensa/kensa/maint.py・kari_lot.py)。ここは描いて送るだけ。
+  保守画面(2026-11-05 にタブへ分けた)。1 つの面に 1 つの用事。入りきらないぶんは面の中だけが動く。
+  誰でも開けて、見る・引く・テストは誰でもできる。直す・保存・消す は 管理者パスワード + アクセス権限の管理者。
+  判断・書式はサーバ(ufkensa/kensa/maint.py・master_admin.py・kari_lot.py)。ここは描いて送るだけ。
 -->
-<div class="maint" id="maint">
-  <div class="maint__lockbar card">
-    <b>編集の鍵</b>
-    <span id="mLock"></span>
-    <span class="muted maint__small">見る・引くだけなら鍵は要りません。端末設定のセットと仮ロットの保存・削除には、管理者パスワードとアクセス権限の「管理者」が要ります。</span>
+<div class="maint tabs" id="maint">
+  <div class="maint__top">
+    <div class="tabs__bar" role="tablist" aria-label="保守の面" id="mTabs">
+      <button class="tab" role="tab" type="button" data-tab="dist" aria-selected="true">歪公差チェック</button>
+      <button class="tab" role="tab" type="button" data-tab="kari">仮ロット <span class="tab__badge" id="mKariBadge" hidden></span></button>
+      <button class="tab" role="tab" type="button" data-tab="master">マスタ管理</button>
+      <button class="tab" role="tab" type="button" data-tab="device">測定機器ID</button>
+      <button class="tab" role="tab" type="button" data-tab="lookup">ソリ・設備仕様</button>
+      <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
+    </div>
+    <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
+      <span id="mLock"></span>
+    </div>
   </div>
 
-  <div class="maint__main">
-    <section class="card maint__dist">
-      <header><h3>歪公差チェック</h3><span class="lv lv--info">品質基準の表を変えたときの確認・読むだけ</span></header>
-      <div class="pad">
-        <div class="maint__dbs">
-          <div class="field">
-            <label>いまの品質基準</label>
-            <code class="maint__path" id="mCurDb">-</code>
-          </div>
-          <form class="field" id="mAltForm" autocomplete="off">
-            <label for="mAlt">比べる品質基準</label>
-            <input class="input maint__altin" id="mAlt" placeholder="(任意)変更後の 品質基準.sqlite3 のパス">
+  <div class="tabs__panels">
+    <!-- ================= 歪公差チェック ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="dist" id="pDist">
+      <div class="seg maint__seg" role="group" aria-label="見かた">
+        <button class="seg__btn" type="button" data-dmode="one" aria-pressed="true">1 ロットを見る</button>
+        <button class="seg__btn" type="button" data-dmode="all" aria-pressed="false">まとめて確認(仕掛の全ロット)</button>
+      </div>
+
+      <div class="card maint__step" id="dOne">
+        <form class="maint__ask" id="mOne" autocomplete="off">
+          <label class="maint__big" for="mLot">ロットNo</label>
+          <input class="input maint__lotin" id="mLot" maxlength="20" placeholder="例 H9022K1" autofocus>
+          <button class="btn btn--find" type="submit">引く</button>
+          <span class="maint__or">または</span>
+          <label for="mKPick">仮ロットから</label>
+          <select class="input maint__pick" id="mKPick"><option value="">(選ぶ)</option></select>
+        </form>
+        <p class="maint__hint">品質基準の表から、このロットの歪公差を引きます。DB は読むだけで変えません。</p>
+      </div>
+
+      <div class="card maint__step" id="dAll" hidden>
+        <form class="maint__ask" id="mAll" autocomplete="off">
+          <label for="mPrefix">ロットNo の頭</label>
+          <input class="input maint__lot" id="mPrefix" maxlength="20" placeholder="(空 = 全部)">
+          <label class="maint__ck"><input type="checkbox" id="mPlate" checked> 板のみ</label>
+          <label class="maint__ck"><input type="checkbox" id="mWithKari" checked> 仮ロットも</label>
+          <button class="btn btn--run" type="submit">まとめて引く</button>
+          <label class="maint__ck"><input type="checkbox" id="mOnlyDiff"> 違いのあるロットだけ</label>
+        </form>
+        <p class="maint__hint">品質基準の表を変えたあと、仕掛の全ロットで結果が変わらないかを一度に確かめます。下の「比べる」と組み合わせると、変わるロットだけに印が付きます。</p>
+      </div>
+
+      <details class="card maint__cmp" id="dCmp">
+        <summary><b>別の品質基準と比べる</b> <span class="maint__hint">(変更前 → 変更後。使うときだけ開く)</span>
+          <span class="lv lv--warn" id="mAltChip" hidden></span></summary>
+        <div class="maint__cmpbody">
+          <div class="maint__kvline"><span class="muted">変更前(いまの品質基準)</span><code class="maint__path" id="mCurDb">-</code></div>
+          <form class="maint__ask" id="mAltForm" autocomplete="off">
+            <label for="mAlt">変更後</label>
+            <input class="input maint__altin" id="mAlt" placeholder="変更後の 品質基準.sqlite3 のパス">
             <button class="btn" type="button" id="mBrowse">参照…</button>
             <button class="btn" type="button" id="mAltClear">外す</button>
           </form>
-          <div class="maint__browser card" id="mBrowser" hidden>
+          <div class="maint__browser" id="mBrowser" hidden>
             <div class="maint__bhead"><code id="mBPath"></code><button class="btn btn--sm" type="button" id="mBClose">閉じる</button></div>
             <ul class="maint__blist" id="mBList"></ul>
           </div>
         </div>
+      </details>
 
-        <div class="maint__runs">
-          <form class="field" id="mOne" autocomplete="off">
-            <label for="mLot">ロットNo</label>
-            <input class="input maint__lot" id="mLot" maxlength="20" placeholder="例 H9022K1 / 仮ロット">
-            <button class="btn btn--find" type="submit">1ロット引く</button>
+      <div id="mResult" class="maint__result">
+        <p class="maint__empty">ロットNo を入れて「引く」を押すと、ここに結果が大きく出ます。</p>
+      </div>
+    </section>
+
+    <!-- ================= 仮ロット ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="kari" id="pKari" hidden>
+      <p class="maint__hint">歪公差を確かめるための自分のロット。この端末の手元DB に保存し、本物の DB には書きません。「引く」で歪公差チェックの面に結果を出します。</p>
+      <div class="card maint__kari" id="mKariCard">
+        <div class="pad maint__kgrid">
+          <div class="maint__klist">
+            <div class="btn-row">
+              <button class="btn btn--select" type="button" id="mKNew">新しく作る</button>
+              <span class="muted maint__small" id="mKCount"></span>
+            </div>
+            <div class="tablewrap maint__ktable">
+              <table class="table table--dense">
+                <thead><tr><th></th><th>ロットNo</th><th>検番</th><th>用途</th><th>材質/調質</th><th>オーダー寸法</th><th>納入先</th></tr></thead>
+                <tbody id="mKRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <form class="maint__kform" id="mKForm" autocomplete="off">
+            <div class="maint__khead">
+              <b id="mKMode">新しい仮ロット</b>
+              <span class="maint__kcopy">
+                <label for="mKSource">本物のロットから写す</label>
+                <input class="input maint__lot" id="mKSource" maxlength="20" placeholder="例 H9022K1">
+                <button class="btn btn--sm" type="button" id="mKCopy">写す</button>
+              </span>
+            </div>
+            <div class="maint__kfields">
+              <label for="mKLot">ロットNo</label>
+              <input class="input maint__lot" id="mKLot" maxlength="7" placeholder="A111A11" data-key="lot">
+              <label for="mKHead">検番の頭</label>
+              <span class="maint__kken"><input class="input maint__head" id="mKHead" maxlength="1" placeholder="H" data-key="ken_head"><code id="mKKen">-</code></span>
+              <div id="mKMain" class="maint__kmain"></div>
+            </div>
+            <details class="maint__kdetail">
+              <summary>詳しい欄(歪等級など。DBQP が読む列)</summary>
+              <div id="mKDetail" class="maint__kmain"></div>
+            </details>
+            <p class="maint__kmsg muted maint__small" id="mKNote"></p>
+            <div class="btn-row">
+              <button class="btn btn--commit" type="submit" id="mKSave">保存</button>
+              <button class="btn btn--find" type="button" id="mKRun">この値で歪公差を引く</button>
+              <button class="btn" type="button" id="mKClear">空にする</button>
+            </div>
           </form>
-          <form class="field" id="mAll" autocomplete="off">
-            <label for="mPrefix">仕掛の全ロット</label>
-            <input class="input maint__lot" id="mPrefix" maxlength="20" placeholder="ロットNo の頭(任意)">
-            <label class="maint__ck"><input type="checkbox" id="mPlate" checked> 板のみ</label>
-            <label class="maint__ck"><input type="checkbox" id="mWithKari" checked> 仮ロットも</label>
-            <button class="btn btn--run" type="submit">まとめて引く</button>
-            <label class="maint__ck"><input type="checkbox" id="mOnlyDiff"> 違いのあるロットだけ表示</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= マスタ管理 ================= -->
+    <section class="tabpanel" data-panel="master" id="pMaster" hidden>
+      <div class="maint__master">
+        <aside class="card maint__mside">
+          <div class="maint__mlabel">DB</div>
+          <div class="maint__msources" id="mSources"></div>
+          <div class="maint__mlabel">表</div>
+          <ul class="maint__mtables" id="mTables"><li class="muted maint__small">DB を選んでください</li></ul>
+        </aside>
+        <div class="maint__mgrid" id="mGrid"></div>
+      </div>
+    </section>
+
+    <!-- ================= 測定機器ID ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="device" id="pDevice" hidden>
+      <div class="maint__dev">
+        <div class="card maint__devtest">
+          <header><h3>数値が飛ぶかのテスト</h3><span class="lv lv--info">検査画面と同じ部品でなぞる・何も書かない</span></header>
+          <form class="maint__devform" id="mDevForm" autocomplete="off">
+            <label for="mDevText">伝送文字列</label>
+            <input class="input maint__devtext" id="mDevText" placeholder="例 DT10002+0000021.712M / #L395.8">
+            <label for="mDevLine">ライン</label><select class="input" id="mDevLine"></select>
+            <label for="mDevAtu">厚</label><input class="input input--num" id="mDevAtu">
+            <label for="mDevHab">幅</label><input class="input input--num" id="mDevHab">
+            <label for="mDevYouto">用途</label><input class="input" id="mDevYouto" placeholder="例 K126">
+            <label for="mDevSt">入力先</label><input class="input" id="mDevSt" value="S1" maxlength="3" title="S1〜E14・F1〜F10。行1〜4 = 厚、5〜 = 幅・丈・対角">
+            <span></span>
+            <span class="btn-row"><button class="btn btn--find" type="submit">テストする</button>
+              <button class="btn btn--sm" type="button" id="mDevFromKensa" title="検査画面でいま開いているロットの ライン・厚・幅・用途 を入れる">検査中のロットの値</button></span>
           </form>
+          <p class="maint__hint">測定器から送ると(またはここに貼ると)、受け取った値・どの機器の行か・その機器で正しいか を出します。テキスト欄にカーソルを置いて測定器の送信ボタンを押しても入ります。</p>
         </div>
+        <div class="card maint__devout" id="mDevOut"><p class="maint__empty">伝送文字列を入れて「テストする」。</p></div>
+      </div>
+      <div class="maint__devgrid" id="mDevGrid"></div>
+    </section>
 
-        <div class="maint__summary" id="mSummary"></div>
-        <div class="tablewrap maint__result" id="mResult">
-          <p class="muted">ロットNo を入れて「1ロット引く」、または「まとめて引く」を押してください。VBA の Test フォーム(歪公差)と同じ 8 項目を同じ書式で出します。</p>
-        </div>
+    <!-- ================= ソリ・設備仕様 ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="lookup" id="pLookup" hidden>
+      <div class="maint__two">
+        <section class="card">
+          <header><h3>ソリ公差(ソリ4級)</h3></header>
+          <div class="pad">
+            <form class="maint__ask" id="mSori" autocomplete="off">
+              <label for="mSAtu">厚</label><input class="input input--num maint__num" id="mSAtu">
+              <label for="mSHaba">幅</label><input class="input input--num maint__num" id="mSHaba">
+              <label for="mSTake">丈</label><input class="input input--num maint__num" id="mSTake">
+              <button class="btn btn--find" type="submit">引く</button>
+            </form>
+            <p class="maint__hint">「別の品質基準と比べる」で変更後を入れていれば、両方を出します。</p>
+            <dl class="maint__kv" id="mSoriOut"></dl>
+          </div>
+        </section>
+        <section class="card">
+          <header><h3>設備仕様(伝送用ファイル)</h3></header>
+          <div class="pad">
+            <form class="maint__eq" id="mEq" autocomplete="off">
+              <label for="mELine">設備名</label><select class="input" id="mELine"></select>
+              <label for="mEZai">製造材質</label><input class="input maint__num" id="mEZai" placeholder="例 5NB">
+              <label for="mEAtu">厚</label><input class="input input--num maint__num" id="mEAtu">
+              <label for="mEHaba">幅</label><input class="input input--num maint__num" id="mEHaba">
+              <label for="mETake">丈</label><input class="input input--num maint__num" id="mETake">
+              <label for="mEWei">単重</label><input class="input input--num maint__num" id="mEWei">
+              <span></span><button class="btn btn--find" type="submit">確かめる</button>
+            </form>
+            <dl class="maint__kv" id="mEqOut"></dl>
+          </div>
+        </section>
       </div>
     </section>
 
-    <section class="card maint__kari" id="mKariCard">
-      <header><h3>仮ロット</h3><span class="lv lv--info">歪公差を確かめるための自分のロット・手元DB に保存・本物の DB には書かない</span></header>
-      <div class="pad maint__kgrid">
-        <div class="maint__klist">
-          <div class="btn-row">
-            <button class="btn btn--select" type="button" id="mKNew">新しく作る</button>
-            <span class="muted maint__small" id="mKCount"></span>
+    <!-- ================= 端末設定・パスワード ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="term" id="pTerm" hidden>
+      <div class="maint__two">
+        <section class="card">
+          <header><h3>端末設定のセット</h3><span class="lv" id="mTermLv"></span></header>
+          <div class="pad">
+            <p class="muted maint__small">VBA のレジストリ「起動設定」(初期設定.AIM / HVC / DelSet)に当たります。</p>
+            <dl class="maint__kv" id="mTerm"></dl>
+            <div class="btn-row maint__presets" id="mPresets"></div>
+            <div class="btn-row">
+              <button class="btn btn--danger" type="button" id="mClear">端末設定を消す</button>
+              <a class="btn" href="/settings?tab=terminal" id="mToSettings">設定「この端末」を開く</a>
+            </div>
+            <p class="muted maint__small">消すと、次に検査画面を開いたとき VBA の初期設定(SF3)と同じく「この端末」の設定を求めます。</p>
           </div>
-          <div class="tablewrap maint__ktable">
-            <table class="table table--dense">
-              <thead><tr><th></th><th>ロットNo</th><th>検番</th><th>用途</th><th>材質/調質</th><th>オーダー寸法</th><th>納入先</th></tr></thead>
-              <tbody id="mKRows"></tbody>
-            </table>
+        </section>
+        <section class="card">
+          <header><h3>管理者パスワード</h3><span class="lv" id="mPwLv"></span></header>
+          <div class="pad">
+            <p class="muted maint__small">編集の鍵を開けるパスワードです(この PC だけ)。変えるには、いまのパスワードとアクセス権限の「管理者」が要ります。値そのものは画面にもファイルにも出ません。</p>
+            <form class="maint__pw" id="mPw" autocomplete="off">
+              <label for="mPwCur">いまの</label><input class="input" type="password" id="mPwCur" autocomplete="current-password">
+              <label for="mPwNew">新しい</label><input class="input" type="password" id="mPwNew" autocomplete="new-password">
+              <label for="mPwConf">もう一度</label><input class="input" type="password" id="mPwConf" autocomplete="new-password">
+              <span></span><button class="btn btn--commit" type="submit">変える</button>
+            </form>
+            <p class="maint__msg" id="mPwErr"></p>
           </div>
-        </div>
-        <form class="maint__kform" id="mKForm" autocomplete="off">
-          <div class="maint__khead">
-            <b id="mKMode">新しい仮ロット</b>
-            <span class="maint__kcopy">
-              <label for="mKSource">本物のロットから写す</label>
-              <input class="input maint__lot" id="mKSource" maxlength="20" placeholder="例 H9022K1">
-              <button class="btn btn--sm" type="button" id="mKCopy">写す</button>
-            </span>
-          </div>
-          <div class="maint__kfields">
-            <label for="mKLot">ロットNo</label>
-            <input class="input maint__lot" id="mKLot" maxlength="7" placeholder="A111A11" data-key="lot">
-            <label for="mKHead">検番の頭</label>
-            <span class="maint__kken"><input class="input maint__head" id="mKHead" maxlength="1" placeholder="H" data-key="ken_head"><code id="mKKen">-</code></span>
-            <div id="mKMain" class="maint__kmain"></div>
-          </div>
-          <details class="maint__kdetail">
-            <summary>詳しい欄(歪等級など。DBQP が読む列)</summary>
-            <div id="mKDetail" class="maint__kmain"></div>
-          </details>
-          <p class="maint__kmsg muted maint__small" id="mKNote"></p>
-          <div class="btn-row">
-            <button class="btn btn--commit" type="submit" id="mKSave">保存</button>
-            <button class="btn btn--find" type="button" id="mKRun">この値で歪公差を引く</button>
-            <button class="btn" type="button" id="mKClear">空にする</button>
-          </div>
-        </form>
-      </div>
-    </section>
-  </div>
-
-  <div class="maint__side">
-    <section class="card">
-      <header><h3>ソリ公差(ソリ4級)</h3></header>
-      <div class="pad">
-        <form class="field" id="mSori" autocomplete="off">
-          <label for="mSAtu">厚</label><input class="input input--num maint__num" id="mSAtu">
-          <label for="mSHaba">幅</label><input class="input input--num maint__num" id="mSHaba">
-          <label for="mSTake">丈</label><input class="input input--num maint__num" id="mSTake">
-          <button class="btn btn--find" type="submit">引く</button>
-        </form>
-        <dl class="maint__kv" id="mSoriOut"></dl>
-      </div>
-    </section>
-
-    <section class="card">
-      <header><h3>設備仕様(伝送用ファイル)</h3></header>
-      <div class="pad">
-        <form class="maint__eq" id="mEq" autocomplete="off">
-          <label for="mELine">設備名</label><select class="input" id="mELine"></select>
-          <label for="mEZai">製造材質</label><input class="input maint__num" id="mEZai" placeholder="例 5NB">
-          <label for="mEAtu">厚</label><input class="input input--num maint__num" id="mEAtu">
-          <label for="mEHaba">幅</label><input class="input input--num maint__num" id="mEHaba">
-          <label for="mETake">丈</label><input class="input input--num maint__num" id="mETake">
-          <label for="mEWei">単重</label><input class="input input--num maint__num" id="mEWei">
-          <span></span><button class="btn btn--find" type="submit">確かめる</button>
-        </form>
-        <dl class="maint__kv" id="mEqOut"></dl>
-      </div>
-    </section>
-
-    <section class="card">
-      <header><h3>端末設定のセット</h3><span class="lv" id="mTermLv"></span></header>
-      <div class="pad">
-        <p class="muted maint__small">VBA のレジストリ「起動設定」(初期設定.AIM / HVC / DelSet)に当たります。</p>
-        <dl class="maint__kv" id="mTerm"></dl>
-        <div class="btn-row maint__presets" id="mPresets"></div>
-        <div class="btn-row">
-          <button class="btn btn--danger" type="button" id="mClear">端末設定を消す</button>
-          <a class="btn" href="/settings?tab=terminal" id="mToSettings">設定「この端末」を開く</a>
-        </div>
-        <p class="muted maint__small">消すと、次に検査画面を開いたとき VBA の初期設定(SF3)と同じく「この端末」の設定を求めます。</p>
-      </div>
-    </section>
-
-    <section class="card">
-      <header><h3>管理者パスワード</h3><span class="lv" id="mPwLv"></span></header>
-      <div class="pad">
-        <p class="muted maint__small">編集の鍵を開けるパスワードです(この PC だけ)。変えるには、いまのパスワードとアクセス権限の「管理者」が要ります。値そのものは画面にもファイルにも出ません。</p>
-        <form class="maint__pw" id="mPw" autocomplete="off">
-          <label for="mPwCur">いまの</label><input class="input" type="password" id="mPwCur" autocomplete="current-password">
-          <label for="mPwNew">新しい</label><input class="input" type="password" id="mPwNew" autocomplete="new-password">
-          <label for="mPwConf">もう一度</label><input class="input" type="password" id="mPwConf" autocomplete="new-password">
-          <span></span><button class="btn btn--commit" type="submit">変える</button>
-        </form>
-        <p class="maint__msg" id="mPwErr"></p>
+        </section>
       </div>
     </section>
   </div>

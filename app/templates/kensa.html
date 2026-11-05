@@ -8,17 +8,22 @@
   <!-- 左: 検査員・ロット・公差・作業選択 -->
   <div class="kensa__col">
     <section class="card">
-      <header><h3>検査員</h3><span class="lv lv--ng" id="workerLv" hidden>検査員登録なし</span><span class="lv" id="proofLv"></span></header>
+      <header><h3>検査員</h3><span class="lv lv--ok" id="workerOk" hidden></span><span class="lv lv--ng" id="workerLv" hidden>検査員登録なし</span><span class="lv" id="proofLv"></span></header>
       <a class="btn btn--primary" id="calibLink" href="/calibration" hidden style="margin:0 10px">校正を始める</a>
       <div class="pad">
-        <div class="inbox"><label for="cardIn">カード</label><input class="input" id="cardIn" inputmode="numeric" autocomplete="off" placeholder="社員カード(13桁)"></div>
-        <ul class="log-lines" id="workers"></ul>
+        <ul class="reg-workers" id="workers" aria-label="登録済みの検査員"></ul>
+        <div class="inbox inbox--sub"><label for="cardIn">カードで追加</label><input class="input" id="cardIn" inputmode="numeric" autocomplete="off" placeholder="社員カード(13桁)"></div>
       </div>
     </section>
     <section class="card">
       <header><h3>ロット</h3><span class="lv lv--warn" id="lotSrcLv" hidden>控えから読んでいます</span></header>
       <div class="pad">
-        <div class="inbox"><label for="lotIn">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
+        <div class="reg-lot" id="lotReg" hidden>
+          <div class="reg-lot__head"><span class="reg-badge">登録済</span><span class="reg-lot__label">Lot</span><b class="reg-lot__no" id="lotRegNo"></b></div>
+          <dl class="reg-lot__kv" id="lotRegKv"></dl>
+        </div>
+        <p class="reg-empty" id="lotEmpty">ロット未登録 — LotNo を入れて Enter</p>
+        <div class="inbox inbox--sub"><label for="lotIn" id="lotInLabel">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
         <div class="lot-src__row"><button class="btn lot-src" type="button" id="lotSrcBtn" aria-pressed="false" title="このロットだけ、モードによらず控え(第2パス)の仕掛台帳から読みます。台帳にロットが無い・引当が足りない・台帳が古いときに使います">控え(第2)から読む</button></div>
         <p class="lot-src__note" id="lotSrcNote" hidden></p>
         <dl class="kv-grid" id="lotKv"></dl>

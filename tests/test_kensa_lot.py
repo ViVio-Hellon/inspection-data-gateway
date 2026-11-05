@@ -133,7 +133,7 @@ class ArrboxTest(_Base):
         self.d.remove(self.d.next, "SIKAHIKINOW")
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
         self.assertIsNone(r.value)
-        self.assertEqual([m.text for m in r.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_Arrbox"])
+        self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAHIKINOW")])
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL, over12=True)
         self.assertEqual(r.messages, [])                                  # IsOver12Hours の間は出さない
 
@@ -388,7 +388,7 @@ class HistorySaveTest(_Base):
         self.d.remove(self.d.next, "SIKAHIKINOW")
         res = lot.history_save(self.ph(), _sheet(_hrow("H2500K0")), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual(res.delete_rows, [2])
-        self.assertEqual([m.text for m in res.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_HistorySave"])
+        self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAHIKINOW")])
         self.assertFalse(res.completed)
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_NORMAL, over12=True))
         self.assertEqual(res.messages, [])
@@ -531,7 +531,7 @@ class VcTest(_Base):
         self.assertEqual(r.value, vbx.single(0.08406977))
         self.assertEqual(r.messages[0].text, "VC厚登録なし,担当者に連絡のこと")
         r = lot.vc_conv("AM-500", test=True)                         # Test は PackingPath(ファイルなし)
-        self.assertEqual((r.value, r.messages[0].text), (0.0, "日稲:伝送用ファイル.accdbがありません_ReadCheck_VcConv"))
+        self.assertEqual((r.value, r.messages[0].text), (0.0, paths.missing_text("伝送用ファイル", [paths.db_file("伝送用ファイル", base_key="packing")])))
 
 
 class VerifierAccReflecNullTest(_Base):
@@ -573,7 +573,7 @@ class FixBranchTest(_Base):
         for mode in ("reproduce", "fix"):
             quirks.set_for_test({"B49": mode})
             res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
-            self.assertEqual([m.text for m in res.messages], ["日稲:SIKAHIKINOW.accdbがありません_ReadCheck_HistorySave"])
+            self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAHIKINOW")])
             self.assertFalse(res.completed)
 
     def test_b49_offline_same_paths(self) -> None:
@@ -634,7 +634,7 @@ class FixBranchTest(_Base):
         # NextPath のファイルが無い → 「日稲:…がありません」
         self.d.remove(self.d.next, "SIKAODRNOW")
         res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
-        self.assertEqual([m.text for m in res.messages], ["日稲:SIKAODRNOW.accdbがありません_ReadCheck_HistorySave"])
+        self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAODRNOW")])
 
     def test_b54_clear_previous_captions(self) -> None:
         # 再現: 熱処理工程・QF が無いロットは None(前ロットの表示を変えない)(SaveLoad:211-213)

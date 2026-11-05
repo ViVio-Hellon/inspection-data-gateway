@@ -310,7 +310,7 @@ def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "
             file_path = db_path(fpath, target)
             if read_check(db_path(nxt, target), 1) is False:
                 if not over12:
-                    res.messages.append(Message("日稲:" + vba_target(target) + "がありません" + "_ReadCheck_Arrbox",
+                    res.messages.append(Message(paths.missing_text(target),
                                                 ERROR, source="AccHIki:33"))
                 res.file_path = file_path
                 return res
@@ -544,11 +544,18 @@ def _select_lot(file_path: str, cb_text: str) -> tuple[list[str], Optional[tuple
     `ｵｰﾀﾞｰ板丈 <> '0'` は文字列 '0' との比較(全列 Text)。Null の行は残らない(SQLite も同じ)。
     行の順は取り込み順(rowid)。
     """
-    sql = ('SELECT * FROM "仕掛" WHERE "ﾛｯﾄ番号" = ? COLLATE NOCASE AND "ｵｰﾀﾞｰ板丈" <> ? '
-           'ORDER BY rowid LIMIT 1')
+    from . import lot_columns
     with datasource.open_ro(file_path) as conn:
+        # 2つ目のファイルは列名の書き方が違うことがある(全角カナなど)。実際の列名で引き、第1の名前で返す
+        actual = [r[1] for r in conn.execute('PRAGMA table_info("仕掛")')]
+        canon = lot_columns.canonical(actual)
+        real = dict(zip(canon, actual))
+        lot_col = real.get("ﾛｯﾄ番号", "ﾛｯﾄ番号").replace('"', '""')
+        take_col = real.get("ｵｰﾀﾞｰ板丈", "ｵｰﾀﾞｰ板丈").replace('"', '""')
+        sql = (f'SELECT * FROM "仕掛" WHERE "{lot_col}" = ? COLLATE NOCASE AND "{take_col}" <> ? '
+               'ORDER BY rowid LIMIT 1')
         cur = conn.execute(sql, (cb_text, "0"))
-        cols = [d[0] for d in cur.description]
+        cols = lot_columns.canonical([d[0] for d in cur.description])
         return cols, cur.fetchone()
 
 
@@ -869,7 +876,7 @@ def _odr_fallback(fpath: str, odr_path: str, what: str, res: HistorySaveResult,
         odr_path = db_path(fpath, "SIKAODRNOW")
         if not read_check(odr_path, 1):
             if not over12:
-                res.messages.append(Message("日稲:" + target + "がありません" + "_ReadCheck_HistorySave", ERROR,
+                res.messages.append(Message(paths.missing_text("SIKAODRNOW"), ERROR,
                                             source="SaveLoad:1399"))
             return fpath, odr_path, False
     return fpath, odr_path, True
@@ -909,7 +916,7 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
     fpath = _history_path(env)
     file_path = db_path(fpath, target)
     c1 = read_check(file_path, 1) is False          # D26 改: 時刻窓・PLEASE WAIT は見ない
-    missing = Message("日稲:" + vba_target(target) + "がありません" + "_ReadCheck_HistorySave", ERROR,
+    missing = Message(paths.missing_text(target), ERROR,
                       source="SaveLoad:1322")
     if c1:
         if fpath == nxt:
@@ -1239,7 +1246,7 @@ def vc_conv(no: str, *, test: bool = False) -> VcConvResult:
     res = VcConvResult()
     file_path = paths.join(_denso_base(test), DENSO + ".sqlite3")
     if not read_check(file_path, 1):
-        res.messages.append(Message("日稲:" + DENSO + ".accdb" + "がありません" + "_ReadCheck_VcConv", ERROR,
+        res.messages.append(Message(paths.missing_text(DENSO, [file_path]), ERROR,
                                     source="Input:772"))
         return res
     temp = datasource.get_records(file_path, VC_TABLE, "[品名ｺｰﾄﾞ]='" + ado_filter.quote(no) + "'")

@@ -1386,7 +1386,7 @@ def materials_msgbox(form: Form, ord_no: str, *,
 
     file_path = file_of(fpath)
     if not rc(file_path):
-        missing = "日稲:" + target + "がありません" + "_MaterialsMsgBox"
+        missing = paths.missing_text("SIKAODRNOW")
         if fpath == nxt:
             out.messages.append(flow.Message(missing, flow.ERROR, source="Judg:2004"))
             return out

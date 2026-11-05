@@ -549,16 +549,36 @@ async function saveRow(p, inputs, names) {
   toast("保存しました", "success");
 }
 
+/** 確認で送る値: 行の入力欄にいま入っている値(保存前でもその値を確かめる) */
+function typedValues(key, tr) {
+  const body = { key };
+  if (!tr) return body;
+  for (const i of tr.querySelectorAll("input[data-field]")) body[i.dataset.field] = i.value;
+  const names = tr.querySelectorAll("input[data-db]");
+  if (names.length) {
+    body.second_names = {};
+    for (const n of names) body.second_names[n.dataset.db] = n.value;
+  }
+  return body;
+}
+
 async function checkOne(key, td) {
   td.textContent = "確かめています…";
   try {
-    const r = await api.post("/api/settings/path/check", { key });
+    const r = await api.post("/api/settings/path/check", typedValues(key, td.closest("tr")));
     td.replaceChildren();
     for (const x of r.results) {
       const d = document.createElement("div");
       d.textContent = (x.label ? x.label.replace("パス", "") + ": " : "") + x.message;
       d.className = x.ok ? "lv--ok" : "lv--ng";
       td.append(d);
+      // 2つ目のファイルの足りない列(python-web-tools と同じ)。読めても目立たせる
+      for (const f of (x.files || []).filter((f) => f.lacking && f.lacking.length)) {
+        const w = document.createElement("div");
+        w.className = "lv--ng";
+        w.textContent = `${f.name} の足りない列: ${f.lacking.join("、")}`;
+        td.append(w);
+      }
     }
     if (r.in_use) {
       const d = document.createElement("small");

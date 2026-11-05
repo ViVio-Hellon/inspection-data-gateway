@@ -11,6 +11,7 @@ import shutil
 import sqlite3
 import tempfile
 import unittest
+from ufkensa.kensa import paths
 from pathlib import Path
 from typing import Any
 
@@ -378,7 +379,7 @@ class DbqpTest(unittest.TestCase):
     def test_messages_and_errors(self) -> None:
         r = q.dbqp("X", "H", "", "", None)
         self.assertIsNone(r.kousa)
-        self.assertEqual(r.messages[0].text, "日稲:SIKALOTNOW.accdbがありません_ReadCheck_DBQP")
+        self.assertEqual(r.messages[0].text, paths.missing_text("SIKALOTNOW"))
         ld = q.read_lot("無いロット")
         r = q.dbqp("無いロット", "H", "", "", ld)
         self.assertEqual(r.messages[0].text, "SIKALOTNOWに該当ロットがありません_DBQP")

@@ -1,18 +1,24 @@
 /*
-  保守画面。歪公差チェック(仮ロットも)・ソリ公差・設備仕様・端末設定のセット・仮ロット・管理者パスワード。
+  保守画面(タブ: 歪公差チェック / 仮ロット / マスタ管理 / 測定機器ID / ソリ・設備仕様 / 端末設定・パスワード)。
   誰でも開けて見られる。編集はサーバが 403 {code:"locked"} で断るので、鍵の窓(admin_unlock.js)を出して呼び直す。
-  値の書式・状態・違いの有無・入力の誤りはサーバ(ufkensa/kensa/maint.py・kari_lot.py)が決める。ここは描いて送るだけ。
+  値の書式・状態・違いの有無・入力の誤りはサーバ(ufkensa/kensa/maint.py・master_admin.py・kari_lot.py)が決める。
+  ここは描いて送るだけ。
 */
 
 import { api } from "../api.js";
 import { confirmBox } from "../askbox.js";
 import { adminState, mountLockBadge, withUnlock } from "../admin_unlock.js";
 import { toast, toastError } from "../toast.js";
+import { createMasterGrid } from "./master_grid.js";
 
 const $ = (id) => document.getElementById(id);
 const STATUS = { ok: ["", ""], none: ["該当なし", "lv--warn"], error: ["エラー", "lv--ng"], not_found: ["ロットなし", "lv--ng"] };
 // 一覧に出す欄(コメントは長いので最後・折り返し)
 const LIST_KEYS = ["MG", "HaHiz", "TaHiz", "Naka", "Mimi", "NoTex", "Source", "Flag", "HizCome"];
+// 結果カードの大きな札(公差そのもの)と、その下の行
+const TILE_KEYS = ["HaHiz", "TaHiz", "Naka", "Mimi", "MG"];
+const SUB_KEYS = ["Source", "HizCome", "NoTex", "Flag"];
+const TAB_KEY = "maint.tab";
 
 let S = { labels: {}, keys: [] };
 let lastAll = null;
@@ -44,41 +50,87 @@ function kariChip(r) {
   return c;
 }
 
-/* ---------- 歪公差: 1 ロット(縦に項目、横に いまの表 / 比べる表) ---------- */
+/* ---------- タブ ---------- */
+const grids = {};
+function showTab(name) {
+  if (!document.querySelector(`[data-panel="${name}"]`)) name = "dist";
+  for (const t of document.querySelectorAll("#mTabs .tab")) t.setAttribute("aria-selected", String(t.dataset.tab === name));
+  for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== name;
+  try { localStorage.setItem(TAB_KEY, name); } catch { /* 保存できなくても動く */ }
+  if (name === "master") openMaster();
+  if (name === "device") openDevice();
+}
+for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
+
+/* ---------- 歪公差: 1 ロットと まとめて の切り替え ---------- */
+function setDMode(mode) {
+  for (const b of document.querySelectorAll("[data-dmode]")) b.setAttribute("aria-pressed", String(b.dataset.dmode === mode));
+  $("dOne").hidden = mode !== "one";
+  $("dAll").hidden = mode !== "all";
+  $("mResult").replaceChildren(el("p", "maint__empty", mode === "one"
+    ? "ロットNo を入れて「引く」を押すと、ここに結果が大きく出ます。"
+    : "「まとめて引く」を押すと、ロットごとに 1 行で出します(数が多いと少し待ちます)。"));
+  lastAll = null;
+}
+for (const b of document.querySelectorAll("[data-dmode]")) b.addEventListener("click", () => setDMode(b.dataset.dmode));
+
+function renderAltChip() {
+  const a = altText();
+  $("mAltChip").hidden = !a;
+  $("mAltChip").textContent = a ? `比べる: ${a.split(/[\\/]/).pop()}` : "";
+}
+
+/* ---------- 歪公差: 1 ロット(大きな札。比べるときだけ 変更前 → 変更後) ---------- */
+function tileValue(box, a, b, diff) {
+  if (b === undefined || !diff) {
+    box.append(el("span", "maint__tv", a || "—"));
+    return;
+  }
+  box.append(el("span", "maint__tv maint__tv--old", a || "(空)"), el("span", "maint__arrow", "→"), el("span", "maint__tv maint__tv--new", b || "(空)"));
+}
+
 function renderOne(d) {
   const r = d.row;
   const cur = r.current, alt = r.alt;
-  $("mSummary").replaceChildren(
-    el("b", "", r.lot), ...(r.kari ? [kariChip(r)] : []), el("span", "muted", "検番"), el("code", "", r.ken_no || "-"),
-    el("span", "muted", "引当"), el("span", "", (r.hiki || []).map((h) => h[0]).join(" / ") || "-"),
-    statusChip(cur.status),
-    ...(alt ? [el("span", "lv " + (r.diff.length ? "lv--warn" : "lv--ok"), r.diff.length ? `違い ${r.diff.length} 項目` : "違いなし")] : []),
-  );
-  const t = el("table", "table maint__one");
-  const head = el("tr");
-  head.append(el("th", "", "項目"), el("th", "", "いまの品質基準"));
-  if (alt) head.append(el("th", "", "比べる品質基準"));
-  const thead = el("thead"); thead.append(head);
-  const tbody = el("tbody");
-  for (const k of S.keys) {
-    const tr = el("tr");
-    if (r.diff.includes(k)) tr.className = "is-diff";
-    tr.append(el("th", "", S.labels[k] + (k === "Flag" ? "(参考)" : "")), el("td", "", cur.values[k] ?? ""));
-    if (alt) tr.append(el("td", "", alt.values[k] ?? ""));
-    tbody.append(tr);
+  const card = el("div", "card maint__card");
+  const head = el("div", "maint__chead");
+  head.append(el("span", "maint__clot", r.lot), ...(r.kari ? [kariChip(r)] : []), statusChip(cur.status));
+  if (alt) head.append(el("span", "lv " + (r.diff.length ? "lv--warn" : "lv--ok"), r.diff.length ? `変更後で ${r.diff.length} 項目が変わる` : "変更後も同じ"));
+  const meta = el("div", "maint__cmeta");
+  meta.append(el("span", "", "検番 "), el("code", "", r.ken_no || "-"), el("span", "", "　引当 "),
+              el("span", "", (r.hiki || []).map((h) => h[0]).join(" / ") || "-"));
+  card.append(head, meta);
+
+  if (cur.status === "ok" || (alt && alt.status === "ok")) {
+    const tiles = el("div", "maint__tiles");
+    for (const k of TILE_KEYS) {
+      const diff = r.diff.includes(k);
+      const t = el("div", "maint__tile" + (diff ? " is-diff" : ""));
+      t.append(el("span", "maint__tl", S.labels[k]));
+      tileValue(t, cur.values[k], alt ? alt.values[k] : undefined, diff);
+      tiles.append(t);
+    }
+    const sub = el("dl", "maint__csub");
+    for (const k of SUB_KEYS) {
+      const diff = r.diff.includes(k);
+      const dd = el("dd", diff ? "is-diff" : "");
+      if (diff) dd.append(el("span", "maint__tv--old", cur.values[k] || "(空)"), el("span", "maint__arrow", " → "), el("b", "", alt.values[k] || "(空)"));
+      else dd.textContent = cur.values[k] || "—";
+      sub.append(el("dt", "", S.labels[k] + (k === "Flag" ? "(参考)" : "")), dd);
+    }
+    card.append(tiles, sub);
   }
-  t.append(thead, tbody);
-  const box = [t];
-  for (const [name, x] of [["いまの品質基準", cur], ["比べる品質基準", alt]]) {
+  for (const [name, x] of [[alt ? "変更前" : "", cur], ["変更後", alt]]) {
     if (!x) continue;
-    if (x.note) box.push(el("p", "maint__note", `${name}: ${x.note}`));
-    for (const m of x.messages || []) box.push(el("p", "maint__msg", `${name}: ${m}`));
+    const pre = name ? `${name}: ` : "";
+    if (x.note) card.append(el("p", "maint__note", pre + x.note));
+    for (const m of x.messages || []) card.append(el("p", "maint__msg", pre + m));
   }
-  for (const m of r.messages || []) box.push(el("p", "maint__msg", m));
-  $("mResult").replaceChildren(...box);
+  for (const m of r.messages || []) card.append(el("p", "maint__msg", m));
+  $("mResult").replaceChildren(card);
 }
 
-/* ---------- 歪公差: 全ロット(1 行 1 ロット。違う欄は「いま → 比べる」) ---------- */
+/* ---------- 歪公差: 全ロット(1 行 1 ロット。違う欄は「変更前 → 変更後」) ---------- */
 function cell(r, k) {
   const td = el("td", ["HizCome", "Source", "Flag"].includes(k) ? "maint__wrap" : "n");
   const a = r.current.values[k] ?? "";
@@ -94,11 +146,12 @@ function cell(r, k) {
 function renderAll(d) {
   lastAll = d;
   const b = d.by_status;
-  $("mSummary").replaceChildren(
+  const sum = el("div", "maint__summary");
+  sum.append(
     el("b", "", `${d.count} ロット`), el("span", "muted", `${d.sec} 秒`),
     el("span", "lv lv--ok", `OK ${b.ok}`), el("span", "lv lv--warn", `該当なし ${b.none}`),
     el("span", "lv lv--ng", `エラー ${b.error + b.not_found}`),
-    ...(d.alt ? [el("span", "lv " + (d.diffs ? "lv--warn" : "lv--ok"), `違いのあるロット ${d.diffs}`)] : []),
+    ...(d.alt ? [el("span", "lv " + (d.diffs ? "lv--warn" : "lv--ok"), `変更後で変わるロット ${d.diffs}`)] : []),
     ...((d.kari_used || []).length ? [el("span", "lv lv--info", `仮ロット ${d.kari_used.length}: ${d.kari_used.join(" ")}`)] : []),
   );
   const onlyDiff = $("mOnlyDiff").checked;
@@ -121,18 +174,29 @@ function renderAll(d) {
     tbody.append(tr);
   }
   t.append(thead, tbody);
-  $("mResult").replaceChildren(t);
+  const wrap = el("div", "tablewrap maint__allwrap");
+  wrap.append(t);
+  $("mResult").replaceChildren(sum, wrap);
 }
 
-$("mOne").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const lot = $("mLot").value.trim().toUpperCase();
+async function runLot(lot) {
+  lot = (lot || "").trim().toUpperCase();
   $("mLot").value = lot;
   try {
     renderOne(await api.post("/api/maint/dist", { lot, alt: altText() }));
     toast("ロード済", "ok");                             // Test:107 MsgBox "ロード済"
-  } catch (err) { toastError(err); }
-});
+  } catch (err) { toastError(err); if (err.field === "lot") $("mLot").select(); }
+}
+
+/** 仮ロットの面などから: 歪公差の面へ移って 1 ロット引く。 */
+function goLot(lot) {
+  showTab("dist");
+  setDMode("one");
+  runLot(lot);
+}
+
+$("mOne").addEventListener("submit", (e) => { e.preventDefault(); runLot($("mLot").value); });
+$("mKPick").addEventListener("change", () => { if ($("mKPick").value) { runLot($("mKPick").value); $("mKPick").value = ""; } });
 
 $("mAll").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -143,6 +207,134 @@ $("mAll").addEventListener("submit", async (e) => {
   } catch (err) { toastError(err); }
 });
 $("mOnlyDiff").addEventListener("change", () => { if (lastAll) renderAll(lastAll); });
+$("mAlt").addEventListener("input", renderAltChip);
+
+/* ---------- マスタ管理 ---------- */
+let M = { sources: [], source: "", table: "", loaded: false };
+
+async function openMaster() {
+  if (!grids.master) grids.master = createMasterGrid($("mGrid"));
+  if (M.loaded) return;
+  M.loaded = true;
+  try {
+    const d = await api.get("/api/maint/master/sources");
+    M.sources = d.sources;
+    $("mSources").replaceChildren(...d.sources.map((s) => {
+      const b = el("button", "maint__msrc", "");
+      b.type = "button";
+      b.dataset.key = s.key;
+      b.append(el("span", "", s.label), el("span", "maint__mtag" + (s.editable ? "" : " is-ro"), !s.exists ? "無し" : s.editable ? "直せる" : "見るだけ"));
+      b.title = s.path || s.error || "場所が決まっていません";
+      b.disabled = !s.exists;
+      b.addEventListener("click", () => pickSource(s.key));
+      return b;
+    }));
+    const first = d.sources.find((s) => s.exists);
+    if (first) pickSource(first.key);
+  } catch (err) { M.loaded = false; toastError(err); }
+}
+
+async function pickSource(key) {
+  M.source = key;
+  for (const b of $("mSources").querySelectorAll(".maint__msrc")) b.classList.toggle("is-current", b.dataset.key === key);
+  try {
+    const d = await api.get(`/api/maint/master/tables?source=${encodeURIComponent(key)}`);
+    const items = d.tables.map((t) => {
+      const li = el("li");
+      const b = el("button", "maint__mtab", "");
+      b.type = "button";
+      b.dataset.table = t.name;
+      b.append(el("span", "", t.name), el("span", "muted", t.rows == null ? "" : String(t.rows)));
+      b.addEventListener("click", () => pickTable(t.name));
+      li.append(b);
+      return li;
+    });
+    if (d.note) items.push(el("li", "maint__msg", d.note));
+    if (!d.tables.length && !d.note) items.push(el("li", "muted maint__small", "表がありません"));
+    $("mTables").replaceChildren(...items);
+    if (d.tables.length) pickTable(d.tables[0].name);
+  } catch (err) { toastError(err); $("mTables").replaceChildren(el("li", "maint__msg", err.message)); }
+}
+
+function pickTable(name) {
+  M.table = name;
+  for (const b of $("mTables").querySelectorAll(".maint__mtab")) b.classList.toggle("is-current", b.dataset.table === name);
+  grids.master.open(M.source, name);
+}
+
+/* ---------- 測定機器ID(伝送テスト + 表) ---------- */
+let devLoaded = false;
+let devDefaults = null;
+
+async function openDevice() {
+  if (!grids.device) grids.device = createMasterGrid($("mDevGrid"), { compact: true });
+  if (devLoaded) return;
+  devLoaded = true;
+  grids.device.open("denso", "測定機器ID");
+  try {
+    devDefaults = await api.get("/api/maint/device/defaults");
+    $("mDevLine").replaceChildren(...devDefaults.lines.map((x) => { const o = el("option", "", x); o.value = x; return o; }));
+    fillDevice(devDefaults);
+  } catch (err) { toastError(err); }
+  $("mDevText").focus();
+}
+
+function fillDevice(d) {
+  if (d.line) $("mDevLine").value = d.line;
+  if (d.atu !== undefined) $("mDevAtu").value = d.atu;
+  if (d.hab !== undefined) $("mDevHab").value = d.hab;
+  if (d.youto !== undefined) $("mDevYouto").value = d.youto;
+}
+
+function devRow(label, value, cls) {
+  const tr = el("tr", cls || "");
+  const td = el("td");
+  if (value instanceof Node) td.append(value); else td.textContent = value ?? "";
+  tr.append(el("th", "", label), td);
+  return tr;
+}
+
+function renderDevice(d) {
+  const box = $("mDevOut");
+  const head = el("div", "maint__devhead");
+  const ok = d.judge.ok;
+  const verdict = !d.accepted ? ["受け付けない", "lv--ng"] : d.kind !== "DT" ? ["値は入る(機器の確かめなし)", "lv--info"]
+    : ok === true ? ["OK 値が入る", "lv--ok"] : ok === false ? ["NG 止まる", "lv--ng"] : ["機器を確かめられない", "lv--warn"];
+  head.append(el("span", "maint__devval", d.accepted ? d.value : "—"), el("span", "lv " + verdict[1], verdict[0]));
+  const t = el("table", "table table--dense maint__devtbl");
+  const tb = el("tbody");
+  const hit = (rows) => rows.map((r) => `${r["ライン"]} ${r["機器名"]}(ID ${r["ID"]}・厚 ${r["厚下"] || "-"}〜${r["厚上"] || "-"}${r["用途"] ? "・用途あり" : ""})`).join("\n");
+  tb.append(
+    devRow("種別", d.kind || "(なし)"),
+    devRow("入る値", d.accepted ? `${d.value}(伝送の値部分「${d.raw}」)` : "—"),
+    devRow("入力先", `${d.st} … ${d.st_label}`),
+    devRow("機器の番号", d.code || "(DT のときだけ。3〜7 文字目)"),
+    devRow(`この機器(${d.line})`, d.kind === "DT" ? (hit(d.hits) || "測定機器ID に行がありません") : "—", d.kind === "DT" && !d.hits.length ? "is-warn" : ""),
+    ...(d.others.length ? [devRow("ほかのラインで同じ番号", hit(d.others))] : []),
+    devRow("この厚・用途で使う機器", d.expect ? `${d.expect.name || "(該当なし)"}(出力テキスト ${d.expect.text || "-"})` : "—"),
+    devRow("検査画面の判定", d.judge.text || (ok === true ? "そのまま入って判定に進みます" : "—"), ok === false ? "is-warn" : ""),
+    devRow("帳票の機器欄", (d.report || []).join(" / ") || "—"),
+  );
+  t.append(tb);
+  box.replaceChildren(head, t, ...d.notes.map((n) => el("p", "maint__note", n)));
+}
+
+async function runDevice() {
+  try {
+    renderDevice(await api.post("/api/maint/device/test", {
+      text: $("mDevText").value, line: $("mDevLine").value, atu: $("mDevAtu").value, hab: $("mDevHab").value,
+      youto: $("mDevYouto").value, st: $("mDevSt").value, tak: devDefaults?.tak || "",
+    }));
+  } catch (err) { toastError(err); if (err.field === "st") $("mDevSt").select(); }
+}
+$("mDevForm").addEventListener("submit", (e) => { e.preventDefault(); runDevice(); });
+$("mDevFromKensa").addEventListener("click", async () => {
+  try {
+    devDefaults = await api.get("/api/maint/device/defaults");
+    fillDevice(devDefaults);
+    toast(devDefaults.lot ? `検査中のロット ${devDefaults.lot} の値を入れました` : "検査中のロットがありません(この端末のラインだけ入れました)", devDefaults.lot ? "ok" : "warn");
+  } catch (err) { toastError(err); }
+});
 
 /* ---------- 比べる品質基準: 参照(/api/fs/list) ---------- */
 async function browse(path) {
@@ -155,7 +347,7 @@ async function browse(path) {
     for (const r of d.path ? [] : d.roots) items.push(li(r.name || r.path, "is-dir", () => browse(r.path)));
     for (const x of d.dirs) items.push(li(x.name, "is-dir", () => browse(x.path)));
     for (const x of d.files.filter((f) => f.name.toLowerCase().endsWith(".sqlite3"))) {
-      items.push(li(x.name, "is-file", () => { $("mAlt").value = x.path; $("mBrowser").hidden = true; }));
+      items.push(li(x.name, "is-file", () => { $("mAlt").value = x.path; $("mBrowser").hidden = true; renderAltChip(); }));
     }
     if (d.message) items.push(el("li", "muted maint__bmsg", d.message));
     $("mBList").replaceChildren(...items);
@@ -167,7 +359,7 @@ $("mBrowse").addEventListener("click", () => {
   browse(v.replace(/[\\/][^\\/]*\.sqlite3$/i, ""));
 });
 $("mBClose").addEventListener("click", () => { $("mBrowser").hidden = true; });
-$("mAltClear").addEventListener("click", () => { $("mAlt").value = ""; });
+$("mAltClear").addEventListener("click", () => { $("mAlt").value = ""; renderAltChip(); });
 $("mAltForm").addEventListener("submit", (e) => e.preventDefault());
 
 /* ---------- ソリ公差・設備仕様 ---------- */
@@ -286,6 +478,11 @@ function kMark(err) {
 
 function renderKariRows() {
   $("mKCount").textContent = `${K.rows.length} 件(この端末の手元DB)`;
+  $("mKariBadge").hidden = !K.rows.length;
+  $("mKariBadge").textContent = String(K.rows.length);
+  $("mKPick").replaceChildren(el("option", "", K.rows.length ? "(選ぶ)" : "(まだありません)"),
+    ...K.rows.map((r) => { const o = el("option", "", `${r.lot}  ${r.values["用途コード"] || ""}`); o.value = r.lot; return o; }));
+  $("mKPick").firstChild.value = "";
   if (!K.rows.length) {
     const tr = el("tr");
     const td = el("td", "muted", "まだありません。「新しく作る」か「本物のロットから写す」で作ってください。");
@@ -301,7 +498,7 @@ function renderKariRows() {
     const ops = el("td", "maint__kops");
     const btn = (text, cls, fn) => { const b = el("button", "btn btn--sm " + cls, text); b.type = "button"; b.addEventListener("click", fn); return b; };
     ops.append(
-      btn("引く", "btn--find", () => { $("mLot").value = r.lot; $("mOne").requestSubmit(); }),
+      btn("引く", "btn--find", () => goLot(r.lot)),
       btn("直す", "", () => kFill({ ...r, original: r.lot })),
       btn("写す", "", () => kFill({ ...r, lot: "", original: "", notes: [`仮ロット ${r.lot} の値を写しました。ロットNo を入れて保存してください`] })),
       btn("消す", "btn--danger", () => kDelete(r.lot)),
@@ -349,8 +546,10 @@ $("mKForm").addEventListener("submit", async (e) => {
 
 $("mKRun").addEventListener("click", async () => {
   try {
-    renderOne(await api.post("/api/maint/kari/dist", { ...kBody(), alt: altText() }));
-    $("mResult").scrollIntoView({ block: "nearest" });
+    const d = await api.post("/api/maint/kari/dist", { ...kBody(), alt: altText() });
+    showTab("dist");
+    setDMode("one");
+    renderOne(d);
   } catch (err) { kMark(err); toastError(err); }
 });
 
@@ -393,6 +592,9 @@ $("mPw").addEventListener("submit", async (e) => {
 
 async function init() {
   mountLockBadge($("mLock"));
+  let tab = "dist";
+  try { tab = new URLSearchParams(location.search).get("tab") || localStorage.getItem(TAB_KEY) || "dist"; } catch { /* 既定 */ }
+  showTab(tab);
   try {
     const d = await api.get("/api/maint/state");
     S = d;

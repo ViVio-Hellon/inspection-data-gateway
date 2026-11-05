@@ -621,7 +621,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     res = QpResult()
     msgs = res.messages
     if lot is None:
-        msgs.append(Message("日稲:SIKALOTNOW.accdbがありません_ReadCheck_DBQP", ERROR, source="QP:92"))
+        msgs.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QP:92"))
         return res
     hi = lot.fields
     if hi is None:
@@ -1156,7 +1156,7 @@ def dbdisplay_lateral(lot: Optional[LotData], target_text: str, *, quiet: bool =
     msgs = messages if messages is not None else []
     if lot is None:
         if not quiet:
-            msgs.append(Message("日稲:SIKALOTNOW.accdbがありません_ReadCheck_DBdisplay", ERROR, source="QDB:1510"))
+            msgs.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QDB:1510"))
         return 0.0
     if lot.fields is None:
         return 0.0

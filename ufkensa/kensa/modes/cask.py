@@ -652,10 +652,16 @@ def read_lot_row(lot: str) -> Optional[dict[str, Any]]:
 
     値は SQLite のまま(Null は None)。Access の文字の比較は大文字小文字を区別しないので NOCASE で比べる。
     """
+    from .. import lot_columns
     with datasource.open_ro(_db_path("SIKALOTNOW")) as conn:
-        cur = conn.execute('SELECT * FROM "仕掛" WHERE "ﾛｯﾄ番号" = ? COLLATE NOCASE AND "ｵｰﾀﾞｰ板丈" <> \'0\' '
+        # 2つ目のファイルは列名の書き方が違うことがある。実際の列名で引き、第1の名前で返す
+        actual = [r[1] for r in conn.execute('PRAGMA table_info("仕掛")')]
+        real = dict(zip(lot_columns.canonical(actual), actual))
+        lc = real.get("ﾛｯﾄ番号", "ﾛｯﾄ番号").replace('"', '""')
+        tc = real.get("ｵｰﾀﾞｰ板丈", "ｵｰﾀﾞｰ板丈").replace('"', '""')
+        cur = conn.execute(f'SELECT * FROM "仕掛" WHERE "{lc}" = ? COLLATE NOCASE AND "{tc}" <> \'0\' '
                            'ORDER BY rowid LIMIT 1', (lot,))
-        cols = [d[0] for d in cur.description]
+        cols = lot_columns.canonical([d[0] for d in cur.description])
         r = cur.fetchone()
     return dict(zip(cols, r)) if r else None
 

@@ -11,6 +11,7 @@ const HOST = () => document.getElementById("toasts");
 
 /** 種類ごとの表示時間(ms)。読む量に比例させる。0 は自動で消さない。 */
 const LIFETIME = { ok: 4000, info: 5000, warn: 8000, error: 0 };
+const ALIAS = { success: "ok", done: "ok", warning: "warn", danger: "error", ng: "error" };
 
 /**
  * @param {string} message 現場向けの日本語。文言はサーバが持つ
@@ -18,12 +19,34 @@ const LIFETIME = { ok: 4000, info: 5000, warn: 8000, error: 0 };
  * @param {{label:string, onClick:Function}} [action] 「元に戻す」など
  */
 export function toast(message, kind = "info", action = null) {
+  // 知らない種類(以前の "success" など)で消えずに溜まらないように、4種類へ寄せる。
+  // 自動で消さないのは error だけ
+  kind = ALIAS[kind] || (kind in LIFETIME ? kind : "info");
   const host = HOST();
   if (!host) return;
+  // 同じ知らせが続けて来たら(1回の操作で同じ DB を何度も見るときなど)、積み上げずに回数だけ足す
+  if (!action) {
+    const same = [...host.children].find((t) => t.dataset.msg === message && t.dataset.kind === kind);
+    if (same) {
+      const n = Number(same.dataset.count || 1) + 1;
+      same.dataset.count = String(n);
+      let c = same.querySelector(".toast__count");
+      if (!c) {
+        c = document.createElement("small");
+        c.className = "toast__count";
+        c.style.marginLeft = "6px";
+        same.querySelector(".toast__text").appendChild(c);
+      }
+      c.textContent = `(×${n})`;
+      return same;
+    }
+  }
 
   const el = document.createElement("div");
   el.className = `toast toast--${kind}`;
   el.setAttribute("role", kind === "error" ? "alert" : "status");
+  el.dataset.msg = message;
+  el.dataset.kind = kind;
 
   const text = document.createElement("span");
   text.className = "toast__text";
