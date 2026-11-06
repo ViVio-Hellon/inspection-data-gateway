@@ -107,7 +107,6 @@ class Session:
         self.print_ready = False
         self.report: dict[str, Any] = {}
         self.calibration_required = False
-        self.entry_gate = True          # 検査員・校正が済むまでロットを入れさせない(試験は外せる)
         self.visual_lists: checks.VisualLists = checks.VisualLists()   # Visual_Add(外観・山・不良要因の選択肢)
         self.orders: list[str] = []                                   # OrdNoCB の一覧(OrdNoOpen)
         self.order: str = ""                                          # OrdNoCB.Text
@@ -353,20 +352,6 @@ class Session:
         self._require_line()
         st, env, hooks = self.state, self._env(), self.hooks
         assert hooks is not None
-        if self.entry_gate:
-            # 検査員がこの直に登録されていない・校正が済んでいないときは、ロットを登録しない(検査に進ませない)
-            try:
-                no_worker = hooks.register_check(st)
-            except (datasource.DbMissing, IndexError, vbx.TypeMismatch):
-                no_worker = False
-            if no_worker:
-                env.sound(snd.KENSA_CALIBRATION, "entry_gate")
-                raise Stop("この直の検査員が登録されていません。先に検査員のカードを読んでください", level=WARN,
-                           source="entry_gate")
-            if not self._calibrated():
-                self.calibration_required = True
-                raise Stop("この直の校正が済んでいません。校正画面で校正してからロットを入れてください", level=WARN,
-                           source="entry_gate")
         if st.line_option != "Bala":
             ans = answers.get("lot_register")
             if ans is None:
