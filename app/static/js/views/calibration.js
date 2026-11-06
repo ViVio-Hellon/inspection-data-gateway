@@ -29,7 +29,18 @@ async function op(name, body = {}) {
   }
   if (res.view) render(res.view);
   if (res.stop) toast(res.stop.text, "error");
+  if (res.view && res.view.closed) backToKensa();
   return res;
+}
+
+/* 校正に合格(F1 = "end")したら、検査の判定をやり直して検査画面へ戻る(UF校正.INPG_Exit) */
+let leaving = false;
+async function backToKensa() {
+  if (leaving) return;
+  leaving = true;
+  try { await api.post("/api/kensa/calibrated", { answers: {} }); } catch (e) { /* 検査画面が開いていなければ何もしない */ }
+  toast("校正が終わりました。検査画面へ戻ります", "success");
+  setTimeout(() => { location.href = "/kensa"; }, 1200);
 }
 
 function renderStatus(v) {

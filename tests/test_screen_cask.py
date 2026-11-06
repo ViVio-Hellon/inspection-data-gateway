@@ -102,6 +102,21 @@ class CaskScreenTest(SessionBase):
         self.assertEqual(d["view"]["form"]["ken_no"], "T6X1913")                 # 仕掛から検査番号を読んだ
         self.assertEqual(d["view"]["form"]["count_st"], "3")                     # 製造板厚から検査回数を決めた
 
+    def test_ainput_from_cask_uses_cask_lot(self) -> None:
+        """キャスクの「Aインプットへ」: Aインプットは通常検査ではなく、キャスクのシートのロットで開く(Input:247-252)。"""
+        from ufkensa.kensa import ainput_session
+        self.post("open")
+        self.post("lot", lot="rx021t0")
+        a = ainput_session.AinputSession(self.s)
+        res = a.open("L2", "Cask")
+        self.assertIsNone(res.stop, res.stop and res.stop.text)
+        v = a.view()
+        self.assertEqual((v["source"], a.form.lot), ("Cask", "RX021T0"))
+        self.assertNotEqual(a.form.lot, self.s.state.lot)                    # 通常検査のロットではない
+        empty = ainput_session.AinputSession(self.s)
+        cask_session.reset_for_test(self.cask_session())                     # キャスクでロットを開いていない
+        self.assertIn("キャスク画面でロットを開いてから", empty.open("L2", "Cask").stop.text)
+
     def test_open_needs_worker(self) -> None:                # UF1.KYB_Click (UF1:3232-3234)
         cs = self.cask_session(uf1=lambda: KensaState())
         res = cs.open()

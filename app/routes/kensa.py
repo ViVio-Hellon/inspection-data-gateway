@@ -53,6 +53,7 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "print-reset": ("print_reset", ("answers",)),
     "resize": ("resize", ("answers",)),
     "namelist-ack": ("name_list_ack", ()),
+    "calibrated": ("after_calibration", ()),          # 校正に合格して検査へ戻る(UF校正.INPG_Exit)
 }
 
 #: 画像の種類 → (使用パスの項目, その下のフォルダ)。VC 画像は SaveLoad.VC_Picture(PackingPath\VC種類画像)。

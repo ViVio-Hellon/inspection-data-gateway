@@ -120,7 +120,10 @@ function renderForm(v) {
   }));
   $("formula").textContent = f.takasa_formula ? `高さ計算式: ${f.takasa_formula}` : "";
   $("ainputLink").hidden = !v.ainput;
-  if (v.ainput) $("ainputLink").textContent = `Aインプットへ(${v.ainput.kind} ${v.ainput.method})`;
+  if (v.ainput) {
+    $("ainputLink").textContent = `Aインプットへ(${v.ainput.kind} ${v.ainput.method})`;
+    $("ainputLink").href = `/ainput?from=${encodeURIComponent(v.ainput.kind)}&method=${encodeURIComponent(v.ainput.method)}`;
+  }
 }
 
 // --- 中央: シートの上部と表 ----------------------------------------------
