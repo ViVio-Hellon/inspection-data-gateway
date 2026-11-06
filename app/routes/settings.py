@@ -197,11 +197,16 @@ def save_path():
         if key != paths.LOT or db not in paths.LOT_DBS:
             return _err("bad_value", "2つ目の名前を決められるのは仕掛台帳の SIKALOT / SIKAHIKI / SIKAODR だけです")
         try:
-            paths.set_second_name(db, "" if body.get("reset") else str(body.get("second_name", "")))
+            if "first_name" in body:
+                paths.set_name(db, paths.FIRST, "" if body.get("reset") else str(body.get("first_name", "")))
+                done = f"第1の名前 {db} を {paths.first_name(db)}"
+            else:
+                paths.set_second_name(db, "" if body.get("reset") else str(body.get("second_name", "")))
+                done = f"第2の名前 {db} を {paths.second_name(db)}"
         except ValueError as e:
             return _err("bad_value", str(e))
-        log.info("仕掛台帳の2つ目の名前 %s を %s にしました", db, paths.second_name(db))
-        trace.event("settings.path", f"仕掛台帳の2つ目の名前 {db} を {paths.second_name(db)} にしました")
+        log.info("仕掛台帳の%sにしました", done)
+        trace.event("settings.path", f"仕掛台帳の{done}にしました")
         return jsonify(_state())
     if key == paths.LOT and slot not in paths.SLOT_LABELS:
         return _err("bad_value", "仕掛台帳は第1パスか第2パスかを選んでください")
@@ -269,6 +274,7 @@ def check_path():
     # 画面で入力中(保存前)の値。送られて来なければ保存した値を確かめる
     typed = {f: str(body[f]) for f in ("path", "first", "second") if body.get(f) is not None}
     names = body.get("second_names") if isinstance(body.get("second_names"), dict) else None
+    fnames = body.get("first_names") if isinstance(body.get("first_names"), dict) else None
     if key == LOG_KEY:
         log_text = typed.get("path", str(user_settings.get(config.KEY_LOG_DIR, "") or ""))
         target = logging_utils.resolve_log_dir(log_text.strip().strip('"'))
@@ -279,7 +285,7 @@ def check_path():
         results = [one]
     elif key in paths.BY_KEY:
         if key == paths.LOT:
-            results = [paths.check(key, s, text=typed.get(s), names=names) for s in paths.SLOT_LABELS]
+            results = [paths.check(key, s, text=typed.get(s), names=names, first_names=fnames) for s in paths.SLOT_LABELS]
         else:
             results = [paths.check(key, text=typed.get("path"))]
         if key == "access_master" and results[0]["path"] and typed.get("path", "").strip() in ("", paths.slot_value(key)):

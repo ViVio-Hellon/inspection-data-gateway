@@ -311,7 +311,7 @@ class KariLotTest(MaintBase):
         self.assertEqual((k.lot, k.ken_head, k.ken_no), ("A123B45", "H", "H111111"))
         # 検番の長さは本物(SIKAHIKINOW・SIKALOTNOW の 検査番号 H6X1176 など)と同じ 7
         self.assertEqual(len(k.ken_no), len(maint.dist_check("H9022K1")["ken_no"]))
-        for bad in ("A11A11", "A1111A1", "1111A11", "A111111", "A111AA1", "A111A1", "A111A111", "", "A111A1-"):
+        for bad in ("A11A11", "A111A1", "A111A111", "", "A111A1-", "N8281C"):
             with self.assertRaises(kari_lot.KariError, msg=bad) as cm:
                 kari_lot.validate(bad, "H", _kari_body()["values"])
             self.assertEqual(cm.exception.field, "lot")

@@ -246,6 +246,27 @@ class PerLotTest(_Saved):
         r = paths.check(paths.LOT, paths.FIRST, text=str(self.d2 / "無い"))
         self.assertEqual(r["message"], "見つかりません")
 
+    def test_first_with_other_name(self) -> None:
+        """第1パスにも名前を決められる(オンライン: 第1の別名のファイルでロット登録できる)。"""
+        screen = lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T")
+        self.use(paths.ONLINE)
+        base = lot.acc_reflec(screen, check_equipment=_ok)
+        for n in ("SIKALOT", "SIKAHIKI", "SIKAODR"):
+            (self.d2 / f"{n}.sqlite3").unlink()
+            (self.d1 / f"{n}.sqlite3").rename(self.d1 / f"{n}_1.sqlite3")
+        self.use(paths.ONLINE, first_names={"SIKALOTNOW": "SIKALOT_1", "SIKAHIKINOW": "SIKAHIKI_1",
+                                            "SIKAODRNOW": "SIKAODR_1"})
+        self.assertEqual(paths.first_name("SIKALOTNOW"), "SIKALOT_1.sqlite3")
+        r = lot.acc_reflec(screen, check_equipment=_ok)
+        self.assertEqual((r.status, r.db_path), ("ok", str(self.d1) + "/SIKALOT_1.sqlite3"))
+        self.assertEqual(r.past_hiki, base.past_hiki)
+        c = paths.check(paths.LOT, paths.FIRST)
+        self.assertIn("SIKALOT_1.sqlite3 あり", c["message"])
+        c = paths.check(paths.LOT, paths.FIRST, first_names={"SIKALOTNOW": ""})
+        self.assertIn("SIKALOT.sqlite3 なし", c["message"])
+        paths.set_name("SIKALOTNOW", paths.FIRST, "")
+        self.assertEqual(paths.first_name("SIKALOTNOW"), "SIKALOT.sqlite3")
+
     def test_offline_reads_only_second(self) -> None:
         self.use(paths.OFFLINE)
         self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
