@@ -921,7 +921,13 @@ class RealHooks(Hooks):
     def small_number_count(self, state: KensaState, th: int) -> None:
         def dri(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: float, haba: float, take: float) -> str:
             return self.db_return_item(state, nou, tori, youtc, zai, tyou, atu, haba, take)
-        ch = checks.small_number_count(th, to_uf1(state), self.get_lot_info(state, state.lot), dri)
+        rows = self.get_lot_info(state, state.lot)
+        # 2026.11.06 の VBA の直し: 引当の判定は JudgeLotAllocations(1 件でも要なら要)で行い、
+        # 検査不要かどうか(Right(Additional, 4))は判定の後の表示で取り直す
+        need_lateral: Optional[bool] = False
+        if rows is not None:
+            need_lateral = layout.judge_lot_allocations(state, [list(r) for r in rows], self).need_lateral
+        ch = checks.small_number_count(th, to_uf1(state), rows, dri, need_lateral=need_lateral)
         for k, v in ch.visible.items():
             put(state, k + ".Visible", v)
         for k, v in ch.enabled.items():
