@@ -103,6 +103,8 @@ def _open_read(s: Source) -> sqlite3.Connection:
 def _table_names(conn: sqlite3.Connection, s: Source) -> list[str]:
     names = [r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
+    # 「~TMPCLP…」は Access が作る作業用の表(貼り付け・クエリの残り)。取り込みで写っただけなので出さない
+    names = [n for n in names if not n.startswith(("~", "MSys"))]
     if s.tables:
         names = [n for n in names if n in s.tables]
     return names

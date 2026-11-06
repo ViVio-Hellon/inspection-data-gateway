@@ -145,6 +145,8 @@ async function loadPhotos() {
       const img = document.createElement("img");
       img.loading = "lazy"; img.alt = n;
       img.src = tokenUrl("/api/quality/photo?dir=" + encodeURIComponent(t.name) + "&name=" + encodeURIComponent(n));
+      img.title = "押すと元の大きさで開きます";
+      img.addEventListener("click", () => window.open(img.src, "_blank"));
       const cap = document.createElement("figcaption"); cap.textContent = n;
       fig.append(img, cap);
       return fig;

@@ -214,3 +214,18 @@
 /* 面の中身は縮めない(縮むと重なって見えた)。入りきらないぶんは面が縦に送る */
 .maint .tabpanel--scroll > * { flex-shrink: 0; }
 .maint__tvrow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+/* 歪公差: 判定の流れ */
+.maint__trace { margin-top: 12px; border: 1px solid var(--rule); border-radius: var(--radius-sm, 4px); padding: 10px 12px; }
+.maint__trh { margin: 0 0 8px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.maint__tsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.maint__tstep { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 6px; padding: 4px 8px; border-radius: 4px; font-size: var(--fs-sm); }
+.maint__tstep.is-ok .maint__mark { color: var(--ok, #1f7a4a); }
+.maint__tstep.is-ng { background: color-mix(in srgb, var(--ng, #b3261e) 14%, transparent); }
+.maint__tstep.is-ng .maint__mark, .maint__tstep.is-ng b { color: var(--ng, #b3261e); }
+.maint__tstep.is-info { color: var(--muted); }
+.maint__mark { font-weight: 700; text-align: center; }
+.maint__bar { height: 6px; background: var(--sunken, #e9eef0); border-radius: 3px; margin-top: 3px; max-width: 360px; }
+.maint__bar span { display: block; height: 100%; background: var(--accent, #1d5c86); border-radius: 3px; }
+.maint__tstep.is-ng .maint__bar span { background: var(--ng, #b3261e); }
+.maint__miss { margin: 4px 0 0; padding-left: 1.2em; font-size: var(--fs-xs); }

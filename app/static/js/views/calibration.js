@@ -49,6 +49,7 @@ function renderStatus(v) {
   const pairs = [["いま", s.now], ["最後の記録", [s.last_date, s.last_shift].filter(Boolean).join(" ") || "なし"]];
   const se = v.straight_edge;
   if (se) pairs.push(["ストレートエッヂ", `${se.lo} 〜 ${se.hi}` + (se.length ? `(長さ ${se.length} ±${se.tol})` : "")]);
+  for (const m of v.masters || []) pairs.push([`参照マスタ(${m.label})`, `${m.path}　表「${m.table}」`]);
   $("calStatusKv").replaceChildren(...pairs.flatMap(([k, x]) => {
     const dt = document.createElement("dt"); dt.textContent = k;
     const dd = document.createElement("dd"); dd.textContent = x;

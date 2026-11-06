@@ -25,6 +25,7 @@ class NavItem:
 
 
 # 画面の並び。上から、ふだん使う順(A案「計測コックピット」が中心。D6)
+# 名簿・日報(/meibo)はメニューに出さない。検査で名簿の不一致などが出たときだけ、その知らせから開く
 NAV: tuple[tuple[str, str, str, str], ...] = (
     ("kensa", "検査", "/kensa", "測る・判定・Min/Max・印刷"),
     ("cask", "キャスク", "/cask", "キャスク検査(最大700枚)"),
@@ -33,7 +34,6 @@ NAV: tuple[tuple[str, str, str, str], ...] = (
     ("calibration", "校正", "/calibration", "直尺の校正"),
     ("quality", "品質基準", "/quality", "このロットの品質基準を見る"),
     ("history", "履歴", "/history", "保存した検査を見る・再印刷"),
-    ("meibo", "名簿・日報", "/meibo", "検査員の不一致・梱包枚数・日報の修正"),
     ("import", "取り込み", "/import", "Access・xlsm からの取り込み"),
     ("maint", "保守", "/maint", "歪公差チェック・端末設定のセット(管理者)"),
     ("settings", "設定", "/settings", "この端末・使用パス・権限"),

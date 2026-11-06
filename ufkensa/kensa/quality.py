@@ -604,6 +604,12 @@ class QpResult:
     messages: list[Message] = field(default_factory=list)
     form: dict[str, Any] = field(default_factory=dict)
     uf1: dict[str, Any] = field(default_factory=dict)
+    #: どの表のどの条件で何行残ったか(保守 → 歪公差チェックで見せる)。{"step", "detail", "ok": True/False/None, "rows"?}
+    trace: list[dict[str, Any]] = field(default_factory=list)
+
+
+def _t(res: "QpResult", step: str, detail: str = "", ok: Optional[bool] = None, **extra: Any) -> None:
+    res.trace.append({"step": step, "detail": detail, "ok": ok, **extra})
 
 
 def _table(db: Union[str, Path], table: str) -> tuple[Optional[list[str]], Optional[list[list[str]]]]:
@@ -622,12 +628,15 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     msgs = res.messages
     if lot is None:
         msgs.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QP:92"))
+        _t(res, "仕掛(SIKALOT)を読む", "ファイルが読めません", False)
         return res
     hi = lot.fields
     if hi is None:
+        _t(res, "仕掛(SIKALOT)を読む", "列名が取れません", False)
         return res
     if lot.records is None:
         msgs.append(Message("SIKALOTNOWに該当ロットがありません_DBQP", ERROR, source="QP:162"))
+        _t(res, "仕掛(SIKALOT)を読む", f"ロット {lot_no} がありません", False)
         return res
     la = lot.records[0]
 
@@ -641,6 +650,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
             ken_a = result_c
         if result_c == "":
             msgs.append(Message("検査Noがないファイルです_DBQP", ERROR, source="QP:174"))
+            _t(res, "検番の頭", f"検番 {ken_no or '(空)'}・実績_設備ｺｰｽ から決められません", False)
             return res
 
     o_atu = csng(lv("ｵｰﾀﾞｰ板厚"))
@@ -675,8 +685,12 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
 
     db = _quality_db()
     table_name = "平坦度一覧QP追加"
+    _t(res, "ロットの値", f"検番の頭 {ken_a} / 用途 {youto} / 材質 {m_zai}({o_zai}) / 調質 {m_tyo}({o_tyo}) / "
+       f"オーダー {vbx.fmt(o_atu, '0.000')}×{vbx.fmt(o_haba, '0.0')}×{vbx.fmt(o_take, '0.0')} / "
+       f"歪等級 {vstr(flat_raw)} / 納入先 {delivery} / 取引先 {good}", None)
     fq = datasource.get_fields(db, table_name)
     if fq is None:
+        _t(res, "参照マスタ", f"{db} の表「{table_name}」が読めません(空)", False)
         return res
     C = {n: col_of(fq, n) for n in (
         "平坦度上限値参照元", "用途コード", "板厚下", "板厚上", "1m当たり平坦度上限", "納入先", "納入先コード",
@@ -686,7 +700,10 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     flt = "[検査番号の頭] LIKE '*" + ken_a + "*' OR [検査番号の頭] =  ''"
     aq = datasource.get_records(db, table_name, flt)
     if aq is None:
+        _t(res, "参照マスタ", f"{db} の表「{table_name}」に 検査番号の頭 が {ken_a} か空の行がありません", False)
         return res
+    _t(res, "参照マスタ", f"{db} の表「{table_name}」 検査番号の頭 {ken_a} か空 → {len(aq)} 行", True, master=str(db),
+       table=table_name)
     update_day = vstr(cell(aq[0], C["更新日"]))
     hit_haba = find_indices(fq, "H", o_haba)
     hit_take = find_indices(fq, "T", o_take)
@@ -694,6 +711,17 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
 
     matching: list[int] = []
     same = not quirks.reproduce("B71")
+    last = 13 if quirks.reproduce("B24") else 15
+    cond_names = ["", "用途コード", "製造材質", "オーダー材質", "製造調質", "オーダー調質", "板厚(下〜上)",
+                  "板幅(下〜上)", "板丈(下〜上)", "納入先", "納入先コード", "取引先", "取引先コード", "送り先",
+                  "送り先コード", "巾取数"]
+    cond_vals = ["", youto, m_zai, o_zai, m_tyo, o_tyo, vbx.fmt(o_atu, "0.000"), vbx.fmt(o_haba, "0.0"),
+                 vbx.fmt(o_take, "0.0"), delivery, nou_code, good, tori_code, okuri, okuri_code, yokowari]
+    cond_cols = [None, ("用途コード",), ("製造材質",), ("オーダー材質",), ("製造調質",), ("オーダー調質",),
+                 ("板厚下", "板厚上"), ("板幅下", "板幅上"), ("板丈下", "板丈上"), ("納入先",), ("納入先コード",),
+                 ("取引先",), ("取引先コード",), ("送り先",), ("送り先コード",), ("巾取数幅分割数のこと",)]
+    survive = [0] * 16
+    prev_rows: list[list[Any]] = [[] for _ in range(16)]
     for r in aq:
         c = [False] * 16
         c[1] = check_condition(r, C["用途コード"], youto)
@@ -712,11 +740,31 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
         c[13] = c[12] & check_condition(r, C["送り先"], okuri)
         c[14] = c[13] & check_condition(r, C["送り先コード"], okuri_code)
         c[15] = c[14] & check_size(r, C["巾取数幅分割数のこと"], yokowari)
-        last = 13 if quirks.reproduce("B24") else 15   # B24: 送り先コード・巾取数が最終判定に入っていない
+        # B24: 送り先コード・巾取数が最終判定に入っていない(last = 13)
+        for i in range(1, 16):
+            if c[i]:
+                survive[i] += 1
+            elif (i == 1 or c[i - 1]) and len(prev_rows[i]) < 5:
+                prev_rows[i].append(r)       # 前の条件までは合って、ここで外れた行(見本 5 行まで)
         if all(c[1:last + 1]):
             matching.append(clng(cell(r, C["管理番号"])))
 
+    before = len(aq)
+    stuck = False
+    for i in range(1, last + 1):
+        ok = survive[i] > 0
+        cols = cond_cols[i]
+        miss = []
+        if survive[i] < before:
+            for r in prev_rows[i]:
+                miss.append(f"管理番号{vstr(cell(r, C['管理番号']))}: " + "〜".join(vstr(cell(r, C[k])) or "(空)" for k in cols))
+        _t(res, f"条件 {i}: {cond_names[i]}", f"ロット {cond_vals[i] or '(空)'} → {before} 行中 {survive[i]} 行が合う",
+           ok if not stuck else None, rows=miss, kept=survive[i], before=before)
+        if not ok and not stuck:
+            stuck = True
+        before = survive[i]
     if not matching:
+        _t(res, "平坦度一覧QP追加の判定", "合う行がありません → 等級表(ソリ・中歪・耳歪)へ(SkipQP)", False)
         return _dbqp_skip_qp(res, db, flat, m_tyo, o_atu, o_haba, o_take, naka_sika, mimi_sika,
                              execution, uf1_visible, update_day, m_atu, m_haba, m_take, m_zai, youto,
                              grade, delivery, flat_text=vstr(flat_raw))
@@ -737,6 +785,8 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
             break
     if prio is not None:
         new_array[0] = prio
+    _t(res, "平坦度一覧QP追加の判定", f"合った管理番号 {', '.join(str(x) for x in matching)}"
+       + (f"。納入先などが書いてある {prio} を優先" if prio is not None else f"。先頭の {new_array[0]} を使う"), True)
 
     kousa: list[list[Any]] = [[None] * 9 for _ in new_array]
     for a, no in enumerate(new_array):
@@ -765,9 +815,12 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
 
     if flat != 3 and flat != 4:
         msgs.append(Message("歪等級が3,4以外です", ERROR, source="QP:450"))
+        _t(res, "歪等級", f"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ = {vstr(flat_raw) or '(空)'}(3・4 以外)なので止まります", False)
         return res
 
     k0 = kousa[0]
+    _t(res, "中歪・耳歪の欄", f"「{vstr(k0[K_NAKA]) or '(空)'}」 幅の列 {fq[hit_haba[0] - 1] if 0 < hit_haba[0] <= len(fq) else '?'}"
+       f" / 丈の列 {fq[hit_take[0] - 1] if 0 < hit_take[0] <= len(fq) else '?'}", None)
     goto = ""
     table_n = table_m = ""
     v4 = k0[K_NAKA]
@@ -863,10 +916,13 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
             k0[K_TA] = vbx.fmt(sori_array(rws, f, o_atu, st[0]), "0.0")
             if vbx.instr(vstr(k0[K_SOURCE]), search_s) == 0:
                 k0[K_SOURCE] = vstr(k0[K_SOURCE]) + " " + search_s
+            _t(res, "等級表", f"巾歪・丈歪が「フラットネス品質等級」なので 表「{sori}」から引きました", True)
     elif goto == "SkipEndA":
         k0[K_NAKA] = 0
         k0[K_MIMI] = 0
 
+    if table_n:
+        _t(res, "等級表", f"中 {table_n} / 耳 {table_m} を引きました", True)
     res.kousa = kousa
     return _dbqp_end(res, naka_sika, mimi_sika, execution, update_day, m_atu, m_haba, m_take,
                      m_zai, m_tyo, youto, grade, delivery)
@@ -881,6 +937,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
     k0 = kousa[0]
     res.kousa = kousa
     if m_tyo == "O":
+        _t(res, "SkipQP", "製造調質 O → 別表C 判定不要", True)
         k0[K_COMMENT] = "別表Cに記載のないO材_判定不要"
         k0[K_SOURCE] = "Q-S-QA-DIM-122_別表C"
         if execution == "" and uf1_visible:
@@ -888,6 +945,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
             res.uf1["DistortionFrame.Caption"] = "参照元:" + "Q-S-QA-DIM-122_別表C"
         return res
     if len(m_tyo) == 3 and vbx.left(m_tyo, 1) == "H" and vbx.right(m_tyo, 1) == "8":
+        _t(res, "SkipQP", f"製造調質 {m_tyo}(Hx8) → 別表D 判定不要", True)
         k0[K_COMMENT] = "別表Dに記載のないHx8材_判定不要"
         k0[K_SOURCE] = "Q-S-QA-DIM-122_別表D"
         if execution == "" and uf1_visible:
@@ -904,7 +962,9 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
     def sori() -> bool:
         f, rws = _table(db, table_name)
         if f is None or rws is None:
+            _t(res, "等級表", f"{db} の表「{table_name}」が読めません(空)", False)
             return False
+        _t(res, "等級表", f"ソリ(幅・丈)を 表「{table_name}」から引きました", True)
         sh = find_indices(f, "H", o_haba)
         st = find_indices(f, "T", o_take)
         k0[K_HA] = vbx.fmt(sori_array(rws, f, o_atu, sh[0]), "0.0")
@@ -916,6 +976,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
     if not quirks.reproduce("B74") and flat != 3 and flat != 4:
         # B74 を直す(2026-11-02 の回答で見直し): 等級が 3/4 以外なら、どの表の公差も当てはまらないので
         # ソリ(幅・丈)・中・耳は空にして知らせる。平坦度一覧QP追加の値は入れない
+        _t(res, "歪等級", f"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ = {flat_text or flat}(3・4 以外)なので公差は出しません", False)
         res.messages.append(Message(f"歪等級が3,4以外です(品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ={flat_text or flat})。"
                                     "歪公差は出しません。品証に確認してください", ERROR, source="QP:732"))
         k0[K_HA] = k0[K_TA] = k0[K_NAKA] = k0[K_MIMI] = ""
@@ -936,6 +997,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
                 res.kousa = None
                 return res
             k0[K_MIMI] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+            _t(res, "等級表", f"中 {table_n} / 耳 {table_m} を引きました(厚 6.0 以下)", True)
     else:
         k0[K_NAKA] = ""
         k0[K_MIMI] = ""
@@ -1021,11 +1083,15 @@ def dist_array(lot_no: str, ken_no: str, hiki: Optional[Sequence[tuple[str, str]
     """
     out = QpResult()
     if hiki is None:
+        _t(out, "引当(SIKAHIKI)", f"ロット {lot_no} の引当がありません(VBA は何もしない)", False)
         return out
     result = [h[0] for h in hiki]
 
     def run(nou: str, tori: str) -> QpResult:
         r = dbqp(lot_no, ken_no, nou, tori, lot, execution=execution, uf1_visible=uf1_visible)
+        if len(hiki) > 1 and not all_elements_same(result):
+            _t(out, f"引当 納入先 {nou}", "この納入先で引きます", None)
+        out.trace.extend(r.trace)
         out.messages.extend(r.messages)
         if r.form:
             out.form = r.form
