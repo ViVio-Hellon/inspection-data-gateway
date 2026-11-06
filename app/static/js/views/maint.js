@@ -23,6 +23,10 @@ const TAB_KEY = "maint.tab";
 let S = { labels: {}, keys: [] };
 let lastAll = null;
 
+// COM受信テストの状態(タブの初期表示より前に用意する。後ろで宣言すると「初期化前に参照」で落ちる)
+let comLast = 0, comTimer = null, comLoaded = false;
+const COM_FIELDS = [["baud", "mComBaud"], ["bytesize", "mComBits"], ["parity", "mComParity"], ["stopbits", "mComStop"], ["flow", "mComFlow"]];
+
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -645,15 +649,13 @@ init();
 
 
 /* ---------- COM受信テスト ---------- */
-let comLast = 0, comTimer = null, comLoaded = false;
-const COM_FIELDS = [["baud", "mComBaud"], ["bytesize", "mComBits"], ["parity", "mComParity"], ["stopbits", "mComStop"], ["flow", "mComFlow"]];
 function comFill(conf) {
   for (const [k, id] of COM_FIELDS) if (conf[k] !== undefined) $(id).value = String(conf[k]);
 }
 function comPorts(ports, want) {
   const sel = $("mComPort");
   sel.replaceChildren(...(ports.length ? ports : [{ port: "", device: "" }]).map((p) =>
-    new Option(p.port ? `${p.port}${p.usb ? "(USB の仮想COM)" : ""}` : "(見つかりません。右に入れてください)", p.port)));
+    new Option(p.port ? (p.label || `${p.port}${p.usb ? "(USB の仮想COM)" : ""}`) : "(見つかりません。右に入れてください)", p.port)));
   if (want && ports.some((p) => p.port === want)) sel.value = want;
   else if (want) $("mComPortText").value = want;
 }
@@ -707,4 +709,10 @@ $("mComForm").addEventListener("submit", async (e) => {
     comShow(await api.post("/api/maint/com/start", body));
   } catch (err) { toastError(err); }
 });
-$("mComStop2").addEventListener("click", async () => { try { comShow(await api.post("/api/maint/com/stop", {})); } catch (e) { toastError(e); } });
+$("mComStop2").addEventListener("click", async () => {
+  try {
+    comShow(await api.post("/api/maint/com/stop", {}));
+    const d = await api.get("/api/maint/com");
+    comPorts(d.ports, d.saved.port);           // 止めたあとも選んでいたポートを残す
+  } catch (e) { toastError(e); }
+});
