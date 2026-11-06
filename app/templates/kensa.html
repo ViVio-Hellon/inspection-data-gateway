@@ -14,6 +14,7 @@
   <div class="kbar" id="kbar">
     <div class="kbar__info" id="kbarInfo"></div>
     <div class="kbar__works" id="kbarWorks" aria-label="作業選択"></div>
+    <div class="kbar__ops" id="kbarOps"></div>
   </div>
   <div class="kbody">
   <!-- 左(選ぶまで): 検査員・ロット・公差 -->
@@ -59,7 +60,7 @@
         <div class="works" id="works"></div>
         <div class="inbox" id="yamaBox" hidden><label for="yamaSel">山数</label><select class="input" id="yamaSel"></select></div>
         <div class="btn-row"><button class="btn" type="button" id="atBtn" hidden></button><button class="btn" type="button" id="inspeBtn" hidden></button></div>
-        <label class="chk"><input type="checkbox" id="byousyaChk"> 強制描写</label>
+        <input type="checkbox" id="byousyaChk" hidden>
         <p class="muted" id="atCount"></p>
       </div>
     </section>
@@ -123,8 +124,10 @@
   <!-- 右(作業を選んだら): 次に測る・チェック・操作 -->
   <div class="kensa__col krail" id="krail">
     <div class="next" id="nextBox"><small>次に測る</small><b id="nextName">-</b><small id="nextHint"></small></div>
-    <!-- 測定器の伝送を受ける欄(見せない。フォーカスはここに戻す)。手入力は VBA で隠しモードだったので出さない -->
-    <input class="input meas-hidden" id="measIn" autocomplete="off" aria-label="測定値(伝送文字列)">
+    <!-- 測定器の伝送を受ける欄。測定器はキーボードと同じく「カーソルのある欄」に打つので、見える所に置き、
+         受け取れる状態か(カーソルがあるか)を色で出す。手入力(VBA の隠しモード)は出さない -->
+    <label class="recv" id="recvBox" for="measIn"><span class="recv__state" id="recvState">受信待ち</span>
+      <input class="input recv__in" id="measIn" autocomplete="off" aria-label="測定器から受け取る欄"></label>
     <div class="notice" id="nameListBox" hidden></div>
     <section class="card">
       <header><h3>印刷前チェック</h3></header>
@@ -153,7 +156,11 @@
         <ul class="log-lines" id="recent"></ul>
       </div>
     </section>
-    <section class="card" id="kAdd"><header><h3>検査員の追加・別のロット</h3></header><div class="pad" id="kAddPad"></div></section>
+    <dialog class="kpop" id="kAdd" aria-labelledby="kAddTitle">
+      <header><h3 id="kAddTitle">検査員の追加・ロットの読み直し</h3><button class="btn btn--sm" type="button" id="kAddClose">閉じる</button></header>
+      <div class="pad" id="kAddPad"></div>
+      <p class="muted kpop__hint">カード(13桁)・LotNo(7桁)は読み取ると自動で受け付けます。同じ LotNo を入れると読み直します。</p>
+    </dialog>
   </div>
   </div>
 </div>
