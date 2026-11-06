@@ -339,10 +339,13 @@ function renderLeft(v) {
   const ws = v.workers || [];
   $("workers").replaceChildren(...ws.map((w) => {
     const m = /^(T\d):\s*(.*?)(?:\(([^()]*)\))?$/.exec(w) || [null, "", w, ""];
-    return el("li", {}, el("span", { class: "reg-badge", textContent: m[1] ? `${m[1]} 登録済` : "登録済" }),
+    // この直に登録が無い(worker_needed)ときは、残っているのは前の直の登録
+    const stale = !!v.worker_needed;
+    return el("li", stale ? { class: "is-stale" } : {}, el("span", { class: "reg-badge" + (stale ? " reg-badge--stale" : ""),
+      textContent: stale ? `${m[1] || ""} 前の直の登録` : (m[1] ? `${m[1]} 登録済` : "登録済") }),
       el("b", { class: "reg-workers__name", textContent: m[2] }), m[3] ? el("small", { class: "muted", textContent: m[3] }) : null);
   }));
-  $("workerOk").hidden = !ws.length;
+  $("workerOk").hidden = !ws.length || !!v.worker_needed;
   $("workerOk").textContent = ws.length ? `登録済 ${ws.length}名` : "";
   $("cardIn").placeholder = ws.length ? "もう1人追加するとき(社員カード)" : "社員カード(13桁)";
 }

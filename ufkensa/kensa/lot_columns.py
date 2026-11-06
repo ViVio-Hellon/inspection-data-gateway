@@ -70,3 +70,39 @@ def missing(db: str, cols: list[str]) -> list[str]:
     """第1にあって、このファイル(列名を直したあと)に無い列(2つ目の「足りない列」)。"""
     have = set(canonical(list(cols)))
     return [c for c in COLUMNS.get(db, ()) if c not in have and c not in OPTIONAL]
+
+
+def which_db(cols: list[str]) -> str:
+    """列名からどの仕掛 DB か(第1の列と一番多く重なるもの)。どれとも重ならなければ ""。"""
+    have = set(canonical(list(cols)))
+    best, score = "", 0
+    for db, want in COLUMNS.items():
+        n = sum(1 for c in want if c in have)
+        if n > score:
+            best, score = db, n
+    return best if score >= 3 else ""
+
+
+#: 足りなかった列を知らせた DB(同じことを何度もログに書かない)
+_told: set[tuple[str, tuple[str, ...]]] = set()
+
+
+def pad(cols: list[str], rows: list) -> tuple[list[str], list]:
+    """2つ目のファイルに無い列を、空("")の列として後ろに足す(VBA で空のセルを読んだのと同じ扱い)。
+
+    無い列で「列 0 は範囲外」「要求された名前…がコレクションに見つかりません」で止まらないようにする。
+    足した列はログに 1 回だけ書く。
+    """
+    db = which_db(cols)
+    if not db:
+        return cols, rows
+    have = set(cols)
+    add = [c for c in COLUMNS[db] if c not in have]
+    if not add:
+        return cols, rows
+    key = (db, tuple(add))
+    if key not in _told:
+        _told.add(key)
+        from ..logging_utils import get_logger
+        get_logger(__name__).warning("%s のファイルに無い列 %d 個を空として読みます: %s", db, len(add), "、".join(add))
+    return list(cols) + add, [list(r) + [""] * len(add) for r in rows]

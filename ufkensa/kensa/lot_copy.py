@@ -41,7 +41,8 @@ def _stamp(p: Path) -> tuple[int, int, int]:
 
 
 def _uri(p: Path) -> str:
-    return "file:" + _urlquote(str(p.resolve()).replace("\\", "/"), safe="/:") + "?mode=ro"
+    from .datasource import sqlite_uri
+    return sqlite_uri(p.resolve(), "ro")
 
 
 def _snapshot(src: Path, dst: Path) -> bool:

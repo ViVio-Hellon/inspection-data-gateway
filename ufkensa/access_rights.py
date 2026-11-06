@@ -408,7 +408,8 @@ def read_rows(path: Path) -> list[dict[str, Any]]:
     """`アクセス権限` の行(読み取り専用で開く)。表が無い・読めないときは例外。"""
     if not path.is_file():
         raise FileNotFoundError(f"見つかりません: {path}")
-    uri = "file:" + str(path).replace("?", "%3F").replace("#", "%23") + "?mode=ro"
+    from .kensa.datasource import sqlite_uri
+    uri = sqlite_uri(path, "ro")
     conn = sqlite3.connect(uri, uri=True, timeout=3)
     try:
         conn.row_factory = sqlite3.Row
