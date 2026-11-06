@@ -124,3 +124,24 @@ class ProgressTest(unittest.TestCase):
         seen.clear()
         op(6, True)                                    # 前回より多い → 見積もりを超えたら % を出さない
         self.assertIsNone(seen[-1]["pct"])
+
+
+class HistoryRowTest(unittest.TestCase):
+    def test_selected_row_is_restored(self) -> None:
+        """同じ LOT を 2 回保存したとき、履歴で選んだ行を戻す(前は最初に一致した行だった)。"""
+        from ufkensa.kensa import records, store
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        st = store.LocalStore(tmp / "l.sqlite3")
+        self.addCleanup(st.close)
+        sh = st.ensure_sheet(store.HOZON)
+        for r, (when, atu) in enumerate((("2026/11/06 09:00～09:30", "1.000"), ("2026/11/06 10:00～10:30", "2.000")), 2):
+            sh.set(r, 1, when)
+            sh.set(r, 2, "A111A11")
+            sh.set(r, 3, atu)
+        first = records.history_load(st, "A111A11", "", mimi=False)
+        picked = records.history_load(st, "A111A11", "", mimi=False, row_no=3)
+        self.assertTrue(first.found and picked.found)
+        self.assertNotEqual(first.values, picked.values)
+        wrong = records.history_load(st, "B222B22", "", mimi=False, row_no=3)   # LOT が合わない行番号は使わない
+        self.assertFalse(wrong.found)

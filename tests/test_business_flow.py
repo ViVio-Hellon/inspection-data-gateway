@@ -146,7 +146,8 @@ class NormalFlowTest(FlowBase):
         self.s = session.get()
         self.op("start")
         self.assertEqual({k: c.value for k, c in self.s.state.cells.items() if c.value}, vals)
-        # 次に測る欄は開き直した直後は空(VBA も InpTag は保存しない)。次の値は自動で続きの欄に入る
+        # 開き直した直後も「次に測る」が続きの欄を指す(2026-11-06)。次の値はそこに入る
+        self.assertEqual(self.s.state.inp_tag, nxt)
         d = self.op("receive", text="DT10001+0000015.012M")
         self.assertIsNone(d.get("stop"), self.texts(d))
         self.assertEqual(self.s.state.cells[nxt].value, "15.012")
@@ -267,6 +268,22 @@ class SaveIntegrityTest(FlowBase):
         self.assertIn("一致しない", " ".join(self.texts(d)))
         self.assertEqual(d["view"]["name_list"], 1)
         self.assertEqual(self.store.sheet(store.HOZON).last_row(1), 1)     # 保存していない
+
+    def test_report_built_once_per_print(self) -> None:
+        """「印刷する？」に答えても帳票を作り直さない(前は 2 回作り、終了時刻が後の時刻に変わった)。"""
+        from unittest import mock
+        from ufkensa.kensa import report_model
+        self.ready()
+        self.op("work", work="厚板")
+        self.measure_all()
+        self.strain_visual_height()
+        self.op("minmax")
+        real = report_model.print_transfer
+        calls = []
+        with mock.patch.object(report_model, "print_transfer", lambda *a, **k: calls.append(1) or real(*a, **k)):
+            d = self.op("print-commit")
+        self.assertEqual(d["view"]["report"]["saved"]["mode"], "ADDNEW", self.texts(d))
+        self.assertEqual(len(calls), 1)
 
     def test_missing_measure_db_stops_before_save(self) -> None:
         self.ready()

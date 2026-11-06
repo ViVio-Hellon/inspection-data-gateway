@@ -1288,21 +1288,26 @@ def line_auto_selection(state: KensaState, n: str, hooks: Hooks, maru_no: int = 
     state.v("ZEB").value = "検入4山以上" if vbx.mid(state.line_name, 1, 2) == "丸徳" else "全数.三菱.5N"
     state.form_tag = "STOP"
     state.load = "off"
-    hooks.load_text(state, n)
-    if state.lot != "":
-        rows = hooks.get_lot_info(state, state.lot)
-        if rows is None:
-            if quirks.reproduce("B6"):
-                hooks.worker_load(state)
-                return
-        else:
-            alloc = judge_lot_allocations(state, rows, hooks)
-            if alloc.need_flat:
-                state.flatnes_text = "ﾌﾘｰｿﾘ要"
-    hooks.worker_load(state)
-    hooks.loop_judg(state)
-    hooks.hiz_loop_judg(state)
-    for p in FIVE + ("F",):
-        hooks.check_labels_by_category(state, p)
-    state.load = "on"
-    state.form_tag = ""
+    stuck = False                                   # B6 を再現するときだけ、VBA どおり止まったまま抜ける
+    try:
+        hooks.load_text(state, n)
+        if state.lot != "":
+            rows = hooks.get_lot_info(state, state.lot)
+            if rows is None:
+                if quirks.reproduce("B6"):
+                    hooks.worker_load(state)
+                    stuck = True
+                    return
+            else:
+                alloc = judge_lot_allocations(state, rows, hooks)
+                if alloc.need_flat:
+                    state.flatnes_text = "ﾌﾘｰｿﾘ要"
+        hooks.worker_load(state)
+        hooks.loop_judg(state)
+        hooks.hiz_loop_judg(state)
+        for p in FIVE + ("F",):
+            hooks.check_labels_by_category(state, p)
+    finally:
+        if not stuck:                               # 途中で止まっても旗は戻す(2026-11-06)
+            state.load = "on"
+            state.form_tag = ""

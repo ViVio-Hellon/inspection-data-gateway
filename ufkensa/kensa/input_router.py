@@ -610,13 +610,12 @@ def text_tag(state: KensaState, name: str, hooks: Hooks) -> str:
     黄色は判定色を上書きする(VBA どおり)。
     """
     state.auto = "off"
-    state.form_tag = "STOP"
-    hooks.loop_judg(state)
-    hooks.hiz_loop_judg(state)
-    c = state.ctl(name)
-    c.border, c.color = BORDER_RED, COLOR_YELLOW
-    _set_target(state, name)
-    state.form_tag = ""
+    with state.stopped():
+        hooks.loop_judg(state)
+        hooks.hiz_loop_judg(state)
+        c = state.ctl(name)
+        c.border, c.color = BORDER_RED, COLOR_YELLOW
+        _set_target(state, name)
     return name
 
 

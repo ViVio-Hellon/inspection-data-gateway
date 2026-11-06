@@ -983,8 +983,12 @@ def _ab_strain(cell: Value, state: dict[str, str]) -> tuple[str, str]:
 
 def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi: bool = False,
                  current: Optional[Mapping[str, str]] = None, lname: str = "",
-                 kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = "Now_A") -> FormRestore:
+                 kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = "Now_A",
+                 row_no: Optional[int] = None) -> FormRestore:
     """SaveLoad.HistoryLoad (SaveLoad:3409-4049)。保存用(耳用)の行を UF1 に戻す。
+
+    `row_no`(2026-11-06): 履歴画面で選んだ行の番号。渡せばその行を戻す(VBA は A 列・LOT で最初に一致した行を
+    戻すので、同じ LOT を 2 回保存した耳用や、同じ分に開始・終了した行では別の行が戻った)。
 
     - `temp_date` があれば A 列(検査開始終了)で、無ければ B 列(LOT)で最初に一致した行(耳用は常に LOT)
     - `current`: いまの UF1 の値(VBA は空のセルのとき前の値を残すので、それを引き継ぐ)
@@ -1002,7 +1006,10 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
     rows = sh.read_range(2, 1, lr, lc)
     key_col = 1 if (temp_date != "" and not mimi) else 2
     key = temp_date if (temp_date != "" and not mimi) else hist_lot
-    hit = next((r for r in rows if variant_eq(r[key_col - 1], key, vbx.STR)), None)
+    if row_no is not None and 2 <= row_no <= lr and variant_eq(rows[row_no - 2][1], hist_lot, vbx.STR):
+        hit = rows[row_no - 2]                       # 選んだ行(LOT が合うときだけ)
+    else:
+        hit = next((r for r in rows if variant_eq(r[key_col - 1], key, vbx.STR)), None)
     if hit is None:
         out.found = False
         out.values = {}
@@ -1387,7 +1394,8 @@ def kanri_view(store: LocalStore, list_index: int, cb1_list: Sequence[str], cb1_
 
 def kanri_load(store: LocalStore, cb1_text: str, new_cb_text: str, *, uf1_visible: bool, uf1_lot: str,
                mimi: bool = False, current: Optional[Mapping[str, str]] = None, lname: str = "",
-               kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = "Now_A") -> FormRestore:
+               kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = "Now_A",
+               row_no: Optional[int] = None) -> FormRestore:
     """UF管理.CommandButton1_Click (UF管理:620-635)。別の LOT を表示中なら止める。"""
     if uf1_visible and uf1_lot != "":
         out = FormRestore(found=False)
@@ -1395,7 +1403,7 @@ def kanri_load(store: LocalStore, cb1_text: str, new_cb_text: str, *, uf1_visibl
                                     source="UF管理:622"))
         return out
     res = history_load(store, cb1_text, new_cb_text, mimi=mimi, current=current, lname=lname,
-                       kanri_positions=kanri_positions, aorb=aorb)
+                       kanri_positions=kanri_positions, aorb=aorb, row_no=row_no)
     res.calls.append(("InitialSetting", "サイズ保存"))
     return res
 

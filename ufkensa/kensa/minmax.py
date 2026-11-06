@@ -265,16 +265,10 @@ def select_range(state: KensaState, which: str, idx: int) -> None:
 
 def run_min_max(state: KensaState, hooks: Hooks) -> list[Message]:
     """UF1.CommandButton4_Click (UF1:4459-4468)。再判定してから MinMax。Load を止めて最後に戻す。"""
-    state.load = "off"
-    hooks.loop_judg(state, vbx.val(state.picfm_tag))
-    hooks.hiz_loop_judg(state, vbx.val(state.picfm_tag))
-    try:
-        msgs = min_max(state, hooks)
-    except Stop:
-        state.load = "on"                                  # MinMax の Exit Sub の後も Load="on" に戻る
-        raise
-    state.load = "on"
-    return msgs
+    with state.paused():                                   # MinMax の Exit Sub・途中のエラーの後も Load="on" に戻る
+        hooks.loop_judg(state, vbx.val(state.picfm_tag))
+        hooks.hiz_loop_judg(state, vbx.val(state.picfm_tag))
+        return min_max(state, hooks)
 
 
 __all__ = ["backcolor_check", "backcolor_check_tb", "ngrange_check", "uf_array", "min_max", "under_bar",
