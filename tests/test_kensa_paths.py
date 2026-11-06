@@ -246,6 +246,20 @@ class PerLotTest(_Saved):
         r = paths.check(paths.LOT, paths.FIRST, text=str(self.d2 / "無い"))
         self.assertEqual(r["message"], "見つかりません")
 
+    def test_second_missing_columns_read_as_blank(self) -> None:
+        """2つ目のファイルに列が足りなくても(実機: SIKALOT_圧縮 は 46 列)止まらず、無い列は空として読む。"""
+        from ufkensa.kensa import quality, datasource as ds
+        screen = lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T")
+        self.use(paths.OFFLINE, second_names={"SIKALOTNOW": "LOT2"})
+        (self.d2 / "SIKALOT.sqlite3").rename(self.d2 / "LOT2.sqlite3")
+        self.rename_columns(self.d2 / "LOT2.sqlite3", {}, drop=("指示_中歪_高さ", "品質ｸﾞﾚｰﾄﾞ_直角度", "BOX設計_横割数(板)"))
+        r = lot.acc_reflec(screen, check_equipment=_ok)
+        self.assertEqual(r.status, "ok")
+        f = lot.arrbox("SIKALOTNOW", "板", "Fields").value
+        rec = lot.arrbox("SIKALOTNOW", "H2500K0", "Record").value
+        self.assertEqual(quality.cell(rec[0], quality.col_of(f, "指示_中歪_高さ")), "")
+        self.assertIn("ﾛｯﾄ番号", ds.get_fields(str(self.d2 / "LOT2.sqlite3"), "仕掛"))
+
     def test_first_with_other_name(self) -> None:
         """第1パスにも名前を決められる(オンライン: 第1の別名のファイルでロット登録できる)。"""
         screen = lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T")

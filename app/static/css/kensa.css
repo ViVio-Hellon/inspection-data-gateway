@@ -106,3 +106,7 @@
 .reg-empty { margin: 0 0 8px; color: var(--state-error); font-weight: 700; }
 .inbox--sub .input { min-height: 30px; padding: 3px 8px; font-size: var(--fs-sm); }
 .inbox--sub label { font-size: var(--fs-xs); }
+
+/* 前の直の登録(この直には検査員がいない) */
+.reg-badge--stale { background: var(--sunken, #e9eef0) !important; color: var(--muted) !important; }
+li.is-stale { opacity: .6; }

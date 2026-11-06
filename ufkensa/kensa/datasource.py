@@ -44,6 +44,15 @@ def resolve(db: Union[str, Path]) -> Path:
     return paths.to_local(db)
 
 
+def sqlite_uri(path: Union[str, Path], mode: str = "ro") -> str:
+    """SQLite の URI。共有フォルダ(\\\\server\\share)は file:////server/share にする
+    (file://server は「authority」と読まれて「invalid uri authority」で開けない)。"""
+    text = str(path).replace("\\", "/")
+    if text.startswith("//"):
+        text = "//" + text
+    return "file:" + _urlquote(text, safe="/:") + "?mode=" + mode
+
+
 def open_ro(db: Union[str, Path]) -> sqlite3.Connection:
     p = resolve(db)
     if not p.is_file():
@@ -55,7 +64,7 @@ def open_ro(db: Union[str, Path]) -> sqlite3.Connection:
         if c is None:
             raise DbMissing(f"DB ファイルを手元へ写せないので読みません: {p}")
         p = c
-    uri = "file:" + _urlquote(str(p.resolve()).replace("\\", "/"), safe="/:") + "?mode=ro"
+    uri = sqlite_uri(p.resolve(), "ro")
     try:
         conn = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_MS / 1000)
     except sqlite3.Error as e:
@@ -127,6 +136,7 @@ def _read(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]
     if lot:
         from . import lot_columns
         cols = lot_columns.canonical(cols)
+        cols, rows = lot_columns.pad(cols, rows)
     return cols, rows
 
 

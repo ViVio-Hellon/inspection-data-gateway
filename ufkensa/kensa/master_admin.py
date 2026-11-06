@@ -309,7 +309,7 @@ def _same_row(now: dict[str, Any], seen: dict[str, Any]) -> bool:
 
 def _connect_rw(path: Path) -> sqlite3.Connection:
     """書くために開く。**無いファイルは作らない**(mode=rw)。BEGIN は自分で出す(isolation_level=None)。"""
-    uri = "file:" + _urlquote(str(path.resolve()).replace("\\", "/"), safe="/:") + "?mode=rw"
+    uri = datasource.sqlite_uri(path.resolve(), "rw")
     try:
         conn = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None)
     except sqlite3.Error as e:

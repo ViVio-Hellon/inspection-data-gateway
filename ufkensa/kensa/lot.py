@@ -556,7 +556,11 @@ def _select_lot(file_path: str, cb_text: str) -> tuple[list[str], Optional[tuple
                'ORDER BY rowid LIMIT 1')
         cur = conn.execute(sql, (cb_text, "0"))
         cols = lot_columns.canonical([d[0] for d in cur.description])
-        return cols, cur.fetchone()
+        row = cur.fetchone()
+        if row is None:
+            return cols, None
+        cols, rows = lot_columns.pad(cols, [row])
+        return cols, tuple(rows[0])
 
 
 def acc_reflec_path(dbflag: str) -> str:
