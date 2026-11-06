@@ -21,6 +21,8 @@ VBA では UF1 のコントロール(Label の Caption・BackColor・Visible・T
 """
 from __future__ import annotations
 
+import contextlib
+
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator, Optional
 
@@ -364,6 +366,27 @@ class KensaState:
             return True
         except KeyError:
             return False
+
+    # -- 処理中の旗(2026-11-06 の見直し) ---------------------------------
+    # VBA は Load.Caption = "off" / FormTag = "STOP" を手で立てて手で戻していた。途中で止まると戻らず、
+    # 測定値の受け付け・判定の音・ロットの読み込みが黙って止まったままになる。with で囲めば必ず戻る
+    @contextlib.contextmanager
+    def paused(self):
+        """`Load = "off"` の間(イベントを止める)。抜けたら必ず "on"(VBA も最後は "on" に戻す)。"""
+        self.load = "off"
+        try:
+            yield self
+        finally:
+            self.load = "on"
+
+    @contextlib.contextmanager
+    def stopped(self):
+        """`FormTag = "STOP"` の間(描画・音を止める)。抜けたら必ず ""。"""
+        self.form_tag = "STOP"
+        try:
+            yield self
+        finally:
+            self.form_tag = ""
 
     def v(self, name: str) -> Ctl:
         """表示だけのコントロール(view)。無ければ既定値で作る。"""

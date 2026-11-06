@@ -229,6 +229,7 @@ class Session:
             if not keep_ready:
                 # 印刷前チェックの後に値・ロットが変わったら、チェックはやり直し(印刷確定がもう一度チェックする)
                 self.print_ready = False
+                self._print_pending = None           # 確認の後に何か変わったら、帳票は作り直す
             if env.confi:
                 self._open_confi(env.confi[-1])
             if env.reason is not None:
@@ -327,6 +328,12 @@ class Session:
             st.form_tag = ""
             st.load = "on"
             self.started = True
+            if st.lot != "" and st.work != "" and st.inp_tag == "" and st.auto == "on":
+                # 開き直した直後も「次に測る」を出す(VBA は InpTag を保存しないので空だった。値は続きの欄に入っていた)
+                try:
+                    input_router.next_blank(st, vbx.left(st.ken_no_caption, 1))
+                except Exception:                                       # noqa: BLE001 - 表示だけなので止めない
+                    log.warning("次に測る欄を出せませんでした", exc_info=True)
             self._prune_workers()                 # 持ち越しの検査が無ければ、前の直の検査員は残さない
             self._activate_name_check()
 
@@ -769,11 +776,10 @@ class Session:
             r = records.reflect_strain(self.store, wiring.to_snapshot(st, self.store), vbx.right(st.strain_face, 1))
             if r is not None:
                 wiring.apply_restore(st, r, hooks)
-            st.form_tag = "STOP"
-            for c in list(st.strain_z.values()) + list(st.strain_g.values()):   # SetSpecificTextBoxesBackColorToWhite
-                c.color = grid.COLOR_WHITE
-            hooks.hiz_loop_judg(st, 0)
-            st.form_tag = ""
+            with st.stopped():
+                for c in list(st.strain_z.values()) + list(st.strain_g.values()):   # SetSpecificTextBoxesBackColorToWhite
+                    c.color = grid.COLOR_WHITE
+                hooks.hiz_loop_judg(st, 0)
             return
         if name == "DBflag":
             st.dbflag = value
@@ -935,9 +941,8 @@ class Session:
             p = act.split_z_tag
             for n in (f"CB{p}1", f"CB{p}2", f"CB{p}3", f"CB{p}4", "G" + p, "Z" + p):
                 st.ctl(n).tag = ""
-        st.load = "off"
-        self.hooks.load_text(st, "")
-        st.load = "on"
+        with st.paused():
+            self.hooks.load_text(st, "")
 
     def _confi_reason(self, reasons: list[str], other: str) -> None:
         """UFConfi.CommandButton2_Click(理由選択の決定)。"""
@@ -1082,12 +1087,9 @@ class Session:
         st, hooks = self.state, self.hooks
         if not self.started or hooks is None:
             return None
-        st.load = "off"
-        try:
+        with st.paused():
             hooks.loop_judg(st)
             hooks.hiz_loop_judg(st)
-        finally:
-            st.load = "on"
         self.calibration_required = False
         return None
 
@@ -1561,18 +1563,25 @@ class Session:
         shifts = env.shift_times()
         penv = report_model.PrintEnv(now=env.now(), lateral_check=checks.lateralbow_check(wiring.to_uf1(st)),
                                      machine_transfer=self._machine_transfer, start1=shifts.start1, end3=shifts.end3)
-        with trace.timed("db.save", "帳票を作る(印刷転送)", expected=(Stop,), path=str(self.store.path),
-                         table=line_sheet(report_model.PRINT_SHEET, lname)) as info:
-            res = report_model.print_transfer(self.store, snap, penv)
-            info["cells"] = len(res.report.cells) if res.report else 0
-        st.v("EndTime").value = res.end_time or st.v("EndTime").value
-        env.messages.extend(res.messages)
+        ans = answers.get("print")
+        pending = getattr(self, "_print_pending", None)
+        if ans is not None and pending is not None and pending[0] == st.lot:
+            # 「印刷する？」に答えて来た: 確認の前に作った帳票をそのまま使う(作り直すと終了時刻が後の時刻に変わる)
+            res = pending[1]
+            self._print_pending = None
+        else:
+            with trace.timed("db.save", "帳票を作る(印刷転送)", expected=(Stop,), path=str(self.store.path),
+                             table=line_sheet(report_model.PRINT_SHEET, lname)) as info:
+                res = report_model.print_transfer(self.store, snap, penv)
+                info["cells"] = len(res.report.cells) if res.report else 0
+            st.v("EndTime").value = res.end_time or st.v("EndTime").value
+            env.messages.extend(res.messages)
         if res.stopped:
             env.messages.append(Message("ｷｬﾝｾﾙ処理", INFO, source="UF1:3740"))
             self.print_ready = False
             return None
-        ans = answers.get("print")
         if ans is None:
+            self._print_pending = (st.lot, res)
             env.sound(snd.KENSA_PRINT, "UF1:3763")
             return Question("print", "印刷する？", source="UF1:3764")
         if not ans:
@@ -1698,7 +1707,7 @@ class Session:
         sheet = self.store.sheet(MIMI if mimi else HOZON)
         lot, when = lots[row - 2], records.cell_text(sheet.get(row, 1))
         r = records.kanri_load(self.store, lot, when, uf1_visible=True, uf1_lot=st.lot, mimi=mimi,
-                               lname=st.lname, aorb=st.strain_face)
+                               lname=st.lname, aorb=st.strain_face, row_no=row)
         hooks.env.messages.extend(r.messages)
         if not r.found:
             raise Stop(r.messages[-1].text if r.messages else "該当する履歴がありません", source="UF管理:622")
