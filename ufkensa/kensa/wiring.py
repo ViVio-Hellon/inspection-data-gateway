@@ -789,7 +789,8 @@ class RealHooks(Hooks):
         sheet = line_sheet(records.WORK_SAVE, state.lname)
         trace.note_used(self.store.path, "save")
         with trace.timed("db.save", "作業中保存(Posting)", expected=(Stop,), path=str(self.store.path),
-                         table=sheet) as info:
+                         table=sheet) as info, self.store.transaction():
+            # 消してから約 300 セル書く。全部書けたときだけ確定(途中で落ちたら前の作業保存のまま)
             sh = records.posting(self.store, snap, need_right)
             info["cells"] = len(sh.used())
 

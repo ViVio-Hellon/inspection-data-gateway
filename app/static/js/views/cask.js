@@ -11,6 +11,7 @@ import { toast, toastError } from "../toast.js";
 import { playMessage } from "../sound.js";
 import { confirmBox } from "../askbox.js";
 import { packDialog } from "./pack_dialog.js";
+import { startReceiver } from "../recv.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -247,7 +248,7 @@ function remember(line) {
 
 function onEnter(id, fn) {
   $(id).addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
+    if (e.key !== "Enter" && !(e.key === "Tab" && $(id).value)) return;   // Enter でも Tab でも受ける
     e.preventDefault();
     const val = $(id).value;
     $(id).value = "";
@@ -298,3 +299,6 @@ function init() {
 }
 
 init();
+
+// 受信機から直接受け取る(保守で「検査画面で受け取る」にした受信機)。この画面が開いている間だけ、この画面に入る
+startReceiver("cask", (text) => op("receive", { text }));

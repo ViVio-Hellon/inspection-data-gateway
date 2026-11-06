@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import contextlib
 import threading
 from pathlib import Path
 from typing import Any, Iterable, Optional, Sequence, Union
@@ -187,12 +188,45 @@ class LocalStore:
         self.path = Path(path) if path else default_path()
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self._depth = 0
         self.conn = sqlite3.connect(str(self.path), timeout=BUSY_TIMEOUT_MS / 1000, check_same_thread=False)
         self.conn.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
         self._create()
 
     def close(self) -> None:
         self.conn.close()
+
+    # -- 書き込みのまとまり(2026-11-06 の見直し) ------------------------------
+    # 前は 1 セル書くたびに確定(commit)していたので、作業中保存(約 300 セル)の途中で落ちると、
+    # 消した後の書きかけしか残らず、測った値が消えた。transaction() の中の書き込みは、最後にまとめて確定し、
+    # 途中で例外が出たら全部取り消す(前の状態のまま残る)。
+    @contextlib.contextmanager
+    def _write(self):
+        with self._lock:
+            try:
+                yield
+            except BaseException:
+                if self._depth == 0:
+                    self.conn.rollback()
+                raise
+            if self._depth == 0:
+                self.conn.commit()
+
+    @contextlib.contextmanager
+    def transaction(self):
+        """この中の書き込みを 1 つにまとめる(入れ子にしてよい。一番外で確定・取り消し)。"""
+        with self._lock:
+            self._depth += 1
+            try:
+                yield self
+            except BaseException:
+                self._depth -= 1
+                if self._depth == 0:
+                    self.conn.rollback()
+                raise
+            self._depth -= 1
+            if self._depth == 0:
+                self.conn.commit()
 
     def __enter__(self) -> "LocalStore":
         return self
@@ -225,7 +259,7 @@ class LocalStore:
 
     def add_sheet(self, name: str) -> "Sheet":
         """VBA `AddWS(name)`。同じ名前があれば**消してから**作り直す(中身は空)。"""
-        with self._lock, self.conn:
+        with self._write():
             if name in ROW_TABLES:
                 self.conn.execute(f"DELETE FROM {_q(name)}")
             else:
@@ -240,7 +274,7 @@ class LocalStore:
         return self.sheet(name)
 
     def delete_sheet(self, name: str) -> None:
-        with self._lock, self.conn:
+        with self._write():
             if name in ROW_TABLES:
                 self.conn.execute(f"DELETE FROM {_q(name)}")
             else:
@@ -252,7 +286,7 @@ class LocalStore:
 
     # -- 帳票(印刷用_<L> の出来上がり。再印刷 PrintOnly で使う) --------
     def save_report(self, name: str, content_json: str) -> None:
-        with self._lock, self.conn:
+        with self._write():
             self.conn.execute('INSERT OR REPLACE INTO "帳票" ("シート", "内容") VALUES (?, ?)', (name, content_json))
 
     def load_report(self, name: str) -> Optional[str]:
@@ -333,7 +367,7 @@ class GridSheet(Sheet):
         return row[0] if row else None
 
     def set(self, r: int, c: int, v: Value) -> None:
-        with self.store._lock, self.conn:
+        with self.store._write():
             if not self.store.exists(self.name):
                 self.conn.execute('INSERT OR IGNORE INTO "シート" ("名前", "順") VALUES (?, 0)', (self.name,))
             if v is None:
@@ -353,7 +387,7 @@ class GridSheet(Sheet):
 
     def set_color(self, r: int, c: int, rgb: Optional[int]) -> None:
         """背景色(VBA `Interior.Color`。None = 塗りなし)。"""
-        with self.store._lock, self.conn:
+        with self.store._write():
             self.conn.execute('INSERT INTO "セル" ("シート", "行", "列", "値", "色") VALUES (?, ?, ?, NULL, ?) '
                               'ON CONFLICT ("シート", "行", "列") DO UPDATE SET "色" = excluded."色"',
                               (self.name, r, c, rgb))
@@ -374,13 +408,13 @@ class GridSheet(Sheet):
 
     def delete_row(self, r: int) -> None:
         """`Rows(r).Delete`(下の行を 1 つ上げる)。"""
-        with self.store._lock, self.conn:
+        with self.store._write():
             self.conn.execute('DELETE FROM "セル" WHERE "シート" = ? AND "行" = ?', (self.name, r))
             self.conn.execute('UPDATE "セル" SET "行" = -("行" - 1) WHERE "シート" = ? AND "行" > ?', (self.name, r))
             self.conn.execute('UPDATE "セル" SET "行" = -"行" WHERE "シート" = ? AND "行" < 0', (self.name,))
 
     def clear(self) -> None:
-        with self.store._lock, self.conn:
+        with self.store._write():
             self.conn.execute('DELETE FROM "セル" WHERE "シート" = ?', (self.name,))
 
 
@@ -412,7 +446,7 @@ class RowSheet(Sheet):
             log.warning("%s の %s%d(見出しより右)への書き込みを捨てました: %r", self.name, col_letter(c), r, v)
             return
         col = self._col(c)
-        with self.store._lock, self.conn:
+        with self.store._write():
             self.conn.execute(f'INSERT OR IGNORE INTO {_q(self.name)} ("行") VALUES (?)', (r,))
             self.conn.execute(f'UPDATE {_q(self.name)} SET {_q(col)} = ? WHERE "行" = ?', (v, r))
 
@@ -452,13 +486,13 @@ class RowSheet(Sheet):
     def delete_row(self, r: int) -> None:
         if r < 2:
             raise ValueError("見出しの行は消せません")
-        with self.store._lock, self.conn:
+        with self.store._write():
             self.conn.execute(f'DELETE FROM {_q(self.name)} WHERE "行" = ?', (r,))
             self.conn.execute(f'UPDATE {_q(self.name)} SET "行" = -("行" - 1) WHERE "行" > ?', (r,))
             self.conn.execute(f'UPDATE {_q(self.name)} SET "行" = -"行" WHERE "行" < 0')
 
     def clear(self) -> None:
-        with self.store._lock, self.conn:
+        with self.store._write():
             self.conn.execute(f"DELETE FROM {_q(self.name)}")
 
     def append(self, values: Sequence[Any], kind: str = "O") -> int:

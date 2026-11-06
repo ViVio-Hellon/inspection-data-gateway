@@ -94,12 +94,13 @@ class CaskScreenTest(SessionBase):
         self.assertEqual(st["view"]["total_rows"], 700)
         self.assertEqual([c["label"] for c in st["view"]["columns"]][:4], ["厚1", "厚2", "厚3", "厚4"])
 
-    def test_lot_u4_default(self) -> None:                   # U4: 部品の既定(全角の欄名で読めない)のまま
+    def test_lot_u4_default(self) -> None:                   # U4: 既定は読める(2026-11-06。全角の欄名でも半角の欄を読む)
         self.post("open")
         d = self.post("lot", lot="rx021t0")
         self.assertEqual(d["view"]["form"]["lot_box"], "RX021T0")
-        self.assertIn("DB読み込みエラー:\r\n" + caskmod.FIELD_MISSING, self.texts(d))
-        self.assertEqual((d["view"]["next"]["row"], d["view"]["next"]["col"]), (7, 2))
+        self.assertNotIn("DB読み込みエラー:\r\n" + caskmod.FIELD_MISSING, self.texts(d))
+        self.assertEqual(d["view"]["form"]["ken_no"], "T6X1913")                 # 仕掛から検査番号を読んだ
+        self.assertEqual(d["view"]["form"]["count_st"], "3")                     # 製造板厚から検査回数を決めた
 
     def test_open_needs_worker(self) -> None:                # UF1.KYB_Click (UF1:3232-3234)
         cs = self.cask_session(uf1=lambda: KensaState())

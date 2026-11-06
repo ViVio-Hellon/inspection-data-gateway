@@ -135,12 +135,38 @@ _recv_results: "_deque[dict]" = _deque(maxlen=50)
 _recv_seq = 0
 
 
+#: いま開いている画面(受信の結果を取りに来た画面 → 最後に来た時刻)。2026-11-06 の見直し:
+#: 前は届いた値をいつも通常検査に入れていたので、校正・Aインプット・キャスク・全ヵ所を開いて測った値が、
+#: 見えないまま通常検査の欄に入るおそれがあった。いま開いている(最後に取りに来た)画面にだけ渡す
+_recv_seen: dict[str, float] = {}
+RECV_ALIVE_SEC = 3.0
+_recv_dropped = 0
+
+
+def _recv_target() -> str:
+    import time as _t
+    now = _t.monotonic()
+    alive = {k: v for k, v in _recv_seen.items() if now - v <= RECV_ALIVE_SEC}
+    return max(alive, key=alive.get) if alive else ""
+
+
 def _to_kensa(text: str) -> None:
-    global _recv_seq
-    s = session.get()
-    res = s.receive(text)
-    out = res.to_dict()
-    out["text"] = text
+    """受信機から届いた 1 件。通常検査が開いていればサーバで受け取る(カーソルに関係なく入る)。
+    ほかの画面なら、その画面が取りに来たときに渡す(画面の「受け取る欄」に入れたのと同じ処理になる)。
+    どの画面も開いていなければ捨てて記録する(見えないまま検査に入れない)。"""
+    global _recv_seq, _recv_dropped
+    with _recv_lock:
+        target = _recv_target()
+    if target == "":
+        _recv_dropped += 1
+        from ufkensa.logging_utils import get_logger
+        get_logger(__name__).warning("受信機の値を受け取る画面が開いていないので捨てました: %r", text)
+        return
+    if target == "kensa":
+        out = session.get().receive(text).to_dict()
+    else:
+        out = {}
+    out["text"], out["screen"] = text, target
     with _recv_lock:
         _recv_seq += 1
         out["seq"] = _recv_seq
@@ -177,10 +203,16 @@ def _recv_state(errors=None) -> dict:
 
 @bp.get("/api/kensa/recv")
 def recv_poll():
-    from ufkensa.kensa import comport
+    """画面が受信の結果を取りに来る(screen = kensa / calibration / ainput / cask / zenkasho)。来た画面を「開いている」とする。"""
+    import time as _t
     since = int(request.args.get("since", "0") or 0)
+    screen = str(request.args.get("screen", "kensa") or "kensa")
     with _recv_lock:
-        items = [r for r in _recv_results if r["seq"] > since]
+        if request.args.get("visible", "1") != "0":
+            _recv_seen[screen] = _t.monotonic()
+        else:
+            _recv_seen.pop(screen, None)
+        items = [r for r in _recv_results if r["seq"] > since and r.get("screen", "kensa") == screen]
         last = _recv_seq
     st = _recv_state()
     return jsonify({"results": items, "last": last, "running": st["on"], "port": st["port"], "error": st["error"]})
