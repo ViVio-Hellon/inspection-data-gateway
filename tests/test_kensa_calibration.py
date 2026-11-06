@@ -7,6 +7,7 @@ from datetime import datetime
 from ufkensa.kensa import calibration as cal
 from ufkensa.kensa import flow, quirks
 from ufkensa.kensa.workers import CellWrite, ShiftTimes, WorkerRegistry
+from tests._isolation import vba_reproduce
 
 SHIFTS = ShiftTimes("07:00", "15:00", "15:00", "22:50", "22:50", "07:00", "08:15", "17:00")
 
@@ -245,6 +246,7 @@ class Hinsho1000Test(unittest.TestCase):
         self.assertEqual(st.mode, cal.GREEN)
 
 
+@vba_reproduce
 class RankTest(unittest.TestCase):
     def test_rank_only_red_rows(self) -> None:
         c = kiroku(("2026.09.30", None, 2053.9), ("2026.10.01", None, 2053.9), ("2026.10.02", None, "2052.5"),

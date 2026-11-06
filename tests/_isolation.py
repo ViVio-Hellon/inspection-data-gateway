@@ -26,6 +26,7 @@ unittest はテストを**全部取り込んでから**走らせる。書き込�
 from __future__ import annotations
 
 import atexit
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -85,8 +86,7 @@ def ensure_isolated() -> list[str]:
         distribution.DIR = _escape("dist") / "配布設定"
         moved.append("distribution.DIR")
 
-    # 不具合の扱い(config/quirks.json): 本番は「直す」を選んだものがあるが、試験は既定(VBA どおり再現)で書いてある。
-    # 「直す」側は各試験が quirks.set_for_test で当てる
+    # 不具合の扱い(config/quirks.json): 試験も本番と同じ扱いで動かす(下)。
     # 試験は書いた直後にファイル・DB を読むので、まとめ書き(trace)と共有フォルダの確かめの間引き(lot_copy)は切る。
     # 本番の動き(まとめ書き・間引き)は tests/test_speed.py で確かめる
     from ufkensa import trace as _trace
@@ -97,6 +97,11 @@ def ensure_isolated() -> list[str]:
     if _under(quirks.QUIRKS_FILE, repo):
         quirks.QUIRKS_FILE = _escape("quirks") / "quirks.json"
         moved.append("quirks.QUIRKS_FILE")
+        # 2026-11-06: 試験の既定は**本番と同じ不具合の扱い**(config/quirks.json)。本番で通る道を試すため。
+        # VBA どおりの動き(再現)を確かめる試験クラスは @vba_reproduce で明示する
+        import shutil as _sh
+        quirks.QUIRKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _sh.copy2(repo / "config" / "quirks.json", quirks.QUIRKS_FILE)
 
     # ローカル領域(%LOCALAPPDATA%\…): アクセス権限の「前回の結果」(runtime\access_rights.json)・仕掛の写し・控え。
     # `tests/__init__.py` が読まれない流しかたでも、本番の端末の記録と混ぜない
@@ -120,3 +125,25 @@ def ensure_isolated() -> list[str]:
 
     logging_utils.silence_console()
     return moved
+
+
+def vba_reproduce(cls):
+    """試験クラスに付ける: この中は VBA の不具合をすべて「再現」で動かす(VBA と同じ結果を確かめる試験)。
+
+    既定(本番と同じ「直す」)では結果が VBA と違って当然の試験だけに付ける。中で set_for_test(None) しても、
+    戻る先は「すべて再現」。
+    """
+    orig = cls.setUp
+
+    def setUp(self, *a, **k):  # noqa: N802
+        from ufkensa.kensa import quirks
+        quirks._test_default = {}
+        quirks.set_for_test({})
+
+        def back() -> None:
+            quirks._test_default = None
+            quirks.set_for_test(None)
+        self.addCleanup(back)
+        orig(self, *a, **k)
+    cls.setUp = setUp
+    return cls

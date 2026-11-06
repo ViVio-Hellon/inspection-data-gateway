@@ -8,6 +8,7 @@ from tests import kensa_fixture
 from tests.test_kensa_grid import FakeHooks, QuirkCase, cells
 from ufkensa.kensa import grid, layout, quirks, vbx
 from ufkensa.kensa.grid import KensaState
+from tests._isolation import vba_reproduce
 
 FIVE = ("S", "U", "C", "D", "E")
 HIKI_FIELDS = ["ﾛｯﾄ番号", "x", "検査番号"]
@@ -136,6 +137,7 @@ class LSelectFixtureTest(unittest.TestCase):
         self.assertEqual(msgs, [])                        # IsOver12Hours のときは出さない
 
 
+@vba_reproduce
 class LSelectTest(QuirkCase):
     def test_atuita(self) -> None:
         s = KensaState(lot="LOT0001", work="厚板", yama_visible=True, at_butt_visible=True)
@@ -290,6 +292,7 @@ class JudgeLotAllocationsTest(unittest.TestCase):
         self.assertEqual((s.additional, s.lateral_text), ("ﾗﾃﾗﾙﾎﾞ-追記公差あり", "0.5"))
 
 
+@vba_reproduce
 class CountSelectTest(QuirkCase):
     def test_at_count_select_thin_l(self) -> None:
         s = KensaState(lot="LOT0001", work="薄板")
@@ -458,6 +461,7 @@ class AtuOpSelectFixtureTest(unittest.TestCase):
         self.assertEqual(s.ken_no_caption, "H6X1879")
 
 
+@vba_reproduce
 class EventsTest(QuirkCase):
     def test_select_work_small_h(self) -> None:
         s = KensaState(lot="LOT0001", atu="3")
@@ -550,6 +554,7 @@ class EventsTest(QuirkCase):
         self.assertEqual(s.blind_message, "作業選択を選んでください")
 
 
+@vba_reproduce
 class LayoutFixedQuirksTest(QuirkCase):
     """B56〜B59・B62 の「再現」(既定)と「直す」。"""
 

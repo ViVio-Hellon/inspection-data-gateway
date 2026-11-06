@@ -527,7 +527,8 @@ def apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks")
         if call[0] == "Atu_OPselect" and at_sl in grid.WORKS and r.option == at_sl:
             try:
                 layout.select_work(state, at_sl, hooks, hooks.env.messages)
-            except layout.VBA_ERRORS:
+            except layout.VBA_ERRORS as _vba_e:
+                layout.vba_swallow(_vba_e, "wiring.py apply_restore")
                 state.work = at_sl
 
 
@@ -784,7 +785,8 @@ class RealHooks(Hooks):
         if rows is not None:
             try:
                 need_right = layout.judge_lot_allocations(state, rows, self).need_right
-            except layout.VBA_ERRORS:
+            except layout.VBA_ERRORS as _vba_e:
+                layout.vba_swallow(_vba_e, "wiring.py posting")
                 need_right = None
         sheet = line_sheet(records.WORK_SAVE, state.lname)
         trace.note_used(self.store.path, "save")

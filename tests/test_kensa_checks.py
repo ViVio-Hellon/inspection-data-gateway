@@ -13,6 +13,7 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa.kensa import checks, quirks, vbx
 from ufkensa.kensa.checks import Uf1, WorkDist
+from tests._isolation import vba_reproduce
 
 ZERO_DIST = {f"{k}{p}": "0.00" for k in ("Z", "G") for p in "SUCDEF"}
 
@@ -138,6 +139,7 @@ class AbnormalTest(unittest.TestCase):
         self.assertTrue(a.clear_inp and a.posting)
 
 
+@vba_reproduce
 class OutToleranceTest(unittest.TestCase):
     def test_atsuita_row(self) -> None:
         # 厚板: Rig 4 で 1〜10 の NG を全部(O:899-913)。DeleteC は Long
@@ -246,6 +248,7 @@ class ConfiTest(unittest.TestCase):
         self.assertEqual(len(checks.DELETE_REASONS), 7)
 
 
+@vba_reproduce
 class NgPostingTest(unittest.TestCase):
     def test_posting(self) -> None:
         uf = make_uf(text={"S1": "24.0", "S2": "25.0", "DiagSKou": "0.5", "LateralS": "1.0",
@@ -361,6 +364,7 @@ class SheetsTest(unittest.TestCase):
         self.assertIsNone(checks.yama_layout(""))
 
 
+@vba_reproduce
 class GaugeTest(QuirkCase):
     def heavy(self, **text) -> Uf1:      # 257kg(パターンB)
         return make_uf(text=text)
@@ -450,6 +454,7 @@ class GaugeTest(QuirkCase):
         self.assertEqual(checks.get_label_state(uf, "S14"), "すべて非表示")
 
 
+@vba_reproduce
 class DistortionTest(QuirkCase):
     def test_zero_clears_shape(self) -> None:
         uf = make_uf(text={"CBS1": "幅", "CBS2": "上", "CBF1": "幅", "CBF2": "上", "CBS3": "幅"})
@@ -501,6 +506,7 @@ class DistortionTest(QuirkCase):
         self.assertEqual(checks.single_unit_distortion(uf, "G", "S"), "ｹﾞｰｼﾞ:S")
 
 
+@vba_reproduce
 class PrecheckTest(QuirkCase):
     def test_ok(self) -> None:
         self.assertEqual(checks.print_precheck(make_uf(), dist()).text, "")
@@ -559,6 +565,7 @@ class PrecheckTest(QuirkCase):
         self.assertEqual(checks.bh_check(uf), "")
 
 
+@vba_reproduce
 class AllowCheckTest(QuirkCase):
     def test_b34(self) -> None:
         uf = make_uf(text={"NGS": "許容", "S": "1"})
@@ -594,6 +601,7 @@ def _write_xlsx(path: Path, cells: dict[str, object]) -> None:
         z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{m}"><sheetData>{data}</sheetData></worksheet>')
 
 
+@vba_reproduce
 class ConductivTest(QuirkCase):
     def test_check(self) -> None:
         self.assertTrue(checks.conductiv_check(make_uf(text={"Zai": "75S", "Tyu": "T651"})))
@@ -627,6 +635,7 @@ class ConductivTest(QuirkCase):
         self.assertEqual((v["B6"], v["B7"], v["B8"], v["B9"]), ("75S-T6", "6.75×1385×2770.5", "LVC", "鈴木"))
 
 
+@vba_reproduce
 class SelectionInputTest(unittest.TestCase):
     CODES = ["01", "02", "11", "12", "13", "14", "21", "22", "23", "24", "25", "31", "32", "33", "34", "35",
              "36", "37", "38", "39", "41", None]
@@ -648,6 +657,7 @@ class SelectionInputTest(unittest.TestCase):
             checks.selection_input("汚_12 TP", "SBad", "1", self.CODES)
 
 
+@vba_reproduce
 class SmallNumberTest(unittest.TestCase):
     ROWS = [["滑川", "白銅", "R115", "52S", "H34", "6", "1250", "2500", "L1", "K1"],
             ["滑川", "白銅", "R115", "52S", "H34", "6", "1250", "2500", "L1", "K1"],
@@ -744,6 +754,7 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 「直す」と決まった不具合(B44〜B48)の直した側
 # ------------------------------------------------------------------
+@vba_reproduce
 class FixedQuirksTest(QuirkCase):
     def test_b48_blank_worker(self) -> None:
         # 再現: Split("") → Worker(-1) で添字エラー(O:705-712)。直すと KenName を変えない(None)

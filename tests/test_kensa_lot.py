@@ -14,6 +14,7 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa import user_settings
 from ufkensa.kensa import datasource, flow, lot, paths, quirks, vbx
+from tests._isolation import vba_reproduce
 
 T_NORMAL = dt.datetime(2026, 10, 30, 10, 30, 0)     # 時刻窓の外
 T_WINDOW = dt.datetime(2026, 10, 30, 10, 59, 50)    # 毎時 59:46〜59:59 の中
@@ -163,6 +164,7 @@ class ArrboxTest(_Base):
 
 
 # ------------------------------------------------------------------
+@vba_reproduce
 class AccReflecTest(_Base):
     def reflect(self, lot_no: str, **kw) -> lot.LotReflect:
         return lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, **kw), check_equipment=_ok)
@@ -337,6 +339,7 @@ def _hrow(lot_no: str, order: str = "1") -> list:
     return r
 
 
+@vba_reproduce
 class HistorySaveTest(_Base):
     def ph(self, lot_no: str = "H2500K0") -> list:
         r = lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, work_time="T"), check_equipment=_ok)
@@ -560,6 +563,7 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 直した場合の分岐(B49・B50・B51・B54)。既定(再現)の側は上の試験で確かめている
 # ------------------------------------------------------------------
+@vba_reproduce
 class FixBranchTest(_Base):
     def ph(self, lot_no: str = "H2500K0") -> list:
         r = lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, work_time="T"), check_equipment=_ok)

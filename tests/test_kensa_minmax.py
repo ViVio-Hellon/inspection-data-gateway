@@ -7,6 +7,7 @@ from tests.test_kensa_grid import FakeHooks, QuirkCase, cells, fill
 from ufkensa.kensa import grid, minmax, quirks, vbx
 from ufkensa.kensa.flow import Stop
 from ufkensa.kensa.grid import KensaState
+from tests._isolation import vba_reproduce
 
 FIVE = ("S", "U", "C", "D", "E")
 
@@ -30,6 +31,7 @@ def underlined(s: KensaState) -> list[str]:
     return sorted(n for n, c in s.iter_cells() if c.underline)
 
 
+@vba_reproduce
 class MinMaxTest(QuirkCase):
     def test_atuita_full_range(self) -> None:
         s = atuita()

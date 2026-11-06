@@ -17,6 +17,7 @@ from tests.test_kensa_session import SessionBase
 from ufkensa import user_settings
 from ufkensa.kensa import ainput_session, paths, quirks, session
 from ufkensa.kensa.store import LOT_HISTORY
+from tests._isolation import vba_reproduce
 
 LOT = "H7345B0"
 HIKI = "60602048"
@@ -25,6 +26,7 @@ ROW = ["2026-11-02", "04077194", LOT, 15, 1252, 2502, "H6X1355", "F52S", "R", "H
 OK_TEXT = "正常に送信が行われました。"
 
 
+@vba_reproduce
 class AinputScreenTest(SessionBase):
     def setUp(self) -> None:
         super().setUp()

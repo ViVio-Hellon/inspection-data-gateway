@@ -20,6 +20,7 @@ from unittest import mock
 from ufkensa.kensa import packing, paths, quality, quirks, store, terminal, wiring, zenkasho_session
 from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import sheet as sh
+from tests._isolation import vba_reproduce
 
 LOT = "RX021T0"
 
@@ -70,6 +71,7 @@ class ZenBase(unittest.TestCase):
         return d
 
 
+@vba_reproduce
 class SessionTest(ZenBase):
     def test_measure_flow(self) -> None:
         d = self.open_ippan()
@@ -242,6 +244,7 @@ class ScreenTest(ZenBase):
         d = self.post("pack-close", confirmed=True)
         self.assertIsNone(d["view"]["pack"])
 
+@vba_reproduce
 class ConnectTest(ZenBase):
     """部品の Effects.calls をつないだもの(HistorySave・GetLotInfo/DbReturnItem・包装仕様書・不良要因票・日報・UF対角)。
 

@@ -9,6 +9,7 @@ from datetime import datetime
 
 from ufkensa.kensa import quirks, vbx
 from ufkensa.kensa.modes import sheet as sh
+from tests._isolation import vba_reproduce
 
 
 class PacketTest(unittest.TestCase):
@@ -33,6 +34,7 @@ class PacketTest(unittest.TestCase):
         self.assertEqual(sh.cstr_date(datetime(2026, 2, 24, 8, 59)), "2026/02/24 8:59:00")
 
 
+@vba_reproduce
 class JudgeFunctionTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)

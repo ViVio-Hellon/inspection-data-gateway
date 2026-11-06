@@ -8,6 +8,7 @@ import unittest
 
 from tests import kensa_fixture
 from ufkensa.kensa import flow, instruments as ins, quirks, vbx
+from tests._isolation import vba_reproduce
 
 
 class _Base(unittest.TestCase):
@@ -17,6 +18,7 @@ class _Base(unittest.TestCase):
         quirks.set_for_test(None)
 
 
+@vba_reproduce
 class CheckThickAndCodeTest(unittest.TestCase):
     def test_youto_conditions(self) -> None:
         # MT:522-545
@@ -42,6 +44,7 @@ class CheckThickAndCodeTest(unittest.TestCase):
         self.assertTrue(f("", "", "X", 0.0, "X"))                         # Val("") = 0
 
 
+@vba_reproduce
 class DbReturnMicroTest(_Base):
     def test_l1_by_thickness(self) -> None:
         d = ins.db_return_micro
@@ -95,6 +98,7 @@ class MakerTest(unittest.TestCase):
         self.assertEqual(ins.machin_text("#L395.8", "前"), "前")
 
 
+@vba_reproduce
 class MicroJugeTest(_Base):
     def mi(self, **kw) -> ins.MicroInput:
         base = dict(st="S1", machin="10006", atu="3.000", hab="1000.0", youto="K126", lname="L-1")
@@ -138,6 +142,7 @@ class MicroJugeTest(_Base):
             ins.micro_juge(self.mi(st="SX", youto="H494", hab="250"))     # Case 5 To 6 と "X"
 
 
+@vba_reproduce
 class MachineTransferTest(_Base):
     def t(self, **kw) -> ins.TransferInput:
         base = dict(x=9, y=5, atu="3", haba="1000", yout="K126", line="L-1", tak="2000.0", hab="1000.0")
@@ -188,6 +193,7 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 直した場合の分岐(B51・B52・B53)
 # ------------------------------------------------------------------
+@vba_reproduce
 class FixBranchTest(_Base):
     def tearDown(self) -> None:
         quirks.set_for_test(None)

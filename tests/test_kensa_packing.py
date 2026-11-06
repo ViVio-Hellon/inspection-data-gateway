@@ -12,6 +12,7 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa.kensa import packing, paths, quirks
 from ufkensa.kensa.store import LOT_HISTORY_HEADERS
+from tests._isolation import vba_reproduce
 
 LOT = "RX021T0"
 
@@ -29,6 +30,7 @@ def no_gaichu(*_a, **_k) -> str:
     return ""
 
 
+@vba_reproduce
 class PackingTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="ufkensa_pack_"))

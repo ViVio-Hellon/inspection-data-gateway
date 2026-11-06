@@ -13,6 +13,7 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa.kensa import judge, quirks, vbx
 from ufkensa.kensa.judge import NG, OK, WHITE
+from tests._isolation import vba_reproduce
 
 
 def spec_form(**kw) -> judge.Form:
@@ -139,6 +140,7 @@ class DiagonalTest(unittest.TestCase):
         self.assertEqual(judge.re_diag(f).values, {})
 
 
+@vba_reproduce
 class LateralTest(QuirkCase):
     """LateralJudg / UnitRecord(J:395-409, 2421-2443)。G2 §10.3(LateralText="2.0")"""
 
@@ -204,6 +206,7 @@ class LateralTest(QuirkCase):
         self.assertEqual(judge.unit_record_input("1.1"), "1.5")
 
 
+@vba_reproduce
 class BhTest(unittest.TestCase):
     """BhJudg / simplyjudge(J:410-478)。G2 §10.4(下限値 40)"""
 
@@ -313,6 +316,7 @@ class HizumiTest(unittest.TestCase):
         self.assertEqual(judge.hiz_loop_judg(self.form(ZS="1"), n=2).states, {})
 
 
+@vba_reproduce
 class LoopJudgTest(QuirkCase):
     """LoopJudg(J:836-1116)"""
 
@@ -533,6 +537,7 @@ class AdvanceCheckTest(unittest.TestCase):
             judge.advance_check("X", arrbox=box)
 
 
+@vba_reproduce
 class ConditionFieldTest(unittest.TestCase):
     """IsMatchConditionField / IsWildcardMatch(J:2346-2411)。G2 §10.12"""
 
@@ -556,6 +561,7 @@ class ConditionFieldTest(unittest.TestCase):
             judge.is_match_condition_field("A,*", "B")
 
 
+@vba_reproduce
 class PackagingTest(QuirkCase):
     """PackagingSpecificationNo / MaterialsMsgBox(J:1987-2344)"""
 
@@ -729,6 +735,7 @@ class FixedConditionTest(QuirkCase):
         self.assertFalse(judge.is_match_condition_field("abc*", "ABCD"))  # ほかは今までどおり
 
 
+@vba_reproduce
 class FixedPackagingTest(PackagingTest):
     def test_b40_empty_table(self) -> None:
         con = sqlite3.connect(self.pack)
@@ -752,6 +759,7 @@ class FixedPackagingTest(PackagingTest):
         self.assertEqual(self.psn(thick=1.2, width=1000), "板_")          # 再現
 
 
+@vba_reproduce
 class UnitRecordB13FixTest(unittest.TestCase):
     """B13 を直した側: 区間の間の値・0.1 未満・999 超も必ずどこかの区間に入れる(2026-11-02 の回答)。"""
 

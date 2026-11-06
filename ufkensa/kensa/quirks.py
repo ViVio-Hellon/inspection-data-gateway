@@ -151,10 +151,14 @@ def reproduce(bug: str) -> bool:
     return _load().get(key, "keep") != "fix"
 
 
+#: 試験用: set_for_test(None) で戻る先(None = quirks.json。VBA どおりを確かめる試験クラスは {} = すべて再現)
+_test_default: Optional[dict[str, str]] = None
+
+
 def set_for_test(choices: Optional[dict[str, str]]) -> None:
     """試験用: `{"B8": "fix"}` を当てる。None で元に戻す。"""
     global _override
-    _override = None if choices is None else {k.upper(): v for k, v in choices.items()}
+    _override = _test_default if choices is None else {k.upper(): v for k, v in choices.items()}
 
 
 def summary() -> dict[str, list[str]]:
