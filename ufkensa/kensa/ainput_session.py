@@ -94,6 +94,7 @@ class AinputSession:
         self.sleep = sleep
         self.form: Optional[AinputForm] = None
         self.ken_m = ""
+        self.source = ""                     # 呼び元(""=通常検査 / Cask / Mitsubishi / H494)
         self.hiki_rows: list[list[Any]] = []        # Hiki_Lot シート(No_Search の結果)
         self.hiki_list: list[str] = []              # HikiNo の選択肢(UserForm_Activate のソート後)
         self.adjust_label = "調整No"
@@ -153,10 +154,33 @@ class AinputSession:
     # ------------------------------------------------------------------
     # 開く
     # ------------------------------------------------------------------
-    def open(self, ken_m: str = "") -> Any:
-        return self._run(self._open, ken_m)
+    def open(self, ken_m: str = "", source: str = "") -> Any:
+        return self._run(self._open, ken_m, source)
 
-    def _open(self, ken_m: str) -> None:
+    def _source_sheet(self, source: str) -> tuple[str, dict[tuple[int, int], Any], str, str]:
+        """キャスク・全ヵ所・H494 から開いたとき(Input:247-252, 361-364): そのシートのロット(D2)・Min/Max のセル・
+        検査員の文字・ライン名。前は呼び元にかかわらず通常検査(UF1)のロット・Min/Max で開いていた(2026-11-06)。"""
+        from .modes.sheet import CASK, H494, ZEN
+        if source == "Cask":
+            from . import cask_session
+            book = cask_session.get().book
+            if book is None or not book.has(CASK):
+                raise Stop("キャスク画面でロットを開いてから、Aインプットを開いてください", level=WARN, source="Input:249")
+            ws, workers_txt, line = book.ws(CASK), "UFｷｬｽｸ:" + book.cask.kname, book.cask.line_name
+        else:
+            from . import zenkasho_session
+            book = zenkasho_session.get().book
+            name = ZEN if source == "Mitsubishi" else H494
+            if book is None or not book.has(name):
+                raise Stop("全ヵ所・H494 の画面でロットを開いてから、Aインプットを開いてください", level=WARN,
+                           source="Input:250")
+            ws, line = book.ws(name), book.mit.line_name
+            workers_txt = "UF三菱:" + (book.mit.kname if source == "Mitsubishi" else book.mit.h494_kname)
+        cells = {(r, c): ws.get(r, c) for r in (2, 3, 4) for c in range(1, 28)}
+        lot = "" if cells.get((2, 4)) is None else str(cells[(2, 4)])
+        return lot, cells, workers_txt, line
+
+    def _open(self, ken_m: str, source: str = "") -> None:
         """UF1.AMode_Click (UF1:447-479) → Input.Ainput_Startup (Input:225-400) → UFAinput.UserForm_Activate。"""
         from .session import NO_LINE_TEXT
         k = self.kensa
@@ -171,16 +195,24 @@ class AinputSession:
             raise Stop("検査画面の処理中です。終わってからもう一度開いてください。", level=INFO, source="UF1:461")
         ln = lines.find(st.line_name)
         test = st.line_option == "Test" or (ln is not None and ln.official == "Test")
-        mm = {"amin": st.amin, "hmin": st.hmin, "tmin": st.tmin, "amax": st.amax, "hmax": st.hmax, "tmax": st.tmax}
-        if not (test or st.dbflag != "" or all(v != "" for v in mm.values())):
-            raise Stop("MinMax処理を行ってください", level=INFO, source="UF1:474")
         store = k.store
-        reg = wiring.registry(st)
-        day_max = wiring.worker_day_max(store, st.lname)
+        source = source if source in ("Cask", "Mitsubishi", "H494") else ""
+        self.source = source
         with trace.timed("db.read", "Lot情報履歴 を読む(Aインプット)", path=str(store.path)):
             history = self._history()
-        res = ainput.startup("UF1", ken_m, history, working_lot=st.lot, lname=st.lname, uf1_line=st.line_name,
-                             uf1_minmax=mm, workers=workers.workers_text(day_max, reg))
+        if source:
+            lot, cells, workers_txt, line = self._source_sheet(source)
+            res = ainput.startup(source, ken_m, history, working_lot=lot, lname=line or st.lname,
+                                 uf1_line=st.line_name, sheet_cells=cells, workers=workers_txt)
+        else:
+            mm = {"amin": st.amin, "hmin": st.hmin, "tmin": st.tmin, "amax": st.amax, "hmax": st.hmax,
+                  "tmax": st.tmax}
+            if not (test or st.dbflag != "" or all(v != "" for v in mm.values())):
+                raise Stop("MinMax処理を行ってください", level=INFO, source="UF1:474")
+            reg = wiring.registry(st)
+            day_max = wiring.worker_day_max(store, st.lname)
+            res = ainput.startup("UF1", ken_m, history, working_lot=st.lot, lname=st.lname, uf1_line=st.line_name,
+                                 uf1_minmax=mm, workers=workers.workers_text(day_max, reg))
         self.messages += res.messages
         if res.form is None:
             last = self.messages.pop() if self.messages else Message("Aインプットを開けません", ERROR)
@@ -535,7 +567,7 @@ class AinputSession:
         st = k.state
         ks = {"lot": st.lot, "line": st.lname, "minmax": all(getattr(st, a) != "" for a in
                                                             ("amin", "amax", "hmin", "hmax", "tmin", "tmax"))}
-        out: dict[str, Any] = {"ready": self.form is not None, "ken_m": self.ken_m, "ken_methods": list(KEN_METHODS),
+        out: dict[str, Any] = {"ready": self.form is not None, "ken_m": self.ken_m, "source": self.source, "ken_methods": list(KEN_METHODS),
                                "kensa": ks}
         f = self.form
         if f is None:

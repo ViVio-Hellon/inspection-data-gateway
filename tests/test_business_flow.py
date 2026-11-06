@@ -248,6 +248,26 @@ class SaveIntegrityTest(FlowBase):
         self.op("value", name="ZS", value="")                    # 歪の値を消す
         self.assertFalse(self.s.print_ready)
 
+    def test_worker_mismatch_stops_print(self) -> None:
+        """検査員と測定者が一致しないと、印刷・保存に進まず名簿・日報へ案内する(VBA は UFNameList で止まる)。"""
+        from unittest import mock
+        from ufkensa.kensa import workers
+        self.ready()
+        self.op("work", work="厚板")
+        self.measure_all()
+        self.strain_visual_height()
+        self.op("minmax")
+        real = workers.name_match
+        def mismatch(*a, **k):
+            r = real(*a, **k)
+            r.out = True
+            return r
+        with mock.patch.object(workers, "name_match", mismatch):
+            d = self.op("print-commit")
+        self.assertIn("一致しない", " ".join(self.texts(d)))
+        self.assertEqual(d["view"]["name_list"], 1)
+        self.assertEqual(self.store.sheet(store.HOZON).last_row(1), 1)     # 保存していない
+
     def test_missing_measure_db_stops_before_save(self) -> None:
         self.ready()
         self.op("work", work="厚板")
@@ -277,6 +297,24 @@ class AbnormalInputTest(FlowBase):
         self.assertEqual(d["view"]["header"]["lot"], "")
         d = self.op("lot", lot="")
         self.assertEqual(d["view"]["header"]["lot"], "")
+
+    def test_wrong_length_keeps_current_lot(self) -> None:
+        """8 桁などを入れても、いまのロット・公差はそのまま(前は黙って作業保存のロットが空になった)。"""
+        self.ready()
+        d = self.op("lot", lot="H7345B00")
+        self.assertEqual((d["view"]["header"]["lot"], d["view"]["tolerance"]["apk"]), (LOT, "15.350"))
+        self.assertTrue(any("7 桁" in t for t in self.texts(d)), self.texts(d))
+        self.assertEqual(self.store.sheet("作業保存_HVC").get(1, 1), LOT)
+
+    def test_recent_lot_no_keeps_everything(self) -> None:
+        """「直近5Lot内に同じLotNo」でいいえ → 何も変えない(前は新しい番号に前のロットの公差が残った)。"""
+        self.ready()
+        sh = self.store.ensure_sheet(store.HOZON)
+        sh.set(2, 1, "2026/11/01 10:00～10:30")
+        sh.set(2, 2, "RX021T0")
+        self.answers["lot_recent"] = False
+        d = self.op("lot", lot="RX021T0")
+        self.assertEqual((d["view"]["header"]["lot"], d["view"]["tolerance"]["apk"]), (LOT, "15.350"))
 
     def test_lot_not_in_shikake(self) -> None:
         self.op("start")
@@ -319,6 +357,19 @@ class CalibrationAndShiftTest(FlowBase):
         self.assertTrue(any("校正" in t for t in self.texts(d)), self.texts(d))
         self.assertEqual([k for k, c in self.s.state.cells.items() if c.value], [])
         self.assertTrue(d["view"]["calibration_required"])
+
+    def test_after_calibration_rejudges(self) -> None:
+        """校正に合格して戻ったら(UF校正.INPG_Exit)、判定をやり直し、校正の案内を消す。"""
+        self.ready()
+        self.op("work", work="厚板")
+        self.op("receive", text="DT10001+0000015.012M")          # 未校正なので受け付けない
+        self.write_calibration()
+        d = self.op("calibrated")
+        self.assertIsNone(d.get("stop"), self.texts(d))
+        self.assertFalse(d["view"]["calibration_required"])
+        self.assertEqual(self.s.state.load, "on")
+        d = self.op("receive", text="DT10001+0000015.012M")
+        self.assertEqual(self.s.state.cells["S1"].value, "15.012")
 
     def test_previous_day_worker_not_kept(self) -> None:
         """前の日の検査員は、持ち越しの検査が無ければ残らない(2026-11-06)。"""

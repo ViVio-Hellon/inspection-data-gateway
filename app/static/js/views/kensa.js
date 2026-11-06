@@ -719,16 +719,24 @@ function init() {
   $("izyouBtn").addEventListener("click", () => op("izyou"));
   $("resizeBtn").addEventListener("click", () => op("resize"));
   $("aorbBtn").addEventListener("click", async () => { await op("value", { name: "AorB", value: "" }); refocus(); });
+  // クリックはダブルクリックか分かるまで少し待つ。すぐ送ると描き直しで表が入れ替わり、
+  // 2 回目のクリックが別の要素に当たってダブルクリック(消去)が効かないことがあった
+  let clickTimer = null;
   $("mgrid").addEventListener("click", (e) => {
     const td = e.target.closest("td[data-name]");
-    if (td) { op("click", { name: td.dataset.name }); refocus(); }
+    if (!td) return;
+    const name = td.dataset.name;
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(async () => { await op("click", { name }); refocus(); }, 260);
   });
   $("mgrid").addEventListener("dblclick", async (e) => {
+    clearTimeout(clickTimer);
     const ng = e.target.closest("td.ng[data-pos]");
     if (ng) { await op("ng-delete", { pos: ng.dataset.pos }); return; }
     const td = e.target.closest("td[data-name]");
     if (!td || !td.textContent) return;
-    op("dblclick", { name: td.dataset.name });
+    await op("dblclick", { name: td.dataset.name });
+    refocus();
   });
   // 外観: 欠陥名を選んで LC を押す(LcColor)。ダブルクリックで白に戻して選択を外す(LC?_DblClick)
   $("visualGrid").addEventListener("click", async (e) => {

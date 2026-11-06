@@ -426,6 +426,22 @@ class Session:
                                         source="UF1:2952")
                     if a2:
                         st.v("SplitFlag").value = "Lot分割"
+        # 2026-11-06: 桁の確かめと「直近5Lot」の確認は、画面の値を消す前に行う。前は先に消していたので、
+        # 8 桁を入れると黙って作業保存のロットが空になり、「直近5Lot」でいいえと答えると新しいロット番号に
+        # 前のロットの公差が残ったまま保存されていた
+        text = "".join(ch.upper() if "a" <= ch <= "z" else ch for ch in lot
+                       if ch.isascii() and ch.isalnum())
+        if len(text) != 7:
+            env.messages.append(Message(f"LotNo は英数字 7 桁で入れてください(入れた値: {lot or '(空)'})。"
+                                        "いまのロットはそのままです", WARN, source="Lot_Change"))
+            return None
+        if st.load != "off" and judge.check_for_lot(wiring.sheet_rows(self.store, HOZON) or [], text, 2):
+            a3 = answers.get("lot_recent")
+            if a3 is None:
+                return Question("lot_recent", "直近5Lot内に同じLotNoがあります" + "\r\n" + "このまま作業しますか？",
+                                title="確認", source="UF1:4505")
+            if not a3:
+                return None                          # いいえ: 何も変えない
         # line:(入力欄を空にする)
         st.lot = ""
         st.yama = ""
@@ -435,11 +451,6 @@ class Session:
         st.v("HizCome").tag = ""
         st.flatnes_text = ""
         st.machin = ""
-        # Lot_KeyPress: 英数字だけ・大文字
-        text = "".join(ch.upper() if "a" <= ch <= "z" else ch for ch in lot
-                       if ch.isascii() and ch.isalnum())
-        if len(text) != 7:
-            return None
         if text != prev_lot:
             self._prune_workers()                 # 別のロット = 持ち越しではない(st.lot は空にしてある)
         st.lot = text
@@ -1063,6 +1074,23 @@ class Session:
                 return
         self.name_list = n
 
+    def after_calibration(self) -> Result:
+        """UF校正.INPG_Exit (UF校正:281-296)。校正に合格して戻ったら、止めていた判定をやり直す(LoopJudg・HizLoopJudg)。"""
+        return self._run(self._after_calibration)
+
+    def _after_calibration(self) -> None:
+        st, hooks = self.state, self.hooks
+        if not self.started or hooks is None:
+            return None
+        st.load = "off"
+        try:
+            hooks.loop_judg(st)
+            hooks.hiz_loop_judg(st)
+        finally:
+            st.load = "on"
+        self.calibration_required = False
+        return None
+
     def name_list_ack(self) -> Result:
         """名簿画面(UFNameList)への案内を出し終えた(画面が開いた)。"""
         return self._run(self._name_list_ack, posting=False)
@@ -1146,6 +1174,13 @@ class Session:
                                  table=line_sheet(report_model.DEFECT_SHEET, st.lname)):
                     for r, c, v in w.cells:
                         sheet.write(r, c, v)
+        # 水色(選んでいる)欄だけが反映される。ほかの欄に入れた枚数は VBA と同じく消えるので、黙って消さずに知らせる
+        dropped = [f"{st.header(p) or p} {st.bad[p].value}枚" for p in grid.POSITIONS
+                   if st.bad[p].value != "" and st.bad[p].color != wiring.COLOR_CYAN]
+        if dropped:
+            env.messages.append(Message("反映したのは選んでいる(水色の)欄だけです。次の枚数は反映していません: "
+                                        + "、".join(dropped) + "。欄を押して選んでから、もう一度入れてください",
+                                        WARN, source="ListReflect"))
         for p in grid.POSITIONS:                                          # リセット
             st.bad[p].value = ""
             st.bad[p].color = grid.COLOR_WHITE
@@ -1500,6 +1535,12 @@ class Session:
             if nc.stop:                                                  # Number_Count → NameList_Open(3)
                 self._name_list_open(3)
         items.append({"label": "梱包枚数", "ok": None if nc is None else not nc.stop})
+        if nm.out:
+            # VBA は UFNameList を vbModal で出し、閉じるまで印刷に進まない。Web では印刷確定を止め、名簿・日報へ案内する
+            stop = True
+            env.messages.append(Message("登録検査員と測定者が一致しないので、印刷を止めました。"
+                                        "「名簿・日報を開く」で直してから、もう一度 印刷・保存 を押してください",
+                                        WARN, source="Name_Match"))
         self.checks = items
         self.print_ready = not stop
         return None

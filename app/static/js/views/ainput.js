@@ -78,7 +78,7 @@ function renderOpen(v) {
     const b = document.createElement("button");
     b.type = "button"; b.className = "seg__btn"; b.textContent = m;
     b.setAttribute("aria-pressed", String(v.ken_m === m));
-    b.addEventListener("click", () => op("open", { ken_m: m }));
+    b.addEventListener("click", () => op("open", { ken_m: m, source: V ? V.source : FROM }));
     return b;
   }));
   const k = v.kensa;
@@ -237,6 +237,10 @@ function render(v) {
 }
 
 // ------------------------------------------------------------------
+const QS = new URLSearchParams(location.search);
+const FROM = QS.get("from") || "";          // 呼び元(Cask / Mitsubishi / H494)。無ければ通常検査
+const METHOD = QS.get("method") || "";
+
 function init() {
   document.querySelectorAll("[data-field]").forEach((el) => {
     const send = () => op("value", { name: el.dataset.field, value: el.type === "checkbox" ? (el.checked ? "1" : "0") : el.value });
@@ -268,10 +272,12 @@ function init() {
   });
   $("unlockBtn").addEventListener("click", () => op("unlock"));
   $("resetBtn").addEventListener("click", () => op("reset"));
-  $("reopenBtn").addEventListener("click", () => op("open", { ken_m: V ? V.ken_m : "" }));
+  $("reopenBtn").addEventListener("click", () => op("open", { ken_m: V ? V.ken_m : "", source: V ? V.source : FROM }));
   api.get("/api/ainput/state").then((res) => {
     render(res.view);
     const v = res.view;
+    // キャスク・全ヵ所・H494 の「Aインプットへ」から来た: 呼び元のシートのロット・Min/Max で開く(Input:247-252)
+    if (FROM) return op("open", { ken_m: METHOD || v.ken_m, source: FROM });
     // 開いていない・検査画面のロットが変わった → 前に選んだ検査法で開き直す(VBA は毎回 Ainput_Startup)
     if (v.ken_m && (!v.ready || (v.kensa.lot && v.lot.lot !== v.kensa.lot && !v.lot.db_flag))) return op("open", { ken_m: v.ken_m });
     return null;

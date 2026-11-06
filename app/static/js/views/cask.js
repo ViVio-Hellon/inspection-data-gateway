@@ -219,6 +219,7 @@ function renderSide(v) {
   $("labels").replaceChildren(...v.form.labels.map((l) => { const li = document.createElement("li"); li.textContent = l; return li; }));
   kv($("mmKv"), v.header.maxmin.map((m) => [m.name, m.max || m.min ? `MAX ${m.max} / MIN ${m.min}` : ""]));
   $("ainLink").hidden = !v.ainput;
+  $("ainLink").href = "/ainput?from=Cask&method=L2";            // 呼び元のシートのロット・Min/Max で開く
   const rep = v.report;
   $("reportLink").hidden = !rep;
   if (rep) {
