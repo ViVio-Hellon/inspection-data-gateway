@@ -12,6 +12,7 @@ from ufkensa import user_settings
 from ufkensa.kensa import ainput, flow, paths, vbx
 from ufkensa.kensa.ainput import AinputForm
 from ufkensa.kensa.workers import CellWrite, ShiftTimes, WorkerRegistry
+from tests._isolation import vba_reproduce
 
 NOW = datetime(2026, 10, 30, 10, 7, 0)
 SHIFTS = ShiftTimes("07:00", "15:00", "15:00", "22:50", "22:50", "07:00", "08:15", "17:00")
@@ -338,6 +339,7 @@ class HikiTest(unittest.TestCase):
         self.assertIsNone(ainput.startup("Cask", "", [HEAD] + HIST, working_lot="?", lname="L-1").form)
 
 
+@vba_reproduce
 class FilesTest(unittest.TestCase):
     def setUp(self) -> None:
         kensa_fixture.use_offline()
@@ -409,6 +411,7 @@ class FilesTest(unittest.TestCase):
         self.assertEqual(ainput.host_con("A009"), "")
 
 
+@vba_reproduce
 class AinButtonTest(FilesTest):
     def press(self, answers=None, daily=None):
         return ainput.ain_button(self.form, history_rows=HIST, answers=answers or {},

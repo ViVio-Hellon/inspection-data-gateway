@@ -20,6 +20,7 @@ from tests._web import make_client
 from ufkensa import user_settings
 from ufkensa.kensa import calibration_session as cs
 from ufkensa.kensa import quirks, session, store, terminal, workers
+from tests._isolation import vba_reproduce
 
 
 class Clock:
@@ -48,6 +49,7 @@ class CalBase(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+@vba_reproduce
 class CalibrationSessionTest(CalBase):
     def test_open_shows_uncalibrated_and_template(self) -> None:
         self.assertFalse(self.kensa._calibrated())

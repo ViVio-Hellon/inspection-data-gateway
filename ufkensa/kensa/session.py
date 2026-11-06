@@ -552,7 +552,8 @@ class Session:
         if r.lateral_text is not None:
             try:
                 layout.lselect_lateral(st, r.ken_no)
-            except layout.VBA_ERRORS:
+            except layout.VBA_ERRORS as _vba_e:
+                layout.vba_swallow(_vba_e, "session.py _acc_reflec")
                 pass
         try:                                                             # SaveLoad:378-381
             if r.vc_action == "clear":
@@ -606,7 +607,8 @@ class Session:
             return
         try:
             layout.judge_lot_allocations(st, rows, hooks)
-        except layout.VBA_ERRORS:
+        except layout.VBA_ERRORS as _vba_e:
+            layout.vba_swallow(_vba_e, "session.py _acc_reflec")
             pass
 
     def _apply_history(self, h: lotmod.HistorySaveResult) -> int:

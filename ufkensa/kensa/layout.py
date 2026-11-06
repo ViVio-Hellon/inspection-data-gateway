@@ -19,6 +19,20 @@ from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, hab_lt_300, ken_fla
 #: VBA の On Error Resume Next で飛ばされる実行時エラーに当たる Python の例外
 VBA_ERRORS = (vbx.TypeMismatch, KeyError, IndexError, ValueError, TypeError, ZeroDivisionError, OverflowError)
 
+#: VBA の型・添字の誤り(VBA でも On Error Resume Next で飛ばしたもの)。これ以外を飛ばしたときは
+#: Python のプログラムの誤りのおそれがあるので、ログに残して見えるようにする(2026-11-06 の見直し)
+_VBA_LIKE = (vbx.TypeMismatch, IndexError, ZeroDivisionError, OverflowError)
+
+
+def vba_swallow(e: BaseException, where: str = "") -> None:
+    """On Error Resume Next で飛ばした誤りを記録する(動きは変えない)。"""
+    import logging
+    lg = logging.getLogger("ufkensa.kensa.vba_swallow")
+    if isinstance(e, _VBA_LIKE):
+        lg.debug("飛ばした(VBA と同じ): %s: %s %s", type(e).__name__, e, where)
+    else:
+        lg.warning("飛ばした誤り(プログラムの誤りのおそれ): %s: %s %s", type(e).__name__, e, where, exc_info=e)
+
 #: ライン OptionButton → Caption(G6 UF1 WorkFrame)
 LINE_CAPTIONS = {"L1Work": "L-1", "LVC": "LVC", "HVC": "HVC", "Tott": "ﾄｯﾄ", "Bala": "ﾊﾞﾗﾝｻｰ", "Test": "Test", "Maru": "丸徳"}
 #: 丸徳の号機 A1..A11 → Caption(G6 UF1 NoFrame)
@@ -439,7 +453,8 @@ def at_butt_click(state: KensaState, hooks: Hooks) -> None:
             at_count_select(state, 2, hooks)
         elif state.at_butt_caption == "厚4ヵ所":
             at_count_select(state, 4, hooks)
-    except VBA_ERRORS:
+    except VBA_ERRORS as _vba_e:
+        vba_swallow(_vba_e, "layout.py at_butt_click")
         pass
 
 
@@ -450,7 +465,8 @@ def inspe_butt_click(state: KensaState, hooks: Hooks) -> None:
             inspection_select(state, "表示", hooks)
         elif state.inspe_butt_caption == "検入≦25":
             inspection_select(state, "非表示", hooks)
-    except VBA_ERRORS:
+    except VBA_ERRORS as _vba_e:
+        vba_swallow(_vba_e, "layout.py inspe_butt_click")
         pass
 
 
@@ -672,7 +688,8 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
     def safe(fn, *a, **k):
         try:
             return fn(*a, **k)
-        except VBA_ERRORS:
+        except VBA_ERRORS as _vba_e:
+            vba_swallow(_vba_e, "layout.py safe")
             return None
 
     if state.sika_set_atu != 0:
@@ -681,7 +698,8 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
             state.sika_atu_all = all_
             if all_ is not None:
                 state.sika_set_atu = vbx.single(vbx.cdbl(all_[0]))
-        except VBA_ERRORS:
+        except VBA_ERRORS as _vba_e:
+            vba_swallow(_vba_e, "layout.py lselect")
             pass
 
     jumped = bool(state.byousya)
@@ -725,7 +743,8 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                 if ken_no in ("0", ""):
                     try:
                         input_string = str(_cell1(lot_acc, c_course))
-                    except VBA_ERRORS:
+                    except VBA_ERRORS as _vba_e:
+                        vba_swallow(_vba_e, "layout.py lselect")
                         input_string = ""
                     r = find_priority(input_string)
                     if r != "":
@@ -738,7 +757,8 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
             elif lot_acc is not None:
                 try:
                     course = str(_cell1(lot_acc, cours))
-                except VBA_ERRORS:
+                except VBA_ERRORS as _vba_e:
+                    vba_swallow(_vba_e, "layout.py lselect")
                     course = ""
             if vbx.instr(course, "2HI") > 0:
                 hi = True
@@ -755,14 +775,16 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
             # NewAtu(Single) = IIf(bUseCache, g_CacheOrdAtu, LotAcc(1, OrdAtu))
             try:
                 raw = _cell1(lot_acc, ord_atu)                    # IIf は両辺を評価する(キャッシュ時は Empty → エラー)
-            except VBA_ERRORS:
+            except VBA_ERRORS as _vba_e:
+                vba_swallow(_vba_e, "layout.py lselect")
                 new_atu = 0.0                                     # 代入ごと飛ばされる
                 if use_cache and not quirks.reproduce("B7"):
                     new_atu = c.ord_atu
             else:
                 try:
                     new_atu = c.ord_atu if use_cache else _csng(raw)
-                except VBA_ERRORS:
+                except VBA_ERRORS as _vba_e:
+                    vba_swallow(_vba_e, "layout.py lselect")
                     new_atu = 0.0
             if new_atu == 0 and state.atu != "":
                 new_atu = vbx.single(vbx.val(state.atu))
@@ -993,7 +1015,8 @@ def _thin_body(state: KensaState, hooks: Hooks, *, set_diag: bool) -> None:
     if state.yama == "4":
         try:                                           # AtCountSelect のエラーは LSelect の Resume Next で次の文へ
             six_display(state, "on", hooks)
-        except VBA_ERRORS:
+        except VBA_ERRORS as _vba_e:
+            vba_swallow(_vba_e, "layout.py _thin_body")
             pass
     elif state.yama == "3":
         _cells(state, range(1, 11), FIVE, True, True)
@@ -1186,7 +1209,8 @@ def byousya_after_update(state: KensaState, hooks: Hooks) -> None:
                      (right_angle_display, ("強制", "6回目も表示"))):
         try:
             fn(state, *args)
-        except VBA_ERRORS:
+        except VBA_ERRORS as _vba_e:
+            vba_swallow(_vba_e, "layout.py byousya_after_update")
             pass
     hooks.initial_setting(state)
 

@@ -21,8 +21,10 @@ from ufkensa.kensa import cask_session, packing, paths, store, vbx, wiring
 from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import cask as caskmod
 from ufkensa.kensa.modes import sheet as sh
+from tests._isolation import vba_reproduce
 
 
+@vba_reproduce
 class CaskScreenTest(SessionBase):
     def setUp(self) -> None:
         super().setUp()

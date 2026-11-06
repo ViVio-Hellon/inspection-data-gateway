@@ -10,6 +10,7 @@ from tests import kensa_fixture
 from ufkensa.kensa import flow, quirks
 from ufkensa.kensa.modes import h494
 from ufkensa.kensa.modes import sheet as sh
+from tests._isolation import vba_reproduce
 
 NOW = datetime(2026, 10, 30, 10, 0)
 
@@ -29,6 +30,7 @@ def h_book() -> sh.Book:
     return b
 
 
+@vba_reproduce
 class H494SheetTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -102,6 +104,7 @@ class H494SheetTest(unittest.TestCase):
         self.assertTrue(fx.logs[1].path.endswith("LVC\\LVC_Log"))
 
 
+@vba_reproduce
 class H494PrintTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

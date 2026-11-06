@@ -10,10 +10,12 @@ from pathlib import Path
 from ufkensa.kensa import quirks, records as rc, report_model as rm, store as st
 from ufkensa.kensa.flow import Question, Stop
 from tests.test_kensa_records import make_snap
+from tests._isolation import vba_reproduce
 
 NOW = datetime(2024, 11, 2, 8, 55, 3)
 
 
+@vba_reproduce
 class PartsTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -63,6 +65,7 @@ class Base(unittest.TestCase):
         return rm.print_transfer(self.store, snap or make_snap(), env or self.env)
 
 
+@vba_reproduce
 class PrintTransferTest(Base):
     def test_header_cells(self) -> None:
         s = make_snap(ken_hbox=["200", "226", "", "", "", "", ""], resize_tag="有")
@@ -235,6 +238,7 @@ class PrintTransferTest(Base):
         self.assertEqual(res.messages[-1].text, "再印刷が完了しました")
 
 
+@vba_reproduce
 class DefectTest(Base):
     def defect(self) -> st.GridSheet:
         sh = rm.ensure_defect_sheet(self.store, "Test", "H7372A0")

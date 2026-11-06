@@ -23,6 +23,7 @@ from tests import kensa_fixture
 from ufkensa import user_settings
 from ufkensa.kensa import paths, quirks, records, session, store, terminal, workers
 from ufkensa.kensa.store import HOZON, LOT_HISTORY
+from tests._isolation import vba_reproduce
 
 LOT = "H7345B0"
 CARD = "9000000000001"            # 名簿「検査員01」
@@ -336,6 +337,7 @@ class NoLineTest(SessionBase):
         self.assertEqual(r.view["workers"], [])
 
 
+@vba_reproduce
 class DiagDKouTest(SessionBase):
     """B43: D 欄の直角度(DiagDKou_BeforeUpdate UF1:1184-1205)。"""
 
@@ -433,6 +435,7 @@ class SameToleranceAsQualityScreenTest(SessionBase):
         self.assertEqual(new[0][6], "薄板QP")
 
 
+@vba_reproduce
 class ScreenGapTest(SessionBase):
     """画面に足りなかった操作(外観・不良要因・歪コンボ・検入高さ・保留・まとめて削除・廃棄フラグ・印刷履歴クリア・
     サイズ修正・強制描写・オーダー・包装仕様書・VC 画像・検査員不一致)。期待値は VBA を手で追った結果。"""

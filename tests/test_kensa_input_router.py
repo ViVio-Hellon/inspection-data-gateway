@@ -7,6 +7,7 @@ from tests.test_kensa_grid import FakeHooks, QuirkCase, cells, fill
 from ufkensa.kensa import grid, input_router as ir, quirks
 from ufkensa.kensa.flow import Stop
 from ufkensa.kensa.grid import KensaState
+from tests._isolation import vba_reproduce
 
 FIVE = ("S", "U", "C", "D", "E")
 
@@ -154,6 +155,7 @@ class PucketMoveTest(unittest.TestCase):
         self.assertEqual(s.inp_tag, "U5")
 
 
+@vba_reproduce
 class LookBlankTest(unittest.TestCase):
     def test_look_blank_atuita_c_from_row1(self) -> None:
         # Look_Blank の厚板は行5〜10 のとき C1〜C10 から探す(FormRelat:1369)
@@ -231,6 +233,7 @@ class LookBlankTest(unittest.TestCase):
         self.assertEqual(s.inp_tag, "S1")
 
 
+@vba_reproduce
 class InpChangeTest(QuirkCase):
     def test_normal_flow(self) -> None:
         s = ready()
@@ -413,6 +416,7 @@ class EraseTest(unittest.TestCase):
         self.assertEqual(s.ng["E"].value, "")
 
 
+@vba_reproduce
 class BadTest(QuirkCase):
     def test_b4(self) -> None:
         s = ready()
@@ -431,6 +435,7 @@ class BadTest(QuirkCase):
         self.assertEqual(s.bad["S"].value, "")
 
 
+@vba_reproduce
 class FixedQuirksTest(QuirkCase):
     """B55・B60・B61・B63・B87 の「再現」(既定)と「直す」。"""
 

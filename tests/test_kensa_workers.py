@@ -7,6 +7,7 @@ from datetime import datetime
 from tests import kensa_fixture
 from ufkensa.kensa import quirks, vbx, workers
 from ufkensa.kensa.workers import CellWrite, ShiftTimes, WorkerRegistry
+from tests._isolation import vba_reproduce
 
 # DB「時間用」の値(fixtures)
 SHIFTS = ShiftTimes("07:00", "15:00", "15:00", "22:50", "22:50", "07:00", "08:15", "17:00")
@@ -116,6 +117,7 @@ class NameTest(unittest.TestCase):
         self.assertEqual((r.name, r.registry.t1, r.log), ("", "x", None))
 
 
+@vba_reproduce
 class RegistrySheetTest(unittest.TestCase):
     def test_worker_save_merges_same_names(self) -> None:
         w = workers.worker_save_rows(WorkerRegistry(t1="阿部_阿部", t2="阿部_佐藤", day1="d1"))
@@ -255,6 +257,7 @@ def ctx(now: datetime, cells=None, lot: str = "N456J52", **kw) -> workers.DailyC
                                 registry=WorkerRegistry(t1="阿部", t2="佐藤", t3="鈴木"), uf1_line="Test", **kw)
 
 
+@vba_reproduce
 class DailyTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)

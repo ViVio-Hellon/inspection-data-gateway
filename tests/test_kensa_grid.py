@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from ufkensa.kensa import grid, quirks, vbx
 from ufkensa.kensa.grid import KensaState
+from tests._isolation import vba_reproduce
 
 
 class FakeHooks(grid.Hooks):
@@ -203,6 +204,7 @@ class FlagTest(unittest.TestCase):
         self.assertFalse(f[5])
 
 
+@vba_reproduce
 class HelperTest(unittest.TestCase):
     def test_fm_clear_formats_z_and_removes_underline(self) -> None:
         s = KensaState()
@@ -249,6 +251,7 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(grid.small_count_th(s2, h.calculate_sheets, by_ken_count_blank=True), 2)
 
 
+@vba_reproduce
 class NCountQuirkTest(QuirkCase):
     def test_b88(self) -> None:
         s = KensaState(work="極厚")

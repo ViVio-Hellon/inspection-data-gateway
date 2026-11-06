@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ufkensa.kensa import quirks, records as rc, store as st, vbx
 from ufkensa.kensa.flow import Stop
+from tests._isolation import vba_reproduce
 
 
 def make_snap(**kw) -> rc.KensaSnapshot:
@@ -48,6 +49,7 @@ class Base(unittest.TestCase):
             return c.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()
 
 
+@vba_reproduce
 class VisualJoinTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -84,6 +86,7 @@ class VisualJoinTest(unittest.TestCase):
             rc.strain_ab(s)
 
 
+@vba_reproduce
 class MainDataSaveTest(Base):
     def test_hozon_row(self) -> None:
         s = make_snap(lgs_caption="ﾌﾘｰｿﾘ")
@@ -173,6 +176,7 @@ class MainDataSaveTest(Base):
         self.assertIn("'9'", cm.exception.text)
 
 
+@vba_reproduce
 class RegisterTest(Base):
     def test_more_columns_than_values(self) -> None:
         r = rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", ["Test", "k"], "[検査開始終了] ='k'")
@@ -278,6 +282,7 @@ class PostingLoadTest(Base):
         self.assertEqual(out.tags["ReSize"], "無")
 
 
+@vba_reproduce
 class HistoryTest(Base):
     def test_history_load(self) -> None:
         s = make_snap()
@@ -355,6 +360,7 @@ class HistoryTest(Base):
         self.assertEqual(out.messages[0].text, "別Lotデータがあります、新規登録処理を行ってください")
 
 
+@vba_reproduce
 class NumberCountTest(Base):
     def daily(self, rows) -> None:
         sh = self.store.add_sheet("Daily_Test")

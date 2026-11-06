@@ -19,6 +19,7 @@ from tests import kensa_fixture
 from ufkensa.kensa import quality as q
 from ufkensa.kensa import quality_view as qv
 from ufkensa.kensa import quirks, vbx
+from tests._isolation import vba_reproduce
 
 CRLF = "\r\n"
 
@@ -158,6 +159,7 @@ class RangeCheckTest(unittest.TestCase):
         self.assertFalse(q.check_size(["3.5"], 1, "3.9"))            # 3.5→4
 
 
+@vba_reproduce
 class FindIndicesTest(unittest.TestCase):
     SORI = ["板厚下", "板厚上", "H500", "H1000", "H1500", "H1530", "H2000", "H9999", "T500", "T1000", "T1500",
             "T1530", "T2000", "T9999", "備考", "管理番号", "T1999"]
@@ -295,6 +297,7 @@ class SmallFunctionsTest(unittest.TestCase):
 # ------------------------------------------------------------------
 # DBQP(QP L69-801)
 # ------------------------------------------------------------------
+@vba_reproduce
 class DbqpTest(unittest.TestCase):
     def test_H6083T1_table_A3(self) -> None:
         # H205 F52S R、オーダー 85×1525×2500、等級4、検番 H。一致 [6, 105](行順)。優先(納入先などの記入)なし
@@ -398,6 +401,7 @@ class DbqpTest(unittest.TestCase):
         self.assertEqual(r.messages[0].text, "歪等級が3,4以外です")
 
 
+@vba_reproduce
 class DbqpRowOrderTest(_DbCopy):
     def test_priority_row_later_in_table(self) -> None:
         # 管理番号25 を表の末尾へ → 一致順 [98, 104, 25]。優先行 25 が NewArray(1) を上書きし、98 は消え 25 が重複(QP:378)
@@ -495,6 +499,7 @@ class FormReflectTest(unittest.TestCase):
 # ------------------------------------------------------------------
 # DbReturnItem・ラテラル(QP L1176-1456, QDB L1491-1696)
 # ------------------------------------------------------------------
+@vba_reproduce
 class ReturnItemTest(unittest.TestCase):
     def test_lateral_table_B(self) -> None:
         # H9022K1(ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ K21S NP56 O 製造 23×672×2703): ラテフリ直角 管理番号8 → ラテラルボー要、公差 "別表B"
@@ -550,6 +555,7 @@ class ReturnItemTest(unittest.TestCase):
         self.assertEqual(msgs, [])
 
 
+@vba_reproduce
 class ReturnItemDbTest(_DbCopy):
     def test_free_sori(self) -> None:
         self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "厚下"=?, "厚上"=? WHERE "管理番号"=?', "0.5", "0.7", "1")
@@ -580,6 +586,7 @@ class ReturnItemDbTest(_DbCopy):
 # ------------------------------------------------------------------
 # 設備仕様・時間用・ストレートエッヂ・バーコール
 # ------------------------------------------------------------------
+@vba_reproduce
 class TransferTest(unittest.TestCase):
     def test_equipment(self) -> None:
         self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30), "可")   # 管理番号2 に一致
@@ -805,6 +812,7 @@ class AppearanceHTest(unittest.TestCase):
         self.assertEqual(f.tabs, ["前回"])                        # 渡した form は変えない
 
 
+@vba_reproduce
 class AppearanceHDbTest(_DbCopy):
     def test_last_match_wins(self) -> None:
         self.sql("品質基準", 'UPDATE "Q_S_QA_124_別表2" SET "飛込み"=? WHERE "管理番号"=?', "1", "15")
@@ -858,6 +866,7 @@ class AppearanceSTest(unittest.TestCase):
                          "該当用途ｺｰﾄﾞなし")
 
 
+@vba_reproduce
 class DistortionViewTest(unittest.TestCase):
     def test_122_B(self) -> None:
         # H9022K1: K21S NP56 O 23×670×2700。DIM_122_B 先頭行の用途に K21S → 材質は右3文字 "P56" と調質 O で絞り
@@ -976,6 +985,7 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 直した場合の分岐(B71・B72・B73・B74)
 # ------------------------------------------------------------------
+@vba_reproduce
 class FixBranchTest(unittest.TestCase):
     def setUp(self) -> None:
         kensa_fixture.use_offline()
@@ -1049,6 +1059,7 @@ class FixBranchTest(unittest.TestCase):
 # ------------------------------------------------------------------
 # B71・B72 を同じ種類の箇所すべてに広げた分(直した側と再現側)
 # ------------------------------------------------------------------
+@vba_reproduce
 class FixB71WideTest(_DbCopy):
     """B71: 下限・上限を Single に入れて Double(Val(Single) など)と比べ、境界ちょうどが外れる。"""
 
@@ -1114,6 +1125,7 @@ class FixB71WideTest(_DbCopy):
         self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "2.0")
 
 
+@vba_reproduce
 class FixB71MaterialsTest(MaterialsUpperPartTest):
     """QP:1764-1766: 梱包保護材の 板厚下 0.6 と 厚 0.6。"""
 
@@ -1134,6 +1146,7 @@ class FixB71MaterialsTest(MaterialsUpperPartTest):
         pass
 
 
+@vba_reproduce
 class FixB72WideTest(_DbCopy):
     def test_free_sori_tolerance_from_free_row(self) -> None:
         # ｽﾐﾄﾓ R115: 一致 [9(直角度・公差 1), 10]。10 をフリー反り「要」・公差 30 にする
@@ -1154,6 +1167,7 @@ class FixB72WideTest(_DbCopy):
         self.assertEqual(r.cells[(1, 13)], "30.0")                             # ラテラル公差も行 10(既存の B72)
 
 
+@vba_reproduce
 class FixB72HurisAndB89Test(_DbCopy):
     def test_b72_huris_loop_first_free_row(self) -> None:
         # 行 9・10 ともフリー反り「要」(公差 1 / 30)。UFMitsubishi 表示中は QP:1337 のループの HURIS が残る

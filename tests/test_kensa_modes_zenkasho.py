@@ -10,6 +10,7 @@ from tests import kensa_fixture
 from ufkensa.kensa import flow, quirks, vbx
 from ufkensa.kensa.modes import sheet as sh
 from ufkensa.kensa.modes import zenkasho as zk
+from tests._isolation import vba_reproduce
 
 NOW = datetime(2026, 10, 30, 10, 0)
 
@@ -31,6 +32,7 @@ def zen_book(choice: str = "一般", line: str = "LVC") -> sh.Book:
     return b
 
 
+@vba_reproduce
 class SheetInputTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -140,6 +142,7 @@ class DeviceTest(unittest.TestCase):
         self.assertEqual(ws.get(3, 29), "ﾏｲｸﾛ:M1" + sp + "ｺﾝﾍﾞｯｸｽ:")
 
 
+@vba_reproduce
 class MaxMinTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -187,6 +190,7 @@ class MaxMinTest(unittest.TestCase):
         self.assertEqual((ws.get(3, 23), ws.get(4, 23)), (vbx.single(10.5), vbx.single(10.4)))
 
 
+@vba_reproduce
 class EventsTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -201,6 +205,7 @@ class EventsTest(unittest.TestCase):
         self.assertTrue(b.events_enabled)
 
 
+@vba_reproduce
 class AllRowsTest(unittest.TestCase):
     """決定 D22(W12): 31 枚以上もあるので、VBA が 36 行目までしか見ない処理を全行(7-76)にした。"""
 
@@ -233,6 +238,7 @@ class AllRowsTest(unittest.TestCase):
         self.assertIn((45, 2), ws.underline)
 
 
+@vba_reproduce
 class FormTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -284,6 +290,7 @@ class FormTest(unittest.TestCase):
         self.assertEqual(res.text, "公差外判定の板があります 厚:1箇所　" + "\r\n" + "処理を続行しますか？")
 
 
+@vba_reproduce
 class SaveTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

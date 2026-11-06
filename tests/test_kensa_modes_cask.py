@@ -11,6 +11,7 @@ from tests import kensa_fixture
 from ufkensa.kensa import datasource, flow, quirks, vbx
 from ufkensa.kensa.modes import cask
 from ufkensa.kensa.modes import sheet as sh
+from tests._isolation import vba_reproduce
 
 NOW = datetime(2026, 10, 30, 10, 0)
 
@@ -30,6 +31,7 @@ def cask_book(*, micro: str = "0.000", convex: str = "0.0", count_st: str = "3")
     return b
 
 
+@vba_reproduce
 class CaskSheetTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -252,6 +254,7 @@ class PackDbTest(unittest.TestCase):
         self.assertTrue(b2.fx.messages[-1].text.startswith("DBにデータが見つかりません。"))
 
 
+@vba_reproduce
 class EventsTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -266,6 +269,7 @@ class EventsTest(unittest.TestCase):
         self.assertTrue(b.events_enabled)
 
 
+@vba_reproduce
 class MaxMinTest(unittest.TestCase):
     def tearDown(self) -> None:
         quirks.set_for_test(None)
@@ -312,6 +316,7 @@ class MaxMinTest(unittest.TestCase):
             cask.max_min(b)
 
 
+@vba_reproduce
 class SaveTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
