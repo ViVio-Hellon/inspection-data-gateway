@@ -32,6 +32,48 @@ MAX_LINES = 200
 IS_WINDOWS = sys.platform == "win32"
 
 
+D2XX_PREFIX = "FTDI:"     # 受信機を FTD2XX.dll で直接読むときのポート名(FTDI:<シリアル番号>)
+
+
+def _d2xx():
+    """FTD2XX.dll(FTDI のドライバに付いてくる)。無ければ None。"""
+    if not IS_WINDOWS:
+        return None
+    import ctypes
+    for name in ("ftd2xx.dll", "ftd2xx64.dll"):
+        try:
+            return ctypes.WinDLL(name)
+        except OSError:
+            continue
+    return None
+
+
+def d2xx_devices() -> list[dict[str, Any]]:
+    """FTD2XX.dll で見える FTDI の機器(U-WAVE-R など)。仮想COM が切ってあっても見える。"""
+    dll = _d2xx()
+    if dll is None:
+        return []
+    import ctypes
+    n = ctypes.c_uint32(0)
+    if dll.FT_CreateDeviceInfoList(ctypes.byref(n)) != 0:
+        return []
+    out = []
+    for i in range(n.value):
+        flags, typ, did, loc = (ctypes.c_uint32() for _ in range(4))
+        serial, desc = ctypes.create_string_buffer(16), ctypes.create_string_buffer(64)
+        h = ctypes.c_void_p()
+        dll.FT_GetDeviceInfoDetail.argtypes = [ctypes.c_uint32] + [ctypes.POINTER(ctypes.c_uint32)] * 4 + \
+            [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_void_p)]
+        if dll.FT_GetDeviceInfoDetail(i, ctypes.byref(flags), ctypes.byref(typ), ctypes.byref(did), ctypes.byref(loc),
+                                      serial, desc, ctypes.byref(h)) != 0:
+            continue
+        sn, ds = serial.value.decode("ascii", "replace"), desc.value.decode("ascii", "replace")
+        busy = bool(flags.value & 1)                        # FT_FLAGS_OPENED = ほかで使用中
+        out.append({"port": D2XX_PREFIX + sn, "device": ds, "usb": True, "d2xx": True,
+                    "label": f"{ds or 'FTDI'}(シリアル {sn})直接" + ("・使用中" if busy else "")})
+    return out
+
+
 def list_ports() -> list[dict[str, str]]:
     """この PC の COM ポート(レジストリ HARDWARE\\DEVICEMAP\\SERIALCOMM)。名前の例: \\Device\\VCP0 = USB の仮想COM。"""
     if not IS_WINDOWS:
@@ -51,7 +93,13 @@ def list_ports() -> list[dict[str, str]]:
                 i += 1
     except OSError as e:
         log.warning("COM ポートの一覧を読めません: %s", e)
-    return sorted(out, key=lambda x: (not x["usb"], int("".join(c for c in x["port"] if c.isdigit()) or 0)))
+    out = sorted(out, key=lambda x: (not x["usb"], int("".join(c for c in x["port"] if c.isdigit()) or 0)))
+    try:
+        direct = d2xx_devices()                  # 受信機を直接(仮想COM が切ってある U-WAVEPAK の設定でも見える)
+    except Exception as e:                       # noqa: BLE001 - 一覧が取れなくても COM は出す
+        log.warning("FTD2XX の機器一覧を読めません: %s", e)
+        direct = []
+    return direct + out
 
 
 @dataclass
@@ -158,6 +206,57 @@ class _WinPort:
             self.h = None
 
 
+class _D2xxPort:
+    """受信機を FTD2XX.dll で直接読む(U-WAVEPAK と同じ読み方。仮想COM が切ってあっても読める)。"""
+
+    FLOW = {"none": 0x0000, "rtscts": 0x0100, "xonxoff": 0x0400}
+
+    def __init__(self, serial: str, baud: int, flow: str, bytesize: int = 8, parity: str = "N",
+                 stopbits: int = 1) -> None:
+        import ctypes
+        self.ct = ctypes
+        dll = _d2xx()
+        if dll is None:
+            raise ComError("FTD2XX.dll が見つかりません(FTDI のドライバが入っていない)")
+        self.dll = dll
+        dll.FT_OpenEx.argtypes = [ctypes.c_char_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_void_p)]
+        for fn in ("FT_SetBaudRate", "FT_Purge"):
+            getattr(dll, fn).argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        dll.FT_SetDataCharacteristics.argtypes = [ctypes.c_void_p, ctypes.c_ubyte, ctypes.c_ubyte, ctypes.c_ubyte]
+        dll.FT_SetFlowControl.argtypes = [ctypes.c_void_p, ctypes.c_uint16, ctypes.c_ubyte, ctypes.c_ubyte]
+        dll.FT_SetTimeouts.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32]
+        dll.FT_Read.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint32, ctypes.POINTER(ctypes.c_uint32)]
+        for fn in ("FT_Close", "FT_SetDtr", "FT_SetRts"):
+            getattr(dll, fn).argtypes = [ctypes.c_void_p]
+        h = ctypes.c_void_p()
+        st = dll.FT_OpenEx(serial.encode("ascii"), 1, ctypes.byref(h))      # FT_OPEN_BY_SERIAL_NUMBER
+        if st != 0:
+            why = {2: "その受信機がありません(抜けている)", 3: "開けません。U-WAVEPAK など、ほかのプログラムが使っています"}.get(
+                st, f"FTD2XX のエラー {st}")
+            raise ComError(f"受信機(シリアル {serial})を開けません: {why}")
+        self.h = h
+        steps = [dll.FT_SetBaudRate(h, baud),
+                 dll.FT_SetDataCharacteristics(h, bytesize, 2 if stopbits == 2 else 0, PARITY.get(parity, 0)),
+                 dll.FT_SetFlowControl(h, self.FLOW.get(flow, 0), 0x11, 0x13),
+                 dll.FT_SetTimeouts(h, 200, 200), dll.FT_SetDtr(h), dll.FT_SetRts(h), dll.FT_Purge(h, 1 | 2)]
+        if any(steps):
+            self.close()
+            raise ComError(f"受信機の設定ができません(FTD2XX のエラー {[x for x in steps if x][0]})")
+
+    def read(self) -> bytes:
+        buf = self.ct.create_string_buffer(256)
+        got = self.ct.c_uint32(0)
+        st = self.dll.FT_Read(self.h, buf, 256, self.ct.byref(got))       # 200ms で戻る(FT_SetTimeouts)
+        if st != 0:
+            raise ComError(f"読めません(FTD2XX のエラー {st})。受信機が抜けたかもしれません")
+        return buf.raw[: got.value]
+
+    def close(self) -> None:
+        if getattr(self, "h", None):
+            self.dll.FT_Close(self.h)
+            self.h = None
+
+
 class _FilePort:
     """Windows 以外(試験): ファイル・擬似端末を読む。"""
 
@@ -250,7 +349,10 @@ def start(port: str, baud: int = DEFAULT_BAUD, flow: str = "rtscts", bytesize: i
         raise ComError("COM ポートを選んでください")
     if flow not in FLOWS or parity not in PARITY or bytesize not in (7, 8) or stopbits not in (1, 2) or baud <= 0:
         raise ComError("受信の設定が正しくありません")
-    dev = _WinPort(port, baud, flow, bytesize, parity, stopbits) if IS_WINDOWS else _FilePort(port)
+    if port.startswith(D2XX_PREFIX):
+        dev = _D2xxPort(port[len(D2XX_PREFIX):], baud, flow, bytesize, parity, stopbits)
+    else:
+        dev = _WinPort(port, baud, flow, bytesize, parity, stopbits) if IS_WINDOWS else _FilePort(port)
     with _lock:
         _state.port, _state.baud, _state.flow = port, baud, flow
         _state.bytesize, _state.parity, _state.stopbits = bytesize, parity, stopbits
