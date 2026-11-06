@@ -360,7 +360,7 @@ KEY_COM = "com_receive"         # この端末の受信の設定(次に開いた
 def _com_saved() -> dict:
     from ufkensa import user_settings
     from ufkensa.kensa import comport
-    d = dict(comport.DEFAULTS, port="")
+    d = dict(comport.DEFAULTS, port="", kensa=False)
     d.update({k: v for k, v in (user_settings.get(KEY_COM, {}) or {}).items() if k in d})
     return d
 
@@ -382,6 +382,7 @@ def com_start():
                 "bytesize": int(b.get("bytesize") or 8), "parity": str(b.get("parity") or "N"),
                 "stopbits": int(b.get("stopbits") or 1), "flow": str(b.get("flow") or "rtscts")}
         out = comport.start(**conf)
+        conf["kensa"] = bool(_com_saved().get("kensa"))
     except (ValueError, comport.ComError) as e:
         trace.event("maint.com", f"COM受信テストを始められません: {e}")
         return _err("com", str(e))
@@ -394,3 +395,18 @@ def com_start():
 def com_stop():
     from ufkensa.kensa import comport
     return jsonify(comport.stop())
+
+
+@bp.post("/api/maint/com/kensa")
+def com_kensa():
+    """「検査画面でこの受信機から受け取る」を入れる・外す(この端末の設定)。"""
+    from ufkensa import user_settings
+    b = _body()
+    conf = _com_saved()
+    conf.update({k: b[k] for k in ("port", "baud", "bytesize", "parity", "stopbits", "flow") if k in b})
+    conf["kensa"] = bool(b.get("on"))
+    if conf["kensa"] and not str(conf.get("port") or "").strip():
+        return _err("com", "先に受信機(ポート)を選んでください")
+    user_settings.save(KEY_COM, conf)
+    trace.event("maint.com", f"検査画面で受信機から受け取る: {'入' if conf['kensa'] else '切'} {conf.get('port')}")
+    return jsonify({"saved": conf})

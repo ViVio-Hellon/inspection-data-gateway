@@ -618,6 +618,7 @@ function initTabs() {
 function initReceiver() {
   const box = $("measIn");
   const show = () => {
+    if ($("recvBox").dataset.direct === "1") return;     // 受信機から直接のときはカーソルに関係ない
     const on = document.activeElement === box;
     $("recvBox").dataset.on = on ? "1" : "";
     text($("recvState"), on ? "受信待ち(測定器のボタンで入ります)" : "受け取れません — ここを押してください");
@@ -633,9 +634,57 @@ function initReceiver() {
   show();
 }
 
+/* 受信機から直接受け取る(保守で「検査画面でこの受信機から受け取る」を入れたとき)。
+   値はサーバが受け取って検査に渡すので、ここは届いた結果を出すだけ */
+let recvLast = 0, recvOn = false;
+async function handleRecv(r) {
+  remember(`受信機 ${r.text}`);
+  for (const m of r.messages || []) {
+    playMessage(m);
+    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
+  }
+  if (r.view) render(r.view);
+  if (r.question) {                              // 理由などを聞かれたら、答えを付けて同じ値を送り直す
+    const q = r.question;
+    const yes = await confirmBox(q.text, { ok: "はい", cancel: "いいえ" });
+    await op("receive", { text: r.text }, { [q.key]: !!yes });
+  }
+  if (r.stop) toast(r.stop.text, "error");
+}
+async function recvPoll() {
+  try {
+    const d = await api.get(`/api/kensa/recv?since=${recvLast}`);
+    for (const r of d.results) await handleRecv(r);
+    recvLast = d.last;
+    recvShow(d.running, d.port, d.error);
+  } catch (e) { /* 次の回で */ }
+  if (recvOn) setTimeout(recvPoll, 400);
+}
+function recvShow(on, port, error) {
+  recvOn = on;
+  $("recvBox").dataset.direct = on ? "1" : "";
+  if (on) {
+    $("recvBox").dataset.on = "1";
+    text($("recvState"), `受信機から直接受信中(${port})— カーソルに関係なく入ります`);
+  } else if (error) {
+    text($("recvState"), `受信機を開けません: ${error}(キー入力で受け取ります)`);
+  }
+}
+async function initDirect() {
+  try {
+    const d = await api.post("/api/kensa/recv/start", {});
+    if (!d.on) { if (d.error) recvShow(false, "", d.error); return; }
+    const p = await api.get("/api/kensa/recv?since=999999999");
+    recvLast = p.last;                            // 開く前に届いた分は流さない
+    recvShow(true, d.port, "");
+    recvPoll();
+  } catch (e) { /* キー入力のまま */ }
+}
+
 function init() {
   buildExtras();
   initReceiver();
+  initDirect();
   $("kAddClose").addEventListener("click", () => { $("kAdd").close(); refocus(); });
   initTabs();
   const closeAdd = () => { if ($("kAdd").open) $("kAdd").close(); };
