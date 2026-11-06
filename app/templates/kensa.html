@@ -4,15 +4,26 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/kensa.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pack_dialog.css') }}">
-<div class="kensa" id="kensa">
-  <!-- 左: 検査員・ロット・公差・作業選択 -->
-  <div class="kensa__col">
+<!--
+  検査画面(2026-11-06 の選定): 選ぶまで = 案A(上に作業の順番の帯、中央に大きな作業選択)、
+  作業を選んだら = 案B(上に1行の状態、中央に公差付きの測定表、右に次に測る・チェック・操作)。
+  入力欄・ボタンの id と動きは前のまま。場所は data-phase で切り替え、要る部品は JS で移す。
+-->
+<div class="kensa" id="kensa" data-phase="select">
+  <ol class="ksteps" id="ksteps" aria-label="作業の順番"></ol>
+  <div class="kbar" id="kbar">
+    <div class="kbar__info" id="kbarInfo"></div>
+    <div class="kbar__works" id="kbarWorks" aria-label="作業選択"></div>
+  </div>
+  <div class="kbody">
+  <!-- 左(選ぶまで): 検査員・ロット・公差 -->
+  <div class="kensa__col kside" id="kside">
     <section class="card">
       <header><h3>検査員</h3><span class="lv lv--ok" id="workerOk" hidden></span><span class="lv lv--ng" id="workerLv" hidden>検査員登録なし</span><span class="lv" id="proofLv"></span></header>
       <a class="btn btn--primary" id="calibLink" href="/calibration" hidden style="margin:0 10px">校正を始める</a>
       <div class="pad">
         <ul class="reg-workers" id="workers" aria-label="登録済みの検査員"></ul>
-        <div class="inbox inbox--sub"><label for="cardIn">カードで追加</label><input class="input" id="cardIn" inputmode="numeric" autocomplete="off" placeholder="社員カード(13桁)"></div>
+        <div class="inbox inbox--sub" id="cardBox"><label for="cardIn">カードで追加</label><input class="input" id="cardIn" inputmode="numeric" autocomplete="off" placeholder="社員カード(13桁)"></div>
       </div>
     </section>
     <section class="card">
@@ -23,13 +34,13 @@
           <dl class="reg-lot__kv" id="lotRegKv"></dl>
         </div>
         <p class="reg-empty" id="lotEmpty">ロット未登録 — LotNo を入れて Enter</p>
-        <div class="inbox inbox--sub"><label for="lotIn" id="lotInLabel">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
-        <div class="lot-src__row"><button class="btn lot-src" type="button" id="lotSrcBtn" aria-pressed="false" title="このロットだけ、モードによらず控え(第2パス)の仕掛台帳から読みます。台帳にロットが無い・引当が足りない・台帳が古いときに使います">控え(第2)から読む</button></div>
+        <div class="inbox inbox--sub" id="lotBox"><label for="lotIn" id="lotInLabel">LotNo</label><input class="input" id="lotIn" maxlength="7" autocomplete="off" placeholder="7桁"></div>
+        <div class="lot-src__row" id="lotSrcRow"><button class="btn lot-src" type="button" id="lotSrcBtn" aria-pressed="false" title="このロットだけ、モードによらず控え(第2パス)の仕掛台帳から読みます。台帳にロットが無い・引当が足りない・台帳が古いときに使います">控え(第2)から読む</button></div>
         <p class="lot-src__note" id="lotSrcNote" hidden></p>
         <dl class="kv-grid" id="lotKv"></dl>
       </div>
     </section>
-    <section class="card">
+    <section class="card" id="tolCard">
       <header><h3>公差</h3><span class="lv lv--warn" id="resizeLv" hidden>サイズ修正中</span></header>
       <div class="pad">
         <dl class="kv-grid" id="tolKv"></dl>
@@ -37,9 +48,14 @@
         <p class="muted" id="tolNote"></p>
       </div>
     </section>
-    <section class="card">
-      <header><h3>作業選択</h3></header>
-      <div class="pad">
+  </div>
+
+  <!-- 中央: 測定グリッドと、歪・外観・不良・検入高さ・BH・オーダー(VBA の MPEX のページ) -->
+  <div class="kensa__col kensa__center">
+    <section class="card kwait" id="kwait"><div class="pad"><p class="kwait__text" id="kwaitText"></p></div></section>
+    <section class="card chooser" id="chooser">
+      <header><h3>作業選択</h3><span class="muted" id="chooserHint">どれかを選ぶと測定表が出ます</span></header>
+      <div class="pad" id="workPad">
         <div class="works" id="works"></div>
         <div class="inbox" id="yamaBox" hidden><label for="yamaSel">山数</label><select class="input" id="yamaSel"></select></div>
         <div class="btn-row"><button class="btn" type="button" id="atBtn" hidden></button><button class="btn" type="button" id="inspeBtn" hidden></button></div>
@@ -47,17 +63,13 @@
         <p class="muted" id="atCount"></p>
       </div>
     </section>
-  </div>
-
-  <!-- 中央: 測定グリッドと、歪・外観・不良・検入高さ・BH・オーダー(VBA の MPEX のページ) -->
-  <div class="kensa__col kensa__center">
-    <section class="card">
+    <section class="card kmeasure">
       <header><h3>測定</h3><span class="lv lv--info" id="workLv"></span></header>
       <div class="pad" style="overflow-x:auto">
         <table class="mgrid" id="mgrid" aria-label="測定値"></table>
       </div>
     </section>
-    <section class="card">
+    <section class="card kmeasure">
       <header class="subtabs-head">
         <div class="subtabs" role="tablist" id="subtabs">
           <button type="button" role="tab" data-tab="strain" aria-selected="true">歪</button>
@@ -108,8 +120,8 @@
     <div class="blind" id="blind" hidden></div>
   </div>
 
-  <!-- 右: 次に測る・チェック・操作 -->
-  <div class="kensa__col">
+  <!-- 右(作業を選んだら): 次に測る・チェック・操作 -->
+  <div class="kensa__col krail" id="krail">
     <div class="next" id="nextBox"><small>次に測る</small><b id="nextName">-</b><small id="nextHint"></small></div>
     <!-- 測定器の伝送を受ける欄(見せない。フォーカスはここに戻す)。手入力は VBA で隠しモードだったので出さない -->
     <input class="input meas-hidden" id="measIn" autocomplete="off" aria-label="測定値(伝送文字列)">
@@ -141,6 +153,8 @@
         <ul class="log-lines" id="recent"></ul>
       </div>
     </section>
+    <section class="card" id="kAdd"><header><h3>検査員の追加・別のロット</h3></header><div class="pad" id="kAddPad"></div></section>
+  </div>
   </div>
 </div>
 

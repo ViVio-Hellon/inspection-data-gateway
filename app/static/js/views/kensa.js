@@ -119,36 +119,52 @@ function selectTd(c, name, choices) {
   return td;
 }
 
-function headRow(positions) {
-  return el("tr", {}, el("th"), ...positions.map((p) => el("th", { textContent: p.visible ? p.label : "" })));
-}
-
-function rowOf(label, tds, cls) {
-  const tr = el("tr", cls ? { class: cls } : {});
-  tr.append(el("th", { class: "rowh", textContent: label }), ...tds);
+function headRow(positions, withTol = false) {
+  const tr = el("tr", {}, el("th"), ...positions.map((p) => el("th", { textContent: p.visible ? p.label : "" })));
+  if (withTol) tr.append(el("th", { class: "tolh", textContent: "公差(下限〜上限)" }));
   return tr;
 }
 
-function renderGrid(g) {
-  const rows = [headRow(g.positions)];
+/** 行の公差(表示だけ。判定はサーバのまま)。厚・巾・丈は頭の字で決める */
+function tolOf(label, v) {
+  const t = (v && v.tolerance) || {};
+  const head = String(label || "").charAt(0);
+  if (head === "厚" && t.atu) return `${t.amk}〜${t.apk}`;
+  if ((head === "巾" || head === "幅") && t.hab) return `${t.hmk}〜${t.hpk}`;
+  if (head === "丈" && t.tak) return `${t.tmk}〜${t.tpk}`;
+  return "";
+}
+const tolTd = (txt) => el("td", { class: "tol", textContent: txt || "" });
+
+function rowOf(label, tds, cls, tol) {
+  const tr = el("tr", cls ? { class: cls } : {});
+  tr.append(el("th", { class: "rowh", textContent: label }), ...tds);
+  if (tol !== undefined) tr.append(tolTd(tol));
+  return tr;
+}
+
+function renderGrid(g, v) {
+  const t = (v && v.tolerance) || {};
+  const rows = [headRow(g.positions, true)];
   for (const r of g.rows) {
     if (!r.visible) continue;
-    rows.push(rowOf(r.label, r.cells.map((c) => cellTd(c))));
+    rows.push(rowOf(r.label, r.cells.map((c) => cellTd(c)), "", tolOf(r.label, v)));
   }
-  if (g.diag.some((c) => c.visible !== false)) rows.push(rowOf(g.diag_label, g.diag.map((c) => cellTd({ ...c, name: "" }, "sub")), "sep"));
+  if (g.diag.some((c) => c.visible !== false)) rows.push(rowOf(g.diag_label, g.diag.map((c) => cellTd({ ...c, name: "" }, "sub")), "sep",
+    [t.taik, v && v.taik_text].filter(Boolean).join(" / ")));
   // 直角度・ラテラルボーは VBA でも手で入れる TextBox
   if (g.diag_kou.some((c) => c.visible !== false)) {
-    rows.push(rowOf(g.diag_kou_label, g.diag_kou.map((c) => inputTd(c, `Diag${c.pos}Kou`)), "sep"));
+    rows.push(rowOf(g.diag_kou_label, g.diag_kou.map((c) => inputTd(c, `Diag${c.pos}Kou`)), "sep", ""));
   }
   if (g.lateral.some((c) => c.visible !== false)) {
-    rows.push(rowOf(g.lateral_label, g.lateral.map((c) => inputTd(c, `Lateral${c.pos}`)), "sep"));
+    rows.push(rowOf(g.lateral_label, g.lateral.map((c) => inputTd(c, `Lateral${c.pos}`)), "sep", t.lateral_text || t.lateral_grade || ""));
   }
   if (g.ng.some((c) => c.visible !== false)) {
     const tr = rowOf("判定", g.ng.map((c) => {
       const td = cellTd({ ...c, name: "" }, "sub ng");
       if (c.visible !== false) { td.dataset.pos = c.pos; td.title = "ダブルクリックでまとめて削除"; }
       return td;
-    }), "sep");
+    }), "sep", "");
     rows.push(tr);
   }
   $("mgrid").replaceChildren(...rows);
@@ -350,6 +366,79 @@ function renderLeft(v) {
   $("cardIn").placeholder = ws.length ? "もう1人追加するとき(社員カード)" : "社員カード(13桁)";
 }
 
+/* ---------- 選ぶまで(案A)/ 測定(案B)の切り替え ---------- */
+let phase = "";
+function setPhase(p) {
+  if (p === phase) return;
+  phase = p;
+  $("kensa").dataset.phase = p;
+  const measure = p === "measure";
+  // 作業の選択肢: 選ぶまでは中央の大きな枠、測定中は上の行
+  (measure ? $("kbarWorks") : $("chooser")).append($("workPad"));
+  // 公差の詳しい欄(対角・ラテラル・サイズ修正)は測定中は右の列へ。測定表の行にも出す
+  (measure ? $("krail") : $("kside")).append($("tolCard"));
+  // カードの追加・別のロットの入力は、測定中は右の列の下へ
+  const add = $("kAddPad");
+  if (measure) add.append($("cardBox"), $("lotBox"), $("lotSrcRow"));
+  else {
+    $("workers").after($("cardBox"));
+    $("lotEmpty").after($("lotBox"));
+    $("lotBox").after($("lotSrcRow"));
+  }
+}
+
+function renderPhase(v) {
+  const h = v.header || {};
+  const ws = v.workers || [];
+  const workerOk = ws.length > 0 && !v.worker_needed;
+  const calibOk = !!h.proofread;
+  const lotOk = !!h.lot;
+  const workOk = !!h.work;
+  setPhase(lotOk && workOk ? "measure" : "select");
+  const checks = v.checks || [];
+  const checkOk = checks.length > 0 && checks.every((c) => c.ok);
+  const printed = v.buttons && v.buttons.print === "再印刷";
+  const steps = [
+    ["検査員", workerOk, workerOk ? ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") : "カードを読む"],
+    ["校正", calibOk, calibOk ? "済" : "未校正"],
+    ["ロット", lotOk, lotOk ? h.lot : "LotNo を入れる"],
+    ["作業選択", workOk, workOk ? [h.work, h.yama && `${h.yama}山`].filter(Boolean).join(" ") : "選ぶ"],
+    ["測定", null, workOk ? "次: " + ((v.next && (v.next.label || v.next.name)) || "-") : ""],
+    ["歪・外観", null, ""],
+    ["印刷前チェック", checks.length ? checkOk : null, checks.length ? (checkOk ? "OK" : "未了あり") : ""],
+    ["印刷", printed ? true : null, printed ? "済" : ""],
+  ];
+  // いまの段 = 最初の済んでいない段(1〜4)。全部済めば「測定」
+  let cur = steps.findIndex((x, i) => i < 4 && !x[1]);
+  if (cur < 0) cur = checkOk ? (printed ? 7 : 7) : 4;
+  $("ksteps").replaceChildren(...steps.map(([name, ok, sub], i) => {
+    const st = ok === true ? "done" : (i === cur ? "cur" : (ok === false && i < cur ? "ng" : ""));
+    const li = el("li", { class: "kstep" + (st ? " is-" + st : "") },
+      el("b", { textContent: `${i + 1} ${name}` }), el("small", { textContent: sub || "" }));
+    if (i === 1 && !calibOk) {
+      const a = el("a", { href: "/calibration", textContent: "校正へ" });
+      li.append(a);
+    }
+    return li;
+  }));
+  // 選ぶまでの中央: 何をすればよいか
+  const wait = !lotOk ? (workerOk ? "LotNo を入れてください(左の「ロット」)" : "検査員のカードを読み、LotNo を入れてください")
+    : "";
+  $("kwait").hidden = !!(lotOk);
+  text($("kwaitText"), wait);
+  $("chooser").hidden = !(lotOk && !workOk);
+  // 測定中の上の1行
+  const info = $("kbarInfo");
+  const chip = (cls, t) => el("span", { class: "lv " + cls, textContent: t });
+  info.replaceChildren(
+    chip(workerOk ? "lv--ok" : "lv--ng", workerOk ? "検査員" : "検査員登録なし"),
+    el("span", { class: "kbar__names", textContent: ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") }),
+    chip(calibOk ? "lv--ok" : "lv--ng", calibOk ? "校正済" : "未校正"),
+    el("b", { class: "kbar__lot", textContent: h.lot || "" }),
+    el("span", { textContent: [h.ken_no && `検査No ${h.ken_no}`, h.youto && `用途 ${h.youto}`, [h.zai, h.tyu].filter(Boolean).join(" ")].filter(Boolean).join("　") }),
+  );
+}
+
 function renderRight(v) {
   text($("nextName"), v.next.label || v.next.name || "-");
   text($("nextHint"), [v.next.machin, v.next.auto ? "" : "手で選んだ欄"].filter(Boolean).join(" / "));
@@ -427,7 +516,8 @@ function render(v) {
   const act = document.activeElement;
   const keep = act && act.dataset && act.dataset.name && act.closest("#kensa") ? act.dataset.name : null;
   renderLeft(v);
-  renderGrid(v.grid);
+  renderGrid(v.grid, v);
+  renderPhase(v);
   renderStrain(v);
   renderVisual(v);
   renderBad(v);

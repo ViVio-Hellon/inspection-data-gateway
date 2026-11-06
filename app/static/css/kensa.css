@@ -1,5 +1,6 @@
 /* 検査画面(A案「計測コックピット」)。左=ロット・公差、中央=測定グリッド、右=次に測る・チェック・操作 */
-.kensa { display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 10px; align-items: start; }
+.kensa { display: flex; flex-direction: column; gap: 10px; }
+.kbody { display: grid; gap: 10px; align-items: start; }
 .kensa__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .kensa .card .pad { gap: 6px; }
 
@@ -82,7 +83,7 @@
           display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
 .notice p { margin: 0; color: var(--state-error); font-weight: 700; }
 
-@media (max-width: 1280px) { .kensa { grid-template-columns: 220px minmax(0, 1fr) 230px; } }
+
 
 /* D28: ロットごとの「控え(第2)から読む」 */
 .lot-src__row { margin-top: 6px; display: flex; justify-content: flex-end; }
@@ -113,3 +114,47 @@ li.is-stale { opacity: .6; }
 
 /* 測定器の伝送を受ける欄(見せないがフォーカスは受ける) */
 .meas-hidden { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+/* ---- 2026-11-06 の選定: 選ぶまで = 案A / 測定 = 案B ---- */
+/* 作業の順番の帯 */
+.ksteps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.kstep { border: 1px solid var(--rule); background: var(--surface); border-radius: var(--radius-sm, 6px); padding: 5px 8px; min-width: 0; }
+.kstep b { display: block; font-size: var(--fs-sm); white-space: nowrap; }
+.kstep small { display: block; color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kstep a { font-size: var(--fs-xs); font-weight: 700; }
+.kstep.is-done { border-color: var(--state-ok); background: var(--ok-bg); }
+.kstep.is-done b { color: var(--state-ok); }
+.kstep.is-cur { border: 2px solid var(--focus); background: var(--info-bg); }
+.kstep.is-ng { border-color: var(--state-error); background: var(--warn-bg); }
+.kstep.is-ng b { color: var(--state-error); }
+
+/* 選ぶまで: 左 = 検査員・ロット・公差 / 中央 = 案内か大きな作業選択 */
+.kensa[data-phase="select"] .kbody { grid-template-columns: 320px minmax(0, 1fr); }
+.kensa[data-phase="select"] .krail,
+.kensa[data-phase="select"] .kmeasure,
+.kensa[data-phase="select"] .kbar,
+.kensa[data-phase="select"] .blind { display: none !important; }
+.kwait .pad { min-height: 260px; display: grid; place-items: center; }
+.kwait__text { font-size: var(--fs-lg); font-weight: 700; color: var(--muted); margin: 0; text-align: center; }
+.chooser .pad { min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.chooser .works { gap: 12px; justify-content: center; }
+.chooser .works .btn { min-width: 9em; min-height: 64px; font-size: var(--fs-lg); font-weight: 800; }
+
+/* 測定: 上 = 状態の1行と作業の切り替え / 中央 = 公差付きの測定表 / 右 = 次に測る・チェック・操作 */
+.kensa[data-phase="measure"] .kbody { grid-template-columns: minmax(0, 1fr) 280px; }
+.kensa[data-phase="measure"] .kside,
+.kensa[data-phase="measure"] .kwait,
+.kensa[data-phase="measure"] .chooser { display: none !important; }
+.kbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 6px 10px; border: 1px solid var(--rule);
+        border-radius: var(--radius); background: var(--surface); }
+.kbar__info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; font-size: var(--fs-sm); }
+.kbar__names { font-weight: 800; font-size: var(--fs-md, 1rem); }
+.kbar__lot { font-family: var(--mono); font-size: 1.4rem; font-weight: 800; }
+.kbar__works { margin-left: auto; }
+.kbar__works .pad { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0; }
+.kbar__works .works .btn { min-height: 34px; }
+.kbar__works #atCount { margin: 0; }
+
+/* 測定表の公差の列 */
+.mgrid th.tolh { text-align: left; white-space: nowrap; }
+.mgrid td.tol { background: transparent; cursor: default; text-align: left; white-space: nowrap; color: var(--accent); font-size: var(--fs-sm); }
