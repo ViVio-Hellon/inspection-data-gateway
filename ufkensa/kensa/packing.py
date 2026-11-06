@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
 from . import datasource, paths, quality, quirks, vbx
-from .flow import ERROR, INFO, Message
+from .flow import ERROR, INFO, WARN, Message
 from .lot import read_check
 
 FOLDER = "包装仕様書"
@@ -147,10 +147,18 @@ def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot_no: str, *,
     if not packs:
         return ""
     folder = paths.to_local(folder_path())
-    names = (files or list_files)(folder)
-    file_int = len(names)                       # Dir(FILE_PATH & "\*") の数
     # B84: PacN はデバッグ用の配列。直した場合は PacN を作らない(空のフォルダ・"." が 7 文字目でない名前で止まらない)
     fix_b84 = not quirks.reproduce("B84")
+    try:
+        names = (files or list_files)(folder)
+    except PackingError as e:
+        if not fix_b84 or e.number != 76:
+            raise
+        # 直した側: 包装仕様書のフォルダが無くてもロット登録は止めない(画像を出さないだけ)
+        msgs.append(Message(f"包装仕様書のフォルダが見つからないので、包装仕様書の画像は出しません: {folder}"
+                            "(設定 → 使用パス の「包装仕様書」)", WARN, source="FormRelat.PackingNoCheck"))
+        return ""
+    file_int = len(names)                       # Dir(FILE_PATH & "\*") の数
     if file_int == 0:
         if fix_b84:
             return ""                           # 一致するファイルが無い

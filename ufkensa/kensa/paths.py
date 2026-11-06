@@ -46,6 +46,7 @@ MODE_LABELS = {ONLINE: "オンライン", OFFLINE: "オフライン"}
 FIRST, SECOND = "first", "second"
 SLOT_LABELS = {FIRST: "第1パス", SECOND: "第2パス"}
 KEY_ITEMS, KEY_LOT, KEY_SECOND_NAMES = "items", "lot", "second_names"
+KEY_FIRST_NAMES = "first_names"      # 第1パスで探すファイル名 {DB名: 名前}
 
 LOT = "lot"                          # 仕掛台帳(VBA の MainPath = 第1 / NextPath = 第2)
 ALIASES = ("main", "next")           # 前の項目名。main = いまのモードで読む側、next = 第2
@@ -221,7 +222,8 @@ def _norm(raw: dict, m: str) -> dict[str, Any]:
     items.update({k: str(v) for k, v in _d(raw.get(KEY_ITEMS)).items() if k in BY_KEY and k != LOT})
     lot.update({k: str(v) for k, v in _d(raw.get(KEY_LOT)).items() if k in (FIRST, SECOND)})
     names = {k: str(v) for k, v in _d(raw.get(KEY_SECOND_NAMES)).items() if k in LOT_DBS}
-    return {KEY_ITEMS: items, KEY_LOT: lot, KEY_SECOND_NAMES: names}
+    fnames = {k: str(v) for k, v in _d(raw.get(KEY_FIRST_NAMES)).items() if k in LOT_DBS}
+    return {KEY_ITEMS: items, KEY_LOT: lot, KEY_SECOND_NAMES: names, KEY_FIRST_NAMES: fnames}
 
 
 def _saved() -> dict[str, Any]:
@@ -338,7 +340,8 @@ def snapshot(key: str) -> dict[str, str]:
     k = _key(key)
     if k == LOT:
         out = {SLOT_LABELS[FIRST]: slot_value(LOT, FIRST), SLOT_LABELS[SECOND]: slot_value(LOT, SECOND)}
-        out.update({f"2つ目の名前 {db}": second_name(db) for db in LOT_DBS})
+        out.update({f"第1の名前 {db}": first_name(db) for db in LOT_DBS})
+        out.update({f"第2の名前 {db}": second_name(db) for db in LOT_DBS})
         return out
     return {BY_KEY[k].label: slot_value(k)}
 
@@ -348,7 +351,7 @@ def item_changed(key: str) -> bool:
     k = _key(key)
     d = _saved()
     if k == LOT:
-        return bool(d[KEY_LOT]) or bool(d[KEY_SECOND_NAMES])
+        return bool(d[KEY_LOT]) or bool(d[KEY_SECOND_NAMES]) or bool(d[KEY_FIRST_NAMES])
     return k in d[KEY_ITEMS]
 
 
@@ -360,7 +363,7 @@ def reset_item(key: str) -> None:
     d = _saved()
     if k == LOT:
         d[KEY_LOT].clear()
-        d[KEY_SECOND_NAMES].clear()
+        d[KEY_SECOND_NAMES].clear(); d[KEY_FIRST_NAMES].clear()
     else:
         d[KEY_ITEMS].pop(k, None)
     user_settings.save(KEY_PATHS, d)
@@ -369,7 +372,7 @@ def reset_item(key: str) -> None:
 def reset_all() -> list[str]:
     """すべての項目を既定(VBA のオンラインの値)に戻す。戻した項目の key を返す。モードは変えない。"""
     done = [i.key for i in ITEMS if item_changed(i.key)]
-    user_settings.save(KEY_PATHS, {KEY_ITEMS: {}, KEY_LOT: {}, KEY_SECOND_NAMES: {}})
+    user_settings.save(KEY_PATHS, {KEY_ITEMS: {}, KEY_LOT: {}, KEY_SECOND_NAMES: {}, KEY_FIRST_NAMES: {}})
     return done
 
 
@@ -382,8 +385,41 @@ def changed(key: str, slot: str = FIRST) -> bool:
 # ------------------------------------------------------------------
 # 仕掛台帳の 2つ目の名前
 # ------------------------------------------------------------------
-def first_name(db: str) -> str:
+def default_name(db: str) -> str:
     return DB_FILES[db][1]
+
+
+def first_name_setting(db: str) -> str:
+    """設定「第1の名前」の入力そのまま(空 = 既定の名前)。"""
+    return str(_saved().get(KEY_FIRST_NAMES, {}).get(db, "") or "")
+
+
+def first_name(db: str) -> str:
+    """第1で探すファイル名。設定が空なら既定(SIKALOT.sqlite3 など)。"""
+    if db not in LOT_DBS:
+        return default_name(db)
+    v = first_name_setting(db).strip()
+    if not v:
+        return default_name(db)
+    return v if "." in v else v + ".sqlite3"
+
+
+def set_name(db: str, slot: str, name: str) -> None:
+    """第1 / 第2 のファイル名を決める(空で既定に戻す)。"""
+    if slot == SECOND:
+        return set_second_name(db, name)
+    if db not in LOT_DBS:
+        raise KeyError(db)
+    name = str(name or "").strip().strip('"')
+    if any(c in name for c in "\\/:"):
+        raise ValueError("ファイル名だけを入れてください(フォルダは入れません)")
+    d = _saved()
+    d.setdefault(KEY_FIRST_NAMES, {})
+    if name:
+        d[KEY_FIRST_NAMES][db] = name
+    else:
+        d[KEY_FIRST_NAMES].pop(db, None)
+    user_settings.save(KEY_PATHS, d)
 
 
 def second_name_setting(db: str) -> str:
@@ -432,7 +468,7 @@ def lot_file_name(db: str, base: str, m: Optional[str] = None) -> str:
 def copied_names() -> set[str]:
     """手元へ写して読む仕掛 DB のファイル名(1つ目・2つ目の名前・SIKACOMP・SIKATWOYEAR)。"""
     out = {DB_FILES[db][1] for db in COPIED_DBS}
-    out |= {second_name(db) for db in LOT_DBS}
+    out |= {second_name(db) for db in LOT_DBS} | {first_name(db) for db in LOT_DBS}
     return {n.lower() for n in out}
 
 
@@ -478,7 +514,7 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
         return join(slot_value(k), file)
     if m == OFFLINE:
         return join(slot_value(LOT, SECOND), second_name(name))
-    p1 = join(slot_value(LOT, FIRST), file)
+    p1 = join(slot_value(LOT, FIRST), first_name(name))
     p2 = join(slot_value(LOT, SECOND), second_name(name))
     if p1 == p2 or lot_usable(p1):
         return p1
@@ -502,7 +538,7 @@ def looked_files(name: str, m: Optional[str] = None) -> list[str]:
         p2 = join(slot_value(LOT, SECOND), second_name(name))
         if lot_mode(m) == OFFLINE:
             return [p2]
-        p1 = join(slot_value(LOT, FIRST), file)
+        p1 = join(slot_value(LOT, FIRST), first_name(name))
         return [p1] if p1 == p2 else [p1, p2]
     return [db_file(name, m)]
 
@@ -522,7 +558,7 @@ def missing_text(name: str, files: Optional[list[str]] = None, m: Optional[str] 
         parts.append(f"{fname}(フォルダ {folder or '(空)'})")
     mode_note = ""
     if name in LOT_DBS:
-        mode_note = "オフラインなので第2パスだけを見ました。" if lot_mode(m) == OFFLINE else ""
+        mode_note = "オフラインなので第2パス(控え)だけを見ました。第1パス(台帳)を読むには 設定 → この端末 のモードを「オンライン」にするか、第2パスの名前を合わせてください。" if lot_mode(m) == OFFLINE else ""
     what = "見つからないか、手元へ写せません" if name in COPIED_DBS else "見つかりません"
     return (f"{label} のファイルが{what}: " + " / ".join(parts) + "。"
             + mode_note + "設定 → 使用パス の「確認」で場所と名前を確かめてください。")
@@ -597,7 +633,8 @@ def exists(path_text: str, kind: str = "any") -> bool:
 # 確認ボタン・一覧
 # ------------------------------------------------------------------
 def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
-          names: Optional[dict[str, str]] = None) -> dict[str, Any]:
+          names: Optional[dict[str, str]] = None,
+          first_names: Optional[dict[str, str]] = None) -> dict[str, Any]:
     """確認ボタン: ある・読める・書けるか。仕掛台帳はその側(第1 / 第2)と、各ファイルを手元へ写せるか。
 
     `text` / `names` は画面で入力中(保存前)の値。渡せば保存した値の代わりにそれを確かめる
@@ -638,6 +675,9 @@ def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
         for db in dbs:
             if s == SECOND and names is not None and db in LOT_DBS:
                 fname = _name_of(names.get(db, ""), db)
+            elif s == FIRST and first_names is not None and db in LOT_DBS:
+                v = str(first_names.get(db, "") or "").strip().strip('"')
+                fname = (v if "." in v else v + ".sqlite3") if v else default_name(db)
             else:
                 fname = second_name(db) if s == SECOND else first_name(db)
             there = exists(join(text, fname), "file")
@@ -693,6 +733,8 @@ def overview(m: Optional[str] = None) -> list[dict[str, Any]]:
                 "in_use": {mm: in_use_text(LOT, mm) for mm in MODE_LABELS},
                 "second_names": [{"db": db, "first": first_name(db), "value": second_name_setting(db),
                                   "effective": second_name(db)} for db in LOT_DBS],
+                "first_names": [{"db": db, "default": default_name(db), "value": first_name_setting(db),
+                                 "effective": first_name(db)} for db in LOT_DBS],
             })
         else:
             row.update({"path": slot_value(i.key), "default": slot_default(i.key), "changed": changed(i.key)})

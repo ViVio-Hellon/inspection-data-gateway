@@ -45,8 +45,8 @@ class PackingTest(unittest.TestCase):
         for n in names:
             (self.folder / n).write_bytes(b"x")
 
-    def check(self, lot: str = LOT, hist=None) -> str:
-        return packing.packing_no_check(self.hist if hist is None else hist, lot, gaichu=no_gaichu)
+    def check(self, lot: str = LOT, hist=None, messages=None) -> str:
+        return packing.packing_no_check(self.hist if hist is None else hist, lot, gaichu=no_gaichu, messages=messages)
 
     def test_no_sheet_or_lot(self) -> None:
         self.assertEqual(packing.packing_no_check(None, LOT), "")          # WsCheck("Lot情報履歴") = False
@@ -139,9 +139,9 @@ class PackingB84FixTest(PackingTest):
         super().tearDown()
 
     def test_folder_errors(self) -> None:
-        with self.assertRaises(packing.PackingError) as e:                 # フォルダが無い(76)は直さない
-            self.check()
-        self.assertEqual(e.exception.number, 76)
+        msgs = []
+        self.assertEqual(self.check(messages=msgs), "")                     # フォルダが無くても止めない(画像を出さないだけ)
+        self.assertIn("包装仕様書のフォルダが見つからない", msgs[0].text)
         self.files()
         self.assertEqual(self.check(), "")                                 # 空のフォルダ → 一致なし
         self.files("0.txt", "1P1216.JPG")

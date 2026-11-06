@@ -103,25 +103,42 @@ function lotPathCell(p, td, inputs, names) {
   box.className = "muted";
   box.style.marginTop = "4px";
   const t = document.createElement("small");
-  t.textContent = "2つ目の名前(任意。空なら1つ目と同じ名前):";
+  t.textContent = "読むファイルの名前(空なら左の既定の名前。拡張子を省くと .sqlite3):";
   box.append(t);
-  for (const n of p.second_names) {
-    const line = document.createElement("div");
-    const lab = document.createElement("small");
-    lab.textContent = n.first + " → ";
-    const inp = document.createElement("input");
-    inp.className = "input";
-    inp.style.width = "14em";
-    inp.value = n.value;
-    inp.placeholder = n.first;
-    inp.disabled = !S.master_edit.possible;
-    inp.dataset.db = n.db;
-    inp.dataset.orig = n.value;
-    inp.setAttribute("aria-label", `2つ目の名前(${n.first} の代わり)`);
-    line.append(lab, inp);
-    box.append(line);
-    names.push(inp);
+  const tbl = document.createElement("table");
+  tbl.className = "lot-names";
+  const hd = tbl.createTHead().insertRow();
+  for (const h of ["", "第1パスで読む名前", "第2パスで読む名前"]) {
+    const th = document.createElement("th");
+    th.textContent = h;
+    th.style.fontWeight = "700";
+    th.style.textAlign = "left";
+    hd.append(th);
   }
+  const tb = tbl.createTBody();
+  const firsts = Object.fromEntries((p.first_names || []).map((n) => [n.db, n]));
+  for (const n of p.second_names) {
+    const row = tb.insertRow();
+    const lab = row.insertCell();
+    lab.textContent = n.db.replace("NOW", "");
+    lab.style.whiteSpace = "nowrap";
+    const f = firsts[n.db] || { value: "", default: n.first };
+    for (const [slot, val, ph] of [["first", f.value, f.default], ["second", n.value, f.default]]) {
+      const inp = document.createElement("input");
+      inp.className = "input";
+      inp.style.width = "14em";
+      inp.value = val;
+      inp.placeholder = ph;
+      inp.disabled = !S.master_edit.possible;
+      inp.dataset.db = n.db;
+      inp.dataset.slot = slot;
+      inp.dataset.orig = val;
+      inp.setAttribute("aria-label", `${slot === "first" ? "第1" : "第2"}パスで読む名前(${n.db})`);
+      row.insertCell().append(inp);
+      names.push(inp);
+    }
+  }
+  box.append(tbl);
   td.append(box);
   const use = document.createElement("div");
   use.style.marginTop = "4px";
@@ -145,7 +162,7 @@ function renderPaths() {
   $("pathsLock").textContent = me.possible
     ? (me.ok ? "編集できます(管理者パスワードを入れてあります)。" : "変えるときは管理者パスワードを聞きます。")
     : "変えるには、アクセス権限の「管理者」(Administrator)と管理者パスワードが要ります。";
-  const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || p.second_names.some((n) => n.value))));
+  const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || (p.second_names.some((n) => n.value) || (p.first_names || []).some((n) => n.value)))));
   $("resetAll").disabled = !me.possible || !changed.length;
   $("resetAll").title = changed.length ? `既定から変わっている項目: ${changed.map((p) => p.label).join("・")}` : "すべて既定のままです";
   const body = $("pathsTable").tBodies[0];
@@ -187,13 +204,13 @@ function renderPaths() {
       save.textContent = "保存";
       save.addEventListener("click", () => saveRow(p, inputs, names));
       act.append(" ", save);
-      const lotChanged = !p.single && (p.first_changed || p.second_changed || p.second_names.some((n) => n.value));
+      const lotChanged = !p.single && (p.first_changed || p.second_changed || (p.second_names.some((n) => n.value) || (p.first_names || []).some((n) => n.value)));
       if (p.key === "log" ? p.changed : (p.single ? p.changed : lotChanged)) {
         const reset = document.createElement("button");
         reset.className = "btn";
         reset.type = "button";
         reset.textContent = "既定に戻す";
-        reset.title = p.single ? "既定: " + (p.default || "(空)") : "第1・第2・2つ目の名前をまとめて既定に戻します";
+        reset.title = p.single ? "既定: " + (p.default || "(空)") : "第1・第2のパスと名前をまとめて既定に戻します";
         reset.addEventListener("click", () => (p.key === "log"
           ? postPath({ key: p.key, path: "", reset: true }, "ログの出力パスを既定に戻しました")
           : resetPaths({ key: p.key })));
@@ -517,12 +534,12 @@ async function resetPaths(body) {
 }
 
 async function resetAll() {
-  const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || p.second_names.some((n) => n.value))));
+  const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || (p.second_names.some((n) => n.value) || (p.first_names || []).some((n) => n.value)))));
   if (!changed.length) {
     toast("すべて既定のままです", "info");
     return;
   }
-  const list = changed.map((p) => "・" + p.label + (p.single ? `: ${p.path || "(空)"} → ${p.default || "(空)"}` : "(第1・第2・2つ目の名前)")).join("\n");
+  const list = changed.map((p) => "・" + p.label + (p.single ? `: ${p.path || "(空)"} → ${p.default || "(空)"}` : "(第1・第2のパスと名前)")).join("\n");
   const ok = await confirmBox(`使用パスを、すべて既定(VBA のオンラインの値)に戻します。\n本番のフォルダを指すようになります。\n\n${list}\n\n(モードとログの出力パスは変えません)`,
     { ok: "すべて既定に戻す", cancel: "やめる", danger: true });
   if (!ok) return;
@@ -537,7 +554,7 @@ async function saveRow(p, inputs, names) {
     bodies.push(field === "path" ? { key: p.key, path: input.value } : { key: p.key, slot: field, path: input.value });
   }
   for (const n of names) {
-    if (n.value !== n.dataset.orig) bodies.push({ key: p.key, db: n.dataset.db, second_name: n.value });
+    if (n.value !== n.dataset.orig) bodies.push({ key: p.key, db: n.dataset.db, [n.dataset.slot === "first" ? "first_name" : "second_name"]: n.value });
   }
   if (!bodies.length) {
     toast("変わったところはありません", "info");
@@ -557,7 +574,8 @@ function typedValues(key, tr) {
   const names = tr.querySelectorAll("input[data-db]");
   if (names.length) {
     body.second_names = {};
-    for (const n of names) body.second_names[n.dataset.db] = n.value;
+    body.first_names = {};
+    for (const n of names) (n.dataset.slot === "first" ? body.first_names : body.second_names)[n.dataset.db] = n.value;
   }
   return body;
 }

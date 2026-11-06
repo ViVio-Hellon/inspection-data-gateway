@@ -3,7 +3,7 @@
 品質基準の表を変えたあと、仕掛に無い組み合わせでも公差を確かめられるように、利用者が自分で
 ロットを作って手元DB(`store.LocalStore`)のシート「仮ロット」に保存する。
 
-- ロットNo は `A111A11` の形(英字・数字 3 桁・英字・数字 2 桁)
+- ロットNo は英数字 7 文字(例 `A111A11`。本物の形 `N8281C0` も可)
 - 検番は「頭の英字 1 文字 + 残りは 1」(例 "H" → "H111111")。長さは本物の検査番号(7 桁)と同じ。
   DBQP が検番で見るのは頭の 1 文字だけ(QP: `KenA = Left(KenNo, 1)`)
 - 歪公差は本物のロットと同じ部品(`quality.dist_array` → `dbqp`)で引く。仕掛の行(LotData)と引当
@@ -25,7 +25,7 @@ from .store import LocalStore
 SHEET = "仮ロット"
 HEADER = ("ロットNo", "内容(JSON)")
 
-LOT_RE = re.compile(r"^[A-Z][0-9]{3}[A-Z][0-9]{2}$")
+LOT_RE = re.compile(r"^[A-Z0-9]{7}$")   # 英数字 7 文字(本物の形 N8281C0 も A111A11 も可)
 HEAD_RE = re.compile(r"^[A-Z]$")
 KEN_LEN = 7                     # SIKAHIKINOW / SIKALOTNOW の 検査番号(例 H6X1176)
 
@@ -138,7 +138,7 @@ def validate(lot: Any, ken_head: Any, values: Any, hiki_extra: Any = None, sourc
     """画面の入力 → KariLot。誤りは KariError(field = 項目名)。"""
     lot_no = normalize_lot(lot)
     if not LOT_RE.match(lot_no):
-        raise KariError("ロットNo は A111A11 の形(英字・数字3桁・英字・数字2桁)で入れてください", "lot")
+        raise KariError("ロットNo は英数字 7 文字で入れてください(例 A111A11・N8281C0)", "lot")
     head = normalize_lot(ken_head)
     if not HEAD_RE.match(head):
         raise KariError("検番の頭は英字 1 文字で選んでください(例 H → H111111)", "ken_head")
@@ -253,7 +253,8 @@ def from_real(lot_no: str) -> dict[str, Any]:
     data = quality.LotData(f.value, r.value)
     hiki = quality.hiki_arr_create(lot_no) or []
     if not r.value or not f.value:
-        raise KariError(f"仕掛(SIKALOTNOW)にロット {lot_no} がありません", "source")
+        why = " ".join(m.text for m in (f.messages + r.messages)) or f"読んだファイル: {r.file_path or f.file_path}"
+        raise KariError(f"仕掛(SIKALOTNOW)にロット {lot_no} がありません。{why}", "source")
 
     def col(name: str) -> str:
         c = quality.col_of(f.value, name)
