@@ -141,54 +141,53 @@
 
     <!-- ================= 測定機器ID ================= -->
     <section class="tabpanel tabpanel--scroll" data-panel="device" id="pDevice" hidden>
-      <div class="maint__dev">
-        <div class="card maint__devtest">
-          <header><h3>数値が飛ぶかのテスト</h3><span class="lv lv--info">検査画面と同じ部品でなぞる・何も書かない</span></header>
-          <form class="maint__devform" id="mDevForm" autocomplete="off">
-            <label for="mDevText">伝送文字列</label>
-            <input class="input maint__devtext" id="mDevText" placeholder="例 DT10002+0000021.712M / #L395.8">
-            <label for="mDevLine">ライン</label><select class="input" id="mDevLine"></select>
-            <label for="mDevAtu">厚</label><input class="input input--num" id="mDevAtu">
-            <label for="mDevHab">幅</label><input class="input input--num" id="mDevHab">
-            <label for="mDevYouto">用途</label><input class="input" id="mDevYouto" placeholder="例 K126">
-            <label for="mDevSt">入力先</label><input class="input" id="mDevSt" value="S1" maxlength="3" title="S1〜E14・F1〜F10。行1〜4 = 厚、5〜 = 幅・丈・対角">
-            <span></span>
-            <span class="btn-row"><button class="btn btn--find" type="submit">テストする</button>
-              <button class="btn btn--sm" type="button" id="mDevFromKensa" title="検査画面でいま開いているロットの ライン・厚・幅・用途 を入れる">検査中のロットの値</button></span>
-          </form>
-          <p class="maint__hint">測定器から送ると(またはここに貼ると)、受け取った値・どの機器の行か・その機器で正しいか を出します。テキスト欄にカーソルを置いて測定器の送信ボタンを押しても入ります。</p>
-        </div>
-        <div class="card maint__devout" id="mDevOut"><p class="maint__empty">伝送文字列を入れて「テストする」。</p></div>
-      </div>
-      <div class="card maint__com" id="mCom">
-        <header><h3>COM受信テスト</h3><span class="lv lv--info">受信機(U-WAVE-R)の COM ポートを直接読む・見せるだけ</span>
-          <span class="lv" id="mComLv">止まっています</span></header>
-        <form class="maint__comform" id="mComForm" autocomplete="off">
-          <label for="mComPort">COM ポート</label>
-          <span class="maint__comport"><select class="input" id="mComPort"></select><input class="input" id="mComPortText" placeholder="例 COM3" title="一覧に無いときはここに入れる"><button class="btn btn--sm" type="button" id="mComRefresh">一覧を更新</button></span>
-          <label for="mComBaud">通信速度</label>
-          <select class="input" id="mComBaud"><option>9600</option><option>19200</option><option>38400</option><option selected>57600</option><option>115200</option></select>
-          <label for="mComBits">データビット</label>
-          <select class="input" id="mComBits"><option>8</option><option>7</option></select>
-          <label for="mComParity">パリティ</label>
-          <select class="input" id="mComParity"><option value="N">なし</option><option value="O">奇数</option><option value="E">偶数</option></select>
-          <label for="mComStop">ストップビット</label>
-          <select class="input" id="mComStop"><option>1</option><option>2</option></select>
-          <label for="mComFlow">フロー制御</label>
-          <select class="input" id="mComFlow"><option value="rtscts">RTS/CTS</option><option value="none">なし</option><option value="xonxoff">Xon/Xoff</option></select>
-          <span></span>
-          <span></span>
-          <label class="maint__comkensa"><input type="checkbox" id="mComKensa"> 検査画面でこの受信機から受け取る(カーソルに関係なく測定値が入ります。U-WAVEPAK・Bluetooth キー入力ユーティリティは終了しておく)</label>
-          <span></span>
-          <p class="maint__small" id="mComKensaList"></p>
-          <span></span>
-          <span class="btn-row"><button class="btn btn--find" type="submit" id="mComStart">受信を始める</button><button class="btn" type="button" id="mComStop2">止める</button><button class="btn btn--sm" type="button" id="mComDefault">U-WAVEPAK の設定に戻す</button></span>
+      <!-- 2026-11-06 の選定: 案B(受信機カード)+ 案A(段の流れ)+ 案C(当たった行を光らせる) -->
+      <div class="rx">
+        <div class="rx__cards" id="rxCards" aria-label="受信機"></div>
+        <p class="rx__hint">受信機(U-WAVE-R・DDM-100)は1つのプログラムしか開けません。<b>U-WAVEPAK・Bluetooth キー入力ユーティリティを終了してから</b>「受信を始める」。ここで受け取った値は検査には流しません。</p>
+
+        <form class="rx__cond" id="rxCond" autocomplete="off" aria-label="テストの条件">
+          <b>テストの条件</b>
+          <label>ライン <select class="input" id="mDevLine"></select></label>
+          <label>厚 <input class="input input--num" id="mDevAtu"></label>
+          <label>幅 <input class="input input--num" id="mDevHab"></label>
+          <label>用途 <input class="input" id="mDevYouto" placeholder="例 K126"></label>
+          <label>入力先 <input class="input" id="mDevSt" value="S1" maxlength="3" title="S1〜E14・F1〜F10。行1〜4 = 厚、5〜 = 幅・丈・対角"></label>
+          <button class="btn btn--sm" type="button" id="mDevFromKensa" title="検査画面でいま開いているロットの ライン・厚・幅・用途 を入れる">検査中のロットの値</button>
+          <span class="rx__paste"><input class="input" id="mDevText" placeholder="文字列を貼ってテスト(例 DT10002+0000021.712M / #L395.8)"><button class="btn btn--find btn--sm" type="submit">テスト</button></span>
         </form>
-        <p class="maint__hint">既定は U-WAVEPAK の設定ファイル(FTD2XXRS.232)と同じ 57600bps・8bit・パリティなし・ストップ1・RTS/CTS です。DDM-100(コンベックス)は Bluetooth の COM(例 COM3・COM4。STX〜ETX で 1 件)で、受け取るたびに ACK を返します。一覧の「…直接」は受信機(U-WAVE-R)を FTD2XX.dll で直接読みます(この PC の U-WAVEPAK は仮想COM を使わない設定なので、こちらを選んでください)。受信機は1つのプログラムしか開けないので、<b>U-WAVEPAK を終了してから</b>始めてください。受け取った文字列は検査には流しません。</p>
-        <p class="maint__note" id="mComErr" hidden></p>
-        <div class="maint__comlog"><table class="maint__comtbl"><thead><tr><th>時刻</th><th>受け取った文字列</th><th>バイト(16進)</th><th></th></tr></thead><tbody id="mComRows"><tr><td colspan="4" class="muted">まだ受け取っていません</td></tr></tbody></table></div>
+
+        <div class="rx__mid">
+          <div class="card rx__log">
+            <header><h3>受信記録</h3><span class="muted">全受信機・新しい順。行を押すと右に流れを出します</span></header>
+            <div class="rx__logwrap"><table class="rx__tbl"><thead><tr><th>時刻</th><th>受信機</th><th>文字列</th><th>値</th><th>判定</th></tr></thead>
+              <tbody id="rxRows"><tr><td colspan="5" class="muted">まだ受け取っていません。受信機の「受信を始める」を押してから測定器のボタンを押してください。</td></tr></tbody></table></div>
+          </div>
+          <div class="card rx__detail" id="rxDetail">
+            <header><h3 id="rxDetailTitle">判定の流れ</h3><span class="lv" id="rxVerdict"></span></header>
+            <ol class="rx__flow" id="rxFlow"></ol>
+            <dl class="rx__kv" id="rxKv"></dl>
+            <div id="rxNotes"></div>
+          </div>
+        </div>
+
+        <div class="maint__devgrid" id="mDevGrid"></div>
       </div>
-      <div class="maint__devgrid" id="mDevGrid"></div>
+
+      <dialog class="rx__dlg" id="rxConfDlg" aria-labelledby="rxConfTitle">
+        <form method="dialog" id="rxConfForm">
+          <header><h3 id="rxConfTitle">受信の設定</h3></header>
+          <div class="rx__dlgbody">
+            <label>通信速度 <select class="input" id="rxBaud"><option>9600</option><option>19200</option><option>38400</option><option>57600</option><option>115200</option></select></label>
+            <label>データビット <select class="input" id="rxBits"><option>8</option><option>7</option></select></label>
+            <label>パリティ <select class="input" id="rxParity"><option value="N">なし</option><option value="O">奇数</option><option value="E">偶数</option></select></label>
+            <label>ストップビット <select class="input" id="rxStop"><option>1</option><option>2</option></select></label>
+            <label>フロー制御 <select class="input" id="rxFlowCtl"><option value="rtscts">RTS/CTS</option><option value="none">なし</option><option value="xonxoff">Xon/Xoff</option></select></label>
+            <p class="muted">U-WAVE-R の既定は 57600・8・なし・1・RTS/CTS(U-WAVEPAK と同じ)。</p>
+          </div>
+          <footer class="btn-row"><button class="btn btn--sm" type="button" id="rxConfDefault">既定に戻す</button><button class="btn" value="cancel">やめる</button><button class="btn btn--primary" type="button" id="rxConfSave">保存</button></footer>
+        </form>
+      </dialog>
     </section>
 
     <!-- ================= ソリ・設備仕様 ================= -->

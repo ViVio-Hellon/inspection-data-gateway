@@ -304,6 +304,9 @@ class _FilePort:
 # ------------------------------------------------------------------
 STX, ETX, ACK = 0x02, 0x03, 0x06
 _lock = threading.Lock()
+_gseq = 0
+#: 全受信機の受信記録(止めた後も残す)。(通し番号, 受信の名前, ポート, Line)
+_log: deque = deque(maxlen=400)
 
 
 def _decode(b: bytes) -> str:
@@ -422,9 +425,13 @@ class Receiver:
     def _push(self, raw: bytes, framed: bool) -> None:
         text = ddm_text(raw) if framed else _decode(raw).strip()
         shown = (bytes([STX]) + raw + bytes([ETX])) if framed else raw
+        global _gseq
         with _lock:
             self.seq += 1
-            self.lines.append((self.seq, Line(time.strftime("%H:%M:%S"), text, " ".join(f"{c:02X}" for c in shown))))
+            line = Line(time.strftime("%H:%M:%S"), text, " ".join(f"{c:02X}" for c in shown))
+            self.lines.append((self.seq, line))
+            _gseq += 1
+            _log.append((_gseq, self.slot, self.port, line))
         log.info("COM受信 %s: %r", self.port, shown)
         if self.sink is not None and text:
             try:
@@ -493,3 +500,25 @@ def status(since: int = 0, slot: str = "test") -> dict[str, Any]:
 def receivers() -> list[dict[str, Any]]:
     """動いている受信(名前・ポート・検査へ渡すか)。"""
     return [{k: v for k, v in r.status(10 ** 9).items() if k != "lines"} for r in _rx.values()]
+
+
+def log_lines(prefix: str = "", since: int = 0) -> tuple[list[dict[str, Any]], int]:
+    """全受信機の受信記録(受信の名前が prefix で始まるもの)。(行, 最後の通し番号)。"""
+    with _lock:
+        out = [{"g": g, "slot": sl, "port": pt, "at": ln.at, "text": ln.text, "hex": ln.hex}
+               for g, sl, pt, ln in _log if g > since and sl.startswith(prefix)]
+        return out, _gseq
+
+
+def kind_of(port: str) -> str:
+    """受信機の種類(カードの色・設定の出し分け): uwave / ddm / com。"""
+    if port.startswith(D2XX_PREFIX):
+        return "uwave"
+    for p in list_ports():
+        if p["port"] == port:
+            lab = p.get("label", "")
+            if "Bluetooth" in lab:
+                return "ddm"
+            if "USB" in lab:
+                return "uwave"
+    return "com"

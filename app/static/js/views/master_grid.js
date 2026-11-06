@@ -72,6 +72,7 @@ export function createMasterGrid(root, { compact = false, onChanged = null } = {
   document.body.append(hdlg);
   hdlg.querySelector("button").addEventListener("click", () => hdlg.close());
 
+  let mark_fn = null, scroll_mark = false;
   function render() {
     if (!view) return;
     title.textContent = `${view.label} / ${view.table}`;
@@ -108,8 +109,11 @@ export function createMasterGrid(root, { compact = false, onChanged = null } = {
       tr.append(td);
       tbody.append(tr);
     }
+    let first = null;
     for (const r of view.rows) {
-      const tr = el("tr", "mgrid__row");
+      const mark = mark_fn ? mark_fn(r) : null;
+      const tr = el("tr", "mgrid__row" + (mark ? ` is-${mark}` : ""));
+      if (mark && !first) first = tr;
       tr.tabIndex = 0;
       for (const c of view.columns) {
         const v = show(r[c.name]);
@@ -122,6 +126,7 @@ export function createMasterGrid(root, { compact = false, onChanged = null } = {
       tbody.append(tr);
     }
     tbl.replaceChildren(thead, tbody);
+    if (first && scroll_mark) { first.scrollIntoView({ block: "nearest" }); scroll_mark = false; }
   }
 
   async function load() {
@@ -242,6 +247,8 @@ export function createMasterGrid(root, { compact = false, onChanged = null } = {
   });
 
   return {
+    /** 行に印を付ける(fn(行) → "ok" / "ng" / "expect" / null)。測定機器ID 画面で当たった行を光らせる */
+    highlight(fn) { mark_fn = fn; scroll_mark = true; render(); },
     open(source, tableName) {
       if (source !== src || tableName !== table) { sort = ""; dir = "asc"; q.value = ""; }
       src = source; table = tableName;

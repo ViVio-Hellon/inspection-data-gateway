@@ -242,3 +242,57 @@
 .maint__comtext { font-family: var(--mono); font-weight: 700; }
 .maint__comhex { font-family: var(--mono); color: var(--muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .maint__comkensa { display: flex; gap: 6px; align-items: flex-start; font-weight: 700; }
+
+/* ---- 測定機器ID(受信機カード・受信記録・段の流れ・当たった行) ---- */
+.rx { display: flex; flex-direction: column; gap: 12px; }
+.rx__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.rx__card { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; border-left: 6px solid var(--rxc); min-width: 0; }
+.rx--uw { --rxc: #2f7fd6; } .rx--ddm { --rxc: #d98a1c; } .rx--com { --rxc: #6b7f8c; }
+.rx__chead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rx__kname { font-size: var(--fs-md, 1rem); }
+.rx__port { color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.rx__big { font-family: var(--mono); font-size: 2rem; font-weight: 800; line-height: 1.1; }
+.rx__meta { color: var(--muted); font-size: var(--fs-xs); }
+.rx__err { margin: 0; padding: 6px 8px; border-radius: 4px; background: var(--warn-bg); color: var(--state-error); font-weight: 700; font-size: var(--fs-sm); white-space: pre-line; }
+.rx__ops { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.rx__kensa { display: inline-flex; gap: 4px; align-items: center; font-weight: 700; font-size: var(--fs-sm); }
+.rx__rm { margin-left: auto; }
+.rx__add { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; border: 2px dashed var(--rule); background: transparent; }
+.rx__hint { margin: 0; font-size: var(--fs-sm); color: var(--muted); }
+.rx__cond { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
+.rx__cond label { display: inline-flex; gap: 4px; align-items: center; font-size: var(--fs-sm); color: var(--muted); }
+.rx__cond .input--num { width: 6em; } .rx__cond #mDevYouto { width: 6em; } .rx__cond #mDevSt { width: 4em; }
+.rx__paste { display: inline-flex; gap: 4px; margin-left: auto; min-width: 0; flex: 1 1 320px; }
+.rx__paste .input { flex: 1; min-width: 0; font-family: var(--mono); }
+.rx__mid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); gap: 12px; align-items: start; }
+.rx__log, .rx__detail { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rx__log header, .rx__detail header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rx__logwrap { max-height: 360px; overflow: auto; }
+.rx__tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.rx__tbl th, .rx__tbl td { padding: 4px 8px; border-bottom: 1px solid var(--rule); text-align: left; white-space: nowrap; }
+.rx__tbl th { color: var(--muted); font-weight: 700; position: sticky; top: 0; background: var(--surface); }
+.rx__tbl tr { cursor: pointer; } .rx__tbl tr:hover td { background: var(--sunken); }
+.rx__tbl tr.is-sel td { background: var(--accent-soft); }
+.rx__mono { font-family: var(--mono); }
+.rx__dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; background: var(--rxc); }
+.rx__flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.rx__stage { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); grid-template-rows: auto auto; gap: 0 10px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--rule); position: relative; }
+.rx__stage small { grid-row: 1 / 3; color: var(--muted); font-weight: 700; align-self: center; }
+.rx__stage b { font-family: var(--mono); overflow-wrap: anywhere; }
+.rx__stage span { font-size: var(--fs-xs); color: var(--muted); overflow-wrap: anywhere; }
+.rx__stage:not(:last-child)::after { content: "▼"; position: absolute; left: 3.2em; bottom: -11px; font-size: 9px; color: var(--muted); z-index: 1; }
+.rx__stage.is-ok { border-color: var(--state-ok); background: var(--ok-bg); }
+.rx__stage.is-ng { border-color: var(--state-error); background: var(--warn-bg); }
+.rx__stage.is-ng b, .rx__stage.is-ng small { color: var(--state-error); }
+.rx__stage.is-skip { opacity: .45; }
+.rx__kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; font-size: var(--fs-sm); }
+.rx__kv dt { color: var(--muted); } .rx__kv dd { margin: 0; overflow-wrap: anywhere; }
+.rx__dlg { border: 1px solid var(--rule); border-radius: var(--radius); padding: 0; width: min(420px, 92vw); background: var(--surface); color: var(--ink); }
+.rx__dlg header, .rx__dlg footer { padding: 10px 14px; } .rx__dlg footer { justify-content: flex-end; }
+.rx__dlgbody { display: grid; gap: 8px; padding: 0 14px; }
+.rx__dlgbody label { display: grid; grid-template-columns: 8em 1fr; align-items: center; gap: 8px; }
+/* 案C: 測定機器ID の表で当たった行 */
+.mgrid__row.is-ok td { background: var(--ok-bg); font-weight: 700; }
+.mgrid__row.is-ng td { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
+.mgrid__row.is-expect td { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
+@media (max-width: 1100px) { .rx__mid { grid-template-columns: minmax(0, 1fr); } }

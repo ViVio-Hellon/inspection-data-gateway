@@ -23,9 +23,8 @@ const TAB_KEY = "maint.tab";
 let S = { labels: {}, keys: [] };
 let lastAll = null;
 
-// COM受信テストの状態(タブの初期表示より前に用意する。後ろで宣言すると「初期化前に参照」で落ちる)
-let comLast = 0, comTimer = null, comLoaded = false, comKensa = [];
-const COM_FIELDS = [["baud", "mComBaud"], ["bytesize", "mComBits"], ["parity", "mComParity"], ["stopbits", "mComStop"], ["flow", "mComFlow"]];
+// 測定機器ID 画面の状態(タブの初期表示より前に用意する。後ろで宣言すると「初期化前に参照」で落ちる)
+const RX = { loaded: false, last: 0, timer: null, lines: [], selected: null, defaults: null, confPort: "" };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -62,7 +61,7 @@ function showTab(name) {
   for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== name;
   try { localStorage.setItem(TAB_KEY, name); } catch { /* 保存できなくても動く */ }
   if (name === "master") openMaster();
-  if (name === "device") { openDevice(); comOpen(); }
+  if (name === "device") openDevice();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
 
@@ -298,79 +297,7 @@ function pickTable(name) {
   grids.master.open(M.source, name);
 }
 
-/* ---------- 測定機器ID(伝送テスト + 表) ---------- */
-let devLoaded = false;
-let devDefaults = null;
-
-async function openDevice() {
-  if (!grids.device) grids.device = createMasterGrid($("mDevGrid"), { compact: true });
-  if (devLoaded) return;
-  devLoaded = true;
-  grids.device.open("denso", "測定機器ID");
-  try {
-    devDefaults = await api.get("/api/maint/device/defaults");
-    $("mDevLine").replaceChildren(...devDefaults.lines.map((x) => { const o = el("option", "", x); o.value = x; return o; }));
-    fillDevice(devDefaults);
-  } catch (err) { toastError(err); }
-  $("mDevText").focus();
-}
-
-function fillDevice(d) {
-  if (d.line) $("mDevLine").value = d.line;
-  if (d.atu !== undefined) $("mDevAtu").value = d.atu;
-  if (d.hab !== undefined) $("mDevHab").value = d.hab;
-  if (d.youto !== undefined) $("mDevYouto").value = d.youto;
-}
-
-function devRow(label, value, cls) {
-  const tr = el("tr", cls || "");
-  const td = el("td");
-  if (value instanceof Node) td.append(value); else td.textContent = value ?? "";
-  tr.append(el("th", "", label), td);
-  return tr;
-}
-
-function renderDevice(d) {
-  const box = $("mDevOut");
-  const head = el("div", "maint__devhead");
-  const ok = d.judge.ok;
-  const verdict = !d.accepted ? ["受け付けない", "lv--ng"] : d.kind !== "DT" ? ["値は入る(機器の確かめなし)", "lv--info"]
-    : ok === true ? ["OK 値が入る", "lv--ok"] : ok === false ? ["NG 止まる", "lv--ng"] : ["機器を確かめられない", "lv--warn"];
-  head.append(el("span", "maint__devval", d.accepted ? d.value : "—"), el("span", "lv " + verdict[1], verdict[0]));
-  const t = el("table", "table table--dense maint__devtbl");
-  const tb = el("tbody");
-  const hit = (rows) => rows.map((r) => `${r["ライン"]} ${r["機器名"]}(ID ${r["ID"]}・厚 ${r["厚下"] || "-"}〜${r["厚上"] || "-"}${r["用途"] ? "・用途あり" : ""})`).join("\n");
-  tb.append(
-    devRow("種別", d.kind || "(なし)"),
-    devRow("入る値", d.accepted ? `${d.value}(伝送の値部分「${d.raw}」)` : "—"),
-    devRow("入力先", `${d.st} … ${d.st_label}`),
-    devRow("機器の番号", d.code || "(DT のときだけ。3〜7 文字目)"),
-    devRow(`この機器(${d.line})`, d.kind === "DT" ? (hit(d.hits) || "測定機器ID に行がありません") : "—", d.kind === "DT" && !d.hits.length ? "is-warn" : ""),
-    ...(d.others.length ? [devRow("ほかのラインで同じ番号", hit(d.others))] : []),
-    devRow("この厚・用途で使う機器", d.expect ? `${d.expect.name || "(該当なし)"}(出力テキスト ${d.expect.text || "-"})` : "—"),
-    devRow("検査画面の判定", d.judge.text || (ok === true ? "そのまま入って判定に進みます" : "—"), ok === false ? "is-warn" : ""),
-    devRow("帳票の機器欄", (d.report || []).join(" / ") || "—"),
-  );
-  t.append(tb);
-  box.replaceChildren(head, t, ...d.notes.map((n) => el("p", "maint__note", n)));
-}
-
-async function runDevice() {
-  try {
-    renderDevice(await api.post("/api/maint/device/test", {
-      text: $("mDevText").value, line: $("mDevLine").value, atu: $("mDevAtu").value, hab: $("mDevHab").value,
-      youto: $("mDevYouto").value, st: $("mDevSt").value, tak: devDefaults?.tak || "",
-    }));
-  } catch (err) { toastError(err); if (err.field === "st") $("mDevSt").select(); }
-}
-$("mDevForm").addEventListener("submit", (e) => { e.preventDefault(); runDevice(); });
-$("mDevFromKensa").addEventListener("click", async () => {
-  try {
-    devDefaults = await api.get("/api/maint/device/defaults");
-    fillDevice(devDefaults);
-    toast(devDefaults.lot ? `検査中のロット ${devDefaults.lot} の値を入れました` : "検査中のロットがありません(この端末のラインだけ入れました)", devDefaults.lot ? "ok" : "warn");
-  } catch (err) { toastError(err); }
-});
+/* (測定機器ID は下の「受信機・受信記録」にまとめた) */
 
 /* ---------- 比べる品質基準: 参照(/api/fs/list) ---------- */
 async function browse(path) {
@@ -648,96 +575,241 @@ async function init() {
 init();
 
 
-/* ---------- COM受信テスト ---------- */
-function comFill(conf) {
-  for (const [k, id] of COM_FIELDS) if (conf[k] !== undefined) $(id).value = String(conf[k]);
+
+/* ---------- 測定機器ID: 受信機カード(案B)+ 受信記録 + 段の流れ(案A)+ 当たった行を光らせる(案C) ---------- */
+const KIND = { uwave: ["U-WAVE-R", "rx--uw"], ddm: ["DDM-100(コンベックス)", "rx--ddm"], com: ["COM", "rx--com"] };
+const RX_CONF = [["baud", "rxBaud"], ["bytesize", "rxBits"], ["parity", "rxParity"], ["stopbits", "rxStop"], ["flow", "rxFlowCtl"]];
+
+function rxCond() {
+  return { line: $("mDevLine").value, atu: $("mDevAtu").value, hab: $("mDevHab").value, youto: $("mDevYouto").value,
+           st: $("mDevSt").value || "S1", tak: RX.defaults?.tak || "" };
 }
-function comPorts(ports, want) {
-  const sel = $("mComPort");
-  sel.replaceChildren(...(ports.length ? ports : [{ port: "", device: "" }]).map((p) =>
-    new Option(p.port ? (p.label || `${p.port}${p.usb ? "(USB の仮想COM)" : ""}`) : "(見つかりません。右に入れてください)", p.port)));
-  if (want && ports.some((p) => p.port === want)) sel.value = want;
-  else if (want) $("mComPortText").value = want;
+
+async function openDevice() {
+  if (!grids.device) grids.device = createMasterGrid($("mDevGrid"), { compact: true });
+  if (RX.loaded) { rxPoll(); return; }
+  RX.loaded = true;
+  grids.device.open("denso", "測定機器ID");
+  try {
+    RX.defaults = await api.get("/api/maint/device/defaults");
+    $("mDevLine").replaceChildren(...RX.defaults.lines.map((x) => { const o = el("option", "", x); o.value = x; return o; }));
+    rxFillCond(RX.defaults);
+  } catch (err) { toastError(err); }
+  rxPoll();
 }
-function comShow(d) {
-  $("mComLv").textContent = d.running ? `受信中 ${d.port}(${d.bytes} バイト)` : "止まっています";
-  $("mComLv").className = "lv " + (d.running ? "lv--ok" : "");
-  $("mComErr").hidden = !d.error;
-  $("mComErr").textContent = d.error || "";
-  const fresh = (d.lines || []).filter((ln) => ln.seq > comLast);   // 表示済みの行は足さない(止めたときに全部返ってくる)
-  if (fresh.length) {
-    const body = $("mComRows");
-    if (comLast === 0) body.replaceChildren();
-    for (const ln of fresh) {
-      const use = el("button", "btn btn--sm", "この文字列でテスト");
-      use.type = "button";
-      use.addEventListener("click", () => { $("mDevText").value = ln.text; runDevice(); });
-      const tr = el("tr", "");
-      const tdUse = el("td", ""); tdUse.append(use);
-      tr.append(el("td", "", ln.at), el("td", "maint__comtext", ln.text), el("td", "maint__comhex", ln.hex), tdUse);
-      body.prepend(tr);
+
+function rxFillCond(d) {
+  if (d.line) $("mDevLine").value = d.line;
+  if (d.atu !== undefined) $("mDevAtu").value = d.atu;
+  if (d.hab !== undefined) $("mDevHab").value = d.hab;
+  if (d.youto !== undefined) $("mDevYouto").value = d.youto;
+}
+
+async function rxPoll() {
+  clearTimeout(RX.timer);
+  try {
+    const q = new URLSearchParams({ since: String(RX.last), ...rxCond() });
+    const d = await api.get(`/api/maint/rx?${q}`);
+    rxCards(d.cards, d.ports);
+    if (d.lines.length) {
+      RX.lines.unshift(...d.lines.reverse());
+      RX.lines.length = Math.min(RX.lines.length, 200);
+      RX.last = d.last;
+      rxRows();
+      rxSelect(RX.lines[0]);                      // 届いた最新の値を流れに出す
     }
-    comLast = d.last;
-  }
-  if (d.kensa) comKensa = d.kensa;
-  comKensaShow();
-  clearTimeout(comTimer);
-  if (d.running) comTimer = setTimeout(comPoll, 500);
+    if (d.cards.some((c) => c.running && c.where === "mnt")) RX.timer = setTimeout(rxPoll, 500);
+  } catch (e) { RX.timer = setTimeout(rxPoll, 2000); }
 }
-async function comPoll() {
-  try { comShow(await api.get(`/api/maint/com?since=${comLast}`)); } catch (e) { /* 次の回で */ }
+
+function rxCards(cards, ports) {
+  const box = $("rxCards");
+  RX.kinds = Object.fromEntries(cards.map((c) => [c.port, c.kind]));
+  const items = cards.map((c) => {
+    const [kname, kcls] = KIND[c.kind] || KIND.com;
+    const card = el("div", `card rx__card ${kcls}`);
+    const head = el("div", "rx__chead");
+    const st = c.running && c.where === "mnt" ? ["受信中", "lv--ok"] : c.running && c.where === "kensa" ? ["検査画面で受信中", "lv--info"]
+      : c.error ? ["開けません", "lv--ng"] : ["止まっています", ""];
+    head.append(el("b", "rx__kname", kname), el("span", "lv " + st[1], st[0]));
+    const sub = el("div", "rx__port", c.kind === "uwave" && c.port.startsWith("FTDI:") ? `USB 直接(シリアル ${c.port.slice(5)})` : c.label);
+    const big = el("div", "rx__big", c.last ? (c.last.test?.value || c.last.text) : "—");
+    const meta = el("div", "rx__meta", c.last ? `最後 ${c.last.at}・この画面で ${c.count} 件` : (c.present ? "まだ受け取っていません" : "このポートが見つかりません(抜けている?)"));
+    const items = [head, sub, big, meta];
+    if (c.error) {
+      const busy = /使って|使用中/.test(c.error);
+      items.push(el("p", "rx__err", busy ? `${c.error}\n→ ${c.kind === "ddm" ? "Bluetooth キー入力ユーティリティ" : "U-WAVEPAK"} を終了してから、もう一度「受信を始める」。` : c.error));
+    }
+    const ops = el("div", "rx__ops");
+    const go = el("button", "btn btn--sm " + (c.running && c.where === "mnt" ? "" : "btn--find"), c.running && c.where === "mnt" ? "止める" : "受信を始める");
+    go.type = "button";
+    go.addEventListener("click", () => rxStartStop(c));
+    const kz = el("label", "rx__kensa");
+    const chk = el("input"); chk.type = "checkbox"; chk.checked = c.kensa;
+    chk.addEventListener("change", () => rxKensa(c, chk.checked, chk));
+    kz.append(chk, document.createTextNode(" 検査画面で受け取る"));
+    ops.append(go, kz);
+    if (c.kind !== "ddm") {
+      const cf = el("button", "btn btn--sm", "設定"); cf.type = "button";
+      cf.title = `${c.conf.baud}bps・${c.conf.bytesize}${c.conf.parity}${c.conf.stopbits}・${c.conf.flow}`;
+      cf.addEventListener("click", () => rxOpenConf(c));
+      ops.append(cf);
+    }
+    const rm = el("button", "btn btn--sm rx__rm", "外す"); rm.type = "button";
+    rm.title = "この受信機をこの画面から外す(検査画面でも受け取らなくなる)";
+    rm.addEventListener("click", () => rxRemove(c));
+    ops.append(rm);
+    items.push(ops);
+    card.append(...items);
+    return card;
+  });
+  // 足す: 一覧から(U-WAVE-R の直接・Bluetooth の COM・USB の COM)
+  const add = el("div", "card rx__add");
+  const have = new Set(cards.map((c) => c.port));
+  const sel = el("select", "input"); sel.id = "rxAddSel";
+  const free = (ports || []).filter((p) => !have.has(p.port));
+  sel.append(...(free.length ? free : [{ port: "", label: "(足せる受信機がありません)" }]).map((p) => new Option(p.label || p.port, p.port)));
+  const txt = el("input", "input"); txt.placeholder = "一覧に無ければ COM5 など"; txt.id = "rxAddText";
+  const b = el("button", "btn btn--sm btn--find", "＋ 受信機を足す"); b.type = "button";
+  b.addEventListener("click", async () => {
+    const port = txt.value.trim() || sel.value;
+    try { const d = await api.post("/api/maint/rx/add", { port }); rxCards(d.cards, d.ports); } catch (e) { toastError(e); }
+  });
+  add.append(el("b", "", "受信機を足す"), sel, txt, b);
+  box.replaceChildren(...items, add);
 }
-async function comOpen() {
-  if (comLoaded) return;
-  comLoaded = true;
+
+async function rxStartStop(c) {
   try {
-    const d = await api.get("/api/maint/com");
-    comPorts(d.ports, d.saved.port);
-    comFill(d.saved);
-    comLast = d.last || 0;                      // 開く前に受け取った分は出さない
-    comShow(d);
+    const on = c.running && c.where === "mnt";
+    await api.post(on ? "/api/maint/rx/stop" : "/api/maint/rx/start", { port: c.port });
+    if (!on) toast(`${c.port} の受信を始めました。測定器のボタンを押してください`, "ok");
   } catch (e) { toastError(e); }
+  rxPoll();
 }
-$("mComRefresh").addEventListener("click", async () => {
-  const d = await api.get("/api/maint/com");
-  comPorts(d.ports, $("mComPort").value || $("mComPortText").value);
-});
-$("mComDefault").addEventListener("click", async () => { const d = await api.get("/api/maint/com"); comFill(d.defaults); });
-$("mComForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const body = { port: $("mComPortText").value.trim() || $("mComPort").value };
-  for (const [k, id] of COM_FIELDS) body[k] = $(id).value;
+
+async function rxKensa(c, on, chk) {
   try {
-    comLast = 0;
-    $("mComRows").replaceChildren(el("tr", "", ""));
-    comShow(await api.post("/api/maint/com/start", body));
+    await api.post("/api/maint/com/kensa", { on, port: c.port, ...c.conf });
+    toast(on ? `検査画面を開くと ${c.port} から受け取ります` : `${c.port} は検査画面で受け取りません`, "success");
+  } catch (e) { chk.checked = !on; toastError(e); }
+  rxPoll();
+}
+
+async function rxRemove(c) {
+  if (!(await confirmBox(`${c.port} をこの画面から外しますか?(検査画面でも受け取らなくなります)`, { ok: "外す", cancel: "やめる" }))) return;
+  try { await api.post("/api/maint/rx/remove", { port: c.port }); } catch (e) { toastError(e); }
+  rxPoll();
+}
+
+function rxOpenConf(c) {
+  RX.confPort = c.port;
+  $("rxConfTitle").textContent = `受信の設定(${c.port})`;
+  for (const [k, id] of RX_CONF) $(id).value = String(c.conf[k]);
+  $("rxConfDlg").showModal();
+}
+$("rxConfDefault").addEventListener("click", () => {
+  const d = { baud: 57600, bytesize: 8, parity: "N", stopbits: 1, flow: "rtscts" };
+  for (const [k, id] of RX_CONF) $(id).value = String(d[k]);
+});
+$("rxConfSave").addEventListener("click", async () => {
+  const body = { port: RX.confPort };
+  for (const [k, id] of RX_CONF) body[k] = $(id).value;
+  try { await api.post("/api/maint/rx/conf", body); $("rxConfDlg").close(); toast("受信の設定を保存しました(次に受信を始めたときから)", "success"); } catch (e) { toastError(e); }
+  rxPoll();
+});
+
+/** 判定の札(受信記録の行・流れの見出し) */
+function rxVerdict(t) {
+  if (!t || t.error) return [t?.error || "テストできません", "lv--ng"];
+  if (!t.accepted) return ["受け付けない", "lv--ng"];
+  if (t.kind !== "DT") return ["値は入る", "lv--info"];
+  if (!(t.hits || []).length) return ["NG 測定機器ID に無い", "lv--ng"];
+  if (t.judge.ok === true) return ["OK " + ((t.hits[0] || {})["機器名"] || ""), "lv--ok"];
+  if (t.judge.ok === false) return ["NG 止まる", "lv--ng"];
+  return [t.expect ? "機器を確かめられない" : "厚を入れると判定", "lv--warn"];
+}
+
+function rxRows() {
+  const body = $("rxRows");
+  body.replaceChildren(...RX.lines.map((ln) => {
+    const tr = el("tr", RX.selected === ln ? "is-sel" : "");
+    tr.tabIndex = 0;
+    const v = rxVerdict(ln.test);
+    const who = el("td"); who.append(el("span", "rx__dot " + kindClass(ln.port)), document.createTextNode(ln.port.startsWith("FTDI:") ? "U-WAVE-R" : ln.port));
+    const ver = el("td"); ver.append(el("span", "lv " + v[1], v[0]));
+    tr.append(el("td", "", ln.at), who, el("td", "rx__mono", ln.text), el("td", "rx__mono", ln.test?.value || ""), ver);
+    tr.addEventListener("click", () => rxSelect(ln));
+    tr.addEventListener("keydown", (e) => { if (e.key === "Enter") rxSelect(ln); });
+    return tr;
+  }));
+}
+function kindClass(port) { return (KIND[(RX.kinds || {})[port]] || KIND.com)[1]; }
+
+/** 案A: 受信機 → 文字列 → 入る値 → 測定機器ID の行 → 検査の判定。止まった段を赤く */
+function rxSelect(ln) {
+  RX.selected = ln;
+  rxRows();
+  const t = ln.test || {};
+  const v = rxVerdict(t);
+  $("rxDetailTitle").textContent = `判定の流れ(${ln.at})`;
+  $("rxVerdict").textContent = v[0];
+  $("rxVerdict").className = "lv " + v[1];
+  const dt = t.kind === "DT";
+  const hit = (t.hits || [])[0];
+  const stages = [
+    ["受信機", ln.port.startsWith("FTDI:") ? "U-WAVE-R(USB 直接)" : ln.port, true, ""],
+    ["届いた文字列", ln.text, true, ln.hex],
+    ["入る値", t.accepted ? t.value : "受け付けない", !!t.accepted, t.accepted ? `種別 ${t.kind}${dt ? `・機器番号 ${t.code}` : ""}` : "頭が DT / #L / #〆 ではない"],
+    ["測定機器ID の行", !dt ? "(機器の番号なし)" : hit ? `${hit["ライン"]} ${hit["機器名"]}` : "行がありません", !dt ? null : !!hit,
+     !dt ? "#L は前の機器のまま" : hit ? `ID ${hit["ID"]}・厚 ${hit["厚下"] || "-"}〜${hit["厚上"] || "-"}` : `ライン ${t.line} に 出力テキスト ${t.code} が無い`],
+    ["検査の判定", !t.accepted ? "—" : !dt ? "値は入る" : t.judge.ok === true ? "OK 値が入る" : t.judge.ok === false ? "NG 止まる" : "確かめられない",
+     !t.accepted ? false : !dt ? null : t.judge.ok,
+     t.judge?.text || (t.expect ? `この厚・用途で使う機器 ${t.expect.name || "(該当なし)"}` : "上の「テストの条件」に厚を入れると、正しい機器かまで確かめます")],
+  ];
+  let stopped = false;
+  $("rxFlow").replaceChildren(...stages.map(([name, val, ok, sub], i) => {
+    const st = stopped ? "is-skip" : ok === false ? "is-ng" : ok === true ? "is-ok" : "is-info";
+    if (ok === false) stopped = true;
+    const li = el("li", "rx__stage " + st);
+    li.append(el("small", "", `${i + 1} ${name}`), el("b", "", val || "—"), el("span", "", sub || ""));
+    return li;
+  }));
+  const kv = $("rxKv");
+  kv.replaceChildren();
+  const pair = (k, x) => kv.append(el("dt", "", k), el("dd", "", x || "—"));
+  pair("入力先", t.st ? `${t.st} … ${t.st_label}` : "");
+  pair("ほかのラインで同じ番号", (t.others || []).map((r) => `${r["ライン"]} ${r["機器名"]}`).join("・"));
+  pair("帳票の機器欄", (t.report || []).join(" / "));
+  $("rxNotes").replaceChildren(...(t.notes || []).map((n) => el("p", "maint__note", n)));
+  // 案C: 下の表で当たった行を光らせる(このラインの同じ番号 = 判定の色、使うはずの機器 = 枠)
+  if (grids.device) {
+    grids.device.highlight((r) => {
+      if (!dt) return null;
+      const sameLine = String(r["ライン"] || "") !== "" && (t.hits || []).some((h) => h["ID"] === r["ID"] && h["機器名"] === r["機器名"] && h["ライン"] === r["ライン"]);
+      if (sameLine) return t.judge.ok === false ? "ng" : "ok";
+      if (t.expect && t.expect.text && String(r["出力テキスト"]) === String(t.expect.text) && (t.hits[0] ? r["ライン"] === t.hits[0]["ライン"] : true)) return "expect";
+      return null;
+    });
+  }
+}
+
+$("rxCond").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("mDevText").value.trim();
+  if (!text) { $("mDevText").focus(); return; }
+  try {
+    const t = await api.post("/api/maint/device/test", { text, ...rxCond() });
+    const ln = { g: 0, port: "貼り付け", at: new Date().toLocaleTimeString("ja-JP"), text, hex: "", test: t };
+    RX.lines.unshift(ln);
+    rxRows();
+    rxSelect(ln);
+  } catch (err) { toastError(err); if (err.field === "st") $("mDevSt").select(); }
+});
+$("mDevFromKensa").addEventListener("click", async () => {
+  try {
+    RX.defaults = await api.get("/api/maint/device/defaults");
+    rxFillCond(RX.defaults);
+    toast(RX.defaults.lot ? `検査中のロット ${RX.defaults.lot} の値を入れました` : "検査中のロットがありません(この端末のラインだけ入れました)", RX.defaults.lot ? "ok" : "warn");
   } catch (err) { toastError(err); }
 });
-$("mComStop2").addEventListener("click", async () => {
-  try {
-    comShow(await api.post("/api/maint/com/stop", {}));
-    const d = await api.get("/api/maint/com");
-    comPorts(d.ports, d.saved.port);           // 止めたあとも選んでいたポートを残す
-  } catch (e) { toastError(e); }
-});
-
-$("mComKensa").addEventListener("change", async () => {
-  const body = { on: $("mComKensa").checked, port: $("mComPortText").value.trim() || $("mComPort").value };
-  for (const [k, id] of COM_FIELDS) body[k] = $(id).value;
-  try {
-    const r = await api.post("/api/maint/com/kensa", body);
-    comKensa = r.kensa || [];
-    comKensaShow();
-    toast(body.on ? `検査画面を開くと ${body.port} から受け取ります` : `${body.port} は検査画面で受け取りません`, "success");
-  } catch (e) { $("mComKensa").checked = !body.on; toastError(e); }
-});
-
-function comKensaShow() {
-  const cur = $("mComPortText").value.trim() || $("mComPort").value;
-  $("mComKensa").checked = comKensa.some((x) => x.port === cur);
-  $("mComKensaList").textContent = comKensa.length
-    ? "検査画面で受け取る受信機: " + comKensa.map((x) => x.port).join("・")
-    : "検査画面で受け取る受信機: なし(キー入力で受け取ります)";
-}
-$("mComPort").addEventListener("change", comKensaShow);
-$("mComPortText").addEventListener("input", comKensaShow);
