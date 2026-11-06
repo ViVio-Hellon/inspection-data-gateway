@@ -14,6 +14,7 @@ import hashlib
 import shutil
 import sqlite3
 import threading
+import time
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote as _urlquote
@@ -26,6 +27,8 @@ BUSY_TIMEOUT_MS = 10_000
 _SIDECARS = ("-wal", "-shm", "-journal")
 _lock = threading.Lock()
 _copies: dict[str, tuple[tuple[int, int, int], Path]] = {}
+_checked: dict[str, float] = {}      # 最後に共有フォルダの元を確かめた時刻
+RECHECK_SEC = 5.0
 
 
 def copy_dir() -> Path:
@@ -80,6 +83,13 @@ def local_copy(path_text: str) -> Optional[Path]:
     from . import paths
     src = paths.to_local(path_text)
     key = str(src)
+    # 1 回の操作(ロット登録など)で同じ DB を何十回も読む。そのたびに共有フォルダへ「変わったか」を聞くと遅いので、
+    # 確かめてから RECHECK_SEC 秒の間は、手元の写しをそのまま使う(2026-11-06 重さの見直し)
+    with _lock:
+        known = _copies.get(key)
+        seen = _checked.get(key, 0.0)
+        if known is not None and time.monotonic() - seen < RECHECK_SEC and known[1].is_file():
+            return known[1]
     try:
         if not src.is_file():
             return None
@@ -89,6 +99,7 @@ def local_copy(path_text: str) -> Optional[Path]:
     with _lock:
         known = _copies.get(key)
         if known is not None and known[0] == stamp and known[1].is_file():
+            _checked[key] = time.monotonic()
             return known[1]
         try:
             dst = copy_dir() / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:16] + "_" + src.name)
@@ -108,6 +119,7 @@ def local_copy(path_text: str) -> Optional[Path]:
             _copies.pop(key, None)
             return None
         _copies[key] = (after if after == stamp else stamp, dst)
+        _checked[key] = time.monotonic()
         trace.note_used(src, "copy")
         log.info("仕掛 DB を手元へ写しました: %s → %s", src, dst)
         return dst
@@ -117,3 +129,4 @@ def forget() -> None:
     """覚えている写しを忘れる(試験用)。"""
     with _lock:
         _copies.clear()
+        _checked.clear()

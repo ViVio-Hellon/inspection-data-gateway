@@ -13,7 +13,7 @@ from typing import Optional
 
 from flask import Blueprint, current_app, jsonify, redirect, request
 
-from ufkensa import app_config
+from ufkensa import app_config, trace
 from ufkensa.logging_utils import get_logger
 
 from .. import shell
@@ -236,3 +236,10 @@ def _running_jobs() -> list[str]:
     """
     from ufkensa import jobs as job_registry
     return job_registry.get_registry().busy_labels()
+
+
+@bp.get("/api/progress")
+def progress():
+    """いま動いている操作の段の名前と進み具合(画面の進み具合の表示。2026-11-06)。"""
+    from flask import jsonify
+    return jsonify({"running": trace.progress()})

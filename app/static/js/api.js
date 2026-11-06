@@ -7,6 +7,7 @@
 */
 
 import * as busy from "./busy.js";
+import * as progress from "./progress.js";
 
 const TOKEN = window.APP.token;
 
@@ -53,6 +54,7 @@ async function request(path, options = {}) {
     待機の姿を出すと、画面がちらつくだけになる。
   */
   const done = busy.mark(busy.pressed());
+  const prog = progress.begin(path, TOKEN);           // 少しでも待つときは進み具合を出す(progress.js)
   try {
     const res = await fetch(path, {
       ...options,
@@ -79,6 +81,7 @@ async function request(path, options = {}) {
     return body;
   } finally {
     done();
+    prog();
   }
 }
 

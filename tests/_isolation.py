@@ -87,6 +87,12 @@ def ensure_isolated() -> list[str]:
 
     # 不具合の扱い(config/quirks.json): 本番は「直す」を選んだものがあるが、試験は既定(VBA どおり再現)で書いてある。
     # 「直す」側は各試験が quirks.set_for_test で当てる
+    # 試験は書いた直後にファイル・DB を読むので、まとめ書き(trace)と共有フォルダの確かめの間引き(lot_copy)は切る。
+    # 本番の動き(まとめ書き・間引き)は tests/test_speed.py で確かめる
+    from ufkensa import trace as _trace
+    from ufkensa.kensa import lot_copy as _lot_copy
+    _trace.SYNC = True
+    _lot_copy.RECHECK_SEC = 0.0
     from ufkensa.kensa import quirks
     if _under(quirks.QUIRKS_FILE, repo):
         quirks.QUIRKS_FILE = _escape("quirks") / "quirks.json"
