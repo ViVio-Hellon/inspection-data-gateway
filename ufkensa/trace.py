@@ -227,6 +227,54 @@ def _text_log(level: str, fmt: str, *args: Any) -> None:
         pass
 
 
+# ------------------------------------------------------------------
+# 進み具合(2026-11-06): 時間のかかる操作の間、画面が「いま何をしているか・どこまで進んだか」を出せるようにする。
+# 1 つの操作(一番外の timed。例 検査画面の lot)ごとに、いまの段の名前と終わった段の数を持つ。
+# 全体の段の数は前回の同じ操作から見積もる(初回は進み具合なしで段の名前だけ)。
+# ------------------------------------------------------------------
+_progress: dict[int, dict[str, Any]] = {}
+_progress_total: dict[str, int] = {}
+_progress_lock = _threading.Lock()
+
+
+def _progress_enter(name: str, label: str) -> None:
+    tid = _threading.get_ident()
+    with _progress_lock:
+        p = _progress.get(tid)
+        if p is None:
+            _progress[tid] = {"op": name, "label": label, "done": 0, "t0": _time.monotonic()}
+        else:
+            p["label"] = label
+
+
+def _progress_exit(stack: tuple) -> None:
+    tid = _threading.get_ident()
+    with _progress_lock:
+        p = _progress.get(tid)
+        if p is None:
+            return
+        if len(stack) <= 1:                             # 一番外が終わった = 操作の終わり
+            # 確認だけで終わった回(段が少ない)で見積もりを小さくしないよう、多かった回の段の数を覚える
+            _progress_total[p["op"]] = max(p["done"], _progress_total.get(p["op"], 1))
+            _progress.pop(tid, None)
+        else:
+            p["done"] += 1
+
+
+def progress() -> list[dict[str, Any]]:
+    """いま動いている操作(画面の進み具合の表示用)。pct は前回の段の数からの見積もり(無ければ None)。"""
+    now = _time.monotonic()
+    out = []
+    with _progress_lock:
+        for p in _progress.values():
+            total = _progress_total.get(p["op"])
+            # 前回より段が多い(見積もりが当てにならない)ときは % を出さず、動き続ける横棒にする
+            pct = round(p["done"] * 95 / total) if total and p["done"] < total else None
+            out.append({"op": p["op"], "label": p["label"], "done": p["done"], "pct": pct,
+                        "sec": round(now - p["t0"], 1)})
+    return out
+
+
 @contextmanager
 def timed(name: str, msg: str = "", *, expected: tuple[type, ...] = (), **data: Any):
     """処理の開始と終了をセットで残す。処理時間で INFO / WARN、例外なら ERROR(詳細つき)を残して投げ直す。
@@ -239,6 +287,7 @@ def timed(name: str, msg: str = "", *, expected: tuple[type, ...] = (), **data: 
     token = _procs.set(stack)
     info: dict[str, Any] = dict(data)
     t0 = _time.perf_counter()
+    _progress_enter(name, msg or name)
     event("proc.start", msg or name, proc=name, data=info or None)
     done = _threading.Event()
 
@@ -276,6 +325,7 @@ def timed(name: str, msg: str = "", *, expected: tuple[type, ...] = (), **data: 
                   summarize(info) if info else "")
     finally:
         done.set()
+        _progress_exit(stack)
         _procs.reset(token)
 
 
@@ -340,12 +390,64 @@ def event(ev: str, msg: str = "", *, level: str = "INFO", data: Any = None,
         _maybe_retry()
         path = file_for()
         with _lock:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "a", encoding="utf-8", newline="\n") as f:
-                f.write(line + "\n")
+            _pending.setdefault(path, []).append(line)
+        if SYNC or level in ("ERROR", "CRITICAL") or exc is not None:
+            flush()                                     # エラーはすぐ書く(落ちても残るように)
+        else:
+            _start_flusher()
     except Exception:                                  # noqa: BLE001 - 記録のせいで業務を止めない
         pass
     return rec
+
+
+# ------------------------------------------------------------------
+# まとめて書く(2026-11-06 重さの見直し)
+# ログの置き場所は共有フォルダのことが多い。前は 1 行ごとにファイルを開いて書いていたので、
+# ロット登録 1 回(約 100 行)で共有フォルダを 100 回開いていた。行は貯めて、少し後にまとめて書く。
+# ------------------------------------------------------------------
+_pending: dict[Path, list[str]] = {}
+_flush_lock = threading.Lock()
+_flusher: Optional[threading.Thread] = None
+_wake = threading.Event()
+FLUSH_SEC = 0.5
+SYNC = False                     # 真なら 1 行ごとにすぐ書く(試験で、書いた直後にファイルを読むとき)
+
+
+def flush() -> None:
+    """貯めた行を書く(ファイルごとに 1 回開く)。読む前・終了時・エラーのときに呼ぶ。"""
+    with _flush_lock:
+        with _lock:
+            batch = dict(_pending)
+            _pending.clear()
+        for path, lines in batch.items():
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with open(path, "a", encoding="utf-8", newline="\n") as f:
+                    f.write("\n".join(lines) + "\n")
+            except Exception:                          # noqa: BLE001 - 記録のせいで業務を止めない
+                pass
+
+
+def _flush_loop() -> None:
+    while True:
+        _wake.wait(FLUSH_SEC)
+        _wake.clear()
+        flush()
+
+
+def _start_flusher() -> None:
+    global _flusher
+    if _flusher is not None and _flusher.is_alive():
+        return
+    with _lock:
+        if _flusher is not None and _flusher.is_alive():
+            return
+        _flusher = threading.Thread(target=_flush_loop, name="trace-flush", daemon=True)
+        _flusher.start()
+
+
+import atexit as _atexit  # noqa: E402
+_atexit.register(flush)
 
 
 # ------------------------------------------------------------------
@@ -379,6 +481,7 @@ def _lines(paths: Iterable[Path]) -> list[dict[str, Any]]:
     out = []
     for p in paths:
         try:
+            flush()
             with open(p, encoding="utf-8", errors="replace") as f:
                 for line in f:
                     line = line.strip()
@@ -480,6 +583,7 @@ def cleanup(keep_days: int) -> int:
 def _all_ours(path: Path) -> bool:
     """ファイルの行が全部自分のものか(読めなければ「分からない」= 消さない)。"""
     try:
+        flush()
         with open(path, encoding="utf-8", errors="replace") as f:
             for line in f:
                 line = line.strip()

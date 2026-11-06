@@ -138,11 +138,51 @@ def _filtered(cols: list[str], rows: list[list[str]], expr: str) -> list[list[st
     return [r for r in rows if f(dict(zip(cols, r)))]
 
 
+#: 読んだ表の控え。(実際に読んだファイル, 表) → (ファイルの印, 列名, 行)。ファイルが変われば読み直す。
+#: ロット登録 1 回で同じ表(仕掛台帳・品質基準など)を 40 回以上読んでいたので、変わっていなければ読み直さない
+#: (2026-11-06 重さの見直し)。行は呼び手が変えても控えが壊れないよう、写しを返す
+_table_cache: dict[tuple[str, str], tuple[tuple[int, int], list[str], list[list[str]]]] = {}
+_TABLE_CACHE_MAX = 24
+
+
+def _actual_file(db: Union[str, Path]) -> Optional[Path]:
+    """実際に開くファイル(仕掛台帳は手元の写し)。無ければ None。"""
+    try:
+        p = resolve(db)
+        if paths.is_copied(p):
+            from . import lot_copy
+            return lot_copy.local_copy(str(p))
+        return p if p.is_file() else None
+    except OSError:
+        return None
+
+
+def _read_uncached(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]:
+    with open_ro(db) as conn:
+        return read_table(conn, table)
+
+
 def _read(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]:
     """表を読む。仕掛台帳(手元へ写して読むファイル)は、列名の書き方の違い(2つ目の名前のファイル。
     半角/全角カナなど)を第1の名前に直す(`lot_columns.canonical`)。"""
-    with open_ro(db) as conn:
-        cols, rows = read_table(conn, table)
+    actual = _actual_file(db)
+    stamp = None
+    if actual is not None:
+        try:
+            st = actual.stat()
+            stamp = (st.st_size, st.st_mtime_ns)
+        except OSError:
+            stamp = None
+    key = (str(actual), table)
+    hit = _table_cache.get(key) if stamp is not None else None
+    if hit is not None and hit[0] == stamp:
+        cols, rows = list(hit[1]), [list(r) for r in hit[2]]
+    else:
+        cols, rows = _read_uncached(db, table)
+        if stamp is not None:
+            if len(_table_cache) >= _TABLE_CACHE_MAX:
+                _table_cache.pop(next(iter(_table_cache)))
+            _table_cache[key] = (stamp, list(cols), [list(r) for r in rows])
     try:
         lot = paths.is_copied(resolve(db))
     except (OSError, ValueError):

@@ -1156,3 +1156,17 @@ dialog::backdrop { background: var(--scrim); }
 .cell-act:hover { text-decoration-thickness: 2px; }
 tr[aria-selected="true"] .cell-act--open, tr[aria-selected="true"] .cell-act--preview { color: inherit; }
 .dt__act { margin-left: 6px; padding: 0 8px; min-height: 22px; font-size: var(--fs-xs); }
+
+/* 少しでも待つ操作の進み具合(progress.js) */
+.progress-pop { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  z-index: 1000; min-width: min(460px, 90vw); max-width: 90vw; padding: 10px 14px; border-radius: 10px;
+  background: var(--surface, #fff); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 6px 24px rgba(0,0,0,.18);
+  display: flex; flex-direction: column; gap: 6px; }
+.progress-pop__row { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; }
+.progress-pop__label { font-size: var(--fs-sm, .9rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.progress-pop__sec { color: var(--muted); font-size: var(--fs-xs, .8rem); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.progress-pop__track { height: 6px; border-radius: 3px; background: var(--sunken, #e9eef0); overflow: hidden; }
+.progress-pop__track i { display: block; height: 100%; width: 0; background: var(--accent, #0e6b84); border-radius: 3px; transition: width .2s; }
+.progress-pop__track i.is-indef { animation: progress-indef 1.1s ease-in-out infinite alternate; }
+@keyframes progress-indef { from { margin-left: 0; } to { margin-left: 65%; } }
+@media (prefers-reduced-motion: reduce) { .progress-pop__track i.is-indef { animation: none; } }
