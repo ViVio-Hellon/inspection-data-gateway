@@ -673,10 +673,12 @@ def tolerance_pair(order_p: float, order_m: float, made_p: float, made_m: float)
     return order_p, order_m
 
 
-def combo_change(book: Book, *, fullwidth_fields_readable: bool = False, null_raises: bool = False) -> Effects:
+def combo_change(book: Book, *, fullwidth_fields_readable: bool = True, null_raises: bool = False) -> Effects:
     """UFCask.ComboBox1_Change (UFCask:401-555)。SIKALOTNOW `仕掛` からロット情報を読み、シート上部に寸法・公差を書く。
 
-    `fullwidth_fields_readable`(U4): UFCask は欄名の 4 つを全角カナで読む(実際の欄は半角)。
+    `fullwidth_fields_readable`(U4): UFCask は欄名の 4 つを全角カナで読む(実際の欄は半角)。既定は True
+      (2026-11-06: VBA のまま False だと本番でキャスクのロットが必ず「DB読み込みエラー」になり、寸法・公差・
+      Lot情報履歴・包装仕様書・Aインプットが全部止まる。D23「不具合は直す」に合わせて読めるようにした)。
       False = 欄が見つからず最初の `rs.Fields("オーダー番号")` でエラー処理に落ちる(「DB読み込みエラー:」、シートは変わらない)
       True  = ADO が全角/半角を同一視して読める
     `null_raises`: Null の欄を Val / String / TextBox に入れたとき実行時エラー 94 になるか(受領 DB ではオーダー公差の

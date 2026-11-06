@@ -589,7 +589,8 @@ function onEnter(id, fn, autoLen = 0) {
     if (val) fn(val);
   };
   box.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
+    // VBA は Enter でも Tab でも受けた(U-WAVEPAK などの区切りが Tab の現場がある)。空の Tab は普通に次へ移る
+    if (e.key !== "Enter" && !(e.key === "Tab" && box.value)) return;
     e.preventDefault();
     send();
   });
@@ -653,7 +654,8 @@ async function handleRecv(r) {
 }
 async function recvPoll() {
   try {
-    const d = await api.get(`/api/kensa/recv?since=${recvLast}`);
+    const vis = document.visibilityState === "visible" ? 1 : 0;
+    const d = await api.get(`/api/kensa/recv?since=${recvLast}&screen=kensa&visible=${vis}`);
     for (const r of d.results) await handleRecv(r);
     recvLast = d.last;
     recvShow(d.running, d.port, d.error);
@@ -674,7 +676,7 @@ async function initDirect() {
   try {
     const d = await api.post("/api/kensa/recv/start", {});
     if (!d.on) { if (d.error) recvShow(false, "", d.error); return; }
-    const p = await api.get("/api/kensa/recv?since=999999999");
+    const p = await api.get("/api/kensa/recv?since=999999999&screen=kensa");
     recvLast = p.last;                            // 開く前に届いた分は流さない
     recvShow(true, d.port, "");
     recvPoll();
@@ -701,8 +703,14 @@ function init() {
   $("byousyaChk").addEventListener("change", () => op("value", { name: "Byousya", value: $("byousyaChk").checked ? "True" : "False" }));
   $("mmBtn").addEventListener("click", () => op("minmax"));
   $("printBtn").addEventListener("click", async () => {
-    const r = await op("print-check");
-    if (r && !r.stop && r.view && r.view.print_ready) await op("print-commit");
+    // 2 度押しで保存用・測定DB に二重に登録しないよう、終わるまで押せなくする(VBA の PrintB.Enabled = False)
+    const b = $("printBtn");
+    if (b.disabled) return;
+    b.disabled = true;
+    try {
+      const r = await op("print-check");
+      if (r && !r.stop && r.view && r.view.print_ready) await op("print-commit");
+    } finally { b.disabled = false; }
   });
   $("printResetBtn").addEventListener("click", () => op("print-reset"));
   $("newBtn").addEventListener("click", () => op("new"));

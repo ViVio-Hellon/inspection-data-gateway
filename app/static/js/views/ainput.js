@@ -12,6 +12,7 @@ import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { playMessage } from "../sound.js";
 import { confirmBox } from "../askbox.js";
+import { startReceiver } from "../recv.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -278,3 +279,6 @@ function init() {
 }
 
 init();
+
+// 受信機から直接受け取る(保守で「検査画面で受け取る」にした受信機)。この画面が開いている間だけ、この画面に入る
+startReceiver("ainput", (text) => op("receive", { text }));

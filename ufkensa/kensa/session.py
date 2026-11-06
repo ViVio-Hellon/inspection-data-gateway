@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .. import trace
+from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, quirks, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from . import sound as snd
@@ -54,6 +55,7 @@ from .wiring import Env, RealHooks
 #: 設備名(レジストリ)→ UF1 のライン OptionButton(UF1:230-238)
 FACILITY_OPTION = {"L-1": "L1Work", "LVC": "LVC", "HVC": "HVC", "バランサー": "Bala", "トット": "Tott",
                    "Test": "Test", "丸徳": "Maru"}
+log = get_logger(__name__)
 NO_LINE_TEXT = "ライン設定がありません" + "\r\n" + "担当者に連絡して下さい"          # UF1:225
 CONFI_CHOICES = ("公差外", "再測定", "許容", "保留")
 CONFI_REASONS = ("入力位置間違い", "測定位置間違い", "測定ボタン押し間違い", "再測定", "0点確認", "板廃棄", "その他")
@@ -189,28 +191,58 @@ class Session:
         """D28: いまのロットを控え(第2)だけから読むか(読むたびに状態を見る)。"""
         return wiring.reads_second(self.state, self.state.lot)
 
-    def _run(self, fn: Callable[..., Any], *args: Any, posting: bool = True) -> Result:
+    def _run(self, fn: Callable[..., Any], *args: Any, posting: bool = True, keep_ready: bool = False) -> Result:
         with self._lock, paths.lot_source(self._reads_second):
             env = self._env()
             env.messages, env.confi, env.reason, env.proofread = [], [], None, None
+            # 処理の途中だけ立てる旗(VBA の Load = "off"・FormTag = "STOP")。途中で止まったら元に戻す。
+            # 戻さないと、次からの入力・描画が全部止まったままになる(2026-11-06 の構造の見直し)
+            st0 = self.state
+            if self.started and (st0.flag_label != 1 or st0.load != "on" or st0.form_tag == "STOP"):
+                # 操作は 1 つずつ順に来る(ロック)ので、操作の始めに「処理中」の旗が立っているのは、前の操作が途中で
+                # 止まって戻し忘れたもの。VBA なら End で全部初めに戻る。残すと測定値・カードを黙って受け付けなくなる
+                log.warning("前の操作の旗が残っていたので戻します(FlagLabel=%r Load=%r FormTag=%r)",
+                            st0.flag_label, st0.load, st0.form_tag)
+                st0.flag_label, st0.load = 1, "on"
+                if st0.form_tag == "STOP":
+                    st0.form_tag = ""
+            flags = (self.state.load, self.state.form_tag)
             try:
                 try:
                     q = fn(*args)
                 except datasource.DbMissing as e:                       # VBA は End(D10: 止めるが状態は保つ)
                     raise Stop(str(e), messages=list(env.messages), source="datasource") from e
+                except (Stop, NotImplementedError):
+                    raise
+                except Exception as e:                                   # noqa: BLE001 - 想定外でも画面は止めない
+                    log.exception("検査の操作 %s で想定外のエラー", getattr(fn, "__name__", fn))
+                    raise Stop(f"処理の途中でエラーになりました({type(e).__name__}: {e})。"
+                               "この操作はやり直してください。続くときはログを管理者に渡してください",
+                               messages=list(env.messages), source=getattr(fn, "__name__", "")) from e
             except Stop as e:
+                self.state.load, self.state.form_tag = flags
                 msgs = list(env.messages)
                 for m in e.messages:
                     if not any(m is x for x in msgs):
                         msgs.append(m)
                 return Result(self._view(), msgs, stop=e)
+            if not keep_ready:
+                # 印刷前チェックの後に値・ロットが変わったら、チェックはやり直し(印刷確定がもう一度チェックする)
+                self.print_ready = False
             if env.confi:
                 self._open_confi(env.confi[-1])
             if env.reason is not None:
                 self._open_confi(env.reason)
             if posting and isinstance(q, Question) is False and self.started:
                 assert self.hooks is not None
-                self.hooks.posting(self.state)
+                try:
+                    with self.store.transaction():          # 作業中保存は全部書けたときだけ確定(途中で落ちたら前のまま)
+                        self.hooks.posting(self.state)
+                except Exception as e:                       # noqa: BLE001 - 保存できなくても画面は止めない
+                    log.exception("作業中保存(Posting)に失敗")
+                    env.messages.append(Message(f"作業中の保存ができませんでした({type(e).__name__}: {e})。"
+                                                "このまま続けられますが、再起動すると直前の操作が戻りません", WARN,
+                                                source="Posting"))
             return Result(self._view(), list(env.messages), question=q if isinstance(q, Question) else None)
 
     def _open_confi(self, req: checks.ConfiRequest) -> None:
@@ -242,10 +274,19 @@ class Session:
         return self._run(self._start)
 
     def _start(self) -> None:
-        """UF1.UserForm_Initialize (UF1:173-328) と UserForm_Activate の校正済み表示。"""
+        """UF1.UserForm_Initialize (UF1:173-328) と UserForm_Activate の校正済み表示。
+
+        VBA の Initialize はフォームを開いたとき 1 回だけ。Web では画面を開くたび(再読込・別の画面から戻る・
+        2 つ目のタブ)に呼ばれるので、2 回目からは作り直さない(公差外の確認・分割フラグ・2 度押しの記憶などが
+        消えないように。2026-11-06 の見直し)。ラインを変えたときだけ作り直す。
+        """
         fac = terminal.facility()
         if fac == "":
             raise Stop(NO_LINE_TEXT, level=WARN, source="UF1:224")
+        if self.started and getattr(self, "_started_facility", None) == fac:
+            self._prune_workers()
+            return None
+        self._started_facility = fac
         env, hooks = self._env(), self.hooks
         assert hooks is not None
         with trace.timed("kensa.start", "検査画面の起動", expected=(Stop,), facility=fac):
@@ -1379,7 +1420,7 @@ class Session:
     # 印刷
     # ------------------------------------------------------------------
     def print_check(self, answers: Optional[dict[str, bool]] = None) -> Result:
-        return self._run(self._print_check, answers or {})
+        return self._run(self._print_check, answers or {}, keep_ready=True)
 
     def _print_check(self, answers: dict[str, bool]) -> Optional[Question]:
         """PrintB_Click の前半 (UF1:3619-3730)。結果を view の `checks` と `print_ready` に入れる。"""
@@ -1464,7 +1505,7 @@ class Session:
         return None
 
     def print_commit(self, answers: Optional[dict[str, bool]] = None) -> Result:
-        return self._run(self._print_commit, answers or {})
+        return self._run(self._print_commit, answers or {}, keep_ready=True)
 
     def _print_commit(self, answers: dict[str, bool]) -> Optional[Question]:
         """PrintB_Click の後半 (UF1:3731-3845)。印刷転送 → 印刷する？ → 保存用 → 測定DB → 履歴(PDF) → CSV → 印刷履歴。"""
@@ -1496,6 +1537,12 @@ class Session:
         if not ans:
             env.messages.append(Message("ｷｬﾝｾﾙ処理", INFO, source="UF1:3840"))
             return None
+        db = self.measure_db or paths.to_local(paths.db_file("梱包検査ﾃﾞｰﾀ"))
+        if self.measure_db is None and not Path(db).is_file():
+            # 前は無いと黙って新しく作り、取り違えたパスの空の DB に登録が溜まった。VBA と同じく止める
+            raise Stop(f"測定DB(梱包検査ﾃﾞｰﾀ)が見つからないので保存できません: {db}\r\n"
+                       "設定 → 使用パス の「梱包検査データ」を確かめてください(印刷・保存はしていません)",
+                       source="SQL_追加")
         reg = wiring.registry(st)
         self._log("*UFKen:" + "印刷" + " T1:" + reg.t1 + " T2:" + reg.t2 + " T3:" + reg.t3)
         self.report = self._report_files(res.report, res.defect)          # 印刷(画面で開く HTML)
@@ -1507,7 +1554,8 @@ class Session:
         with trace.timed("db.save", "保存用への追記と測定DBへの登録(MainDataSave)", expected=(Stop,),
                          path=str(db), table="耳付検査ﾃﾞｰﾀ" if snap.kind == "極厚" else "検査ﾃﾞｰﾀ") as info:
             records.ensure_measure_db(db)
-            saved = records.main_data_save(self.store, snap, db_path=db)
+            with self.store.transaction():                  # 保存用・耳用の 1 行は全部書けたときだけ
+                saved = records.main_data_save(self.store, snap, db_path=db)
             info["rows"] = saved.db.rowcount if saved.db else 0
             info["mode"] = saved.db.mode if saved.db else ""
         if saved.db is not None:
@@ -1517,8 +1565,14 @@ class Session:
         self.report["pdf"] = self._history_pdf(res.report, res.defect)    # 履歴保存
         with trace.timed("db.save", "履歴 CSV を書き出す(ExpCSV)", expected=(Stop,),
                          path=paths.get("history"), table=MIMI if snap.kind == "極厚" else HOZON) as info:
-            csvs = records.export_history_csv(self.store, lname, st.line_name, snap.kind == "極厚",
-                                              local_dir=self.store.path.parent)
+            try:
+                csvs = records.export_history_csv(self.store, lname, st.line_name, snap.kind == "極厚",
+                                                  local_dir=self.store.path.parent)
+            except OSError as e:
+                # 書き出せなくても印刷済みの印は付ける(付かないと印刷し直しで保存用・DB の行が二重になる)
+                csvs = []
+                env.messages.append(Message(f"履歴 CSV を書き出せませんでした: {e}(保存用・測定DB には保存済み)",
+                                            WARN, source="ExpCSV"))
             for p in csvs:
                 trace.note_used(p, "save")
             info["files"] = len(csvs)
@@ -1702,6 +1756,12 @@ class Session:
         for p in grid.POSITIONS:
             st.v("LZ" + p).value = "定盤:"
             st.v("LG" + p).value = "ｹﾞｰｼﾞ"
+        hooks.cb_add(st, st.sika_set_atu)                               # UF1:3431 CBAdd(歪コンボ。2026.1.12 の直し)
+        st.v("VC_L_A").tag = st.v("VC_L_B").tag = ""                    # UF1:3445-3446
+        st.v("SplitFlag").value = ""                                    # 分割ロットの印を次のロットへ持ち越さない
+        self.orders, self.order, self.pack = [], "", None
+        self.packing_info = {"no": "", "form": "", "comment": ""}
+        self.calibration_required = False
         st.amin = st.amax = st.hmin = st.hmax = st.tmin = st.tmax = ""
         st.flatnes_text = st.conductiv_text = st.comment = st.reien = st.ken_no_caption = st.additional = ""
         for n in ("flatnes", "QF", "LastHot", "dataLoding", "KenH", "HizCome"):
@@ -1727,6 +1787,7 @@ class Session:
         layout.inspection_select(st, "表示", hooks)
         layout.right_angle_display(st, "新規")
         layout.lselect_lateral(st, "新規")
+        hooks.vc_clear(st)                                              # UF1:3494 VC_Clear(前ロットの VC 画像を消す)
         st.load = "on"
         self.confi, self.checks, self.print_ready, self.report = None, [], False, {}
         return None

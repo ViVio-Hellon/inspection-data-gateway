@@ -44,6 +44,20 @@ def resolve(db: Union[str, Path]) -> Path:
     return paths.to_local(db)
 
 
+class _ClosingConnection(sqlite3.Connection):
+    """`with open_ro(...) as conn:` を抜けたら閉じる接続。
+
+    sqlite3 の標準の `with` は commit / rollback だけで**閉じない**。閉じないと Windows ではファイルを掴んだまま
+    になり、仕掛 DB の手元の写しを差し替えられない・共有フォルダのファイルが使用中になる。
+    """
+
+    def __exit__(self, *exc):  # type: ignore[override]
+        try:
+            return super().__exit__(*exc)
+        finally:
+            self.close()
+
+
 def sqlite_uri(path: Union[str, Path], mode: str = "ro") -> str:
     """SQLite の URI。共有フォルダ(\\\\server\\share)は file:////server/share にする
     (file://server は「authority」と読まれて「invalid uri authority」で開けない)。"""
@@ -66,7 +80,7 @@ def open_ro(db: Union[str, Path]) -> sqlite3.Connection:
         p = c
     uri = sqlite_uri(p.resolve(), "ro")
     try:
-        conn = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_MS / 1000)
+        conn = sqlite3.connect(uri, uri=True, timeout=BUSY_TIMEOUT_MS / 1000, factory=_ClosingConnection)
     except sqlite3.Error as e:
         raise DbMissing(f"DB を開けません: {p}({e})") from e
     conn.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
