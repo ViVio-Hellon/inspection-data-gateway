@@ -146,9 +146,19 @@ function rowOf(label, tds, cls, tol) {
 function renderGrid(g, v) {
   const t = (v && v.tolerance) || {};
   const rows = [headRow(g.positions, true)];
+  let lastGroup = "", n = 0;
   for (const r of g.rows) {
     if (!r.visible) continue;
-    rows.push(rowOf(r.label, r.cells.map((c) => cellTd(c)), "", tolOf(r.label, v)));
+    // 厚・幅・丈ごとにまとまりの色と区切りを付け、公差はまとまりの最初の行にだけ出す
+    const head = String(r.label || "").charAt(0);
+    const group = head === "巾" ? "幅" : head;
+    const first = group !== lastGroup;
+    if (first) n += 1;
+    lastGroup = group;
+    const gk = { 厚: "atu", 幅: "hab", 丈: "tak", 対: "taik" }[group] || (n % 2 ? "a" : "b");
+    const tr = rowOf(r.label, r.cells.map((c) => cellTd(c)), `grp grp--${gk}${first ? " grp--first" : ""}`,
+      first ? tolOf(r.label, v) : "");
+    rows.push(tr);
   }
   if (g.diag.some((c) => c.visible !== false)) rows.push(rowOf(g.diag_label, g.diag.map((c) => cellTd({ ...c, name: "" }, "sub")), "sep",
     [t.taik, v && v.taik_text].filter(Boolean).join(" / ")));
@@ -366,6 +376,15 @@ function renderLeft(v) {
   $("cardIn").placeholder = ws.length ? "もう1人追加するとき(社員カード)" : "社員カード(13桁)";
 }
 
+/* ---------- 検査員の追加・ロットの読み直し(上の帯の 1・3 を押す) ---------- */
+function openAdd(id) {
+  if (phase === "measure") {
+    const d = $("kAdd");
+    if (!d.open) d.showModal();
+  }
+  setTimeout(() => $(id).focus(), 0);
+}
+
 /* ---------- 選ぶまで(案A)/ 測定(案B)の切り替え ---------- */
 let phase = "";
 function setPhase(p) {
@@ -381,6 +400,7 @@ function setPhase(p) {
   const add = $("kAddPad");
   if (measure) add.append($("cardBox"), $("lotBox"), $("lotSrcRow"));
   else {
+    if ($("kAdd").open) $("kAdd").close();
     $("workers").after($("cardBox"));
     $("lotEmpty").after($("lotBox"));
     $("lotBox").after($("lotSrcRow"));
@@ -415,6 +435,11 @@ function renderPhase(v) {
     const st = ok === true ? "done" : (i === cur ? "cur" : (ok === false && i < cur ? "ng" : ""));
     const li = el("li", { class: "kstep" + (st ? " is-" + st : "") },
       el("b", { textContent: `${i + 1} ${name}` }), el("small", { textContent: sub || "" }));
+    if (i === 0 || i === 2) {                    // 検査員・ロットの段を押すと、その入力を出す
+      li.classList.add("is-click");
+      li.title = i === 0 ? "押すと検査員のカードを追加できます" : "押すと LotNo を入れ直せます(同じ番号で読み直し)";
+      li.addEventListener("click", () => openAdd(i === 0 ? "cardIn" : "lotIn"));
+    }
     if (i === 1 && !calibOk) {
       const a = el("a", { href: "/calibration", textContent: "校正へ" });
       li.append(a);
@@ -430,6 +455,7 @@ function renderPhase(v) {
   // 測定中の上の1行
   const info = $("kbarInfo");
   const chip = (cls, t) => el("span", { class: "lv " + cls, textContent: t });
+  if (phase === "measure" && $("newBtn").parentElement.id !== "kbarOps") $("kbarOps").append($("newBtn"));
   info.replaceChildren(
     chip(workerOk ? "lv--ok" : "lv--ng", workerOk ? "検査員" : "検査員登録なし"),
     el("span", { class: "kbar__names", textContent: ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") }),
@@ -587,11 +613,34 @@ function initTabs() {
   show(tabs.some((t) => t.dataset.tab === cur) ? cur : "strain");
 }
 
+/* 測定器はキーボードと同じで「カーソルのある欄」に打つ。入力欄・選択欄の外を押したあとでも
+   受け取れるように、文字キーが来たら受け取る欄へ戻す。受け取れるかどうかは色で出す */
+function initReceiver() {
+  const box = $("measIn");
+  const show = () => {
+    const on = document.activeElement === box;
+    $("recvBox").dataset.on = on ? "1" : "";
+    text($("recvState"), on ? "受信待ち(測定器のボタンで入ります)" : "受け取れません — ここを押してください");
+  };
+  box.addEventListener("focus", show);
+  box.addEventListener("blur", () => setTimeout(show, 0));
+  document.addEventListener("keydown", (e) => {
+    const t = e.target;
+    const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
+    if (typing || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (e.key.length === 1 && !document.querySelector("dialog[open]")) box.focus();   // この文字から受け取る欄に入る
+  }, true);
+  show();
+}
+
 function init() {
   buildExtras();
+  initReceiver();
+  $("kAddClose").addEventListener("click", () => { $("kAdd").close(); refocus(); });
   initTabs();
-  onEnter("cardIn", (card) => op("worker", { card }), 13);
-  onEnter("lotIn", (lot) => op("lot", { lot }), 7);
+  const closeAdd = () => { if ($("kAdd").open) $("kAdd").close(); };
+  onEnter("cardIn", async (card) => { closeAdd(); await op("worker", { card }); refocus(); }, 13);
+  onEnter("lotIn", async (lot) => { closeAdd(); await op("lot", { lot }); refocus(); }, 7);
   $("lotSrcBtn").addEventListener("click", () => {
     const on = !(V && V.lot_source && V.lot_source.on);
     op("lot-source", { on, lot: $("lotIn").value });

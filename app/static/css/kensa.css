@@ -158,3 +158,31 @@ li.is-stale { opacity: .6; }
 /* 測定表の公差の列 */
 .mgrid th.tolh { text-align: left; white-space: nowrap; }
 .mgrid td.tol { background: transparent; cursor: default; text-align: left; white-space: nowrap; color: var(--accent); font-size: var(--fs-sm); }
+
+/* 測定表: 厚・幅・丈のまとまり(色と区切り)。公差はまとまりの最初の行だけ */
+/* まとまりごとに色を変える(厚 = 青・幅 = 緑・丈 = 橙・対角 = 紫)。見出しの左に太い色の帯、公差の欄も同じ色 */
+.mgrid tr.grp th.rowh { border-left: 6px solid var(--g); background: color-mix(in srgb, var(--g) 22%, transparent); font-weight: 800; color: var(--ink); }
+.mgrid tr.grp td.tol { background: color-mix(in srgb, var(--g) 22%, transparent); color: var(--ink); }
+.mgrid tr.grp--atu { --g: #2f7fd6; } .mgrid tr.grp--hab { --g: #2e9d5b; } .mgrid tr.grp--tak { --g: #d98a1c; }
+.mgrid tr.grp--taik { --g: #8a5cc8; } .mgrid tr.grp--a { --g: #6b7f8c; } .mgrid tr.grp--b { --g: #9aa9b3; }
+.mgrid tr.grp--first > * { border-top: 3px solid var(--g) !important; }
+.mgrid tr.grp th.rowh { padding-left: 6px; border-radius: 0; }
+.mgrid td.tol { font-weight: 700; font-size: var(--fs-md, 1rem); }
+/* 測定器から受け取る欄 */
+.recv { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--radius); border: 2px solid var(--state-error);
+        background: var(--warn-bg); cursor: text; }
+.recv[data-on="1"] { border-color: var(--state-ok); background: var(--ok-bg); }
+.recv__state { font-weight: 700; font-size: var(--fs-sm); color: var(--state-error); }
+.recv[data-on="1"] .recv__state { color: var(--state-ok); }
+.recv__in { font-family: var(--mono); }
+/* 上の帯: 押せる段 */
+.kstep.is-click { cursor: pointer; }
+.kstep.is-click:hover { outline: 2px solid var(--focus); }
+.kstep.is-click b::after { content: " ✎"; font-weight: 400; color: var(--muted); }
+.kbar__ops { display: flex; gap: 6px; }
+/* 検査員の追加・ロットの読み直し */
+.kpop { border: 1px solid var(--rule); border-radius: var(--radius); padding: 0; width: min(520px, 92vw); background: var(--surface); color: var(--ink); }
+.kpop header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.kpop .pad { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.kpop .inbox .input { min-height: 40px; font-size: var(--fs-md, 1rem); }
+.kpop__hint { margin: 0; padding: 0 14px 14px; font-size: var(--fs-sm); }
