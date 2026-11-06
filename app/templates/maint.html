@@ -160,6 +160,29 @@
         </div>
         <div class="card maint__devout" id="mDevOut"><p class="maint__empty">伝送文字列を入れて「テストする」。</p></div>
       </div>
+      <div class="card maint__com" id="mCom">
+        <header><h3>COM受信テスト</h3><span class="lv lv--info">受信機(U-WAVE-R)の COM ポートを直接読む・見せるだけ</span>
+          <span class="lv" id="mComLv">止まっています</span></header>
+        <form class="maint__comform" id="mComForm" autocomplete="off">
+          <label for="mComPort">COM ポート</label>
+          <span class="maint__comport"><select class="input" id="mComPort"></select><input class="input" id="mComPortText" placeholder="例 COM3" title="一覧に無いときはここに入れる"><button class="btn btn--sm" type="button" id="mComRefresh">一覧を更新</button></span>
+          <label for="mComBaud">通信速度</label>
+          <select class="input" id="mComBaud"><option>9600</option><option>19200</option><option>38400</option><option selected>57600</option><option>115200</option></select>
+          <label for="mComBits">データビット</label>
+          <select class="input" id="mComBits"><option>8</option><option>7</option></select>
+          <label for="mComParity">パリティ</label>
+          <select class="input" id="mComParity"><option value="N">なし</option><option value="O">奇数</option><option value="E">偶数</option></select>
+          <label for="mComStop">ストップビット</label>
+          <select class="input" id="mComStop"><option>1</option><option>2</option></select>
+          <label for="mComFlow">フロー制御</label>
+          <select class="input" id="mComFlow"><option value="rtscts">RTS/CTS</option><option value="none">なし</option><option value="xonxoff">Xon/Xoff</option></select>
+          <span></span>
+          <span class="btn-row"><button class="btn btn--find" type="submit" id="mComStart">受信を始める</button><button class="btn" type="button" id="mComStop2">止める</button><button class="btn btn--sm" type="button" id="mComDefault">U-WAVEPAK の設定に戻す</button></span>
+        </form>
+        <p class="maint__hint">既定は U-WAVEPAK の設定ファイル(FTD2XXRS.232)と同じ 57600bps・8bit・パリティなし・ストップ1・RTS/CTS です。COM ポートは1つのプログラムしか開けないので、<b>U-WAVEPAK を終了してから</b>始めてください。受け取った文字列は検査には流しません。</p>
+        <p class="maint__note" id="mComErr" hidden></p>
+        <div class="maint__comlog"><table class="maint__comtbl"><thead><tr><th>時刻</th><th>受け取った文字列</th><th>バイト(16進)</th><th></th></tr></thead><tbody id="mComRows"><tr><td colspan="4" class="muted">まだ受け取っていません</td></tr></tbody></table></div>
+      </div>
       <div class="maint__devgrid" id="mDevGrid"></div>
     </section>
 

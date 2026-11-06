@@ -229,3 +229,15 @@
 .maint__bar span { display: block; height: 100%; background: var(--accent, #1d5c86); border-radius: 3px; }
 .maint__tstep.is-ng .maint__bar span { background: var(--ng, #b3261e); }
 .maint__miss { margin: 4px 0 0; padding-left: 1.2em; font-size: var(--fs-xs); }
+
+/* COM受信テスト */
+.maint__com { margin-top: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.maint__com header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.maint__comform { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; align-items: center; max-width: 720px; }
+.maint__comport { display: flex; gap: 6px; flex-wrap: wrap; }
+.maint__comport .input { width: auto; min-width: 10em; }
+.maint__comlog { max-height: 320px; overflow: auto; border: 1px solid var(--rule); border-radius: 4px; }
+.maint__comtbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.maint__comtbl th, .maint__comtbl td { padding: 4px 8px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+.maint__comtext { font-family: var(--mono); font-weight: 700; }
+.maint__comhex { font-family: var(--mono); color: var(--muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }

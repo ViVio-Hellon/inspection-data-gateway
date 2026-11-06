@@ -349,3 +349,48 @@ def device_test():
     except ValueError as e:
         return _err("bad_value", str(e), field="st")
     return jsonify(out)
+
+
+# ------------------------------------------------------------------
+# COM受信テスト(測定器の受信機の COM ポートを直接読む。見せるだけ)
+# ------------------------------------------------------------------
+KEY_COM = "com_receive"         # この端末の受信の設定(次に開いたときの初期値)
+
+
+def _com_saved() -> dict:
+    from ufkensa import user_settings
+    from ufkensa.kensa import comport
+    d = dict(comport.DEFAULTS, port="")
+    d.update({k: v for k, v in (user_settings.get(KEY_COM, {}) or {}).items() if k in d})
+    return d
+
+
+@bp.get("/api/maint/com")
+def com_state():
+    from ufkensa.kensa import comport
+    since = int(request.args.get("since", "0") or 0)
+    return jsonify({**comport.status(since), "ports": comport.list_ports(), "saved": _com_saved()})
+
+
+@bp.post("/api/maint/com/start")
+def com_start():
+    from ufkensa import user_settings
+    from ufkensa.kensa import comport
+    b = _body()
+    try:
+        conf = {"port": str(b.get("port", "")).strip(), "baud": int(b.get("baud") or comport.DEFAULT_BAUD),
+                "bytesize": int(b.get("bytesize") or 8), "parity": str(b.get("parity") or "N"),
+                "stopbits": int(b.get("stopbits") or 1), "flow": str(b.get("flow") or "rtscts")}
+        out = comport.start(**conf)
+    except (ValueError, comport.ComError) as e:
+        trace.event("maint.com", f"COM受信テストを始められません: {e}")
+        return _err("com", str(e))
+    user_settings.save(KEY_COM, conf)
+    trace.event("maint.com", f"COM受信テスト開始 {conf}")
+    return jsonify({**out, "ports": comport.list_ports(), "saved": conf})
+
+
+@bp.post("/api/maint/com/stop")
+def com_stop():
+    from ufkensa.kensa import comport
+    return jsonify(comport.stop())

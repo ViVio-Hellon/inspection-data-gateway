@@ -58,7 +58,7 @@ function showTab(name) {
   for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== name;
   try { localStorage.setItem(TAB_KEY, name); } catch { /* 保存できなくても動く */ }
   if (name === "master") openMaster();
-  if (name === "device") openDevice();
+  if (name === "device") { openDevice(); comOpen(); }
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
 
@@ -642,3 +642,69 @@ async function init() {
 }
 
 init();
+
+
+/* ---------- COM受信テスト ---------- */
+let comLast = 0, comTimer = null, comLoaded = false;
+const COM_FIELDS = [["baud", "mComBaud"], ["bytesize", "mComBits"], ["parity", "mComParity"], ["stopbits", "mComStop"], ["flow", "mComFlow"]];
+function comFill(conf) {
+  for (const [k, id] of COM_FIELDS) if (conf[k] !== undefined) $(id).value = String(conf[k]);
+}
+function comPorts(ports, want) {
+  const sel = $("mComPort");
+  sel.replaceChildren(...(ports.length ? ports : [{ port: "", device: "" }]).map((p) =>
+    new Option(p.port ? `${p.port}${p.usb ? "(USB の仮想COM)" : ""}` : "(見つかりません。右に入れてください)", p.port)));
+  if (want && ports.some((p) => p.port === want)) sel.value = want;
+  else if (want) $("mComPortText").value = want;
+}
+function comShow(d) {
+  $("mComLv").textContent = d.running ? `受信中 ${d.port}(${d.bytes} バイト)` : "止まっています";
+  $("mComLv").className = "lv " + (d.running ? "lv--ok" : "");
+  $("mComErr").hidden = !d.error;
+  $("mComErr").textContent = d.error || "";
+  if (d.lines && d.lines.length) {
+    const body = $("mComRows");
+    if (comLast === 0) body.replaceChildren();
+    for (const ln of d.lines) {
+      const use = el("button", "btn btn--sm", "この文字列でテスト");
+      use.type = "button";
+      use.addEventListener("click", () => { $("mDevText").value = ln.text; runDevice(); });
+      const tr = el("tr", "");
+      const tdUse = el("td", ""); tdUse.append(use);
+      tr.append(el("td", "", ln.at), el("td", "maint__comtext", ln.text), el("td", "maint__comhex", ln.hex), tdUse);
+      body.prepend(tr);
+    }
+    comLast = d.last;
+  }
+  clearTimeout(comTimer);
+  if (d.running) comTimer = setTimeout(comPoll, 500);
+}
+async function comPoll() {
+  try { comShow(await api.get(`/api/maint/com?since=${comLast}`)); } catch (e) { /* 次の回で */ }
+}
+async function comOpen() {
+  if (comLoaded) return;
+  comLoaded = true;
+  try {
+    const d = await api.get("/api/maint/com");
+    comPorts(d.ports, d.saved.port);
+    comFill(d.saved);
+    comShow(d);
+  } catch (e) { toastError(e); }
+}
+$("mComRefresh").addEventListener("click", async () => {
+  const d = await api.get("/api/maint/com");
+  comPorts(d.ports, $("mComPort").value || $("mComPortText").value);
+});
+$("mComDefault").addEventListener("click", async () => { const d = await api.get("/api/maint/com"); comFill(d.defaults); });
+$("mComForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const body = { port: $("mComPortText").value.trim() || $("mComPort").value };
+  for (const [k, id] of COM_FIELDS) body[k] = $(id).value;
+  try {
+    comLast = 0;
+    $("mComRows").replaceChildren(el("tr", "", ""));
+    comShow(await api.post("/api/maint/com/start", body));
+  } catch (err) { toastError(err); }
+});
+$("mComStop2").addEventListener("click", async () => { try { comShow(await api.post("/api/maint/com/stop", {})); } catch (e) { toastError(e); } });
