@@ -418,6 +418,20 @@ class CalibrationSession:
                         "ng": calibration._text(vals[7]) == "〆", "red": r in red})
         return out
 
+    def masters(self) -> list[dict[str, str]]:
+        """画面に出す参照マスタ(ファイルと表)。"""
+        from . import paths
+        out = []
+        try:
+            db, _f = quality._transfer_fields("校正ストレートエッヂ")
+            out.append({"label": "ストレートエッヂ", "path": str(db), "table": "校正ストレートエッヂ"})
+        except Exception:                                   # noqa: BLE001 - 読めなくても場所だけ出す
+            out.append({"label": "ストレートエッヂ", "path": paths.db_file("伝送用ファイル"), "table": "校正ストレートエッヂ"})
+        out.append({"label": "直の時刻", "path": paths.db_file("伝送用ファイル")
+                    + "(無ければ " + paths.db_file("伝送用ファイル", base_key="packing") + ")", "table": "時間用"})
+        out.append({"label": "記録先", "path": str(self.store.path), "table": f"{KIROKU} / {HINSHO}"})
+        return out
+
     def view(self) -> dict[str, Any]:
         st = self.state
         line = st.line_name if st else self._line_name()
@@ -430,6 +444,7 @@ class CalibrationSession:
             "opened": st is not None,
             "range_1000": ["50", "3000"] if test else ["999.5", "1000.5"],
             "straight_edge": se,
+            "masters": self.masters(),
             "center": vbx.fmt(center, "0.0") if center is not None else "",
             "month": f"{self.now().month}月度",
             "records": self.records(),

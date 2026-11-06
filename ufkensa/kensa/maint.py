@@ -105,12 +105,14 @@ def _dist_values(kousa: list[list[Any]]) -> dict[str, str]:
 
 def _run_dist(lot_no: str, ken_no: str, hiki: Any, data: quality.LotData) -> dict[str, Any]:
     """DistArray(LotNo, KenNo, "Test", "Test")(Test:91)。Execution="Test" なので画面へは書かない。"""
-    out: dict[str, Any] = {"status": "ok", "values": {}, "note": "", "messages": []}
+    out: dict[str, Any] = {"status": "ok", "values": {}, "note": "", "messages": [], "trace": [],
+                           "master": str(current_quality_db())}
     try:
         qp = quality.dist_array(lot_no, ken_no, hiki, data, execution="Test")
     except ERRORS as e:                     # VBA なら実行時エラーで止まる
         out["status"], out["note"] = "error", f"{type(e).__name__}: {getattr(e, 'text', '') or e}"
         return out
+    out["trace"] = qp.trace
     out["messages"] = [m.text for m in qp.messages]
     if not qp.kousa:
         # VBA は QpArryD が Empty のまま LBound を取って実行時エラー(13)
@@ -228,20 +230,22 @@ def sori_check(atu: str, haba: str, take: str, db: Optional[Path] = None) -> dic
     fields = datasource.get_fields(src, SORI_TABLE)
     rows = datasource.get_records(src, SORI_TABLE, "") if fields is not None else None
     if fields is None or rows is None:
-        return {"status": "none", "text": "", "note": f"{SORI_TABLE} が空です(VBA は何も出さずに終わる)"}
+        return {"status": "none", "text": "", "note": f"{SORI_TABLE} が空です(VBA は何も出さずに終わる)",
+                "master": str(src), "table": SORI_TABLE}
     try:
         hit_h = quality.find_indices(fields, "H", h)
         hit_t = quality.find_indices(fields, "T", t)
         w = quality.sori_array(rows, fields, a, hit_h[0])
         l_ = quality.sori_array(rows, fields, a, hit_t[0])
     except ERRORS as e:
-        return {"status": "error", "text": "", "note": f"{type(e).__name__}: {e}"}
+        return {"status": "error", "text": "", "note": f"{type(e).__name__}: {e}", "master": str(src), "table": SORI_TABLE}
 
     def col_name(col: int) -> str:
         return fields[col - 1] if 1 <= col <= len(fields) else ""
     ws, ls = vbx.fmt(w, "0.0"), vbx.fmt(l_, "0.0")
     return {"status": "ok", "haba": ws, "take": ls, "text": "幅" + ws + " " + "丈" + ls,
-            "haba_col": col_name(hit_h[0]), "take_col": col_name(hit_t[0]), "note": ""}
+            "haba_col": col_name(hit_h[0]), "take_col": col_name(hit_t[0]), "note": "",
+            "master": str(src), "table": SORI_TABLE}
 
 
 def equipment_check(line: str, zai: str, atu: str, haba: str, take: str, wei: str) -> dict[str, Any]:
@@ -250,11 +254,12 @@ def equipment_check(line: str, zai: str, atu: str, haba: str, take: str, wei: st
     VBA は引数を直書き(LVC, 5NB, 0.49, 730, 1500, 225)していた。ここでは入れた値で引く(伝送用ファイル の 設備仕様)。
     """
     nums = [_single_of(v, n) for v, n in ((atu, "厚"), (haba, "幅"), (take, "丈"), (wei, "単重"))]
+    where = {"master": str(quality._transfer_db()), "table": "設備仕様"}
     try:
         text = quality.check_equipment_db(line, zai, *nums)
     except ERRORS as e:
-        return {"status": "error", "text": "", "note": f"{type(e).__name__}: {e}"}
-    return {"status": "ok", "text": text, "note": ""}
+        return {"status": "error", "text": "", "note": f"{type(e).__name__}: {e}", **where}
+    return {"status": "ok", "text": text, "note": "", **where}
 
 
 # ------------------------------------------------------------------

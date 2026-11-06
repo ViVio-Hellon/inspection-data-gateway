@@ -124,12 +124,42 @@ function renderOne(d) {
   }
   for (const [name, x] of [[alt ? "変更前" : "", cur], ["変更後", alt]]) {
     if (!x) continue;
-    const pre = name ? `${name}: ` : "";
+    if (x.trace && x.trace.length) card.append(traceBox(x, name));
     if (x.note) card.append(el("p", "maint__note", pre + x.note));
     for (const m of x.messages || []) card.append(el("p", "maint__msg", pre + m));
   }
   for (const m of r.messages || []) card.append(el("p", "maint__msg", m));
   $("mResult").replaceChildren(card);
+}
+
+/** どの表のどの条件で何行残ったか。最初に 0 行になった所(躓いた所)を赤で目立たせる */
+function traceBox(x, name) {
+  const box = el("div", "maint__trace");
+  box.append(el("h4", "maint__trh", `${name ? name + ": " : ""}判定の流れ　参照マスタ: ${x.master || "-"}`));
+  const ol = el("ol", "maint__tsteps");
+  for (const t of x.trace) {
+    const li = el("li", "maint__tstep " + (t.ok === true ? "is-ok" : t.ok === false ? "is-ng" : "is-info"));
+    const mark = el("span", "maint__mark", t.ok === true ? "✔" : t.ok === false ? "✖" : "・");
+    const body = el("div", "maint__sbody");
+    body.append(el("b", "", t.step), el("span", "", "　" + (t.detail || "")));
+    if (t.before) {
+      const bar = el("div", "maint__bar");
+      const fill = el("span", "");
+      fill.style.width = Math.max(t.kept ? 2 : 0, Math.round((t.kept / t.before) * 100)) + "%";
+      bar.append(fill);
+      body.append(bar);
+    }
+    if (t.ok === false && t.rows && t.rows.length) {
+      const ul = el("ul", "maint__miss");
+      ul.append(el("li", "muted", "ここで外れた行(表の値):"));
+      for (const r of t.rows) ul.append(el("li", "", r));
+      body.append(ul);
+    }
+    li.append(mark, body);
+    ol.append(li);
+  }
+  box.append(ol);
+  return box;
 }
 
 /* ---------- 歪公差: 全ロット(1 行 1 ロット。違う欄は「変更前 → 変更後」) ---------- */
@@ -367,8 +397,9 @@ $("mAltForm").addEventListener("submit", (e) => e.preventDefault());
 /* ---------- ソリ公差・設備仕様 ---------- */
 function sideOut(x, label) {
   if (!x) return [];
-  if (x.status !== "ok") return [[label, x.note, "is-warn"]];
-  return [[label, x.text]];
+  const src = x.master ? [[label + "の参照マスタ", `${x.master}　表「${x.table}」`]] : [];
+  if (x.status !== "ok") return [...src, [label, x.note, "is-warn"]];
+  return [...src, [label, x.text]];
 }
 
 $("mSori").addEventListener("submit", async (e) => {
@@ -392,7 +423,8 @@ $("mEq").addEventListener("submit", async (e) => {
       line: $("mELine").value, zai: $("mEZai").value, atu: $("mEAtu").value,
       haba: $("mEHaba").value, take: $("mETake").value, wei: $("mEWei").value,
     });
-    kv($("mEqOut"), d.status === "ok" ? [["結果", d.text || "(空)", d.text === "可" ? "" : "is-warn"]] : [["結果", d.note, "is-warn"]]);
+    kv($("mEqOut"), [["参照マスタ", `${d.master}　表「${d.table}」`],
+      d.status === "ok" ? ["結果", d.text || "(空)", d.text === "可" ? "" : "is-warn"] : ["結果", d.note, "is-warn"]]);
   } catch (err) { toastError(err); }
 });
 
