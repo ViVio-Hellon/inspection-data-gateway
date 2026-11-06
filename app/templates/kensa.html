@@ -111,14 +111,8 @@
   <!-- 右: 次に測る・チェック・操作 -->
   <div class="kensa__col">
     <div class="next" id="nextBox"><small>次に測る</small><b id="nextName">-</b><small id="nextHint"></small></div>
-    <section class="card">
-      <header><h3>測定値の入力</h3></header>
-      <div class="pad">
-        <div class="inbox"><input class="input" id="measIn" autocomplete="off" placeholder="測定器から自動で入ります" aria-label="測定値(伝送文字列)"></div>
-        <div class="inbox"><label for="manualIn">手入力</label><input class="input" id="manualIn" autocomplete="off" placeholder="要3桁" inputmode="decimal"></div>
-        <p class="muted">測定器のボタンを押すと、次に測る欄へ入ります。手で入れるときは欄を押してから「手入力」に値を入れて Enter。</p>
-      </div>
-    </section>
+    <!-- 測定器の伝送を受ける欄(見せない。フォーカスはここに戻す)。手入力は VBA で隠しモードだったので出さない -->
+    <input class="input meas-hidden" id="measIn" autocomplete="off" aria-label="測定値(伝送文字列)">
     <div class="notice" id="nameListBox" hidden></div>
     <section class="card">
       <header><h3>印刷前チェック</h3></header>

@@ -90,9 +90,18 @@ class NameTest(unittest.TestCase):
         look = workers.name_conv
         self.assertIsNone(workers.register_card("900000000000", WorkerRegistry(), now=at(10), facility="L-1",
                                                 shifts=SHIFTS, line="L-1", name_lookup=look))
-        r = workers.register_card("9000000000001", WorkerRegistry(t1="阿部"), now=at(10, 5), facility="L-1",
-                                  shifts=SHIFTS, line="L-1", name_lookup=look)
+        r = workers.register_card("9000000000001", WorkerRegistry(t1="阿部", day1="2026.10.30  09:00"), now=at(10, 5),
+                                  facility="L-1", shifts=SHIFTS, line="L-1", name_lookup=look)
         self.assertEqual(r.registry.t1, "阿部_検査員01")
+        # 前の日の同じ直の名前には足さない(別の日の検査)
+        r2 = workers.register_card("9000000000001", WorkerRegistry(t1="阿部", day1="2026.10.29  09:00"), now=at(10, 5),
+                                   facility="L-1", shifts=SHIFTS, line="L-1", name_lookup=look)
+        self.assertEqual(r2.registry.t1, "検査員01")
+        # 持ち越していないときは、いまの直の人だけ残す(3直の人は消える)
+        cur = workers.current_shift_only(WorkerRegistry(t1="剣崎", day1="2026.10.30  09:00", t3="山田",
+                                                        day3="2026.10.29  26:00"), now=at(10, 5), facility="L-1",
+                                         shifts=SHIFTS)
+        self.assertEqual((cur.t1, cur.t3), ("剣崎", ""))
         self.assertEqual(r.registry.day1, "2026.10.30  10:05")
         self.assertEqual(r.log.msg, "*UFKen:検査員登録_2026.10.30  10:05:阿部_検査員01")
         self.assertTrue(r.log.target_path.endswith("L-1\\L-1_Log"))

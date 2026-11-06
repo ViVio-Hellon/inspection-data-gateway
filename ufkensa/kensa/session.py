@@ -133,6 +133,19 @@ class Session:
     def _log(self, text: str, file: str = "") -> None:
         self._env().log(legacy_log.line_entry(self.state.line_name, text, file))
 
+    def _prune_workers(self) -> None:
+        """検査を持ち越していない(ロットが入っていない)なら、いまの直の検査員だけ残す。"""
+        st, env = self.state, self._env()
+        if st.lot != "":
+            return
+        try:
+            reg = workers.current_shift_only(wiring.registry(st), now=env.now(),
+                                             facility=env.facility() or workers.DEFAULT_FACILITY,
+                                             shifts=env.shift_times())
+        except workers.ShiftTimesMissing:
+            return
+        wiring.set_registry(st, reg)
+
     def _extra(self) -> dict[str, Any]:
         st = self.state
         reg = wiring.registry(st)
@@ -273,6 +286,7 @@ class Session:
             st.form_tag = ""
             st.load = "on"
             self.started = True
+            self._prune_workers()                 # 持ち越しの検査が無ければ、前の直の検査員は残さない
             self._activate_name_check()
 
     # ------------------------------------------------------------------
@@ -303,6 +317,7 @@ class Session:
             return None
         ln = lines.find(st.line_name)
         test_line = ln is not None and ln.official == "Test"
+        self._prune_workers()
         reg0 = wiring.registry(st)
         res2 = workers.register_card(card, reg0, now=env.now(), facility=env.facility() or workers.DEFAULT_FACILITY,
                                      shifts=env.shift_times(), line=st.line_name,
@@ -352,6 +367,7 @@ class Session:
         self._require_line()
         st, env, hooks = self.state, self._env(), self.hooks
         assert hooks is not None
+        prev_lot = st.lot
         if st.line_option != "Bala":
             ans = answers.get("lot_register")
             if ans is None:
@@ -383,6 +399,8 @@ class Session:
                        if ch.isascii() and ch.isalnum())
         if len(text) != 7:
             return None
+        if text != prev_lot:
+            self._prune_workers()                 # 別のロット = 持ち越しではない(st.lot は空にしてある)
         st.lot = text
         if st.lot_source != "" and st.lot_source_lot != text:            # D28: 別のロットは いつもの読み方に戻す
             self._set_lot_source("", "", f"別のロット({text})を登録したので")

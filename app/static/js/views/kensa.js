@@ -466,6 +466,7 @@ function remember(line) {
 
 function onEnter(id, fn, autoLen = 0) {
   const box = $(id);
+  if (!box) return;
   const send = () => {
     const val = box.value;
     box.value = "";
@@ -506,7 +507,6 @@ function init() {
     op("lot-source", { on, lot: $("lotIn").value });
   });
   onEnter("measIn", async (t) => { remember(t); await op("receive", { text: t }); refocus(); });
-  onEnter("manualIn", async (t) => { remember(`手入力 ${t}`); await op("value", { name: "Manual", value: t }); refocus(); });
   $("yamaSel").addEventListener("change", () => op("yama", { yama: $("yamaSel").value }));
   $("atBtn").addEventListener("click", () => op("at"));
   $("inspeBtn").addEventListener("click", () => op("inspe"));
