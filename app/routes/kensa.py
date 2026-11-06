@@ -120,3 +120,60 @@ def operate(op: str):
         return jsonify({"view": view.build(s.state), "messages": [m.to_dict() for m in e.messages],
                         "question": None, "stop": e.to_dict()["stop"]})
     return jsonify(result.to_dict())
+
+
+# ------------------------------------------------------------------
+# 受信機から直接受け取る(保守 → 測定機器ID の COM受信テストで決めた受信機。2026-11-06)
+# 測定器の値を、画面のカーソルに関係なくサーバが受け取り、検査の receive に渡す。
+# 画面は /api/kensa/recv を見て、届いた結果(描き直し・知らせ)を出す。
+# ------------------------------------------------------------------
+import threading as _threading
+from collections import deque as _deque
+
+_recv_lock = _threading.Lock()
+_recv_results: "_deque[dict]" = _deque(maxlen=50)
+_recv_seq = 0
+
+
+def _to_kensa(text: str) -> None:
+    global _recv_seq
+    s = session.get()
+    res = s.receive(text)
+    out = res.to_dict()
+    out["text"] = text
+    with _recv_lock:
+        _recv_seq += 1
+        out["seq"] = _recv_seq
+        _recv_results.append(out)
+
+
+@bp.post("/api/kensa/recv/start")
+def recv_start():
+    """この端末の受信の設定で、検査画面の受け取りを始める(設定で「検査画面で受け取る」が入っているときだけ)。"""
+    from ufkensa import user_settings
+    from ufkensa.kensa import comport
+    conf = dict(user_settings.get("com_receive", {}) or {})
+    if not conf.get("kensa") or not conf.get("port"):
+        return jsonify({"on": False, **comport.status(10 ** 9)})
+    st = comport.status(10 ** 9)
+    if st["running"] and st["to_kensa"] and st["port"] == conf["port"]:
+        return jsonify({"on": True, **st})
+    try:
+        comport.start(conf["port"], int(conf.get("baud") or 57600), str(conf.get("flow") or "rtscts"),
+                      int(conf.get("bytesize") or 8), str(conf.get("parity") or "N"), int(conf.get("stopbits") or 1),
+                      sink=_to_kensa)
+    except comport.ComError as e:
+        return jsonify({"on": False, **comport.status(10 ** 9), "error": str(e)})
+    return jsonify({"on": True, **comport.status(10 ** 9)})
+
+
+@bp.get("/api/kensa/recv")
+def recv_poll():
+    from ufkensa.kensa import comport
+    since = int(request.args.get("since", "0") or 0)
+    with _recv_lock:
+        items = [r for r in _recv_results if r["seq"] > since]
+        last = _recv_seq
+    st = comport.status(10 ** 9)
+    return jsonify({"results": items, "last": last, "running": st["running"] and st["to_kensa"],
+                    "port": st["port"], "error": st["error"]})

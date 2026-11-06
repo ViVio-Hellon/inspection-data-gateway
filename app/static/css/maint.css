@@ -241,3 +241,4 @@
 .maint__comtbl th, .maint__comtbl td { padding: 4px 8px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
 .maint__comtext { font-family: var(--mono); font-weight: 700; }
 .maint__comhex { font-family: var(--mono); color: var(--muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.maint__comkensa { display: flex; gap: 6px; align-items: flex-start; font-weight: 700; }

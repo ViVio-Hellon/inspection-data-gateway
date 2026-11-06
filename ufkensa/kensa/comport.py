@@ -332,17 +332,28 @@ def _run(dev: Any) -> None:
             _state.running = False
 
 
+#: 受け取った 1 行を渡す先(検査画面で受け取るとき。None = 見せるだけ)
+_sink: Optional[Any] = None
+
+
 def _push(raw: bytes) -> None:
+    text = _decode(raw).strip()
     with _lock:
         _state.seq += 1
-        _state.lines.append((_state.seq, Line(time.strftime("%H:%M:%S"), _decode(raw).strip(),
-                                              " ".join(f"{c:02X}" for c in raw))))
+        _state.lines.append((_state.seq, Line(time.strftime("%H:%M:%S"), text, " ".join(f"{c:02X}" for c in raw))))
+        sink = _sink
     log.info("COM受信 %s: %r", _state.port, raw)
+    if sink is not None and text:
+        try:
+            sink(text)
+        except Exception:                        # noqa: BLE001 - 受信は止めない(渡す先の失敗はログに残す)
+            log.exception("受け取った値を渡せませんでした: %r", text)
 
 
 def start(port: str, baud: int = DEFAULT_BAUD, flow: str = "rtscts", bytesize: int = 8, parity: str = "N",
-          stopbits: int = 1) -> dict[str, Any]:
-    global _thread
+          stopbits: int = 1, sink: Optional[Any] = None) -> dict[str, Any]:
+    """受信を始める(前の受信は止める)。sink に関数を渡すと、受け取った 1 行ずつをそこへ渡す。"""
+    global _thread, _sink
     stop()
     port = str(port or "").strip()
     if not port:
@@ -359,6 +370,7 @@ def start(port: str, baud: int = DEFAULT_BAUD, flow: str = "rtscts", bytesize: i
         _state.running, _state.error, _state.bytes = True, "", 0
         _state.started = time.strftime("%H:%M:%S")
         _state.lines.clear()
+    _sink = sink
     _stop.clear()
     _thread = threading.Thread(target=_run, args=(dev,), name="com-reader", daemon=True)
     _thread.start()
@@ -379,7 +391,7 @@ def stop() -> dict[str, Any]:
 def status(since: int = 0) -> dict[str, Any]:
     with _lock:
         lines = [{"seq": s, "at": ln.at, "text": ln.text, "hex": ln.hex} for s, ln in _state.lines if s > since]
-        return {"port": _state.port, "baud": _state.baud, "flow": _state.flow, "bytesize": _state.bytesize,
+        return {"to_kensa": _sink is not None, "port": _state.port, "baud": _state.baud, "flow": _state.flow, "bytesize": _state.bytesize,
                 "parity": _state.parity, "stopbits": _state.stopbits, "defaults": DEFAULTS, "running": _state.running,
                 "error": _state.error, "started": _state.started, "bytes": _state.bytes, "lines": lines,
                 "last": _state.seq, "windows": IS_WINDOWS}

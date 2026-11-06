@@ -664,10 +664,11 @@ function comShow(d) {
   $("mComLv").className = "lv " + (d.running ? "lv--ok" : "");
   $("mComErr").hidden = !d.error;
   $("mComErr").textContent = d.error || "";
-  if (d.lines && d.lines.length) {
+  const fresh = (d.lines || []).filter((ln) => ln.seq > comLast);   // 表示済みの行は足さない(止めたときに全部返ってくる)
+  if (fresh.length) {
     const body = $("mComRows");
     if (comLast === 0) body.replaceChildren();
-    for (const ln of d.lines) {
+    for (const ln of fresh) {
       const use = el("button", "btn btn--sm", "この文字列でテスト");
       use.type = "button";
       use.addEventListener("click", () => { $("mDevText").value = ln.text; runDevice(); });
@@ -678,6 +679,7 @@ function comShow(d) {
     }
     comLast = d.last;
   }
+  if (d.saved) $("mComKensa").checked = !!d.saved.kensa;
   clearTimeout(comTimer);
   if (d.running) comTimer = setTimeout(comPoll, 500);
 }
@@ -691,6 +693,7 @@ async function comOpen() {
     const d = await api.get("/api/maint/com");
     comPorts(d.ports, d.saved.port);
     comFill(d.saved);
+    comLast = d.last || 0;                      // 開く前に受け取った分は出さない
     comShow(d);
   } catch (e) { toastError(e); }
 }
@@ -715,4 +718,13 @@ $("mComStop2").addEventListener("click", async () => {
     const d = await api.get("/api/maint/com");
     comPorts(d.ports, d.saved.port);           // 止めたあとも選んでいたポートを残す
   } catch (e) { toastError(e); }
+});
+
+$("mComKensa").addEventListener("change", async () => {
+  const body = { on: $("mComKensa").checked, port: $("mComPortText").value.trim() || $("mComPort").value };
+  for (const [k, id] of COM_FIELDS) body[k] = $(id).value;
+  try {
+    await api.post("/api/maint/com/kensa", body);
+    toast(body.on ? "検査画面を開くと、この受信機から受け取ります" : "検査画面はキー入力で受け取ります", "success");
+  } catch (e) { $("mComKensa").checked = !body.on; toastError(e); }
 });
