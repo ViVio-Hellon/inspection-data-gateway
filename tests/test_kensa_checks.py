@@ -690,6 +690,19 @@ class SmallNumberTest(unittest.TestCase):
         self.assertEqual((ch.values["S"], ch.values["U"], ch.values["OPE2"]), ("1", "", ""))
         self.assertNotIn("DiagUKou", ch.visible)                    # R115 でなければ直角度は触らない
 
+    def test_judge_lot_allocations_result(self) -> None:
+        """2026.11.06 の VBA の直し: 引当の判定は JudgeLotAllocations の結果(1 件でも要なら要)を使い、ループを通らない。"""
+        calls = []
+        ch = checks.small_number_count(5, make_uf(), self.ROWS, lambda *a: calls.append(a) or "", need_lateral=True)
+        self.assertTrue(ch.lateral)
+        self.assertEqual(calls, [])                                 # DbReturnItem はここでは呼ばない
+        ch = checks.small_number_count(5, make_uf(), self.ROWS, lambda *a: "ラテラルボー", need_lateral=False)
+        self.assertFalse(ch.lateral)
+        # 判定の後の Additional が「検査不要」なら出さない
+        uf = make_uf(text={"Additional": "ﾗﾃﾗﾙﾎﾞｰ検査不要"})
+        self.assertFalse(checks.small_number_count(5, uf, self.ROWS, lambda *a: "", need_lateral=True).lateral)
+        self.assertFalse(checks.small_number_count(5, make_uf(), None, lambda *a: "", need_lateral=True).lateral)
+
     def test_bad_thickness(self) -> None:
         rows = [["A", "", "x", "", "", "", "1", "1"]]
         with self.assertRaises(vbx.TypeMismatch):                   # "" を Single に入れる(型エラー13)

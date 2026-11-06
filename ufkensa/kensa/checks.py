@@ -1554,7 +1554,7 @@ DbReturnItem = Callable[[str, str, str, str, str, float, float, float], str]
 
 
 def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[object]]],
-                       db_return_item: DbReturnItem) -> ScreenChanges:
+                       db_return_item: DbReturnItem, need_lateral: Optional[bool] = None) -> ScreenChanges:
     """少枚数の検査回数(1〜5)で入力欄を出し分ける。`SmallNumberCount (O:3-519)`(Q-S-CH-DIM-163, 2025.7)
 
     lot_rows = AccHIki.GetLotInfo("Lot情報履歴", Lot)(None = Empty)。各行の列 1=納入, 2=取引, 3=用途コード,
@@ -1562,6 +1562,11 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     ラテラルボーは DbReturnItem の結果に「ラテラルボー」があり、Additional の右 4 文字が「検査不要」でないとき。
     納入先が前の行と同じなら DbReturnItem を呼ばない。用途コード〜丈は**最後の行の値**で全行を照合する(VBA のとおり)。
     位置(Left/Top)・幅は移さない。
+
+    need_lateral(2026.11.06 の VBA の直し【UFKen_05】OutTolerance SmallNumberCount 157〜203 行目):
+    VBA は引当のループを JudgeLotAllocations(引当混在対策: 1 件でも要なら要)に差し替え、その後で
+    NgTemp = Right(Additional, 4) を取り直した。呼び手が JudgeLotAllocations の NeedLateral と、判定後の
+    Additional を入れた uf を渡す(そのときは下のループを通らない)。None は前の動き(試験用)。
     B47 を直すと: 照合はその行の用途コード〜丈で(前と同じ照合値なら呼ばない)、ラテラル不要のロットでは
     ラテラル欄(L11・Lateral?)を隠し、5 回では隠した DiagU/D の直角度欄(DiagUKou/DKou)も隠す。
     """
@@ -1583,7 +1588,9 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     ch.vis(["TS" + p for p in rows5] + ["TE" + p for p in rows5], True)
 
     late = False
-    if lot_rows is not None:
+    if need_lateral is not None:
+        late = bool(need_lateral) and lot_rows is not None     # VBA: IsEmpty(TempArry) なら skipEnd(判定しない)
+    elif lot_rows is not None:
         rows = [list(r) + [""] * 10 for r in lot_rows]
         nounyu = [_cell_text(r[0]) for r in rows]
         torihiki = [_cell_text(r[1]) for r in rows]
