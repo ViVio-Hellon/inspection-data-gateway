@@ -96,7 +96,6 @@ def compare(rows: Iterable[Row], *, measure_db: Optional[Path] = None,
             local = st.LocalStore(tmp / f"verify_{i}.sqlite3")
             try:
                 s = session.Session(local, write_logs=False, calibration_skip=lambda: True, measure_db=measure_db)
-                s.entry_gate = False          # 突き合わせは検査員・校正なしで登録し直す
                 s.start()
                 res = s.register_lot(row.lot, {"lot_register": True, "lot_recent": True, "lot_split": False})
                 if res.stop is not None:

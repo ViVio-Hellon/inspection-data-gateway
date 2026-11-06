@@ -293,7 +293,6 @@ class CalibrationTest(SessionBase):
 
     def test_uncalibrated_blocks_input(self) -> None:
         s = self.s
-        s.entry_gate = False                     # ロット前の止め(検査員・校正)を外して、測定側の止めを見る
         self.register()
         r = s.receive("DT10001+0000015.012M")
         self.assertIn("校正が済んでいません。校正を起動します。", [m.text for m in r.messages])   # Proofreading:652
@@ -323,10 +322,7 @@ class NoLineTest(SessionBase):
 
     def test_worker_needed(self) -> None:
         self.ok(self.s.start())
-        # 検査員がいないとロットを入れられない(検査に進ませない)
-        r = self.s.register_lot(LOT, {"lot_register": True})
-        self.assertIn("検査員が登録されていません", r.stop.text)
-        self.s.entry_gate = False                    # 測定側の止め(UF1:4609)も見る
+        # ロットは登録できる。検査員がいないと測定を受け付けない(UF1:4609)
         self.ok(self.s.register_lot(LOT, {"lot_register": True}))
         self.ok(self.s.select_work("厚板"))
         r = self.s.receive("DT10001+0000015.012M")
