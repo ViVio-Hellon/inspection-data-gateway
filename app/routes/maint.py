@@ -369,7 +369,8 @@ def _com_saved() -> dict:
 def com_state():
     from ufkensa.kensa import comport
     since = int(request.args.get("since", "0") or 0)
-    return jsonify({**comport.status(since), "ports": comport.list_ports(), "saved": _com_saved()})
+    return jsonify({**comport.status(since), "ports": comport.list_ports(), "saved": _com_saved(),
+                    "kensa": com_kensa_list()})
 
 
 @bp.post("/api/maint/com/start")
@@ -388,7 +389,7 @@ def com_start():
         return _err("com", str(e))
     user_settings.save(KEY_COM, conf)
     trace.event("maint.com", f"COM受信テスト開始 {conf}")
-    return jsonify({**out, "ports": comport.list_ports(), "saved": conf})
+    return jsonify({**out, "ports": comport.list_ports(), "saved": conf, "kensa": com_kensa_list()})
 
 
 @bp.post("/api/maint/com/stop")
@@ -397,16 +398,32 @@ def com_stop():
     return jsonify(comport.stop())
 
 
+KEY_COM_KENSA = "com_kensa"     # 検査画面で受け取る受信機の一覧 [{port, baud, ...}]
+
+
+def com_kensa_list() -> list:
+    from ufkensa import user_settings
+    v = user_settings.get(KEY_COM_KENSA, None)
+    if v is None:                                   # 前の形(com_receive の kensa=True)を読み替える
+        old = dict(user_settings.get(KEY_COM, {}) or {})
+        v = [{k: old[k] for k in ("port", "baud", "bytesize", "parity", "stopbits", "flow") if k in old}] \
+            if old.get("kensa") and old.get("port") else []
+    return [x for x in v if isinstance(x, dict) and x.get("port")]
+
+
 @bp.post("/api/maint/com/kensa")
 def com_kensa():
-    """「検査画面でこの受信機から受け取る」を入れる・外す(この端末の設定)。"""
+    """「検査画面でこの受信機から受け取る」を入れる・外す(この端末の設定。受信機は何台でも)。"""
     from ufkensa import user_settings
     b = _body()
-    conf = _com_saved()
-    conf.update({k: b[k] for k in ("port", "baud", "bytesize", "parity", "stopbits", "flow") if k in b})
-    conf["kensa"] = bool(b.get("on"))
-    if conf["kensa"] and not str(conf.get("port") or "").strip():
+    port = str(b.get("port", "")).strip()
+    if not port:
         return _err("com", "先に受信機(ポート)を選んでください")
-    user_settings.save(KEY_COM, conf)
-    trace.event("maint.com", f"検査画面で受信機から受け取る: {'入' if conf['kensa'] else '切'} {conf.get('port')}")
-    return jsonify({"saved": conf})
+    items = [x for x in com_kensa_list() if x["port"] != port]
+    if b.get("on"):
+        conf = {"port": port}
+        conf.update({k: b[k] for k in ("baud", "bytesize", "parity", "stopbits", "flow") if k in b})
+        items.append(conf)
+    user_settings.save(KEY_COM_KENSA, items)
+    trace.event("maint.com", f"検査画面で受け取る受信機: {[x['port'] for x in items]}")
+    return jsonify({"kensa": items})
