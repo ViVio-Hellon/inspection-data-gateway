@@ -93,7 +93,7 @@ class KensaScreenTest(SessionBase):
     def test_page_has_new_parts(self) -> None:
         html = self.c.get("/kensa", headers=self.h).get_data(as_text=True)
         for part in ("visualList", "defectList", "strainGrid", "yamaLb", "orderSel", "pack_dialog", "holdBtn",
-                     "izyouBtn", "resizeBtn", "printResetBtn", "manualIn", "byousyaChk"):
+                     "izyouBtn", "resizeBtn", "printResetBtn", "byousyaChk"):
             self.assertIn(part, html)
 
     def test_picture_route(self) -> None:

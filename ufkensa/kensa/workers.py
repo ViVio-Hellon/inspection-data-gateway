@@ -305,6 +305,24 @@ class RegisterResult:
     after: tuple[str, ...] = ()       # 呼び手が続けて行うこと(AdvanceCheck・Daily_Report(1))
 
 
+def current_shift_only(reg: WorkerRegistry, *, now: datetime, facility: str, shifts: ShiftTimes) -> WorkerRegistry:
+    """いまの直(その直の日付)に登録した検査員だけ残す(2026-11-06 の依頼)。
+
+    前の直・前日の検査員が残ってよいのは、検査を持ち越したとき(ロットが入ったまま)だけ。
+    持ち越していないのに残すと、次のロットの検査員の履歴が「前の人_いまの人」になってしまう。
+    呼び手が「持ち越していないとき」に使う。
+    """
+    shift = time_check(hhmmss(now), facility=facility, shifts=shifts)
+    day_return = yea_dayr_check(hhmm(now), now=now, facility=facility, shifts=shifts)
+    slot = {"日勤": 1, "1直": 1, "2直": 2}.get(shift, 3)
+    out = WorkerRegistry()
+    t, d = {1: (reg.t1, reg.day1), 2: (reg.t2, reg.day2), 3: (reg.t3, reg.day3)}[slot]
+    if t != "" and d[:10] == day_return:
+        setattr(out, f"t{slot}", t)
+        setattr(out, f"day{slot}", d)
+    return out
+
+
 def register_card(card: str, registry: WorkerRegistry, *, now: datetime, facility: str, shifts: ShiftTimes,
                   line: str, name_lookup: Callable[[str], tuple[str, list[Message]]]) -> Optional[RegisterResult]:
     """UF1.Worker_Change (UF1:4788-4859) の中身。カードが 13 桁のときだけ名簿を引いて直の欄に足す。
@@ -320,6 +338,11 @@ def register_card(card: str, registry: WorkerRegistry, *, now: datetime, facilit
         return RegisterResult(reg, "", messages=msgs)
     shift = time_check(hhmmss(now), facility=facility, shifts=shifts)
     day = day_check(hhmm(now), now=now, facility=facility, shifts=shifts)
+    # 同じ直の欄でも、前の日の名前には足さない(別の日の同じ直は別の検査)
+    today = yea_dayr_check(hhmm(now), now=now, facility=facility, shifts=shifts)
+    slot = {"日勤": 1, "1直": 1, "2直": 2}.get(shift, 3)
+    if getattr(reg, f"day{slot}")[:10] != today:
+        setattr(reg, f"t{slot}", "")
     if shift in ("日勤", "1直"):
         reg.day1 = day
         reg.t1 = name if reg.t1 == "" else reg.t1 + "_" + name

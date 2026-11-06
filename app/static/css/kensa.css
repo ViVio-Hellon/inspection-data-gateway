@@ -110,3 +110,6 @@
 /* 前の直の登録(この直には検査員がいない) */
 .reg-badge--stale { background: var(--sunken, #e9eef0) !important; color: var(--muted) !important; }
 li.is-stale { opacity: .6; }
+
+/* 測定器の伝送を受ける欄(見せないがフォーカスは受ける) */
+.meas-hidden { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
