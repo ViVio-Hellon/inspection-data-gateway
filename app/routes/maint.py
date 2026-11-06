@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import re
+from typing import Optional
 
 from flask import Blueprint, jsonify, render_template, request
 
@@ -427,3 +428,138 @@ def com_kensa():
     user_settings.save(KEY_COM_KENSA, items)
     trace.event("maint.com", f"検査画面で受け取る受信機: {[x['port'] for x in items]}")
     return jsonify({"kensa": items})
+
+
+# ------------------------------------------------------------------
+# 測定機器ID 画面(2026-11-06 の選定: 受信機カード + 受信記録 + 段の流れ + 当たった行を光らせる)
+# 保守で動かす受信は「mnt:<ポート>」(検査には流さない)。検査画面は「kensa:<ポート>」で別に動かす。
+# ------------------------------------------------------------------
+KEY_COM_CARDS = "com_cards"     # この端末で並べる受信機 {ポート: 受信の設定}
+
+
+def _cards_saved() -> dict:
+    from ufkensa import user_settings
+    v = user_settings.get(KEY_COM_CARDS, {}) or {}
+    return {k: dict(c) for k, c in v.items() if isinstance(c, dict)}
+
+
+def _save_cards(cards: dict) -> None:
+    from ufkensa import user_settings
+    user_settings.save(KEY_COM_CARDS, cards)
+
+
+def _conf_of(b: dict, base: Optional[dict] = None) -> dict:
+    from ufkensa.kensa import comport
+    c = dict(comport.DEFAULTS)
+    c.update(base or {})
+    for k, f in (("baud", int), ("bytesize", int), ("stopbits", int), ("parity", str), ("flow", str)):
+        if b.get(k) not in (None, ""):
+            c[k] = f(b[k])
+    return c
+
+
+def _rx_cards() -> list:
+    from ufkensa.kensa import comport
+    saved = _cards_saved()
+    kensa = {x["port"]: x for x in com_kensa_list()}
+    running = {r["port"]: r for r in comport.receivers()}
+    ports = {p["port"]: p for p in comport.list_ports()}
+    names = list(saved) + [p for p in kensa if p not in saved]
+    lines, _last = comport.log_lines("", 0)
+    out = []
+    for port in names:
+        conf = _conf_of({}, saved.get(port) or kensa.get(port) or {})
+        r = running.get(port)
+        mine = [ln for ln in lines if ln["port"] == port]
+        kind = comport.kind_of(port)
+        out.append({
+            "port": port, "kind": kind, "label": (ports.get(port) or {}).get("label") or port,
+            "present": port in ports or not comport.IS_WINDOWS, "conf": conf,
+            "running": bool(r and r["running"]), "where": (r["slot"].split(":")[0] if r else ""),
+            "error": (r or {}).get("error", ""), "bytes": (r or {}).get("bytes", 0),
+            "count": len(mine), "last": mine[-1] if mine else None, "kensa": port in kensa})
+    return out
+
+
+@bp.get("/api/maint/rx")
+def rx_state():
+    """受信機カード・足せるポート・受信記録(since より新しい行。各行に伝送テストの結果を付ける)。"""
+    from ufkensa.kensa import comport
+    since = int(request.args.get("since", "0") or 0)
+    lines, last = comport.log_lines("mnt:", since)
+    a = request.args
+    for ln in lines:
+        try:
+            ln["test"] = maint.device_test(ln["text"], a.get("line", ""), a.get("atu", ""), a.get("hab", ""),
+                                           a.get("youto", ""), a.get("st", "S1") or "S1", a.get("tak", ""))
+        except ValueError as e:
+            ln["test"] = {"error": str(e)}
+    return jsonify({"cards": _rx_cards(), "ports": comport.list_ports(), "lines": lines, "last": last})
+
+
+@bp.post("/api/maint/rx/start")
+def rx_start():
+    from ufkensa.kensa import comport
+    b = _body()
+    port = str(b.get("port", "")).strip()
+    cards = _cards_saved()
+    conf = _conf_of(b, cards.get(port))
+    try:
+        comport.start(port, conf["baud"], conf["flow"], conf["bytesize"], conf["parity"], conf["stopbits"],
+                      slot="mnt:" + port)
+    except (comport.ComError, ValueError) as e:
+        trace.event("maint.com", f"受信を始められません {port}: {e}")
+        return _err("com", str(e))
+    cards[port] = conf
+    _save_cards(cards)
+    trace.event("maint.com", f"受信を始めました {port} {conf}")
+    return jsonify({"cards": _rx_cards()})
+
+
+@bp.post("/api/maint/rx/stop")
+def rx_stop():
+    from ufkensa.kensa import comport
+    port = str(_body().get("port", "")).strip()
+    comport.stop("mnt:" + port)
+    return jsonify({"cards": _rx_cards()})
+
+
+@bp.post("/api/maint/rx/add")
+def rx_add():
+    """受信機カードを足す(まだ受信は始めない)。"""
+    from ufkensa.kensa import comport
+    b = _body()
+    port = str(b.get("port", "")).strip()
+    if not port:
+        return _err("com", "足す受信機(ポート)を選んでください")
+    cards = _cards_saved()
+    cards.setdefault(port, _conf_of(b))
+    _save_cards(cards)
+    return jsonify({"cards": _rx_cards(), "ports": comport.list_ports()})
+
+
+@bp.post("/api/maint/rx/conf")
+def rx_conf():
+    b = _body()
+    port = str(b.get("port", "")).strip()
+    cards = _cards_saved()
+    cards[port] = _conf_of(b, cards.get(port))
+    _save_cards(cards)
+    # 検査画面で受け取る設定にも同じ値を入れる
+    from ufkensa import user_settings
+    items = [dict(x, **cards[port]) if x["port"] == port else x for x in com_kensa_list()]
+    user_settings.save(KEY_COM_KENSA, items)
+    return jsonify({"cards": _rx_cards()})
+
+
+@bp.post("/api/maint/rx/remove")
+def rx_remove():
+    from ufkensa import user_settings
+    from ufkensa.kensa import comport
+    port = str(_body().get("port", "")).strip()
+    comport.stop("mnt:" + port)
+    cards = _cards_saved()
+    cards.pop(port, None)
+    _save_cards(cards)
+    user_settings.save(KEY_COM_KENSA, [x for x in com_kensa_list() if x["port"] != port])
+    return jsonify({"cards": _rx_cards()})
