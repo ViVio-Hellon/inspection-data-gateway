@@ -149,22 +149,30 @@ def _to_kensa(text: str) -> None:
 
 @bp.post("/api/kensa/recv/start")
 def recv_start():
-    """この端末の受信の設定で、検査画面の受け取りを始める(設定で「検査画面で受け取る」が入っているときだけ)。"""
-    from ufkensa import user_settings
+    """保守で「検査画面で受け取る」にした受信機(何台でも)から受け取りを始める。動いているものはそのまま。"""
     from ufkensa.kensa import comport
-    conf = dict(user_settings.get("com_receive", {}) or {})
-    if not conf.get("kensa") or not conf.get("port"):
-        return jsonify({"on": False, **comport.status(10 ** 9)})
-    st = comport.status(10 ** 9)
-    if st["running"] and st["to_kensa"] and st["port"] == conf["port"]:
-        return jsonify({"on": True, **st})
-    try:
-        comport.start(conf["port"], int(conf.get("baud") or 57600), str(conf.get("flow") or "rtscts"),
-                      int(conf.get("bytesize") or 8), str(conf.get("parity") or "N"), int(conf.get("stopbits") or 1),
-                      sink=_to_kensa)
-    except comport.ComError as e:
-        return jsonify({"on": False, **comport.status(10 ** 9), "error": str(e)})
-    return jsonify({"on": True, **comport.status(10 ** 9)})
+    from .maint import com_kensa_list
+    want = com_kensa_list()
+    running = {r["port"]: r for r in comport.receivers() if r["slot"].startswith("kensa:") and r["running"]}
+    errors = []
+    for c in want:
+        if c["port"] in running:
+            continue
+        try:
+            comport.start(c["port"], int(c.get("baud") or 57600), str(c.get("flow") or "rtscts"),
+                          int(c.get("bytesize") or 8), str(c.get("parity") or "N"), int(c.get("stopbits") or 1),
+                          sink=_to_kensa, slot="kensa:" + c["port"])
+        except (comport.ComError, ValueError) as e:
+            errors.append(str(e))
+    return jsonify(_recv_state(errors))
+
+
+def _recv_state(errors=None) -> dict:
+    from ufkensa.kensa import comport
+    rs = [r for r in comport.receivers() if r["slot"].startswith("kensa:")]
+    on = [r["port"] for r in rs if r["running"]]
+    errs = list(errors or []) + [r["error"] for r in rs if r["error"]]
+    return {"on": bool(on), "ports": on, "port": "・".join(on), "error": " / ".join(errs)}
 
 
 @bp.get("/api/kensa/recv")
@@ -174,6 +182,5 @@ def recv_poll():
     with _recv_lock:
         items = [r for r in _recv_results if r["seq"] > since]
         last = _recv_seq
-    st = comport.status(10 ** 9)
-    return jsonify({"results": items, "last": last, "running": st["running"] and st["to_kensa"],
-                    "port": st["port"], "error": st["error"]})
+    st = _recv_state()
+    return jsonify({"results": items, "last": last, "running": st["on"], "port": st["port"], "error": st["error"]})

@@ -24,7 +24,7 @@ let S = { labels: {}, keys: [] };
 let lastAll = null;
 
 // COM受信テストの状態(タブの初期表示より前に用意する。後ろで宣言すると「初期化前に参照」で落ちる)
-let comLast = 0, comTimer = null, comLoaded = false;
+let comLast = 0, comTimer = null, comLoaded = false, comKensa = [];
 const COM_FIELDS = [["baud", "mComBaud"], ["bytesize", "mComBits"], ["parity", "mComParity"], ["stopbits", "mComStop"], ["flow", "mComFlow"]];
 
 function el(tag, cls, text) {
@@ -679,7 +679,8 @@ function comShow(d) {
     }
     comLast = d.last;
   }
-  if (d.saved) $("mComKensa").checked = !!d.saved.kensa;
+  if (d.kensa) comKensa = d.kensa;
+  comKensaShow();
   clearTimeout(comTimer);
   if (d.running) comTimer = setTimeout(comPoll, 500);
 }
@@ -724,7 +725,19 @@ $("mComKensa").addEventListener("change", async () => {
   const body = { on: $("mComKensa").checked, port: $("mComPortText").value.trim() || $("mComPort").value };
   for (const [k, id] of COM_FIELDS) body[k] = $(id).value;
   try {
-    await api.post("/api/maint/com/kensa", body);
-    toast(body.on ? "検査画面を開くと、この受信機から受け取ります" : "検査画面はキー入力で受け取ります", "success");
+    const r = await api.post("/api/maint/com/kensa", body);
+    comKensa = r.kensa || [];
+    comKensaShow();
+    toast(body.on ? `検査画面を開くと ${body.port} から受け取ります` : `${body.port} は検査画面で受け取りません`, "success");
   } catch (e) { $("mComKensa").checked = !body.on; toastError(e); }
 });
+
+function comKensaShow() {
+  const cur = $("mComPortText").value.trim() || $("mComPort").value;
+  $("mComKensa").checked = comKensa.some((x) => x.port === cur);
+  $("mComKensaList").textContent = comKensa.length
+    ? "検査画面で受け取る受信機: " + comKensa.map((x) => x.port).join("・")
+    : "検査画面で受け取る受信機: なし(キー入力で受け取ります)";
+}
+$("mComPort").addEventListener("change", comKensaShow);
+$("mComPortText").addEventListener("input", comKensaShow);

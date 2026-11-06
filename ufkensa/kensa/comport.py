@@ -88,8 +88,12 @@ def list_ports() -> list[dict[str, str]]:
                     dev, port, _t = winreg.EnumValue(k, i)
                 except OSError:
                     break
-                usb = "VCP" in dev.upper() or "USB" in dev.upper()
-                out.append({"port": str(port), "device": dev, "usb": usb})
+                up = dev.upper()
+                usb = "VCP" in up or "USB" in up
+                bt = "BTH" in up or "BLUETOOTH" in up
+                kind = "Bluetooth(DDM-100 など)" if bt else ("USB の仮想COM" if usb else "")
+                out.append({"port": str(port), "device": dev, "usb": usb or bt,
+                            "label": f"{port}" + (f"({kind})" if kind else "")})
                 i += 1
     except OSError as e:
         log.warning("COM ポートの一覧を読めません: %s", e)
@@ -148,6 +152,7 @@ class _WinPort:
         k32.PurgeComm.argtypes = [w.HANDLE, w.DWORD]
         k32.ReadFile.argtypes = [w.HANDLE, w.LPVOID, w.DWORD, ctypes.POINTER(w.DWORD), w.LPVOID]
         k32.CloseHandle.argtypes = [w.HANDLE]
+        k32.WriteFile.argtypes = [w.HANDLE, w.LPVOID, w.DWORD, ctypes.POINTER(w.DWORD), w.LPVOID]
 
         D, W8, W16 = ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint16      # Windows の DWORD / BYTE / WORD
 
@@ -200,6 +205,10 @@ class _WinPort:
             raise ComError(f"読めません(エラー {self.ct.get_last_error()})。受信機が抜けたかもしれません")
         return buf.raw[: n.value]
 
+    def write(self, data: bytes) -> None:
+        n = self.w.DWORD(0)
+        self.k32.WriteFile(self.h, data, len(data), self.ct.byref(n), None)
+
     def close(self) -> None:
         if getattr(self, "h", None):
             self.k32.CloseHandle(self.h)
@@ -251,6 +260,11 @@ class _D2xxPort:
             raise ComError(f"読めません(FTD2XX のエラー {st})。受信機が抜けたかもしれません")
         return buf.raw[: got.value]
 
+    def write(self, data: bytes) -> None:
+        got = self.ct.c_uint32(0)
+        self.dll.FT_Write.argtypes = [self.ct.c_void_p, self.ct.c_char_p, self.ct.c_uint32, self.ct.POINTER(self.ct.c_uint32)]
+        self.dll.FT_Write(self.h, data, len(data), self.ct.byref(got))
+
     def close(self) -> None:
         if getattr(self, "h", None):
             self.dll.FT_Close(self.h)
@@ -262,7 +276,7 @@ class _FilePort:
 
     def __init__(self, path: str) -> None:
         try:
-            self.fd = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+            self.fd = os.open(path, os.O_RDWR | getattr(os, "O_NONBLOCK", 0))
         except OSError as e:
             raise ComError(f"{path} を開けません: {e}") from e
 
@@ -276,6 +290,9 @@ class _FilePort:
         except BlockingIOError:
             return b""
 
+    def write(self, data: bytes) -> None:
+        os.write(self.fd, data)
+
     def close(self) -> None:
         if self.fd is not None:
             os.close(self.fd)
@@ -283,12 +300,10 @@ class _FilePort:
 
 
 # ------------------------------------------------------------------
-# 受信(1 つだけ。開始で前のは止める)
+# 受信。受信機ごとに 1 つ(名前 = slot)。同じポートは 1 つしか開けないので、開始で同じポートの受信は止める
 # ------------------------------------------------------------------
+STX, ETX, ACK = 0x02, 0x03, 0x06
 _lock = threading.Lock()
-_state = _State()
-_thread: Optional[threading.Thread] = None
-_stop = threading.Event()
 
 
 def _decode(b: bytes) -> str:
@@ -300,98 +315,181 @@ def _decode(b: bytes) -> str:
     return b.decode("latin-1")
 
 
-def _run(dev: Any) -> None:
-    buf = b""
-    try:
-        while not _stop.is_set():
-            chunk = dev.read()
-            if not chunk:
-                continue
-            with _lock:
-                _state.bytes += len(chunk)
-            buf += chunk
-            # CR・LF で区切る(U-WAVE-R は CR で終わる)。区切りが来ないまま 1 秒たっても出す
-            while True:
-                cut = min((i for i in (buf.find(b"\r"), buf.find(b"\n")) if i >= 0), default=-1)
-                if cut < 0:
-                    break
-                one, buf = buf[:cut], buf[cut + 1:]
-                if one:
-                    _push(one)
-    except ComError as e:
-        with _lock:
-            _state.error = str(e)
-    except Exception as e:                       # noqa: BLE001 - 受信の止まった理由を画面に出す
-        with _lock:
-            _state.error = f"{type(e).__name__}: {e}"
-    finally:
-        if buf:
-            _push(buf)
-        dev.close()
-        with _lock:
-            _state.running = False
+def ddm_text(frame: bytes) -> str:
+    """DDM-100 の 1 件(STX と ETX の間)→ 検査の読み取りに渡す文字列。
 
-
-#: 受け取った 1 行を渡す先(検査画面で受け取るとき。None = 見せるだけ)
-_sink: Optional[Any] = None
-
-
-def _push(raw: bytes) -> None:
-    text = _decode(raw).strip()
-    with _lock:
-        _state.seq += 1
-        _state.lines.append((_state.seq, Line(time.strftime("%H:%M:%S"), text, " ".join(f"{c:02X}" for c in raw))))
-        sink = _sink
-    log.info("COM受信 %s: %r", _state.port, raw)
-    if sink is not None and text:
+    パケット形式 `#L<長さ>125.3`(長さは 1 バイトの数) → "#L125.3"(Bluetooth キー入力ユーティリティが打つ形)。
+    数値のみ形式 `125.3` → "#L125.3"(DDM-100 は長さの測定なので #L として扱う)。
+    """
+    if len(frame) >= 3 and frame[:1] == b"#" and frame[2] < 0x20:
+        return _decode(frame[:2] + frame[3:]).strip()
+    t = _decode(frame).strip()
+    if t and t[0] != "#":
         try:
-            sink(text)
-        except Exception:                        # noqa: BLE001 - 受信は止めない(渡す先の失敗はログに残す)
-            log.exception("受け取った値を渡せませんでした: %r", text)
+            float(t)
+            return "#L" + t
+        except ValueError:
+            pass
+    return t
 
 
-def start(port: str, baud: int = DEFAULT_BAUD, flow: str = "rtscts", bytesize: int = 8, parity: str = "N",
-          stopbits: int = 1, sink: Optional[Any] = None) -> dict[str, Any]:
-    """受信を始める(前の受信は止める)。sink に関数を渡すと、受け取った 1 行ずつをそこへ渡す。"""
-    global _thread, _sink
-    stop()
+def split_frames(buf: bytes) -> tuple[list[tuple[bytes, bool]], bytes]:
+    """受け取ったバイト列 → ([(1 件, STX/ETX の形か)], 残り)。
+
+    U-WAVE-R は CR で終わる行、DDM-100 は STX〜ETX の 1 件。どちらが来ても分ける。
+    """
+    out: list[tuple[bytes, bool]] = []
+    while buf:
+        if buf[0] == STX:
+            end = buf.find(bytes([ETX]), 1)
+            if end < 0:
+                break
+            out.append((buf[1:end], True))
+            buf = buf[end + 1:]
+            continue
+        cuts = [i for i in (buf.find(b"\r"), buf.find(b"\n"), buf.find(bytes([STX]))) if i >= 0]
+        if not cuts:
+            break
+        cut = min(cuts)
+        one = buf[:cut]
+        buf = buf[cut + (0 if buf[cut] == STX else 1):]
+        if one.strip():
+            out.append((one, False))
+    return out, buf
+
+
+class Receiver:
+    def __init__(self, slot: str, conf: dict[str, Any], sink: Optional[Any]) -> None:
+        self.slot, self.conf, self.sink = slot, conf, sink
+        self.running, self.error, self.bytes, self.seq = False, "", 0, 0
+        self.started = time.strftime("%H:%M:%S")
+        self.lines: deque = deque(maxlen=MAX_LINES)
+        self.stop_ev = threading.Event()
+        self.thread: Optional[threading.Thread] = None
+
+    @property
+    def port(self) -> str:
+        return self.conf["port"]
+
+    def open(self) -> Any:
+        c = self.conf
+        if c["port"].startswith(D2XX_PREFIX):
+            return _D2xxPort(c["port"][len(D2XX_PREFIX):], c["baud"], c["flow"], c["bytesize"], c["parity"], c["stopbits"])
+        if IS_WINDOWS:
+            return _WinPort(c["port"], c["baud"], c["flow"], c["bytesize"], c["parity"], c["stopbits"])
+        return _FilePort(c["port"])
+
+    def start(self) -> None:
+        dev = self.open()
+        self.running = True
+        self.thread = threading.Thread(target=self._run, args=(dev,), name=f"com-{self.slot}", daemon=True)
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.stop_ev.set()
+        if self.thread is not None:
+            self.thread.join(timeout=2)
+
+    def _run(self, dev: Any) -> None:
+        buf = b""
+        try:
+            while not self.stop_ev.is_set():
+                chunk = dev.read()
+                if not chunk:
+                    continue
+                with _lock:
+                    self.bytes += len(chunk)
+                buf += chunk
+                frames, buf = split_frames(buf)
+                for raw, framed in frames:
+                    if framed:
+                        try:
+                            dev.write(bytes([ACK]))     # DDM-100 の「応答確認」(3 秒以内に ACK が無いと送信エラー)
+                        except Exception:              # noqa: BLE001 - 返せなくても受け取りは続ける
+                            pass
+                    self._push(raw, framed)
+        except ComError as e:
+            with _lock:
+                self.error = str(e)
+        except Exception as e:                       # noqa: BLE001 - 受信の止まった理由を画面に出す
+            with _lock:
+                self.error = f"{type(e).__name__}: {e}"
+        finally:
+            dev.close()
+            with _lock:
+                self.running = False
+
+    def _push(self, raw: bytes, framed: bool) -> None:
+        text = ddm_text(raw) if framed else _decode(raw).strip()
+        shown = (bytes([STX]) + raw + bytes([ETX])) if framed else raw
+        with _lock:
+            self.seq += 1
+            self.lines.append((self.seq, Line(time.strftime("%H:%M:%S"), text, " ".join(f"{c:02X}" for c in shown))))
+        log.info("COM受信 %s: %r", self.port, shown)
+        if self.sink is not None and text:
+            try:
+                self.sink(text)
+            except Exception:                        # noqa: BLE001 - 受信は止めない(渡す先の失敗はログに残す)
+                log.exception("受け取った値を渡せませんでした: %r", text)
+
+    def status(self, since: int = 0) -> dict[str, Any]:
+        with _lock:
+            lines = [{"seq": n, "at": ln.at, "text": ln.text, "hex": ln.hex} for n, ln in self.lines if n > since]
+            return {**self.conf, "slot": self.slot, "to_kensa": self.sink is not None, "running": self.running,
+                    "error": self.error, "started": self.started, "bytes": self.bytes, "lines": lines, "last": self.seq}
+
+
+_rx: dict[str, Receiver] = {}
+
+
+def _conf(port: str, baud: int, flow: str, bytesize: int, parity: str, stopbits: int) -> dict[str, Any]:
     port = str(port or "").strip()
     if not port:
         raise ComError("COM ポートを選んでください")
     if flow not in FLOWS or parity not in PARITY or bytesize not in (7, 8) or stopbits not in (1, 2) or baud <= 0:
         raise ComError("受信の設定が正しくありません")
-    if port.startswith(D2XX_PREFIX):
-        dev = _D2xxPort(port[len(D2XX_PREFIX):], baud, flow, bytesize, parity, stopbits)
-    else:
-        dev = _WinPort(port, baud, flow, bytesize, parity, stopbits) if IS_WINDOWS else _FilePort(port)
-    with _lock:
-        _state.port, _state.baud, _state.flow = port, baud, flow
-        _state.bytesize, _state.parity, _state.stopbits = bytesize, parity, stopbits
-        _state.running, _state.error, _state.bytes = True, "", 0
-        _state.started = time.strftime("%H:%M:%S")
-        _state.lines.clear()
-    _sink = sink
-    _stop.clear()
-    _thread = threading.Thread(target=_run, args=(dev,), name="com-reader", daemon=True)
-    _thread.start()
-    log.info("COM受信テストを始めました: %s %dbps %d%s%d フロー=%s", port, baud, bytesize, parity, stopbits, flow)
-    return status()
+    return {"port": port, "baud": baud, "flow": flow, "bytesize": bytesize, "parity": parity, "stopbits": stopbits}
 
 
-def stop() -> dict[str, Any]:
-    global _thread
-    if _thread is not None:
-        _stop.set()
-        _thread.join(timeout=2)
-        _thread = None
-        log.info("COM受信テストを止めました")
-    return status()
+def start(port: str, baud: int = DEFAULT_BAUD, flow: str = "rtscts", bytesize: int = 8, parity: str = "N",
+          stopbits: int = 1, sink: Optional[Any] = None, slot: str = "test") -> dict[str, Any]:
+    """受信を始める。同じ名前(slot)・同じポートの受信は先に止める。sink に関数を渡すと 1 件ずつ渡す。"""
+    conf = _conf(port, baud, flow, bytesize, parity, stopbits)
+    for name, r in list(_rx.items()):
+        if name == slot or r.port == conf["port"]:
+            r.stop()
+            _rx.pop(name, None)
+    r = Receiver(slot, conf, sink)
+    r.start()                                       # 開けなければ ComError(登録しない)
+    _rx[slot] = r
+    log.info("受信を始めました[%s]: %s %dbps %d%s%d フロー=%s", slot, conf["port"], baud, bytesize, parity, stopbits, flow)
+    return status(slot=slot)
 
 
-def status(since: int = 0) -> dict[str, Any]:
-    with _lock:
-        lines = [{"seq": s, "at": ln.at, "text": ln.text, "hex": ln.hex} for s, ln in _state.lines if s > since]
-        return {"to_kensa": _sink is not None, "port": _state.port, "baud": _state.baud, "flow": _state.flow, "bytesize": _state.bytesize,
-                "parity": _state.parity, "stopbits": _state.stopbits, "defaults": DEFAULTS, "running": _state.running,
-                "error": _state.error, "started": _state.started, "bytes": _state.bytes, "lines": lines,
-                "last": _state.seq, "windows": IS_WINDOWS}
+def stop(slot: Optional[str] = "test") -> dict[str, Any]:
+    """受信を止める(slot=None はすべて)。"""
+    for name in list(_rx):
+        if slot is None or name == slot:
+            _rx.pop(name).stop()
+            log.info("受信を止めました[%s]", name)
+    return status(slot=slot or "test")
+
+
+def stop_prefix(prefix: str) -> None:
+    for name in list(_rx):
+        if name.startswith(prefix):
+            _rx.pop(name).stop()
+
+
+def status(since: int = 0, slot: str = "test") -> dict[str, Any]:
+    r = _rx.get(slot)
+    base = {"defaults": DEFAULTS, "windows": IS_WINDOWS}
+    if r is None:
+        return {**base, **DEFAULTS, "slot": slot, "port": "", "to_kensa": False, "running": False, "error": "",
+                "started": "", "bytes": 0, "lines": [], "last": 0}
+    return {**base, **r.status(since)}
+
+
+def receivers() -> list[dict[str, Any]]:
+    """動いている受信(名前・ポート・検査へ渡すか)。"""
+    return [{k: v for k, v in r.status(10 ** 9).items() if k != "lines"} for r in _rx.values()]
