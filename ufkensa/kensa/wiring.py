@@ -43,6 +43,7 @@ VBA のコントロール名(`ATU`、`S1`、`DiagSKou`、`LateralText.Tag`、`�
 from __future__ import annotations
 
 import functools
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Optional, Sequence
@@ -357,16 +358,35 @@ _FROM_JUDGE_STATE = {judge.OK: grid.COLOR_OK, judge.NG: grid.COLOR_NG, judge.YEL
                      judge.WHITE: grid.COLOR_WHITE}
 
 
+class _LiveCells(Mapping):
+    """第3段10: judge.Form.cells の、KensaState を写さずに読む版。読むたびにその欄の Cell を作る。"""
+
+    _NAMES = tuple(judge._blank_cells())
+
+    def __init__(self, state: KensaState) -> None:
+        self._s = state
+
+    def __getitem__(self, name: str) -> judge.Cell:
+        if name not in self._NAMES:
+            raise KeyError(name)
+        s = self._s
+        c = s.ctl(name)
+        v = s.verdict(name)                           # 第3段7: OK / NG は判定から、入力中(黄)だけ色から
+        st = (judge.OK if v is Verdict.OK else judge.NG if v is Verdict.NG
+              else judge.YELLOW if c.color == grid.COLOR_YELLOW else judge.WHITE)
+        return judge.Cell(value=c.value, state=st, visible=c.visible, tag=c.tag,
+                          border=judge.RED if c.border == grid.BORDER_RED else "")
+
+    def __iter__(self):
+        return iter(self._NAMES)
+
+    def __len__(self) -> int:
+        return len(self._NAMES)
+
+
 def to_judge_form(state: KensaState) -> judge.Form:
-    """KensaState → judge.Form。"""
-    f = judge.Form()
-    for name, cell in f.cells.items():
-        c = state.ctl(name)
-        cell.value, cell.visible, cell.tag = c.value, c.visible, c.tag
-        v = state.verdict(name)                       # 第3段7: OK / NG は判定から、入力中(黄)だけ色から
-        cell.state = (judge.OK if v is Verdict.OK else judge.NG if v is Verdict.NG
-                      else judge.YELLOW if c.color == grid.COLOR_YELLOW else judge.WHITE)
-        cell.border = judge.RED if c.border == grid.BORDER_RED else ""
+    """KensaState → judge.Form。欄(cells)は写さずに読む(第3段10)。公差などの短い値だけ写す。"""
+    f = judge.Form(cells=_LiveCells(state))       # type: ignore[arg-type]
     for p in grid.POSITIONS:
         f.captions[p] = state.v(p).value
     f.captions["LZS"] = state.v("LZS").value
