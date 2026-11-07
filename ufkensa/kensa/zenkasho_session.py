@@ -73,6 +73,7 @@ from .modes import zenkasho as zk
 from .modes.sheet import H494, ZEN
 from .report_model import ReportModel
 from .session import Result
+from .special_common import SubInspectionCommon
 from .store import HOZON, LOT_HISTORY, LocalStore
 
 #: 作業シート → 手元DB のシート名(VBA の作業中保存のシート名)
@@ -231,7 +232,7 @@ class _Book(sh.Book):
         return self.fx
 
 
-class ZenkashoSession:
+class ZenkashoSession(SubInspectionCommon):
     """プロセスに 1 つの全ヵ所・H494 のセッション。操作は `_lock` で 1 つずつ通す。
 
     試験では `store`(手元DB)・`now`(時計)・`kensa_state`(通常検査の状態。読むだけ)・`write_logs` を差し替える。
@@ -294,6 +295,9 @@ class ZenkashoSession:
             stem = lp.name[:-5]
             return any((lp.parent / (stem + ext)).exists() for ext in (".html", ".pdf"))
         return False
+
+    def _sink(self) -> list[Message]:
+        return self._msgs
 
     def _new_book(self) -> _Book:
         others = [HOZON] if self.store.exists(HOZON) else []
@@ -469,16 +473,6 @@ class ZenkashoSession:
             for lg in res.logs:
                 legacy_log.write_log(lg.msg, lg.sepl, lg.target_path, now=self.now())
 
-    def _apply_history(self, h: lotmod.HistorySaveResult) -> int:
-        """HistorySave の結果を Lot情報履歴 に反映する(行を消してから足す。通常検査・キャスクと同じ)。"""
-        lh = self.store.sheet(LOT_HISTORY)
-        trace.note_used(self.store.path, "save")
-        for r in sorted(h.delete_rows, reverse=True):
-            lh.delete_row(r)
-        for row in h.new_rows:
-            lh.append(row[:26])
-        return len(h.new_rows)
-
     def _get_lot_info(self) -> bool:
         """`TempArry = GetLotInfo("Lot情報履歴", UFMitsubishi.LotBox.Text)`(UFMit:807-809)。Empty なら抜ける(偽)。
 
@@ -566,38 +560,6 @@ class ZenkashoSession:
                 raise self._vba_error(e) from e
         if form is not None:
             self.pack = form
-
-    def pack_select(self, i: Any) -> Result:
-        return self._run(self._pack_select, i)
-
-    def _pack_select(self, i: Any) -> None:
-        """UF_PackNo の引当の行をクリック(LabelCls → JPGLoad)。"""
-        if self.pack is None:
-            raise Stop("包装仕様書の画面は開いていません", level=WARN)
-        from . import wiring
-        try:
-            n = int(i)
-        except (TypeError, ValueError):
-            raise Stop("行の番号が正しくありません", level=WARN) from None
-        packing.pack_select(self.pack, n, wiring.sheet_rows(self.store, LOT_HISTORY), messages=self._msgs)
-
-    def pack_close(self, confirmed: Any = False) -> Result:
-        return self._run(self._pack_close, bool(confirmed))
-
-    def _pack_close(self, confirmed: bool) -> None:
-        """UF_PackNo.CommandButton2_Click(「確認」が無いと閉じない)。"""
-        m = packing.pack_close(confirmed)
-        if m is not None:
-            self._msgs.append(m)
-            return
-        self.pack = None
-
-    def pack_image(self) -> Optional[Path]:
-        """いま出している包装仕様書の画像(使用パスの QualityPath\包装仕様書)。"""
-        with self._lock:
-            if self.pack is None:
-                return None
-            return packing.picture_file(self.pack.picture)
 
     # ------------------------------------------------------------------
     # 不良要因票(手元DB の 不良要因印刷_<Line>。通常検査と同じシート)
@@ -691,39 +653,17 @@ class ZenkashoSession:
     # ------------------------------------------------------------------
     # 日報(Register_Check / Daily_Create / Daily_Report)
     # ------------------------------------------------------------------
-    def _registered(self, st: Any) -> bool:
-        """Worker.Register_Check(Format$(Now, "hh:mm:ss"))。UF1 の検査員で見る。True = 登録が要る。"""
-        from . import wiring
-        now = self.now()
-        env = self.env()
-        return workers.register_check(workers.hhmmss(now), wiring.registry(st), wiring.worker_sheet_a(self.store, st.lname),
-                                      now=now, facility=terminal.facility() or workers.DEFAULT_FACILITY,
-                                      shifts=env.shift_times())
-
     def _daily_create(self) -> None:
         """新規発行の `If Register_Check(…) Then Call Daily_Create`(UFMit:1253 / 2117)。
 
         Daily_Create は UF1 が隠れているので Lname = UFMitsubishi.LineName(Worker:721-725)。
         見出しの後の Daily_Report(1)(3) は全ヵ所・H494 表示中のため `Daily_` を探す。
         """
-        from . import wiring
         st = self._kstate()
         if st is None or not self._registered(st):
             return
         b = self.book
-        env = self.env()
-        now = self.now()
-        fac = terminal.facility() or workers.DEFAULT_FACILITY
-        lname = b.mit.line_name if b.mit.visible else ""
-        name = "Daily_" + lname
-        day_return = workers.yea_dayr_check(workers.hhmm(now), now=now, facility=fac, shifts=env.shift_times())
-        set_time = workers.time_check(workers.hhmmss(now), facility=fac, shifts=env.shift_times())
-        cells = wiring.sheet_cells(self.store, name)
-        recreate = cells is None or sh.cell_str(cells.get((1, 1))) != day_return + "_" + set_time
-        trace.note_used(self.store.path, "save")
-        with trace.timed("db.save", "日報の作成(Daily_Create)", path=str(self.store.path), table=name):
-            wiring.write_cells(self.store, name, [workers.CellWrite(2, c, v) for c, v in
-                                                  enumerate(workers.DAILY_FIELDS, start=1)], recreate=recreate)
+        self._daily_header(b.mit.line_name if b.mit.visible else "")
         self._daily_report(1)
         self._daily_report(3)
 
