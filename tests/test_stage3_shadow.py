@@ -37,6 +37,15 @@ class ShadowTest(SessionBase):
             shadow.check_restore(st, wiring.restore_typed(r), wiring._restore_names(r), "試験")
         self.assertTrue(any("[第3段9]" in x and "S1" in x for x in cm.output), cm.output)
 
+    def test_undeclared_view_name_is_reported(self) -> None:
+        st = grid.KensaState()
+        st.v("KenH").value = "1"                            # 宣言済み: 何も出ない
+        with self.assertRaises(shadow.ShadowMismatch):
+            st.v("KenHH")                                  # 打ち間違い(STRICT の試験では失敗)
+        with self.assertLogs("ufkensa.stage3", "WARNING") as cm, mock.patch.object(shadow, "STRICT", False):
+            st.v("Lott")
+        self.assertTrue(any("[第3段10]" in x and "Lott" in x for x in cm.output), cm.output)
+
     def test_off_switch(self) -> None:
         with mock.patch.object(shadow, "enabled", return_value=False):
             st = grid.KensaState()

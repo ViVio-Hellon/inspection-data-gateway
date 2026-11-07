@@ -106,6 +106,20 @@ class Ctl:
 
 Cell = Ctl
 
+#: 第3段10: state.v で使ってよい名前(初めて使ったときに作る表示の欄)。ここに無い名前は打ち間違いとみなす
+VIEW_NAMES: frozenset[str] = frozenset(
+    ["Abno", "Conductiv", "DebugLate", "DebugTaikaku", "DistortionFrame", "EndTime", "HaHiz", "HizCome", "IzyouFl",
+     "KenCount", "KenH", "LastHot", "LateralText", "MG", "Mimi", "Naka", "QF", "ResizText", "SplitFlag", "StartTime",
+     "TaHiz", "TaikText", "VC_L_A", "VC_L_B", "YamaLB", "dataLoding", "flatnes", "flatnesText", "高さ計算式"]
+    + [f"T{i}" for i in (1, 2, 3)] + [f"Day{i}" for i in (1, 2, 3)]
+    + [f"HL{i}" for i in range(1, 7)] + [f"KenHL{i}" for i in range(1, 11)])
+
+
+def _undeclared(name: str) -> None:
+    """宣言の無い名前で表示の欄を作ろうとした(打ち間違いの疑い)。[第3段10] でログへ、試験では失敗。"""
+    from . import shadow
+    shadow.report("10", "KensaState.v", [f"宣言の無い欄 {name!r} を作りました(grid.VIEW_NAMES に足すか、名前を直す)"])
+
 
 @dataclass
 class LSelectCache:
@@ -403,6 +417,8 @@ class KensaState:
     def v(self, name: str) -> Ctl:
         """表示だけのコントロール(view)。無ければ既定値で作る。"""
         if name not in self.view:
+            if name not in VIEW_NAMES:
+                _undeclared(name)
             self.view[name] = Ctl()
         return self.view[name]
 
