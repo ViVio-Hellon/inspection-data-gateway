@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from . import vbx
+from .model import kou_name, lateral_name
 from .flow import WARN, Message, Stop
 from .grid import COLOR_DEFAULT, COLOR_NG, POSITIONS, Hooks, KensaState, remove_underline, small_count_th
 from .grid import typed_cmp, variant_eq
@@ -68,11 +69,11 @@ def ngrange_check(state: KensaState, n: int, k: int) -> bool:
                 result = True
     if state.sumisei != "":
         for a in range(n, k + 1):
-            if 1 <= a <= 6 and backcolor_check_tb(state, "Lateral" + POSITIONS[a - 1]):
+            if 1 <= a <= 6 and backcolor_check_tb(state, lateral_name(POSITIONS[a - 1])):
                 result = True
     if state.sumisei != "" and state.youto == "R115":
         for a in range(n, k + 1):
-            if 1 <= a <= 6 and backcolor_check_tb(state, "Diag" + POSITIONS[a - 1] + "Kou"):
+            if 1 <= a <= 6 and backcolor_check_tb(state, kou_name(POSITIONS[a - 1])):
                 result = True
     return result
 

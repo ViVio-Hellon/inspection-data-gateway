@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from . import paths, vbx
-from .model import NORMAL, THICK_ROWS, thick_format
+from .model import NORMAL, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, thick_format
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -213,7 +213,7 @@ def six_display(state: KensaState, n: str, hooks: Hooks) -> None:
     if n == "on":
         _cells(state, range(1, 11), FIVE, True, True)
         for p in FIVE:
-            _show(state, "Diag" + p, True, True)
+            _show(state, diag_name(p), True, True)
             _show(state, "FM" + p, True)
         for i in list(range(1, 6)) + list(range(7, 12)):
             _show(state, f"LC{i}", True)
@@ -223,7 +223,7 @@ def six_display(state: KensaState, n: str, hooks: Hooks) -> None:
         if state.youto != "R115":
             _show(state, "L10", False)
             for p in FIVE:
-                _show(state, f"Diag{p}Kou", False)
+                _show(state, kou_name(p), False)
         # SkipA:
         for i in range(1, 11):
             _show(state, f"F{i}", True)
@@ -249,7 +249,7 @@ def six_display(state: KensaState, n: str, hooks: Hooks) -> None:
         _show(state, "DiagF", False, False)
         if state.is_work("極厚"):
             for p in FIVE:
-                _show(state, "Diag" + p, False, False)
+                _show(state, diag_name(p), False, False)
             _show(state, "Loading", False)
             return
     _show(state, "Loading", False)
@@ -297,7 +297,7 @@ def slab_set(state: KensaState, hooks: Hooks) -> None:
     for name in ("TSE", "TEE", "E", "NGE"):
         _show(state, name, False)
     for p in ("U", "D", "E"):
-        _show(state, "Diag" + p, False, False)
+        _show(state, diag_name(p), False, False)
 
 
 # ------------------------------------------------------------------
@@ -389,7 +389,7 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
             _show(state, name, False)
         if state.sumisei != "" or state.lateral_text_tag == "有":
             for p in ("U", "C", "D"):
-                _show(state, "Lateral" + p, False)
+                _show(state, lateral_name(p), False)
     elif n == "表示":
         state.inspe_butt_caption = "検入≦25"
         if ken_no == "T" or state.at_butt_caption == "厚2ヵ所":
@@ -410,7 +410,7 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
                 _show(state, name, on)
             if state.sumisei != "" or state.lateral_text_tag == "有":
                 for p, on in (("U", False), ("C", True), ("D", False)):
-                    _show(state, "Lateral" + p, on)
+                    _show(state, lateral_name(p), on)
         if ken_no == "T":
             dist_select(state, 26)
         if f[3] or f[2]:
@@ -470,7 +470,7 @@ def right_angle_display(state: KensaState, n: str, count: str = "") -> None:
     if state.sumisei != "":
         _show(state, "L10", True)
         for p in FIVE:
-            _show(state, f"Diag{p}Kou", True)
+            _show(state, kou_name(p), True)
     if variant_eq(state.yama, 4):
         _show(state, "DiagFKou", True)
     if not variant_eq(state.yama, 4):
@@ -493,11 +493,11 @@ def right_angle_display(state: KensaState, n: str, count: str = "") -> None:
     elif n == "強制":
         _show(state, "L10", True)
         for p in FIVE:
-            _show(state, f"Diag{p}Kou", True)
+            _show(state, kou_name(p), True)
     elif n == "新規":
         _show(state, "L10", False)
         for p in FIVE:
-            _show(state, f"Diag{p}Kou", False)
+            _show(state, kou_name(p), False)
 
 
 def lselect_lateral(state: KensaState, n: str, count: str = "") -> None:
@@ -518,7 +518,7 @@ def lselect_lateral(state: KensaState, n: str, count: str = "") -> None:
     _csng(state.tak)
     _show(state, "L11", True)
     for p in FIVE:
-        _show(state, "Lateral" + p, True)
+        _show(state, lateral_name(p), True)
     _show(state, "LateralF", state.yama == "4")
     if count != "":
         _show(state, "LateralF", True)
@@ -532,11 +532,11 @@ def lselect_lateral(state: KensaState, n: str, count: str = "") -> None:
     elif n == "強制":
         _show(state, "L11", True)
         for p in FIVE:
-            _show(state, "Lateral" + p, True)
+            _show(state, lateral_name(p), True)
     elif n == "新規":
         _show(state, "L11", False)
         for p in FIVE:
-            _show(state, "Lateral" + p, False)
+            _show(state, lateral_name(p), False)
 
 
 @dataclass
@@ -873,17 +873,17 @@ def _lselect_common_cells(state: KensaState) -> None:
         _show(state, "FM" + p, True)
     _show(state, "L11", False)
     for p in FIVE:
-        _show(state, "Lateral" + p, False)
+        _show(state, lateral_name(p), False)
     for i in list(range(1, 6)) + list(range(7, 12)):
         _show(state, f"LC{i}", True)
     for p in FIVE:
         _show(state, f"{p}_UpVisual", True)
         _show(state, f"{p}_UnderVisual", True)
-        _show(state, f"{p}BH", True)
+        _show(state, bh_name(p), True)
     if state.youto != "R115":
         _show(state, "L10", False)
         for p in FIVE:
-            _show(state, f"Diag{p}Kou", False)
+            _show(state, kou_name(p), False)
 
 
 
@@ -984,8 +984,8 @@ def _lselect_diag(state: KensaState, n: str, hooks: Hooks, with_ok: bool, fix_ju
             _show(state, "L9", False)
             _show(state, "L10", False)
         for p in FIVE:
-            _show(state, "Diag" + p, False)
-            _show(state, f"Diag{p}Kou", False)
+            _show(state, diag_name(p), False)
+            _show(state, kou_name(p), False)
     if n == "スラブ":
         safe(slab_set, state, hooks)
 
@@ -1009,13 +1009,13 @@ def _lselect_diag(state: KensaState, n: str, hooks: Hooks, with_ok: bool, fix_ju
     elif n == "薄板":
         _show(state, "L9", True)
         for p in FIVE:
-            _show(state, "Diag" + p, True)
+            _show(state, diag_name(p), True)
         _show(state, "DiagU", enabled=True)
         _show(state, "DiagD", enabled=True)
     elif n == "少枚数":
         _show(state, "L9", True)
         for p in FIVE:
-            _show(state, "Diag" + p, True, True)
+            _show(state, diag_name(p), True, True)
 
 
 
@@ -1069,7 +1069,7 @@ def _thin_body(state: KensaState, hooks: Hooks, *, set_diag: bool) -> None:
         _cells(state, range(1, 11), FIVE, True, True)
         if set_diag:
             for p in FIVE:
-                _show(state, "Diag" + p, True, True)
+                _show(state, diag_name(p), True, True)
         for i in list(range(1, 6)) + list(range(7, 12)):
             _show(state, f"LC{i}", True)
         _show(state, "LC6", False)
@@ -1156,7 +1156,7 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
         _show(state, "F" + p, True, False)           # 歪見出し FS..FF
         _show(state, f"{p}_UpVisual", True, True)
         _show(state, f"{p}_UnderVisual", True, True)
-        _show(state, "Diag" + p, True, True)
+        _show(state, diag_name(p), True, True)
         _show(state, "FM" + p, True)
     for i in THICK_ROWS:
         _show(state, f"AL{i}", True)

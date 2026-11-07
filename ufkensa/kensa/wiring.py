@@ -48,7 +48,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
-from .model import EXTREME, NORMAL
+from .model import EXTREME, NORMAL, diag_name, kou_name
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -152,9 +152,9 @@ def all_controls(state: KensaState) -> dict[str, Ctl]:
     """名前つきのコントロールすべて(グリッド・付随欄・表示だけのもの)。"""
     out: dict[str, Ctl] = dict(state.cells)
     for p, c in state.diag.items():
-        out["Diag" + p] = c
+        out[diag_name(p)] = c
     for p, c in state.diag_kou.items():
-        out[f"Diag{p}Kou"] = c
+        out[kou_name(p)] = c
     for prefix, group in (("Lateral", state.lateral), ("NG", state.ng), ("Z", state.strain_z), ("G", state.strain_g)):
         for p, c in group.items():
             out[prefix + p] = c

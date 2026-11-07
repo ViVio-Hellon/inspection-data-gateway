@@ -154,3 +154,26 @@ class Measures:
     def thick_ctls(self, positions: tuple[str, ...] = POSITIONS) -> Iterator[tuple[CellKey, "Ctl"]]:
         for k in thick_keys(positions):
             yield k, self.ctl(k)
+
+
+# ----------------------------------------------------------------------
+# 位置ごとの欄の名前(段3・段4: 対角・直角度・ラテラルボー・BH)。VBA のコントロール名をここだけで組み立てる
+# ----------------------------------------------------------------------
+def diag_name(pos: str) -> str:
+    """対角線差のラベル(DiagS…)。"""
+    return f"Diag{pos}"
+
+
+def kou_name(pos: str) -> str:
+    """直角度の欄(DiagSKou…)。"""
+    return f"Diag{pos}Kou"
+
+
+def lateral_name(pos: str) -> str:
+    """ラテラルボーの欄(LateralS…)。"""
+    return f"Lateral{pos}"
+
+
+def bh_name(pos: str) -> str:
+    """BH の欄(SBH…。F は無い)。"""
+    return f"{pos}BH"
