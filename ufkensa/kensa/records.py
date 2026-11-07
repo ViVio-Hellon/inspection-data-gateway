@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
-from .model import is_thick, row_format
+from .model import NORMAL, is_thick, row_format
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -853,9 +853,9 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
             v = data[fi][i - 1]
             if is_thick(i):
                 out.set(f"{f}{i}", _fmt_val(v, "0.000"))
-            elif i in (5, 6):
+            elif i in NORMAL.width:
                 out.set(f"{f}{i}", _fmt_val(v, "0.0"))
-            elif 7 <= i <= 10:
+            elif i in NORMAL.length or i in NORMAL.diag:
                 out.set(f"{f}{i}", _fmt_val(v, "0.0"))
             elif 11 <= i <= 14:
                 if f != "F":

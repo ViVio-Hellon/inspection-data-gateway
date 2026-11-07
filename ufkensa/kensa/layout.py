@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from . import paths, vbx
-from .model import THICK_ROWS, thick_format
+from .model import NORMAL, THICK_ROWS, thick_format
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -157,7 +157,7 @@ def num_dig(state: KensaState) -> None:
     for _key, c in state.measures.thick_ctls():
         c.value = vbx.fmt(c.value, pat)
     pat = "0.0"
-    for i in range(5, 7):
+    for i in NORMAL.width:
         for p in FIVE + ("F",):
             c = state.cells[f"{p}{i}"]
             c.value = vbx.fmt(c.value, pat)
@@ -262,7 +262,7 @@ def slab_set(state: KensaState, hooks: Hooks) -> None:
         _show(state, f"AL{i}", True)
         for p, on in (("S", True), ("U", False), ("C", True), ("D", False), ("E", False)):
             _show(state, f"{p}{i}", on, on)
-    for i in range(5, 11):
+    for i in NORMAL.size_rows:
         if i <= 8:
             pat = (("S", True), ("U", True), ("C", True), ("D", True), ("E", False))
         else:
@@ -908,8 +908,8 @@ def _lselect_rows_by_work(state: KensaState, n: str, hooks: Hooks) -> None:
 
     if n != "住精":                                    # 住精は GoTo skipSmisei
         if n == "厚板":
-            _cells(state, range(5, 11), ("U", "D"), False, False)
-            _cells(state, range(5, 11), ("C", "E"), True, True)
+            _cells(state, NORMAL.size_rows, ("U", "D"), False, False)
+            _cells(state, NORMAL.size_rows, ("C", "E"), True, True)
             for i in list(range(1, 6)) + list(range(7, 12)):
                 _show(state, f"LC{i}", True)
             for p in ("U", "C", "D"):
@@ -918,7 +918,7 @@ def _lselect_rows_by_work(state: KensaState, n: str, hooks: Hooks) -> None:
         elif n == "薄板":
             _thin_body(state, hooks, set_diag=False)
         elif n == "少枚数":
-            _cells(state, range(5, 11), FIVE, True, True)
+            _cells(state, NORMAL.size_rows, FIVE, True, True)
             _lc_and_visual(state)
         elif n == "極厚":
             _cells(state, range(5, 15), FIVE, True, True)
@@ -932,8 +932,8 @@ def _lselect_sumisei(state: KensaState, n: str, hooks: Hooks, ken_no: str, with_
     if n == "住精":
         if state.is_work("厚板"):
             six_display(state, "off", hooks)
-            _cells(state, range(5, 11), ("U", "D"), False, False)
-            _cells(state, range(5, 11), ("C", "E"), True, True)
+            _cells(state, NORMAL.size_rows, ("U", "D"), False, False)
+            _cells(state, NORMAL.size_rows, ("C", "E"), True, True)
             for p in ("U", "C", "D"):
                 _show(state, f"{p}_UpVisual", True)
                 _show(state, f"{p}_UnderVisual", True)

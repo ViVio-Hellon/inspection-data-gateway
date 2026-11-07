@@ -48,6 +48,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
+from .model import EXTREME, NORMAL
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -549,10 +550,8 @@ def time_posting(state: KensaState, env: Env, position: str, each_t: Optional[da
     sh = store.sheet(name)
     sh.write(1, 1, state.lot)
     sh.write(1, 2, records.vb_format_date(state.v("StartTime").value, "yyyy/mm/dd hh:mm:ss"), "S")
-    if state.is_work("極厚"):
-        fields = ["厚1", "厚2", "厚3", "厚4", "幅1", "幅2", "幅3", "幅4", "幅5", "幅6", "丈1", "丈2"]
-    else:
-        fields = ["厚1", "厚2", "厚3", "厚4", "幅1", "幅2", "丈1", "丈2", "対角A", "対角B"]
+    # 極厚は 丈1・丈2 まで(VBA の見出しは 12 列)
+    fields = EXTREME.labels()[:12] if state.is_work("極厚") else NORMAL.labels()
     sh.write_row(2, 1, fields)
     i = {"S": 1, "U": 2, "C": 3, "D": 4, "E": 5, "F": 6}.get(vbx.left(position, 1), 0)
     x = vbx.clng(vbx.right(position, 1)) if len(position) == 2 else vbx.clng(vbx.mid(position, 2, 2))

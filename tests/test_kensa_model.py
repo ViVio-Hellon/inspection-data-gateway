@@ -25,6 +25,13 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(model.thick_format("74"), "0.000")
         self.assertEqual(model.thick_format("74.5"), "0.00")
 
+    def test_row_layouts(self) -> None:
+        self.assertEqual(model.NORMAL.labels(), ["厚1", "厚2", "厚3", "厚4", "幅1", "幅2", "丈1", "丈2", "対角A", "対角B"])
+        self.assertEqual(list(model.NORMAL.size_rows), [5, 6, 7, 8, 9, 10])
+        self.assertEqual(model.EXTREME.labels()[4:], ["幅1", "幅2", "幅3", "幅4", "幅5", "幅6", "丈1", "丈2", "丈3", "丈4"])
+        self.assertEqual(list(model.EXTREME.length), [11, 12, 13, 14])
+        self.assertIs(model.row_layout(True), model.EXTREME)
+
     def test_verdict_is_the_color(self) -> None:
         self.assertEqual(Verdict.NG, grid.COLOR_NG)
         self.assertEqual(Verdict.of(grid.COLOR_OK), Verdict.OK)

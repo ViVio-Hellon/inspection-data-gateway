@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
-from .model import is_thick
+from .model import NORMAL, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -182,7 +182,7 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
                 if _blank(state, f"U{i}"):
                     return _set_target(state, f"U{i}")
             elif 5 <= i <= 10:
-                for b in range(5, 11):
+                for b in NORMAL.size_rows:
                     if _blank(state, f"C{b}"):
                         return _set_target(state, f"C{b}")
     elif state.is_work("スラブ"):
@@ -233,7 +233,7 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
                 if _blank(state, f"D{i}"):
                     return _set_target(state, f"D{i}")
             elif 5 <= i <= 10:
-                for b in range(5, 11):
+                for b in NORMAL.size_rows:
                     if _blank(state, f"E{b}"):
                         return _set_target(state, f"E{b}")
     elif state.is_work("スラブ"):

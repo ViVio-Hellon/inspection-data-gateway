@@ -48,6 +48,45 @@ def thick_format(atu: str) -> str:
 
 
 @dataclass(frozen=True)
+class RowLayout:
+    """作業ごとの行の意味。厚はいつも 1〜4 行目。
+
+    - ふつう(厚板・薄板・少枚数・スラブ): 幅 5〜6、丈 7〜8、対角 9〜10
+    - 極厚(耳付): 幅 5〜10(幅1〜6)、丈 11〜14(丈1〜4)、対角なし
+    """
+    width: range
+    length: range
+    diag: range
+
+    @property
+    def thick(self) -> range:
+        return THICK_ROWS
+
+    @property
+    def size_rows(self) -> range:
+        """厚の次から(幅・丈・対角。ふつうは 5〜10)。"""
+        last = max(self.diag.stop, self.length.stop)
+        return range(self.width.start, last)
+
+    def labels(self) -> list[str]:
+        """行の見出し(WorkerTime・公差外表の 厚1… 幅1… 丈1… 対角A/B)。"""
+        out = [f"厚{i}" for i in range(1, len(self.thick) + 1)]
+        out += [f"幅{i}" for i in range(1, len(self.width) + 1)]
+        out += [f"丈{i}" for i in range(1, len(self.length) + 1)]
+        out += [f"対角{c}" for c in "AB"[:len(self.diag)]]
+        return out
+
+
+NORMAL = RowLayout(width=range(5, 7), length=range(7, 9), diag=range(9, 11))
+EXTREME = RowLayout(width=range(5, 11), length=range(11, 15), diag=range(11, 11))
+
+
+def row_layout(extreme: bool) -> RowLayout:
+    """極厚(耳付)かどうかで行の意味を返す。"""
+    return EXTREME if extreme else NORMAL
+
+
+@dataclass(frozen=True)
 class CellKey:
     """測定グリッドの 1 欄(位置 × 行)。VBA のラベル名は `name`("S1" など)。"""
     pos: str

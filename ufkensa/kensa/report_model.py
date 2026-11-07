@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, time as dtime
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
 from . import flow, vbx
-from .model import THICK_ROWS
+from .model import EXTREME, NORMAL, THICK_ROWS
 from . import sound as snd
 from .flow import Message, Question, Stop
 from .records import (FACES, KensaSnapshot, cmp_str_num, end_time_register, uf_array, uf_tag_array, vb_cdate,
@@ -1043,12 +1043,10 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
             lr = 26
             sh.put(lr, 1, "公差外ﾃﾞｰﾀ")
             if snap.kind == "極厚":
-                field_date = ["厚1", "厚2", "厚3", "厚4", "幅1", "幅2", "幅3", "幅4", "幅5", "幅6",
-                              "丈1", "丈2", "丈3", "丈4"]
+                field_date = EXTREME.labels()
                 _copy_from(sh, iz, 2, 1, n, 14, lr + 1, 2)
             else:
-                field_date = ["厚1", "厚2", "厚3", "厚4", "幅1", "幅2", "丈1", "丈2", "対角A", "対角B",
-                              "直角度", "ﾗﾃﾗﾙﾎﾞｰ", "定盤", "ｹﾞ-ｼﾞ"]
+                field_date = NORMAL.labels() + ["直角度", "ﾗﾃﾗﾙﾎﾞｰ", "定盤", "ｹﾞ-ｼﾞ"]
                 _copy_from(sh, iz, 2, 1, n, 10, lr + 1, 2)
                 _copy_from(sh, iz, 2, 15, n, 16, lr + 1, 12)
                 _copy_from(sh, iz, 2, 17, n, 18, lr + 1, 14)
