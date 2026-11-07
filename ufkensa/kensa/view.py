@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from . import grid
+from .model import Switch
 from .grid import KensaState
 
 _ROW_LABEL = {**{r: f"AL{r}" for r in range(1, 5)}, **{r: f"L{r - 4}" for r in range(5, 11)},
@@ -78,7 +79,7 @@ def build(state: KensaState, extra: Optional[dict[str, Any]] = None) -> dict[str
         "ken_count": state.ken_count,
         "visual": [{"no": i, **_ctl(c)} for i, c in sorted(state.visual.items())],
         "next": {"name": state.inp_tag, "label": state.tagtext, "kind": state.paked, "machin": state.machin,
-                 "auto": state.auto == "on"},
+                 "auto": state.auto == Switch.ON},
         "minmax": {"amin": state.amin, "amax": state.amax, "hmin": state.hmin, "hmax": state.hmax,
                    "tmin": state.tmin, "tmax": state.tmax},
         "blind": state.blind_message,

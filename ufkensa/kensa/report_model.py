@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, time as dtime
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
 from . import flow, vbx
-from .model import EXTREME, NORMAL, THICK_ROWS
+from .model import EXTREME, Face, NORMAL, THICK_ROWS
 from . import sound as snd
 from .flow import Message, Question, Stop
 from .records import (FACES, KensaSnapshot, cmp_str_num, end_time_register, uf_array, uf_tag_array, vb_cdate,
@@ -900,9 +900,9 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
 
     shown = [[uf_array(snap, 15, f), uf_array(snap, 16, f)] for f in FACES]
     tags = uf_tag_array(snap)
-    if snap.aorb == "Now_A":
+    if snap.aorb == Face.A:
         hz_a, hz_b = shown, tags
-    elif snap.aorb == "Now_B":
+    elif snap.aorb == Face.B:
         hz_a, hz_b = tags, shown
     else:
         raise vbx.TypeMismatch("AorB.Caption が Now_A / Now_B でない(Print:407 の LBound で型エラー)")

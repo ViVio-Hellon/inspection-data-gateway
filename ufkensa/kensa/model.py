@@ -177,3 +177,24 @@ def lateral_name(pos: str) -> str:
 def bh_name(pos: str) -> str:
     """BH の欄(SBH…。F は無い)。"""
     return f"{pos}BH"
+
+
+# ----------------------------------------------------------------------
+# 画面の切り替え・旗(段5・段8)。VBA では Caption / Tag の文字だったもの。値はそのまま(保存・ログと同じ文字)
+# ----------------------------------------------------------------------
+class Face:
+    """歪の入力面(AorB.Caption)。"""
+    A = "Now_A"
+    B = "Now_B"
+
+
+class Switch:
+    """Load.Caption(フォームのイベントを止める)・Auto(次の入力欄を自動で決める)。"""
+    ON = "on"
+    OFF = "off"
+
+
+class FormTag:
+    """UF1.Tag。STOP の間は音声・MsgBox を止める。"""
+    NONE = ""
+    STOP = "STOP"

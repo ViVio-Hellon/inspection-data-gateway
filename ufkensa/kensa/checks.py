@@ -28,7 +28,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
 from . import datasource, paths, vbx
-from .model import NORMAL, diag_name, kou_name, lateral_name
+from .model import Face, NORMAL, diag_name, kou_name, lateral_name
 from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
@@ -577,9 +577,9 @@ def ng_posting(uf: Uf1, posi: str, sheet: Optional[AbnormalSheet]) -> AbnormalSh
     if posi in POSITIONS:
         if uf.t("G" + posi) != "":
             ng[17] = "ｹﾞ:" + uf.t("G" + posi)
-        if uf.t("AorB") == "Now_A" and uf.t("Z" + posi) != "":
+        if uf.t("AorB") == Face.A and uf.t("Z" + posi) != "":
             ng[16] = "A:" + uf.t("Z" + posi)
-        if uf.t("AorB") == "Now_B" and uf.t("Z" + posi) != "":
+        if uf.t("AorB") == Face.B and uf.t("Z" + posi) != "":
             ng[16] = "B:" + uf.t("Z" + posi)
         ng[14] = uf.t(kou_name(posi))
         ng[15] = uf.t(lateral_name(posi))

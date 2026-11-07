@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from . import paths, vbx
-from .model import NORMAL, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, thick_format
+from .model import FormTag, NORMAL, Switch, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, thick_format
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -755,7 +755,7 @@ def _lselect_lot_facts(state: KensaState, n: str, hooks: Hooks, msgs: list[Messa
             if not jumped:
                 lot_acc = None if state.lot == "" else safe(hooks.arrbox, state, "SIKALOTNOW.accdb", state.lot, "Record")
                 if lot_acc is None:
-                    if state.load == "on" and not result_t and not c.skip_lot_not_found_msg:
+                    if state.load == Switch.ON and not result_t and not c.skip_lot_not_found_msg:
                         msgs.append(Message("SIKALOTNOWに該当ロットがありません" + "LSelect", ERROR, source="FormRelat:2665"))
                     if n == "住精":
                         jumped = True
@@ -1205,7 +1205,7 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
 
 def op_forced_selection(state: KensaState) -> None:
     """FormRelat.OpForcedSelection (FormRelat:6974-7022)。作業未選択なら「作業選択を選んでください」(大きさの変更は移さない)。"""
-    if state.load == "off" or state.lot == "":
+    if state.load == Switch.OFF or state.lot == "":
         return
     state.blind_message = "作業選択を選んでください" if state.work == "" else ""
 
@@ -1269,7 +1269,7 @@ def yama_change(state: KensaState, hooks: Hooks, msgs: Optional[list[Message]] =
     数字なら "0" 書式に直す(値が変わると Change がもう一度走る)。
     """
     msgs = msgs if msgs is not None else []
-    if state.load == "off":
+    if state.load == Switch.OFF:
         return
     if vbx.is_numeric(state.yama):
         new = vbx.fmt(state.yama, "0")
@@ -1315,7 +1315,7 @@ def yama_change(state: KensaState, hooks: Hooks, msgs: Optional[list[Message]] =
     if state.sumisei != "":
         lselect(state, "住精", hooks, False, msgs)
     else:
-        if state.load != "off":
+        if state.load != Switch.OFF:
             lselect(state, "薄板", hooks, False, msgs)
         if state.work_caption["薄板"] == "T" and state.yama == "1":
             _caps(state, OPS1="S", OPS2="", OPS3="2", OPS4="", OPS5="E", OPE1="S", OPE2="", OPE3="2", OPE4="", OPE5="E")
@@ -1327,17 +1327,17 @@ def yama_change(state: KensaState, hooks: Hooks, msgs: Optional[list[Message]] =
                 _show(state, f"C{i}", True, True)
                 _show(state, "DiagU", True, True)
                 _show(state, "DiagE", True, True)
-        if state.load != "off":
+        if state.load != Switch.OFF:
             if state.at_butt_caption == "厚2ヵ所":
                 at_count_select(state, 4, hooks)
             elif state.at_butt_caption == "厚4ヵ所":
                 at_count_select(state, 2, hooks)
-        if state.load != "off":
+        if state.load != Switch.OFF:
             inspection_select(state, "表示", hooks)
     # skipSmisei:
     hooks.initial_setting(state)
     hooks.user_form_click(state)
-    if state.load != "off":
+    if state.load != Switch.OFF:
         hooks.posting(state)
         hooks.write_log(state, "*UFKen:山数ﾁｪﾝｼﾞ:" + state.yama)
 
@@ -1357,8 +1357,8 @@ def line_auto_selection(state: KensaState, n: str, hooks: Hooks, maru_no: int = 
     else:
         state.line_no = ""
     state.v("ZEB").value = "検入4山以上" if vbx.mid(state.line_name, 1, 2) == "丸徳" else "全数.三菱.5N"
-    state.form_tag = "STOP"
-    state.load = "off"
+    state.form_tag = FormTag.STOP
+    state.load = Switch.OFF
     try:
         hooks.load_text(state, n)
         if state.lot != "":
@@ -1373,5 +1373,5 @@ def line_auto_selection(state: KensaState, n: str, hooks: Hooks, maru_no: int = 
         for p in FIVE + ("F",):
             hooks.check_labels_by_category(state, p)
     finally:
-        state.load = "on"                           # 途中で止まっても旗は戻す(2026-11-06。B6 を直した)
+        state.load = Switch.ON                           # 途中で止まっても旗は戻す(2026-11-06。B6 を直した)
         state.form_tag = ""
