@@ -48,7 +48,8 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
-from .model import EXTREME, FormTag, NORMAL, Switch, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
+from . import shadow
+from .model import EXTREME, FormTag, NORMAL, Switch, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -127,6 +128,7 @@ def put(state: KensaState, name: str, value: Any) -> None:
         if base == "LateralText":
             state.lateral_text_colored = color_name(value) not in (grid.COLOR_DEFAULT, "-2147483642")
         _ctl(state, base).color = color_name(value)
+        set_verdict(state.verdicts, base, color_name(value))
     elif prop == "visible":
         _ctl(state, base).visible = bool(value)
     elif prop == "enabled":
@@ -353,6 +355,7 @@ def apply_judge(state: KensaState, out: judge.Outcome, env: Env) -> None:
     """judge.Outcome を KensaState に反映する(色・値・Tag・枠、音、ログ、MsgError、NGErase)。"""
     for k, s in out.states.items():
         state.ctl(k).color = _FROM_JUDGE_STATE.get(s, grid.COLOR_WHITE)
+        set_verdict(state.verdicts, k, state.ctl(k).color)
     for k, v in out.values.items():
         put(state, k, v)
     for k, v in out.tags.items():
@@ -508,8 +511,34 @@ def restore_lot_source(state: KensaState, lot: str) -> None:
         state.lot_source, state.lot_source_lot = "", ""
 
 
+def restore_typed(r: records.FormRestore) -> KensaState:
+    """第3段9: 読み戻しを「型への読み込み」で。新しい KensaState に保存の値を入れるだけ(画面操作は再生しない)。"""
+    st = KensaState()
+    for k, val in r.values.items():
+        try:
+            put(st, k, val)
+        except KeyError:
+            pass
+    return st
+
+
+def _restore_names(r: records.FormRestore) -> list[str]:
+    return [SCALAR.get(k, k) for k in r.values]
+
+
 def apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
-    """records.FormRestore(Load_Text・LosdStrain の結果)を画面へ戻し、続けて呼ぶ手続きを呼ぶ。"""
+    """records.FormRestore(Load_Text・LosdStrain の結果)を画面へ戻し、続けて呼ぶ手続きを呼ぶ。
+
+    第3段9: 終わったら、型への読み込み(restore_typed)の結果と業務の値を比べ、食い違えば [第3段9] でログへ。
+    """
+    try:
+        _apply_restore(state, r, hooks)
+    finally:
+        if shadow.enabled():
+            shadow.check_restore(state, restore_typed(r), _restore_names(r), "apply_restore")
+
+
+def _apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
     for k, val in r.values.items():
         put(state, k, val)
     for k, val in r.tags.items():
@@ -610,6 +639,7 @@ def time_record(state: KensaState, env: Env, st: str) -> None:
             state.ctl(st).value = ""
             state.flag_label = 1
             state.ctl(st).color = grid.COLOR_DEFAULT
+            set_verdict(state.verdicts, st, grid.COLOR_DEFAULT)
             state.each_time, state.each_value = now_t, value
             env.messages.append(Message("2度押し", WARN, source="FormRelat:319"))
             time_posting(state, env, st, now, "")
@@ -762,6 +792,7 @@ class RealHooks(Hooks):
             state.ctl(name).value = ""
         for name, col in act.back_color:
             state.ctl(name).color = color_name(col)
+            set_verdict(state.verdicts, name, color_name(col))
         if act.clear_inp:
             state.inp = ""
         for name in act.erase_count:

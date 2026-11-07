@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
-from .model import NORMAL, Switch, bad_name, diag_name, is_thick
+from .model import NORMAL, Switch, set_verdict, bad_name, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -283,6 +283,7 @@ def lookblank_color(state: KensaState, a: str) -> None:
         c.border, c.color = BORDER_RED, COLOR_YELLOW
     else:
         c.border, c.color = BORDER_BLACK, COLOR_WHITE
+    set_verdict(state.verdicts, a, c.color)
 
 
 def _skip34_rows(a: int, n: int) -> Iterator[Optional[int]]:
@@ -395,6 +396,7 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
         _set_target(state, name)
         c = state.ctl(name)
         c.border, c.color = BORDER_RED, COLOR_YELLOW
+        set_verdict(state.verdicts, name, c.color)
         return True
 
     rows = range(a, n + 1)
@@ -604,6 +606,7 @@ def text_tag(state: KensaState, name: str, hooks: Hooks) -> str:
         hooks.hiz_loop_judg(state)
         c = state.ctl(name)
         c.border, c.color = BORDER_RED, COLOR_YELLOW
+        set_verdict(state.verdicts, name, c.color)
         _set_target(state, name)
     return name
 
@@ -618,6 +621,8 @@ def diagonal_erase(state: KensaState, name: str) -> None:
         state.ctl(diag_name(p)).value = ""
         state.ctl(p + "10").color = COLOR_DEFAULT
         state.ctl(p + "9").color = COLOR_DEFAULT
+        set_verdict(state.verdicts, p + "10", COLOR_DEFAULT)
+        set_verdict(state.verdicts, p + "9", COLOR_DEFAULT)
 
 
 def ng_erase(state: KensaState, name: str) -> None:
@@ -695,6 +700,7 @@ def cell_dbl_click(state: KensaState, name: str, hooks: Hooks) -> EraseResult:
     c.tag = ""
     erase_count(state, name, hooks)
     c.color = COLOR_DEFAULT
+    set_verdict(state.verdicts, name, COLOR_DEFAULT)
     ng_erase(state, name)
 
     pos = vbx.left(st, 1)

@@ -221,3 +221,36 @@ def bad_name(pos: str) -> str:
 def ken_h_name(i: int) -> str:
     """検入高さの欄(KenHBox1〜7。7 は少枚数の枚数)。"""
     return f"KenHBox{i}"
+
+
+# ----------------------------------------------------------------------
+# 判定の置き場所(段7 後半)。判定(OK / NG)は色とは別に KensaState.verdicts に持つ
+# ----------------------------------------------------------------------
+#: 判定する欄(測定グリッド・対角・直角度・ラテラルボー・BH・歪)
+JUDGED_NAMES: frozenset[str] = frozenset(
+    [f"{p}{r}" for p in POSITIONS for r in range(1, ROW_COUNT[p] + 1)]
+    + [diag_name(p) for p in POSITIONS] + [kou_name(p) for p in POSITIONS] + [lateral_name(p) for p in POSITIONS]
+    + [bh_name(p) for p in FIVE] + [f"Z{p}" for p in POSITIONS] + [f"G{p}" for p in POSITIONS])
+
+
+def verdict_of_color(color: str) -> Verdict:
+    """色から読み取れる判定(OK / NG のほかは「判定なし」)。"""
+    v = Verdict.of(color)
+    return v if v in (Verdict.OK, Verdict.NG) else Verdict.NONE
+
+
+def set_verdict(verdicts: dict[str, Verdict], name: str, color: str) -> None:
+    """欄の色を変える所で、判定も同じ意味で書く(OK / NG 以外の色 = 判定を外す)。判定する欄でなければ何もしない。"""
+    if name not in JUDGED_NAMES:
+        return
+    v = verdict_of_color(color)
+    if v is Verdict.NONE:
+        verdicts.pop(name, None)
+    else:
+        verdicts[name] = v
+
+
+def display_color(verdict: Verdict, current: str) -> str:
+    """判定から出す色。判定が無ければ いまの表示の色(黄色の入力中・白など)のまま。"""
+    return verdict.value if verdict in (Verdict.OK, Verdict.NG) else ("" if verdict_of_color(current) is not Verdict.NONE
+                                                                       else current)

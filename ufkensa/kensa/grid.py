@@ -214,6 +214,8 @@ class KensaState:
     strain_g: dict[str, Ctl] = field(default_factory=lambda: _by_pos(hidden_f=False))
     #: 歪コンボ CBS1..CBF4(名前 "CBS1" をキー。CB?1 = 形状("耳"/"中" 等)、CB?2 = 上下、CB?3/CB?4 = ゲージ側)
     strain_cb: dict[str, Ctl] = field(default_factory=lambda: {f"CB{p}{i}": Ctl() for p in POSITIONS for i in range(1, 5)})
+    #: 判定(OK / NG)。色とは別に持つ(第3段7。いまは影で確かめ中: shadow.check_verdicts)
+    verdicts: dict[str, Verdict] = field(default_factory=dict)
     #: A/B 面の切替 AorB.Caption("Now_A" / "Now_B")
     strain_face: str = Face.A
     #: 作業保存シートの歪の控え(O2:P7 = A 面、O8:P13 = B 面。ReflectStrain/LosdStrain)。キーは "ZS"/"GS" など
