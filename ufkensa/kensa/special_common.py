@@ -7,12 +7,14 @@ VBA では UFCask と UFMitsubishi が同じ処理(HistorySave の反映・包�
 """
 from __future__ import annotations
 
+import shutil
+from glob import escape as glob_escape
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from .. import trace
 from . import lot as lotmod
-from . import datasource, packing, quality, terminal, vbx, wiring, workers
+from . import datasource, legacy_log, packing, report_html, quality, terminal, vbx, wiring, workers
 from .flow import WARN, Message, Stop
 from .modes import sheet as sh
 from .store import LOT_HISTORY
@@ -147,3 +149,57 @@ class SubInspectionCommon:
         if form is not None:
             self.pack = form
         return msgs
+
+    # -- 保存(SavePlan) ----------------------------------------------------
+    def _exists(self, path_text: str) -> bool:
+        """保存の連番(numbered_path)の「もうあるか」。xlsx と、一緒に書く見せる用の .html/.pdf を見る。"""
+        p = legacy_log.local_path(path_text)
+        if p.exists():
+            return True
+        stem = _stem(p.name)
+        return any((p.parent / (stem + ext)).exists() for ext in (".xlsx", ".html", ".pdf")) or \
+            any(p.parent.glob(glob_escape(stem) + "_*.html"))
+
+    def _run_save_plan(self, plan: sh.SavePlan,
+                       write: Callable[[Path, str], list[Path]]) -> tuple[list[str], list[Message]]:
+        """SavePlan の手順(mkdir / save / copy)を実行する。キャスク・全ヵ所・H494 で同じ。
+
+        save: `write(フォルダ, 名前)` で xlsx(+ 見せる用の HTML/PDF)を書く。
+        copy: save で作ったファイルを、写し先の名前に付け替えて写す(VBA の FileCopy)。
+        パスワード・読み取り専用(xlsx の保護)は付けない。書けなかった手順は知らせて次へ進む。
+        """
+        msgs: list[Message] = []
+        made: dict[str, list[Path]] = {}
+        files: list[str] = []
+        for step in plan.steps:
+            if not step.path:
+                continue
+            target = legacy_log.local_path(step.path)
+            try:
+                if step.kind == "mkdir":
+                    target.mkdir(parents=True, exist_ok=True)
+                elif step.kind == "save":
+                    stem = _stem(target.name)
+                    with trace.timed("db.save", f"保存({plan.name})", path=str(target.parent), table=stem) as info:
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        made[step.path] = write(target.parent, stem)
+                        info["files"] = len(made[step.path])
+                    files.extend(str(p) for p in made[step.path])
+                elif step.kind == "copy":
+                    src_stem = _stem(Path(step.src.replace("\\", "/")).name)
+                    dst_stem = _stem(target.name)
+                    with trace.timed("db.save", f"写し({plan.name})", path=str(target.parent)) as info:
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        for p in made.get(step.src, []):
+                            dst = target.parent / (dst_stem + p.name[len(src_stem):])
+                            shutil.copyfile(p, dst)
+                            trace.note_used(dst, "save")
+                            files.append(str(dst))
+                        info["files"] = len(made.get(step.src, []))
+            except (OSError, report_html.PdfError) as e:
+                msgs.append(Message("保存できませんでした: " + str(target) + "\r\n" + str(e), WARN, source=plan.name))
+        return files, msgs
+
+
+def _stem(name: str) -> str:
+    return name[:-5] if name.lower().endswith(".xlsx") else name
