@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import datasource, flow, paths, vbx
+from .model import THICK_ROWS
 from . import sound as snd
 
 # ------------------------------------------------------------------
@@ -816,7 +817,7 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
         if v(f"F{i}") != "":
             st[f"F{i}"] = NG
     # マイナス公差が空の行は白(J:881-910、F 列は対象外)
-    for blank, rows in ((form.Am, range(1, 5)), (form.Hm, range(5, 7)), (form.Tm, range(7, 9))):
+    for blank, rows in ((form.Am, THICK_ROWS), (form.Hm, range(5, 7)), (form.Tm, range(7, 9))):
         if blank == "":
             for i in rows:
                 for p in POS5:
@@ -835,7 +836,7 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
 
     # 厚(J:931-946)
     def thick() -> None:
-        for i in range(1, 5):
+        for i in THICK_ROWS:
             for a in range(j, k + 1):
                 if form.Am == "":
                     return                                   # GoTo SkipH

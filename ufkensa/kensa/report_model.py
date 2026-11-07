@@ -34,6 +34,7 @@ from datetime import datetime, timedelta, time as dtime
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
 from . import flow, vbx
+from .model import THICK_ROWS
 from . import sound as snd
 from .flow import Message, Question, Stop
 from .records import (FACES, KensaSnapshot, cmp_str_num, end_time_register, uf_array, uf_tag_array, vb_cdate,
@@ -891,7 +892,7 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
                 break
     sh.put(1, 6, snap.height_formula)
 
-    at = [[uf_array(snap, i, f) for i in range(1, 5)] for f in FACES]
+    at = [[uf_array(snap, i, f) for i in THICK_ROWS] for f in FACES]
     ht = [[uf_array(snap, i, f) for i in range(5, 15)] for f in FACES]
     tai = [[uf_array(snap, 17, f)] for f in FACES]
     angle = [[uf_array(snap, 18, f) if uf_array(snap, 18, f) != "" else None] for f in FACES]

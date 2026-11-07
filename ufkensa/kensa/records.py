@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
+from .model import is_thick, row_format
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -850,7 +851,7 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
     for i in range(1, 21):
         for fi, f in enumerate(FACES):
             v = data[fi][i - 1]
-            if 1 <= i <= 4:
+            if is_thick(i):
                 out.set(f"{f}{i}", _fmt_val(v, "0.000"))
             elif i in (5, 6):
                 out.set(f"{f}{i}", _fmt_val(v, "0.0"))
@@ -1079,7 +1080,7 @@ def _history_load_normal(out: FormRestore, c, cur: Mapping[str, str], aorb: str)
         if cell_text(c(113)) != "":
             v["DiagFKou"] = vbx.fmt(vbx.val(cell_text(c(114))), "0.0")
     for i in range(1, 11):
-        pat = "0.000" if i <= 4 else "0.0"
+        pat = row_format(i)
         for k, f in enumerate("SUCDE"):
             v[f"{f}{i}"] = vbx.fmt(vbx.val(cell_text(c(i + 11 + 12 * k))), pat)
         v[f"F{i}"] = vbx.fmt(vbx.val(v.get(f"F{i}", "")), pat)
@@ -1170,7 +1171,7 @@ def _history_strain(out: FormRestore, face: str, kind: str, cell: Value, state: 
 def _history_load_mimi(out: FormRestore, c) -> None:
     v = out.values
     for i in range(1, 15):
-        pat = "0.000" if i <= 4 else "0.0"
+        pat = row_format(i)
         for k, f in enumerate("SUCDE"):
             v[f"{f}{i}"] = vbx.fmt(vbx.val(cell_text(c(i + 11 + 16 * k))), pat)
     for k, f in enumerate("SUCDE"):

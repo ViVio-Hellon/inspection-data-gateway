@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from . import paths, vbx
+from .model import THICK_ROWS, thick_format
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -152,11 +153,9 @@ def num_dig(state: KensaState) -> None:
     """
     if state.atu == "":
         return
-    pat = "0.00" if vbx.val(state.atu) > 74.0 else "0.000"
-    for i in range(1, 5):
-        for p in FIVE + ("F",):
-            c = state.cells[f"{p}{i}"]
-            c.value = vbx.fmt(c.value, pat)
+    pat = thick_format(state.atu)
+    for _key, c in state.measures.thick_ctls():
+        c.value = vbx.fmt(c.value, pat)
     pat = "0.0"
     for i in range(5, 7):
         for p in FIVE + ("F",):
@@ -259,7 +258,7 @@ def six_display(state: KensaState, n: str, hooks: Hooks) -> None:
 def slab_set(state: KensaState, hooks: Hooks) -> None:
     """FormRelat.SlabSet (FormRelat:5104-5257)。スラブの表示(1-上 / 1-下 / 2-上 / 2-下)。"""
     six_display(state, "off", hooks)
-    for i in range(1, 5):
+    for i in THICK_ROWS:
         _show(state, f"AL{i}", True)
         for p, on in (("S", True), ("U", False), ("C", True), ("D", False), ("E", False)):
             _show(state, f"{p}{i}", on, on)
@@ -869,7 +868,7 @@ def _lselect_common_cells(state: KensaState) -> None:
     """段 3: どの作業でも出す欄(E 列・厚 1〜4・外観・BH)と、隠す欄(ラテラル・R115 以外の直角度)。"""
     for name in ("TSE", "TEE", "E", "NGE", "LC2", "LC8"):
         _show(state, name, True)
-    _cells(state, range(1, 5), FIVE, True, True)
+    _cells(state, THICK_ROWS, FIVE, True, True)
     for p in FIVE:
         _show(state, "FM" + p, True)
     _show(state, "L11", False)
@@ -903,9 +902,9 @@ def _lselect_rows_by_work(state: KensaState, n: str, hooks: Hooks) -> None:
             elif i in (11, 14):
                 _cells(state, [i], FIVE, True, True)
     if n in ("厚板", "少枚数", "極厚"):
-        for i in range(1, 5):
+        for i in THICK_ROWS:
             _show(state, f"AL{i}", True)
-        _cells(state, range(1, 5), FIVE, True, True)
+        _cells(state, THICK_ROWS, FIVE, True, True)
 
     if n != "住精":                                    # 住精は GoTo skipSmisei
         if n == "厚板":
@@ -1159,7 +1158,7 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
         _show(state, f"{p}_UnderVisual", True, True)
         _show(state, "Diag" + p, True, True)
         _show(state, "FM" + p, True)
-    for i in range(1, 5):
+    for i in THICK_ROWS:
         _show(state, f"AL{i}", True)
     _show(state, "L11", state.sumisei != "" or state.lateral_text_tag == "有")
     _show(state, "L12", False)
