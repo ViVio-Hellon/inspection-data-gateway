@@ -1626,6 +1626,22 @@ class Session:
                 trace.note_used(p, "save")
             info["files"] = len(csvs)
         self.report["csv"] = [str(p) for p in csvs]
+        with trace.timed("db.save", "履歴ブック(xlsx)と Lot情報履歴 を書き出す", expected=(Stop,),
+                         path=paths.get("local_history"), table=LOT_HISTORY) as info:
+            books: list[Path] = []
+            try:
+                books += records.export_lot_book(self.store, lname, st.line_name, st.lot, env.now(),
+                                                 res.report, res.defect)
+            except OSError as e:
+                env.messages.append(Message(f"履歴ブック(xlsx)を書き出せませんでした: {e}", WARN, source="履歴保存"))
+            try:
+                books += records.export_lot_history(self.store, st.line_name, local_dir=self.store.path.parent)
+            except OSError as e:
+                env.messages.append(Message(f"Lot情報履歴を書き出せませんでした: {e}", WARN, source="履歴保存"))
+            for p in books:
+                trace.note_used(p, "save")
+            info["files"] = len(books)
+        self.report["xlsx"] = [str(p) for p in books]
         report_model.set_printed(self.store, st.lot, lname, env.now())
         env.sound(snd.KENSA_DONE, "UF1:3832")
         self.print_ready = False

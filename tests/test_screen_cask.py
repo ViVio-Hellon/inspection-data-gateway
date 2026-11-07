@@ -191,7 +191,7 @@ class CaskScreenTest(SessionBase):
         self.assertEqual(d["view"]["form"]["inspection"], "OFF")
         # JustinCase_KySave(D7: CSV と HTML)
         files = [Path(p) for p in d["view"]["saved"]["files"]]
-        self.assertTrue(any(p.name.endswith("_キャスク検査.csv") and p.is_file() for p in files), files)
+        self.assertIn("キャスク検査", _xlsx_sheets(files))                      # 1 つの xlsx にシートを並べる
 
     def test_print_and_save(self) -> None:
         d = self.ready()
@@ -220,7 +220,7 @@ class CaskScreenTest(SessionBase):
         self.assertEqual(self.c.get("/api/cask/report/none.html", headers=self.h).status_code, 404)
         # キャスク専用保存(D7: シートごとの CSV + HTML、サーバ・工場共有へ写す)
         files = [Path(p) for p in d["view"]["saved"]["files"]]
-        self.assertTrue(any(p.name.endswith("_品証ｺﾋﾟ-用.csv") for p in files))
+        self.assertIn("品証ｺﾋﾟ-用", _xlsx_sheets(files))
         self.assertTrue(any("キャスク_履歴" in str(p) for p in files))
         self.assertTrue(all(p.is_file() for p in files))
         self.assertEqual(self.store.sheet(store.HOZON).last_row(1), before + 1)      # 保存用に履歴行
@@ -286,6 +286,17 @@ class CaskScreenTest(SessionBase):
     def test_bad_requests(self) -> None:
         self.assertEqual(self.c.post("/api/cask/nothing", json={}, headers=self.h).status_code, 404)
         self.assertEqual(self.c.post("/api/cask/select", json={"row": 7}, headers=self.h).status_code, 400)
+
+
+
+def _xlsx_sheets(files) -> list[str]:
+    """保存した xlsx(1 つ)のシート名。"""
+    import re
+    import zipfile
+    xs = [p for p in files if str(p).endswith(".xlsx") and Path(p).is_file()]
+    assert xs, files
+    with zipfile.ZipFile(xs[0]) as z:
+        return re.findall(r'<sheet name="([^"]+)"', z.read("xl/workbook.xml").decode("utf-8"))
 
 
 class SheetJsonTest(unittest.TestCase):

@@ -65,6 +65,7 @@ from . import checks, datasource, judge, legacy_log, packing, paths, quality, qu
     terminal, vbx, workers
 from . import lot as lotmod
 from . import sound as snd
+from .xlsx_writer import grid_rows, write_xlsx
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .modes import h494 as hm
 from .modes import sheet as sh
@@ -1004,16 +1005,19 @@ class ZenkashoSession:
         folder.mkdir(parents=True, exist_ok=True)
         files: list[Path] = []
         main: Optional[tuple[str, dict[str, Any]]] = None
+        book: list[tuple[str, list[list[Any]]]] = []
         for name, snap in plan.sheets.items():
             if snap is None:
                 self._pending(f"保存:{name}")
                 continue
             if main is None:
                 main = (name, snap)
-            p = folder / f"{stem}_{_safe_name(name)}.csv"
-            write_csv(p, snap)
-            trace.note_used(p, "save")
-            files.append(p)
+            book.append((name, grid_rows((*sh.a1(k), v) for k, v in snap.items())))
+        if book:
+            # VBA と同じく 1 つの xlsx にシートを並べる(値だけ・パスワードなし。2026-11-07 のご判断)
+            x = write_xlsx(folder / f"{stem}.xlsx", book)
+            trace.note_used(x, "save")
+            files.append(x)
         if main is not None:
             h = folder / f"{stem}.html"
             h.write_text(self._render(main[1], None, title=f"{stem} {main[0]}"), encoding="utf-8")

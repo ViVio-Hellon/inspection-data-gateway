@@ -668,18 +668,14 @@ class CaskSession:
     def _write_sheets(self, plan: sh.SavePlan, folder: Path, stem: str, edge: Optional[str]) -> list[Path]:
         out: list[Path] = []
         folder.mkdir(parents=True, exist_ok=True)
+        # VBA と同じく 1 つの xlsx にシートを並べる(値だけ・パスワードなし。2026-11-07 のご判断)
+        from .xlsx_writer import grid_rows, write_xlsx
+        book = [(name, grid_rows((*sh.a1(k), v) for k, v in snap.items())) for name, snap in plan.sheets.items()]
+        x = write_xlsx(folder / (stem + ".xlsx"), book)
+        trace.note_used(x, "save")
+        out.append(x)
         for name, snap in plan.sheets.items():
             base = f"{stem}_{name}"
-            p = folder / (base + ".csv")
-            vals = {sh.a1(k): v for k, v in snap.items()}
-            last_r = max((r for r, _ in vals), default=0)
-            last_c = max((c for _, c in vals), default=0)
-            with open(p, "w", encoding="cp932", errors="replace", newline="") as fh:
-                w = csv.writer(fh, lineterminator="\r\n")
-                for r in range(1, last_r + 1):
-                    w.writerow([cell_text(vals.get((r, c))) for c in range(1, last_c + 1)])
-            trace.note_used(p, "save")
-            out.append(p)
             model = snapshot_model(snap, kind=name, sheet_name=name,
                                    page={"orientation": "landscape", "fit_wide": 1})
             h = folder / (base + ".html")

@@ -1569,3 +1569,77 @@ def export_history_csv(store: LocalStore, lname: str, line: str, extreme: bool, 
         except OSError:
             continue
     return out
+
+
+def _local_dir(folder_text: str) -> Path:
+    """設定のパス文字列(\\ 区切り)→ この PC で書ける Path(exp_csv と同じ変換)。"""
+    p = paths.to_local(str(folder_text))
+    if os.sep == "/" and "\\" in str(p):
+        p = Path(str(p).replace("\\", "/"))
+    return p
+
+
+def _numbered(path: Path) -> Path:
+    """VBA と同じく、あれば .002〜.999 を付けた名前にする(Input:1095-1105)。"""
+    if not path.exists():
+        return path
+    for i in range(2, 1000):
+        p = path.with_name(f"{path.stem}.{i:03d}{path.suffix}")
+        if not p.exists():
+            return p
+    raise OSError(f"同じ名前のファイルが 999 個を超えました: {path}")
+
+
+#: UF1 の履歴ブックに入れるシート(Input:1070-1087)。Lot情報履歴 は別に出す(2026-11-07 のご判断)
+_BOOK_SHEETS = ("WorkerTime", "作業保存", "Daily")
+
+
+def export_lot_book(store: LocalStore, lname: str, line: str, lot: str, now: datetime,
+                    report: Any = None, defect: Any = None) -> list[Path]:
+    """Input.履歴保存 の xlsx(Input:1070-1140)。1 つのブックに複数シート(値だけ)。
+
+    手元: <手元の検査履歴>\\yyyy.mm\\yyyymmdd_LOT\\yyyymmdd_LOT.xlsx(あれば .002〜)
+    共有: <検査履歴>\\<ライン>\\<ライン>_履歴\\yyyy.mm\\ へ同じファイルを写す
+    """
+    import shutil
+    from .xlsx_writer import grid_rows, write_xlsx
+    book: list[tuple[str, list]] = []
+    if report is not None:
+        book.append((f"印刷用_{lname}", grid_rows((c["row"], c["col"], c["value"]) for c in report.cells)))
+    for base in _BOOK_SHEETS:
+        name = f"{base}_{lname}"
+        if store.exists(name):
+            book.append((name, grid_rows(store.sheet(name).used())))
+    if defect is not None:
+        book.append((f"不良要因印刷_{lname}", grid_rows((c["row"], c["col"], c["value"]) for c in defect.cells)))
+    month, day_lot = now.strftime("%Y.%m"), f"{now:%Y%m%d}_{lot}"
+    local = _numbered(_local_dir(paths.join(paths.get("local_history"), month, day_lot)) / f"{day_lot}.xlsx")
+    out = [write_xlsx(local, book)]
+    share = _local_dir(paths.join(paths.get("history"),
+                                  _HISTORY_DIRS.get(lines.official(line), "Test\\Test_履歴"), month))
+    try:
+        share.mkdir(parents=True, exist_ok=True)
+        out.append(Path(shutil.copy2(local, share / local.name)))
+    except OSError:
+        pass                                   # 共有に届かなくても手元は残す(VBA は FileCopy の失敗で止まる)
+    return out
+
+
+def export_lot_history(store: LocalStore, line: str, *, local_dir: Optional[Union[str, Path]] = None) -> list[Path]:
+    """Lot情報履歴 を手元と共有(設定「Lot情報履歴の共有先」)に CSV で出す(2026-11-07 のご判断)。
+
+    共有先が空なら <検査履歴>\\<ライン>\\<ライン>_履歴。ファイル名は Lot情報履歴_<ライン>.csv(上書き)。
+    """
+    if not store.exists(LOT_HISTORY):
+        return []
+    sh = store.sheet(LOT_HISTORY)
+    official = lines.official(line) or line or "Test"
+    name = f"Lot情報履歴_{official}"
+    out = [exp_csv(sh, name, default_dir=local_dir or store.path.parent)]
+    share = paths.get("lot_history_share") or paths.join(paths.get("history"),
+                                                          _HISTORY_DIRS.get(official, "Test\\Test_履歴"))
+    try:
+        out.append(exp_csv(sh, name, share))
+    except OSError:
+        pass
+    return out

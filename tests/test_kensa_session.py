@@ -203,6 +203,16 @@ class EndToEndTest(SessionBase):
         self.assertTrue(any(f.get("html", "").endswith(str(Path("HVC", "2026.11", "02日", LOT + ".html")))
                             for f in rep["pdf"]))
         self.assertTrue(any(p.endswith("HVC_履歴CSV.csv") for p in rep["csv"]))
+        # 履歴ブック(1 つの xlsx に複数シート。Lot情報履歴 は入れずに CSV で手元と共有へ)
+        book = Path(rep["xlsx"][0])
+        self.assertEqual(book.name, f"20261102_{LOT}.xlsx")
+        self.assertEqual(book.parent.name, f"20261102_{LOT}")
+        import zipfile
+        with zipfile.ZipFile(book) as z:
+            wb = z.read("xl/workbook.xml").decode("utf-8")
+        self.assertIn("印刷用_", wb)
+        self.assertNotIn("Lot情報履歴", wb)
+        self.assertTrue(any(Path(p).name == "Lot情報履歴_HVC.csv" for p in rep["xlsx"]))
         # 印刷履歴 → 次の印刷は再印刷の確認(PrintOnly UF1:3579)
         r = s.print_check()
         self.assertEqual(r.question.key, "reprint")
