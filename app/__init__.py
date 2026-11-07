@@ -567,6 +567,8 @@ def _register_routes(app: Flask) -> None:
         app.register_blueprint(cask.bp)
     from .routes import admin_auth
     app.register_blueprint(admin_auth.bp)
+    from .routes import remote_stop as remote_stop_routes
+    app.register_blueprint(remote_stop_routes.bp)   # 管理者以外停止モード(保守 → 管理者以外停止)
     if "maint" in READY_SCREENS:
         from .routes import maint
         app.register_blueprint(maint.bp)

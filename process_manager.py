@@ -308,6 +308,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     if desktop is not None:
         print(DESKTOP_MESSAGE)
         failed = True
+    # 管理者以外停止モード中は止めない(管理者が帯で知らせて5分で強制する。同時には使わない)
+    refusal = remote_stop_refusal(lambda: any(launch_guard.read_lock(m) is not None for m in targets))
+    if refusal:
+        print(f"止めませんでした: {refusal}")
+        return 1
     for mode in targets:
         result = stop(mode, force=args.force)
         print(result)
@@ -321,6 +326,15 @@ def main(argv: Optional[list[str]] = None) -> int:
     except Exception:                              # noqa: BLE001 - 片付けられなくても止める処理は終える
         log.warning("残った Excel・Word を確かめられませんでした", exc_info=True)
     return 1 if failed else 0
+
+
+def remote_stop_refusal(running) -> str:
+    """管理者以外停止のお願いが出ていて、このツールが動いていれば、断る理由(1行)。読めなければ断らない。"""
+    try:
+        from ufkensa import remote_stop_link
+        return remote_stop_link.stop_bat_refusal(bool(running()))
+    except Exception:                              # noqa: BLE001 - 判定で止める道を閉じない
+        return ""
 
 
 # デスクトップ版(exe の窓)は止めない。窓の × か画面の「終了」で閉じる

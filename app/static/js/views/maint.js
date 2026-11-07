@@ -134,6 +134,7 @@ function showTab(name) {
   if (name === "master") openMaster();
   if (name === "device") openDevice();
   if (name === "hist") openHist();
+  if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
 
@@ -626,6 +627,58 @@ $("mPw").addEventListener("submit", async (e) => {
     if (target) $(target).select();
   }
 });
+
+/* ---------- 管理者以外停止(remote_stop.py。お願いを出す・解除する・各 PC の様子) ---------- */
+const RS = { timer: null };
+
+function renderRStop(d) {
+  if (!d) return;
+  const req = d.request;
+  $("rsLv").textContent = !d.available ? "置き場所に届きません" : req ? "お願いを出しています" : "出していません";
+  $("rsLv").className = "lv " + (!d.available ? "lv--ng" : req ? "lv--warn" : "lv--ok");
+  kv($("rsInfo"), [
+    ["置き場所", d.folder || "-"],
+    ["いまのお願い", d.request_text || (d.unreadable || "出ていません"), d.unreadable ? "lv--ng" : ""],
+    ["この PC", d.me_pc || "-"],
+    ["出せるか", d.password_ok && d.administrator ? "出せます"
+      : (!d.administrator ? "この PC のアクセス権限に Administrator がありません" : "管理者パスワード(鍵)を入れると出せます")],
+    ...(d.why ? [["届かない理由", d.why, "lv--ng"]] : []),
+  ]);
+  $("rsIssue").disabled = !d.available || !!req || !d.administrator;
+  $("rsClear").disabled = !d.available || !req || !d.administrator;
+  const pcs = d.pcs || [];
+  $("rsCount").textContent = `${pcs.length} 件`;
+  $("rsRows").replaceChildren(...(pcs.length ? pcs.map((p) => {
+    const tr = el("tr");
+    const cls = p.state === "forced" ? "lv lv--ng" : p.state === "stopped" ? "lv lv--ok" : p.stale ? "lv lv--ng" : "lv lv--warn";
+    const st = el("td"); st.append(el("span", req || p.stale ? cls : "lv", p.label));
+    tr.append(el("td", "", p.pc), el("td", "", p.login || ""), st, el("td", "", p.detail || ""), el("td", "", p.version || ""), el("td", "", p.beat || ""));
+    return tr;
+  }) : [(() => { const tr = el("tr"); const td = el("td", "muted", "知らせはまだありません"); td.colSpan = 6; tr.append(td); return tr; })()]));
+}
+
+async function loadRStop() {
+  try { renderRStop(await api.get("/api/remote_stop/state")); } catch (err) { $("rsMsg").textContent = err.message; }
+}
+function openRStop() { loadRStop(); if (!RS.timer) RS.timer = setInterval(loadRStop, 5000); }
+function stopRStop() { if (RS.timer) { clearInterval(RS.timer); RS.timer = null; } }
+
+async function rsSend(url, body, question) {
+  $("rsMsg").textContent = "";
+  if (question && !(await confirmBox(question))) return;
+  try {
+    const d = await withUnlock(() => api.post(url, body));
+    renderRStop(d.state);
+    toast(d.message, "ok");
+  } catch (err) { $("rsMsg").textContent = err.message; }
+}
+$("rsForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  rsSend("/api/remote_stop/issue", { reason: $("rsReason").value.trim() },
+    "この PC 以外で動いている UF検査判定 を止めます。ほかの PC では、保存していない入力が残っていても 5 分で強制で止まります。よろしいですか?");
+});
+$("rsClear").addEventListener("click", () => rsSend("/api/remote_stop/clear", {}, ""));
+$("rsReload").addEventListener("click", loadRStop);
 
 async function init() {
   mountLockBadge($("mLock"));

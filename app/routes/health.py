@@ -119,7 +119,16 @@ def health():
         # 共有 DB の更新時刻。一覧はこれと自分が読んだ時刻を比べて
         # 「他の端末で更新されました」を出す(業務データは含まない)
         "db_mtime": _db_mtime(),
+        # 管理者以外停止のお願い(`remote_stop.py`)。画面の帯が `?remote_stop=1` で問い合わせる
+        "remote_stop": _remote_stop(),
     })
+
+
+def _remote_stop():
+    """管理者以外停止のお願い(`remote_stop.py`)。見張りが立っていなければ None。"""
+    import sys
+    mod = sys.modules.get("remote_stop")
+    return mod.from_query(request.args) if mod is not None else None
 
 
 def _db_mtime() -> Optional[float]:
