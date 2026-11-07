@@ -51,7 +51,7 @@ from typing import Any, Callable, Optional, Sequence
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
 from . import shadow
-from .model import EXTREME, FormTag, NORMAL, Switch, Verdict, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
+from .model import CellKey, EXTREME, FormTag, NORMAL, Switch, Verdict, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -459,8 +459,7 @@ def apply_judge(state: KensaState, out: judge.Outcome, env: Env) -> None:
     """judge.Outcome を KensaState に反映する(色・値・Tag・枠、音、ログ、MsgError、NGErase)。"""
     for k, s in out.states.items():
         state.set_color(k, _FROM_JUDGE_STATE.get(s, grid.COLOR_WHITE))
-    for k, v in out.values.items():
-        put(state, k, v)
+    apply_values(state, out.values)
     for k, v in out.tags.items():
         state.ctl(k).tag = v
     for k, b in out.borders.items():
@@ -493,8 +492,7 @@ def to_lot_screen(state: KensaState, facility: str) -> lotmod.LotScreen:
 
 def apply_lot_reflect(state: KensaState, r: lotmod.LotReflect) -> None:
     """AccReflec の結果を画面へ(SaveLoad:180-345 / SkipNoItti)。"""
-    for k, v in r.form.items():
-        put(state, k, v)
+    apply_values(state, r.form)
     if r.status == "not_found":
         for k in ("MG", "HaHiz", "TaHiz", "Naka", "Mimi"):
             state.v(k).value = ""
@@ -614,13 +612,63 @@ def restore_lot_source(state: KensaState, lot: str) -> None:
         state.lot_source, state.lot_source_lot = "", ""
 
 
+@dataclass
+class NamedValues:
+    """第3段10: 「VBA の名前 → 値」(読み戻し・ロット反映・品質基準・公差外 などの結果)を、名前のまま流さずに型で分けたもの。
+
+    measures: 測定グリッドの欄(CellKey → 値)/ attrs: KensaState の属性(属性名 → 値)/
+    captions: 作業選択ボタンの Caption / ctls: そのほかの名前つきの欄(名前 → 値)/
+    props: 値以外の性質(`VC_L_A.Tag` のように名前に .Tag などが付いて来たもの。Accessor で入れる)
+    """
+    measures: dict[CellKey, str] = field(default_factory=dict)
+    attrs: dict[str, str] = field(default_factory=dict)
+    captions: dict[str, str] = field(default_factory=dict)
+    ctls: dict[str, str] = field(default_factory=dict)
+    props: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def of(cls, values: dict[str, Any]) -> "NamedValues":
+        d = cls()
+        for name, val in values.items():
+            text = val if isinstance(val, str) else cell_text(val)
+            a = accessor(name)                         # "HizCome.Caption" のような名前も base に揃える
+            key = CellKey.parse(a.base)
+            if a.prop != "value":
+                d.props[name] = val
+            elif key is not None and a.kind == "ctl":
+                d.measures[key] = text
+            elif a.kind == "attr":
+                d.attrs[a.attr] = text
+            elif a.kind == "caption":
+                d.captions[a.base] = text
+            else:
+                d.ctls[a.base] = text
+        return d
+
+    def apply(self, state: KensaState) -> None:
+        for key, v in self.measures.items():
+            state.measures.ctl(key).value = v
+        for attr, v in self.attrs.items():
+            setattr(state, attr, v)
+        state.work_caption.update(self.captions)
+        for name, v in self.ctls.items():
+            _ctl(state, name).value = v
+        for name, v in self.props.items():
+            accessor(name).set(state, v)
+
+
+def apply_values(state: KensaState, values: dict[str, Any]) -> None:
+    """「VBA の名前 → 値」を画面の状態へ(型に分けてから入れる。第3段10)。"""
+    NamedValues.of(values).apply(state)
+
+
 def load_saved(state: KensaState, r: records.FormRestore) -> None:
     """第3段9: 保存の値(値・Tag・色と判定・山の選択)を型どおりに入れる。画面操作(作業選択など)はしない。
 
     読み戻し(apply_restore)も、比べるための restore_typed も、この 1 つを使う。
+    値は NamedValues で型に分けてから入れる(第3段10)。
     """
-    for k, val in r.values.items():
-        put(state, k, val)
+    apply_values(state, r.values)
     for k, val in r.tags.items():
         put(state, k + ".Tag", val)
     for k, col in r.back_colors.items():
@@ -822,8 +870,7 @@ class RealHooks(Hooks):
         r = quality.db_return_item(delivery, customer, youto, zai, tyu, atu, hab, tak,
                                    additional_caption=state.additional, lateral_lot=lateral_lot,
                                    lateral_quiet=True)
-        for k, v in r.uf1.items():
-            put(state, k, v)
+        apply_values(state, r.uf1)
         if r.cb_add_atu is not None:
             self.cb_add(state, r.cb_add_atu)
         self.env.messages.extend(r.messages)
@@ -1076,8 +1123,7 @@ class RealHooks(Hooks):
             put(state, k + ".Visible", v)
         for k, v in ch.enabled.items():
             put(state, k + ".Enabled", v)
-        for k, v in ch.values.items():
-            put(state, k, v)
+        apply_values(state, ch.values)
 
     def load_text(self, state: KensaState, n: str = "") -> None:
         r = records.load_text(self.store, state.lname, n, current_option=state.work)
