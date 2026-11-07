@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
-from .model import Face, NORMAL, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format, visual_under_name, visual_up_name
+from .model import Face, NORMAL, UiValues, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format, visual_under_name, visual_up_name
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -645,7 +645,7 @@ def load_lot_source(store: LocalStore, lname: str) -> str:
 class FormRestore:
     """画面へ戻す値。values: コントロール名 → Caption/Text、tags: → Tag、back_colors: → BackColor など。"""
     found: bool = True
-    values: dict[str, str] = field(default_factory=dict)
+    values: dict[str, str] = field(default_factory=UiValues)
     tags: dict[str, str] = field(default_factory=dict)
     back_colors: dict[str, int] = field(default_factory=dict)
     back_styles: dict[str, int] = field(default_factory=dict)
@@ -997,7 +997,7 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
         hit = next((r for r in rows if variant_eq(r[key_col - 1], key, vbx.STR)), None)
     if hit is None:
         out.found = False
-        out.values = {}
+        out.values = UiValues()
         return out
     row = hit + [None] * (115 - len(hit))
 

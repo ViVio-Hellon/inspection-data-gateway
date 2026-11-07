@@ -46,6 +46,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Sequence
 
 from . import ado_filter, datasource, flow, paths, vbx
+from .model import UiValues
 from .flow import ERROR, INFO, Message
 
 TABLE = "仕掛"
@@ -487,7 +488,7 @@ class LotReflect:
     temp_e: str = ""                        # 注意メッセージ(この後 導電率の文言を足し、dedupe_message → MsgError(…,4))
     equipment_args: tuple = ()              # CheckEquipmentDb に渡した (設備名, 材質, 厚, 幅, 丈, 単重)
     past_hiki: list[Any] = field(default_factory=lambda: [None] * 19)
-    form: dict[str, str] = field(default_factory=dict)   # 画面の値(Zai, Tyu, Youto, TAIK, …, TmK, KenH)
+    form: dict[str, str] = field(default_factory=UiValues)   # 画面の値(Zai, Tyu, Youto, TAIK, …, TmK, KenH)
     last_hot: Optional[str] = None          # LastHot.Caption(None = 変えない。VBA は消さない)
     qf: Optional[str] = None                # QF.Caption(None = 変えない。VBA は消さない)
     sika_set_atu: float = 0.0               # SikaSetAtu(Single)。CBAdd に渡す

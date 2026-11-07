@@ -66,3 +66,19 @@ class NamedValuesTest(unittest.TestCase):
         d.apply(st)
         self.assertEqual((st.cells["S1"].value, st.lot, st.work_caption["厚板"]), ("15.012", "H1", "H"))
         self.assertEqual((st.v("TaikText").value, st.v("HizCome").value, st.v("VC_L_A").tag), ("2.0", "x", "t"))
+
+
+class UiValuesTest(unittest.TestCase):
+    """業務の関数が画面へ返す一覧は、名前を書いたその場で確かめる(第3段10)。"""
+
+    def test_known_names_pass_and_typo_is_caught(self) -> None:
+        from ufkensa.kensa import shadow, wiring  # noqa: F401 - wiring が名前の確かめを入れる
+        v = model.UiValues()
+        for name in ("S1", "Lot", "HizCome.Caption", "VC_L_A.Tag", "厚板.Caption", "LateralText.BackColor",
+                     "INP.Tag", "NGS", "DiagSKou", "KenHBox3"):
+            v[name] = "x"
+        with self.assertRaises(shadow.ShadowMismatch):
+            v["Lott"] = "x"                                  # 打ち間違い
+        with self.assertRaises(shadow.ShadowMismatch):
+            v.update({"S15": "1"})                           # S は 14 行まで
+        self.assertEqual(model.UiValues({"S1": "1"}), {"S1": "1"})   # ふつうの dict と比べられる

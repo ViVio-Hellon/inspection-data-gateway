@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import datasource, flow, paths, vbx
-from .model import NORMAL, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, row_layout
+from .model import NORMAL, THICK_ROWS, UiValues, bh_name, diag_name, kou_name, lateral_name, row_layout
 from . import sound as snd
 
 # ------------------------------------------------------------------
@@ -204,7 +204,7 @@ class Outcome:
     """判定が画面へ返す変更。dict は代入の順に最後の値が残る(VBA で上書きした結果と同じ)。"""
     result: Any = None
     states: dict[str, str] = field(default_factory=dict)
-    values: dict[str, str] = field(default_factory=dict)
+    values: dict[str, str] = field(default_factory=UiValues)       # 画面の名前 → 値(書いた時に名前を確かめる)
     tags: dict[str, str] = field(default_factory=dict)
     borders: dict[str, str] = field(default_factory=dict)
     sounds: list[str] = field(default_factory=list)
