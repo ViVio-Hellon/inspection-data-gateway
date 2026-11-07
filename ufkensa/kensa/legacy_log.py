@@ -83,13 +83,13 @@ def write_log(msg1: str, sepl: str = ",", target_path: str = "", target_file: st
               now: Optional[datetime] = None, computer: Optional[str] = None) -> bool:
     """WriteLog.WriteLog (WriteLog:6-39)。書けたら True(VBA は On Error Resume Next で黙って続ける)。
 
-    - target_path が空なら `ThisWorkbook.path\\Access.log`(= アプリのフォルダ)
+    - target_path が空なら 使用パス「Access.log などの置き場所」(空ならこの PC の手元)。VBA は ThisWorkbook.path
     - target_file が空なら Access.log
     - ファイルが無ければ作り、1 行目に `管理ﾌｧｲﾙ使用状況`
     """
     file_name = target_file or ACCESS_LOG
     if target_path == "":
-        save_text = paths.join(paths.app_dir(), file_name)
+        save_text = paths.join(paths.write_dir(), file_name)
     else:
         _create_folder(target_path)
         save_text = paths.join(target_path, file_name)

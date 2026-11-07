@@ -1503,7 +1503,7 @@ def exp_csv(sheet, file_name: str = "", file_path: Union[str, Path] = "", sep: s
     maxi = maxi or lr
     maxj = maxj or lc
     data = sheet.read_range(1, 1, maxi, maxj)
-    folder = str(file_path) if str(file_path) else str(default_dir or paths.app_dir())
+    folder = str(file_path) if str(file_path) else str(default_dir or paths.write_dir())
     name = file_name or "ExportFile"
     ext = ".csv" if sep == "," else ".txt"
     if "\\" in folder:

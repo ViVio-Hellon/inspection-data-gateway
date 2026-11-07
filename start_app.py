@@ -31,6 +31,25 @@ from typing import Optional
 APP_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(APP_ROOT))
 
+
+def _local_pycache() -> None:
+    """Python の一時ファイル(__pycache__)を各 PC のローカル領域へ(共有の本体フォルダに書かない。2026-11-07)。
+
+    ローカル領域の場所は ufkensa.app_config.local_dir("pycache")。読めなければ書かないだけにする。
+    """
+    try:
+        from ufkensa import app_config
+        d = app_config.local_dir("pycache")
+        d.mkdir(parents=True, exist_ok=True)
+        sys.pycache_prefix = str(d)
+        os.environ["PYTHONPYCACHEPREFIX"] = str(d)        # 起こす子のプロセスも同じ
+    except Exception:                                   # noqa: BLE001 - 起動は止めない
+        sys.dont_write_bytecode = True
+        os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+
+
+_local_pycache()
+
 # 起動の起点。**待機画面が出るまでの時間**をログに残すために持つ ──
 # 「遅い」という感想を、測れる数字にしておく
 _BOOT_AT = time.monotonic()
@@ -323,12 +342,18 @@ def start(mode: str, *, open_browser: bool = True) -> int:
             print(f"起動しました: {srv.url}")
         log().info("待機画面まで %.2f秒", time.monotonic() - _BOOT_AT)
 
+        # --- 管理者以外停止モード中(更新中)なら起動しない(理由を待機画面に出して、しばらくして終わる) ---
+        if _remote_stop().gate(srv):
+            _hold_until_stopped(srv, thread)
+            return 0
+
         # --- 本体を組み立てて差し替える ---
         try:
             srv.build()
         except Exception as exc:                  # noqa: BLE001 - 画面に出して継続
             log().exception("アプリを組み立てられませんでした")
             srv.boot.mark_error(f"アプリを組み立てられませんでした: {exc}")
+            _remote_stop().watch(srv, bare=True)  # 理由の画面のままでも、お願いで止まる
             _hold_after_failure(srv, thread)
             return 1
 
@@ -339,6 +364,7 @@ def start(mode: str, *, open_browser: bool = True) -> int:
         return 0
     finally:
         tidy_children()
+        _remote_stop().leave()
         launch_guard.remove_lock(mode)
         launch_guard.release_app_lock()
         log().info("終了しました: mode=%s", mode)
@@ -417,6 +443,7 @@ def _hard_exit() -> None:
     import logging
 
     tidy_children()
+    _remote_stop().leave()
     logging.shutdown()
     os._exit(0)
 
@@ -472,11 +499,15 @@ def start_bridge(mode: str, *, token: str = "", server_factory) -> int:
         # stop.bat・状態表示が「デスクトップ版が動いている」と分かるように
         launch_guard.write_desktop_marker(mode)
         log().info("待機画面まで %.2f秒(デスクトップ版)", time.monotonic() - _BOOT_AT)
+        if _remote_stop().gate(srv):              # 管理者以外停止モード中(更新中)なら起動しない
+            _hold_until_stopped(srv, thread)
+            return 0
         try:
             srv.build()
         except Exception as exc:                  # noqa: BLE001 - 画面に出して継続
             log().exception("アプリを組み立てられませんでした")
             srv.boot.mark_error(f"アプリを組み立てられませんでした: {exc}")
+            _remote_stop().watch(srv, bare=True, kind="desktop")
             _hold_after_failure(srv, thread, watch_screen=False)
             return 1
         # 窓を閉じたら外枠が終わらせるので、心拍による自動終了は使わない
@@ -486,6 +517,7 @@ def start_bridge(mode: str, *, token: str = "", server_factory) -> int:
         return 0
     finally:
         tidy_children()
+        _remote_stop().leave()
         launch_guard.remove_desktop_marker()
         launch_guard.release_app_lock()
 
@@ -498,6 +530,9 @@ def _initialize(srv, *, watch_idle: bool = True) -> None:
     """
     from ufkensa.kensa import paths, terminal
 
+    # 管理者以外停止のお願いを見張る(前に強制で止められたときの控えは画面に知らせる)。
+    # **初期化より先に**立てる(初期化に失敗した PC も、お願いで止まるように)
+    _remote_stop().watch(srv, kind="browser" if watch_idle else "desktop")
     try:
         srv.mark_stage("アプリを準備中")
         # 配布設定(ツール直下の `配布設定\`)があれば、**接続先を見るより先に**読む(0.30.0)
@@ -525,6 +560,12 @@ def _initialize(srv, *, watch_idle: bool = True) -> None:
     if watch_idle:
         _watch_for_idle(srv)
     srv.mark_ready(True)
+
+
+def _remote_stop():
+    """管理者以外停止モード(`remote_stop.py` に、このツールの事情を渡す部品。中身は `ufkensa/remote_stop_link.py`)。"""
+    from ufkensa import remote_stop_link
+    return remote_stop_link
 
 
 def _watch_for_idle(srv) -> None:

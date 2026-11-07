@@ -693,8 +693,8 @@ def tools_dir() -> str:
 
 
 def hostsend_path() -> str:
-    """hostsend.txt の場所(ExpCSV: NisPath、空ならアプリのフォルダ)。"""
-    base = paths.get("nis") or paths.app_dir()
+    """hostsend.txt の場所(ExpCSV: NisPath、空なら「Access.log などの置き場所」。VBA はアプリのフォルダ)。"""
+    base = paths.get("nis") or paths.write_dir()
     return paths.join(base, HOSTSEND + ".txt")
 
 

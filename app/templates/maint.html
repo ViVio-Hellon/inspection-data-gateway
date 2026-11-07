@@ -18,6 +18,7 @@
       <button class="tab" role="tab" type="button" data-tab="lookup">ソリ・設備仕様</button>
       <button class="tab" role="tab" type="button" data-tab="hist">履歴出力</button>
       <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
+      <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
       <span id="mLock"></span>
@@ -265,6 +266,39 @@
       <section class="card">
         <header><h3>書いたファイル</h3></header>
         <div class="pad"><ul class="maint__files" id="hOut"><li class="muted">まだ出していません</li></ul></div>
+      </section>
+    </section>
+
+    <!-- ================= 管理者以外停止(remote_stop.py。all-tools と同じ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="rstop" id="pRStop" hidden>
+      <section class="card">
+        <header><h3>管理者以外停止(ほかの PC を止める)</h3><span class="lv" id="rsLv"></span></header>
+        <div class="pad">
+          <p class="muted maint__small">更新のため、この PC 以外で動いている UF検査判定 を止めます。ほかの PC の画面には「管理者が更新のため停止を求めています」の帯が出て、
+            保存していない入力・処理中のものが無ければまもなく止まり、残っていても 5 分で強制で止まります(残っていたものは各 PC の手元に控え、次の起動で知らせます)。
+            お願いが出ているあいだ、ほかの PC では起動できません。更新が終わったら「解除する」を押してください。
+            出す・解除するには、管理者パスワード(鍵)と、この PC のアクセス権限の Administrator が要ります。</p>
+          <dl class="maint__kv" id="rsInfo"></dl>
+          <form class="maint__ask" id="rsForm" autocomplete="off">
+            <label for="rsReason">理由</label>
+            <input class="input" id="rsReason" maxlength="200" placeholder="更新のため">
+            <button class="btn btn--danger" type="submit" id="rsIssue">ほかの PC を止める</button>
+            <button class="btn btn--commit" type="button" id="rsClear">解除する</button>
+            <button class="btn" type="button" id="rsReload">読み直す</button>
+          </form>
+          <p class="maint__msg" id="rsMsg"></p>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>動いている PC</h3><span class="muted maint__small" id="rsCount"></span></header>
+        <div class="pad">
+          <div class="tablewrap">
+            <table class="table table--dense">
+              <thead><tr><th>PC</th><th>ログインID</th><th>様子</th><th>残っているもの・詳しく</th><th>版</th><th>最後の知らせ</th></tr></thead>
+              <tbody id="rsRows"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
     </section>
 
