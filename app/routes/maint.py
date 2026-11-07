@@ -563,3 +563,86 @@ def rx_remove():
     _save_cards(cards)
     user_settings.save(KEY_COM_KENSA, [x for x in com_kensa_list() if x["port"] != port])
     return jsonify({"cards": _rx_cards()})
+
+
+# ----------------------------------------------------------------------
+# 履歴出力(2026-11-07): 検査を済ませなくても PDF・xlsx・CSV の保存を試す
+# ----------------------------------------------------------------------
+def _kensa_line() -> tuple[str, str]:
+    """この端末の (Lname, ライン名)。検査画面と同じ起動をしてから読む(ライン設定が無ければ Stop)。"""
+    from ufkensa.kensa import session
+    s = session.get()
+    r = s.start()
+    if r.stop is not None:
+        raise Stop(r.stop.text, source="履歴出力")
+    return s.state.lname, s.state.line_name
+
+
+def _stop_json(e: Stop):
+    return _err("stop", e.text, 400)
+
+
+@bp.get("/api/maint/history/state")
+def history_state():
+    from ufkensa.kensa import history_export as hx
+    s = _store()
+    try:
+        return jsonify({"test_loaded": hx.has_test_history(s), "test_lot": hx.json_lot()})
+    finally:
+        s.close()
+
+
+@bp.post("/api/maint/history/test")
+def history_test():
+    """テスト履歴を入れる(add=true)/ 消す(add=false)。"""
+    from ufkensa.kensa import history_export as hx
+    body = _body()
+    s = _store()
+    try:
+        if body.get("add", True):
+            lname, _line = _kensa_line()
+            with trace.timed("maint.history", "テスト履歴を入れる", line=lname):
+                out = hx.load_test_history(s, lname)
+        else:
+            with trace.timed("maint.history", "テスト履歴を消す"):
+                out = hx.remove_test_history(s)
+        return jsonify(out)
+    except Stop as e:
+        return _stop_json(e)
+    finally:
+        s.close()
+
+
+@bp.post("/api/maint/history/pdf")
+def history_pdf():
+    from ufkensa.kensa import history_export as hx
+    body = _body()
+    try:
+        row = int(body.get("row", 0))
+    except (TypeError, ValueError):
+        row = 0
+    if row < 2:
+        return _err("bad_value", "履歴の行を選んでください", field="row")
+    s = _store()
+    try:
+        with trace.timed("maint.history", "履歴 PDF 出力", expected=(Stop,), row=row):
+            return jsonify(hx.export_pdf(s, row, mimi=bool(body.get("mimi"))))
+    except Stop as e:
+        return _stop_json(e)
+    finally:
+        s.close()
+
+
+@bp.post("/api/maint/history/csv")
+def history_csv():
+    from ufkensa.kensa import history_export as hx
+    body = _body()
+    s = _store()
+    try:
+        lname, line = _kensa_line()
+        with trace.timed("maint.history", "履歴 CSV 出力", expected=(Stop,), line=line):
+            return jsonify(hx.export_csv(s, lname, line, mimi=bool(body.get("mimi"))))
+    except Stop as e:
+        return _stop_json(e)
+    finally:
+        s.close()

@@ -53,6 +53,77 @@ function kariChip(r) {
   return c;
 }
 
+/* ---------- 履歴出力(テスト履歴・PDF・CSV) ---------- */
+// 宣言はタブの初期表示より前に置く(後ろだと「初期化前に参照」で落ちる)
+const H = { row: 0 };
+
+async function openHist() {
+  try {
+    const t = await api.get("/api/maint/history/state");
+    $("hTestLot").textContent = t.test_lot;
+    $("hTestLv").className = "lv " + (t.test_loaded ? "lv--warn" : "");
+    $("hTestLv").textContent = t.test_loaded ? "入っています" : "";
+  } catch (err) { toastError(err); }
+  await histRows();
+}
+
+async function histRows() {
+  try {
+    const d = await api.get("/api/history/lots");
+    $("hCount").textContent = `${d.sheet}: ${d.rows.length} 件`;
+    if (!d.rows.some((r) => r.row === H.row)) H.row = 0;
+    $("hRows").replaceChildren(...(d.rows.length ? d.rows.map((r) => {
+      const tr = el("tr");
+      const rb = el("input"); rb.type = "radio"; rb.name = "hPick"; rb.checked = r.row === H.row;
+      rb.setAttribute("aria-label", `${r.lot} を選ぶ`);
+      const pick = () => { H.row = r.row; rb.checked = true; $("hPdf").disabled = false; };
+      rb.addEventListener("change", pick);
+      tr.addEventListener("click", pick);
+      const td0 = el("td"); td0.append(rb);
+      tr.append(td0, el("td", "", r.time), el("td", "", r.lot), el("td", "", r.atu), el("td", "", r.hab), el("td", "", r.tak));
+      return tr;
+    }) : [(() => { const tr = el("tr"); const td = el("td", "muted", "履歴がありません。テスト履歴を入れると試せます"); td.colSpan = 6; tr.append(td); return tr; })()]));
+    $("hPdf").disabled = !H.row;
+  } catch (err) { toastError(err); }
+}
+
+function histOut(title, files, messages) {
+  const items = [el("li", "maint__ftitle", title)];
+  for (const f of files || []) items.push(el("li", "", f));
+  if (!files || !files.length) items.push(el("li", "muted", "書いたファイルはありません"));
+  for (const m of messages || []) if (m.text) items.push(el("li", m.level === "error" || m.level === "warn" ? "maint__fwarn" : "muted", m.text));
+  $("hOut").replaceChildren(...items);
+}
+
+async function histRun(btn, url, body, title, pick) {
+  btn.disabled = true;
+  try {
+    const r = await api.post(url, body);
+    histOut(title, pick(r), r.messages);
+    toast(title + " が終わりました", "ok");
+  } catch (err) { toastError(err); } finally { btn.disabled = false; }
+}
+
+$("hReload").addEventListener("click", histRows);
+$("hPdf").addEventListener("click", () => histRun($("hPdf"), "/api/maint/history/pdf", { row: H.row },
+  "履歴 PDF 出力", (r) => [...(r.pdf || []), ...(r.xlsx || [])]));
+$("hCsv").addEventListener("click", () => histRun($("hCsv"), "/api/maint/history/csv", {}, "CSV 出力", (r) => r.files));
+$("hTestAdd").addEventListener("click", async () => {
+  try {
+    const r = await api.post("/api/maint/history/test", { add: true });
+    toast(r.added.length ? `テスト履歴を入れました(${r.added.join("・")})` : "テスト履歴はもう入っています", r.added.length ? "ok" : "warn");
+    await openHist();
+  } catch (err) { toastError(err); }
+});
+$("hTestDel").addEventListener("click", async () => {
+  if (!(await confirmBox("テスト履歴(保存用・Lot情報履歴 の行)を消しますか？", { ok: "消す", danger: true }))) return;
+  try {
+    const r = await api.post("/api/maint/history/test", { add: false });
+    toast(r.removed.length ? `消しました(${r.removed.join("・")})` : "テスト履歴は入っていません", r.removed.length ? "ok" : "warn");
+    await openHist();
+  } catch (err) { toastError(err); }
+});
+
 /* ---------- タブ ---------- */
 const grids = {};
 function showTab(name) {
@@ -62,6 +133,7 @@ function showTab(name) {
   try { localStorage.setItem(TAB_KEY, name); } catch { /* 保存できなくても動く */ }
   if (name === "master") openMaster();
   if (name === "device") openDevice();
+  if (name === "hist") openHist();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
 
