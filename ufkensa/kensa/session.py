@@ -459,8 +459,10 @@ class Session:
         st.v("HizCome").tag = ""
         st.flatnes_text = ""
         st.machin = ""
-        if text != prev_lot:
-            self._prune_workers()                 # 別のロット = 持ち越しではない(st.lot は空にしてある)
+        split = st.view.get("SplitFlag")
+        if text != prev_lot and (split is None or split.value == ""):
+            # 別のロット = 持ち越しではない(st.lot は空にしてある)。ロット分割は前半の検査員を残す(VBA も触らない)
+            self._prune_workers()
         st.lot = text
         if st.lot_source != "" and st.lot_source_lot != text:            # D28: 別のロットは いつもの読み方に戻す
             self._set_lot_source("", "", f"別のロット({text})を登録したので")

@@ -414,7 +414,8 @@ def num_extract(value: Any) -> str:
 def convert_to_half(value: Any) -> str:
     """補助.ConvertToHalf (補助:1105-1114)。全角の ０-９ だけ半角にしてから numExtract。"""
     s = "" if value is None else str(value)
-    s = "".join(chr(ord(ch) - 0xFEE0) if "０" <= ch <= "９" else ch for ch in s)
+    # 全角の数字と小数点「．」を半角に(VBA は「．」を落として "３．０" → "30" になっていた。2026-11-07 に直した)
+    s = "".join(chr(ord(ch) - 0xFEE0) if "０" <= ch <= "９" else ("." if ch == "．" else ch) for ch in s)
     return num_extract(s)
 
 
