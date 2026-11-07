@@ -147,7 +147,8 @@ class SessionTest(ZenBase):
         self.assertIn("25.012", html)
         saved = d["view"]["saved"]
         self.assertTrue(any(p.endswith(f"20261102_{LOT}.html") for p in saved))
-        self.assertTrue(any(p.endswith(f"20261102_{LOT}_全ヵ所検査保存.csv") for p in saved))
+        from tests.test_screen_cask import _xlsx_sheets
+        self.assertIn("全ヵ所検査保存", _xlsx_sheets([Path(p) for p in saved if p.endswith(f"20261102_{LOT}.xlsx")]))
         hz = self.store.sheet(store.HOZON)
         self.assertEqual(hz.get(hz.last_row(2), 2), LOT)                # 保存用へ履歴行
         self.assertEqual(hz.get(hz.last_row(2), 77), "別ファイル参照")
