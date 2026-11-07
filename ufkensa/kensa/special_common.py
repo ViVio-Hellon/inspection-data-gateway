@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 from .. import trace
 from . import lot as lotmod
-from . import packing, terminal, wiring, workers
+from . import datasource, packing, quality, terminal, vbx, wiring, workers
 from .flow import WARN, Message, Stop
 from .modes import sheet as sh
 from .store import LOT_HISTORY
@@ -92,3 +92,58 @@ class SubInspectionCommon:
         """いま出している包装仕様書の画像(使用パスの QualityPath\\包装仕様書)。"""
         with self._lock:
             return packing.picture_file(self.pack.picture) if self.pack is not None else None
+
+    # -- ロット選択の続き(HistorySave・包装仕様書) -------------------------
+    #: HistorySave の途中で落ちる実行時エラー(ComboBox1_Change のエラー処理へ)
+    _HISTORY_ERRORS = (vbx.TypeMismatch, lotmod.SubscriptOutOfRange, IndexError, datasource.DbMissing)
+    _PACKING_ERRORS = (packing.PackingError, quality.VbaRuntimeError, vbx.TypeMismatch)
+
+    def _lot_read_failed(self, e: Exception, msgs: list[Message]) -> None:
+        """ロット選択のエラー処理。キャスクは「DB読み込みエラー:」を出す、全ヵ所は VBA のエラーで止める。"""
+        raise NotImplementedError
+
+    def _history_env(self) -> lotmod.HistoryEnv:
+        raise NotImplementedError
+
+    def _after_history(self, res: lotmod.HistorySaveResult) -> None:
+        """HistorySave の後に画面ごとにすること(既定は無し)。"""
+
+    def _history_save(self, past: list[Any]) -> list[Message]:
+        """`Call HistorySave(PastHiki)`(UFCask:535・UFMit:804)。Lot情報履歴 に引当ごとの行。
+
+        途中の実行時エラーは、そこまでの行の削除を反映してから画面のエラー処理へ(VBA どおり)。
+        g_CacheLotNo などの UF1 の控えは通常検査の状態なので書き換えない。
+        """
+        henv = self._history_env()
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY) or []
+        msgs: list[Message] = []
+        with trace.timed("db.save", "Lot情報履歴(HistorySave)", path=str(self.store.path), table=LOT_HISTORY,
+                         expected=(Stop, sh.VbaError)) as info:
+            try:
+                res = lotmod.history_save(past, hist, henv)
+            except self._HISTORY_ERRORS as e:
+                partial = getattr(e, "partial", None)
+                if partial is not None:
+                    self._apply_history(partial)
+                self._lot_read_failed(e, msgs)
+                return msgs
+            info["rows"] = self._apply_history(res)
+        msgs.extend(res.messages)
+        self._after_history(res)
+        return msgs
+
+    def _packing(self, lot_no: str) -> list[Message]:
+        """`If Not PackingNoCheck(LotNo) = "" Then Call UFPack_Open(…)`(UFCask:538・UFMit:856-858)。"""
+        msgs: list[Message] = []
+        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
+        with trace.timed("packing", "包装仕様書の確認(PackingNoCheck)", lot=lot_no,
+                         expected=(packing.PackingError, sh.VbaError)):
+            try:
+                n = packing.packing_no_check(hist, lot_no, messages=msgs)
+                form = packing.pack_open(n, lot_no, hist, messages=msgs) if n != "" else None
+            except self._PACKING_ERRORS as e:
+                self._lot_read_failed(e, msgs)
+                return msgs
+        if form is not None:
+            self.pack = form
+        return msgs

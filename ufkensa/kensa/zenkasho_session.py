@@ -299,6 +299,25 @@ class ZenkashoSession(SubInspectionCommon):
     def _sink(self) -> list[Message]:
         return self._msgs
 
+    def _lot_read_failed(self, e: Exception, msgs: list[Message]) -> None:
+        """ComboBox1_Change のエラー処理(ErrHandler_MitCombo)へ VBA のエラーとして渡す。"""
+        self._msgs.extend(msgs)
+        sub = isinstance(e, (lotmod.SubscriptOutOfRange, IndexError))
+        raise self._vba_error(e, 9 if sub else 13, "インデックスが有効範囲にありません。" if sub else TYPE_MISMATCH) from e
+
+    def _history_env(self) -> lotmod.HistoryEnv:
+        from . import wiring
+        b, st = self.book, self._kstate()
+        over12 = wiring.RealHooks(self.env())._over12(st) if st is not None else False
+        return lotmod.HistoryEnv(dbflag=getattr(st, "dbflag", "") or "", now=self.now(), over12=over12,
+                                 zenkasho_visible=ZEN in b.sheets and b.sheets[ZEN].visible,
+                                 uf1_test=getattr(st, "line_option", "") == "Test", mitsubishi_line=b.mit.line_name)
+
+    def _after_history(self, res: lotmod.HistorySaveResult) -> None:
+        if self.write_logs:
+            for lg in res.logs:
+                legacy_log.write_log(lg.msg, lg.sepl, lg.target_path, now=self.now())
+
     def _new_book(self) -> _Book:
         others = [HOZON] if self.store.exists(HOZON) else []
         b = _Book(self, now=self.now, other_sheets=others, exists=self._exists)
@@ -359,11 +378,11 @@ class ZenkashoSession(SubInspectionCommon):
             elif call.name == "Daily_Report":
                 self._daily_report(int(call.args[0]))
             elif call.name == "HistorySave":
-                self._history_save(list(call.args[0]))
+                self._msgs.extend(self._history_save(list(call.args[0])))
             elif call.name == "GetLotInfo/DbReturnItem":
                 self._db_return_items()
             elif call.name == "PackingNoCheck/UFPack_Open":
-                self._packing(str(call.args[0]))
+                self._msgs.extend(self._packing(str(call.args[0])))
             elif call.name == "AddWS/Pesute":
                 self._add_ws_pesute(str(call.args[0]), str(call.args[1]))
             elif call.name == "不良要因印刷_B1":
@@ -439,40 +458,6 @@ class ZenkashoSession(SubInspectionCommon):
             return sh.VbaError(0, str(e), "datasource")
         return sh.VbaError(number, desc, str(e))
 
-    def _history_save(self, past: list[Any]) -> None:
-        """ComboBox1_Change の `Call HistorySave(PastHiki)`(UFMit:804)。Lot情報履歴 に引当ごとの行。
-
-        途中の実行時エラーは ComboBox1_Change のエラー処理(「DB読み込みエラー:」)に落ちる(行の削除は済んだまま)。
-        g_CacheLotNo などの控え(UF1 のロットと同じときだけ効く)は通常検査の状態なので書き換えない。
-        """
-        b = self.book
-        st = self._kstate()
-        over12 = False
-        if st is not None:
-            from . import wiring
-            over12 = wiring.RealHooks(self.env())._over12(st)
-        henv = lotmod.HistoryEnv(dbflag=getattr(st, "dbflag", "") or "", now=self.now(), over12=over12,
-                                 zenkasho_visible=ZEN in b.sheets and b.sheets[ZEN].visible,
-                                 uf1_test=getattr(st, "line_option", "") == "Test", mitsubishi_line=b.mit.line_name)
-        from . import wiring
-        hist = wiring.sheet_rows(self.store, LOT_HISTORY) or []
-        with trace.timed("db.save", "Lot情報履歴(HistorySave)", path=str(self.store.path), table=LOT_HISTORY,
-                         expected=(sh.VbaError,)) as info:
-            try:
-                res = lotmod.history_save(past, hist, henv)
-            except (vbx.TypeMismatch, lotmod.SubscriptOutOfRange, IndexError, datasource.DbMissing) as e:
-                partial = getattr(e, "partial", None)
-                if partial is not None:
-                    self._apply_history(partial)
-                raise self._vba_error(e, 9 if isinstance(e, (lotmod.SubscriptOutOfRange, IndexError)) else 13,
-                                      "インデックスが有効範囲にありません。"
-                                      if isinstance(e, (lotmod.SubscriptOutOfRange, IndexError)) else TYPE_MISMATCH)
-            info["rows"] = self._apply_history(res)
-        self._msgs.extend(res.messages)
-        if self.write_logs:
-            for lg in res.logs:
-                legacy_log.write_log(lg.msg, lg.sepl, lg.target_path, now=self.now())
-
     def _get_lot_info(self) -> bool:
         """`TempArry = GetLotInfo("Lot情報履歴", UFMitsubishi.LotBox.Text)`(UFMit:807-809)。Empty なら抜ける(偽)。
 
@@ -545,21 +530,6 @@ class ZenkashoSession(SubInspectionCommon):
         if isinstance(v, (int, float)) and not isinstance(v, bool):
             return vbx.single(float(v))
         return vbx.single(vbx.cdbl(v))
-
-    def _packing(self, lot_no: str) -> None:
-        """`If Not PackingNoCheck(LotNo) = "" Then Call UFPack_Open(PackingNoCheck(LotNo), LotNo)`(UFMit:856-858)。"""
-        from . import wiring
-        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
-        with trace.timed("zenkasho.packing", "包装仕様書の確認(PackingNoCheck)", expected=(sh.VbaError,), lot=lot_no):
-            try:
-                n = packing.packing_no_check(hist, lot_no, messages=self._msgs)
-                if n == "":
-                    return
-                form = packing.pack_open(n, lot_no, hist, messages=self._msgs)
-            except (packing.PackingError, quality.VbaRuntimeError, vbx.TypeMismatch) as e:
-                raise self._vba_error(e) from e
-        if form is not None:
-            self.pack = form
 
     # ------------------------------------------------------------------
     # 不良要因票(手元DB の 不良要因印刷_<Line>。通常検査と同じシート)

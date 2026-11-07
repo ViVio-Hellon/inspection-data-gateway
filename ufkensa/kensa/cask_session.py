@@ -48,7 +48,7 @@ from typing import Any, Callable, Optional, Union
 
 from .. import trace
 from ..logging_utils import get_logger
-from . import datasource, legacy_log, lot as lotmod, packing, paths, quality, report_html, terminal, vbx, wiring, workers
+from . import datasource, legacy_log, lot as lotmod, packing, paths, report_html, terminal, vbx, wiring, workers
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .modes import cask
@@ -318,6 +318,20 @@ class CaskSession(SubInspectionCommon):
     def _facility(self) -> str:
         return self.facility() or workers.DEFAULT_FACILITY
 
+    def _lot_read_failed(self, e: Exception, msgs: list[Message]) -> None:
+        """ComboBox1_Change のエラー処理「DB読み込みエラー:」(UFCask:554)。以後の包装仕様書は飛ばす。"""
+        self._lot_error = True
+        desc = e.description if isinstance(e, packing.PackingError) else str(e)
+        msgs.append(Message("DB読み込みエラー:" + "\r\n" + desc, ERROR, source="UFCask:554"))
+
+    def _history_env(self) -> lotmod.HistoryEnv:
+        book, uf1 = self.book, self.uf1_state()
+        hooks = wiring.RealHooks(self.env())
+        return lotmod.HistoryEnv(dbflag=getattr(uf1, "dbflag", "") or "", now=self.now(),
+                                 over12=hooks._over12(uf1) if uf1 is not None else False,
+                                 cask_visible=book.visible(sh.CASK), uf1_test=getattr(uf1, "line_option", "") == "Test",
+                                 cask_line=book.cask.line_name)
+
     def _ensure_book(self) -> sh.Book:
         if self.book is None:
             self.book = sh.Book(now=self.now, exists=self._exists)
@@ -485,35 +499,12 @@ class CaskSession(SubInspectionCommon):
             self.ainput = True
             return []
         if c.name == "PackingNoCheck/UFPack_Open":
-            return self._packing(str(c.args[0]))
+            return [] if self._lot_error else self._packing(str(c.args[0]))   # HistorySave で落ちたら来ない
         # VisibleSheets → HiddenSheets(UFCask.Initialize)はシートの表示だけ。キャスク系のシートは直後の
         # UserForm_Activate(UFCask:784-790)で表示に戻るので、業務の結果は変わらない(Effects をまとめて後で
         # 実行するここで行うと Activate の後に隠してしまうので行わない)
         log.info("キャスク: 呼び出しを省いた %s %s", c.name, c.args)
         return []
-
-    def _packing(self, lot_no: str) -> list[Message]:
-        """`If Not PackingNoCheck(Me.LotBox) = "" Then Call UFPack_Open(…)`(UFCask:538)。
-
-        HistorySave が実行時エラーでエラー処理へ落ちたときは、VBA と同じく ここまで来ない。
-        実行時エラー(包装仕様書のフォルダが無い = 76 など)は「DB読み込みエラー:」(UFCask:554)。
-        """
-        if self._lot_error:
-            return []
-        msgs: list[Message] = []
-        hist = wiring.sheet_rows(self.store, LOT_HISTORY)
-        try:
-            with trace.timed("cask.packing", "包装仕様書の確認(PackingNoCheck)", lot=lot_no,
-                             expected=(packing.PackingError,)):
-                n = packing.packing_no_check(hist, lot_no, messages=msgs)
-                form = packing.pack_open(n, lot_no, hist, messages=msgs) if n != "" else None
-        except (packing.PackingError, quality.VbaRuntimeError, vbx.TypeMismatch) as e:
-            desc = e.description if isinstance(e, packing.PackingError) else str(e)
-            msgs.append(Message("DB読み込みエラー:" + "\r\n" + desc, ERROR, source="UFCask:554"))
-            return msgs
-        if form is not None:
-            self.pack = form
-        return msgs
 
     def _daily_report(self, n: int) -> list[Message]:
         """Worker.Daily_Report(n)。キャスク検査が表示中なので Lname="" → `Daily_` シート(普通は無い → 何もしない)。"""
@@ -552,41 +543,6 @@ class CaskSession(SubInspectionCommon):
         self._daily_report(1)
         self._daily_report(3)
         return []
-
-    def _history_save(self, past: list[Any]) -> list[Message]:
-        """ComboBox1_Change の `Call HistorySave(PastHiki)`(UFCask:535)。Lot情報履歴 に引当ごとの行。
-
-        途中の実行時エラーは ComboBox1_Change のエラー処理(「DB読み込みエラー:」)に落ちる。
-        g_CacheLotNo などの UF1 の控えは通常検査の状態なので書き換えない。
-        """
-        book = self.book
-        assert book is not None
-        uf1 = self.uf1_state()
-        hooks = wiring.RealHooks(self.env())
-        henv = lotmod.HistoryEnv(dbflag=getattr(uf1, "dbflag", "") or "", now=self.now(),
-                                 over12=hooks._over12(uf1) if uf1 is not None else False,
-                                 cask_visible=book.visible(sh.CASK), uf1_test=getattr(uf1, "line_option", "") == "Test",
-                                 cask_line=book.cask.line_name)
-        hist = wiring.sheet_rows(self.store, LOT_HISTORY) or []
-        msgs: list[Message] = []
-        try:
-            with trace.timed("db.save", "Lot情報履歴(HistorySave)", expected=(Stop,), path=str(self.store.path),
-                             table=LOT_HISTORY) as info:
-                try:
-                    res = lotmod.history_save(past, hist, henv)
-                except (vbx.TypeMismatch, lotmod.SubscriptOutOfRange, IndexError) as e:
-                    partial = getattr(e, "partial", None)
-                    if partial is not None:
-                        self._apply_history(partial)
-                    self._lot_error = True
-                    msgs.append(Message("DB読み込みエラー:" + "\r\n" + str(e), ERROR, source="UFCask:554"))
-                    return msgs
-                info["rows"] = self._apply_history(res)
-                msgs.extend(res.messages)
-        except datasource.DbMissing as e:
-            self._lot_error = True
-            msgs.append(Message("DB読み込みエラー:" + "\r\n" + str(e), ERROR, source="UFCask:554"))
-        return msgs
 
     # -- 印刷・保存 ---------------------------------------------------
     def _print_folder(self) -> Path:
