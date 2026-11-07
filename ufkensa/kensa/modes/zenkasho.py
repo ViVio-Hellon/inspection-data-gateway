@@ -13,6 +13,7 @@ import unicodedata
 from typing import Any, Callable, Optional, Union
 
 from .. import datasource, flow, paths, vbx
+from ..model import ken_h_name
 from .. import sound as snd
 from . import cask as ck
 from . import sheet as sh
@@ -362,10 +363,10 @@ def kenhbox_after_update(book: Book, n: int) -> Effects:
     if n == 7:
         tgt = 7
         f.kenh[tgt] = vbx.fmt(f.kenh[tgt], "0")
-        fx.calls.append(Call("LogOut", (f"KenHBox{tgt}", "", "三菱")))
+        fx.calls.append(Call("LogOut", (ken_h_name(tgt), "", "三菱")))
     else:
         f.kenh[n] = vbx.fmt(f.kenh[n], "0.0")
-        fx.calls.append(Call("LogOut", (f"KenHBox{n}", "", "三菱")))
+        fx.calls.append(Call("LogOut", (ken_h_name(n), "", "三菱")))
     if ZEN not in book.sheets:
         return fx
     ws = book.ws(ZEN)

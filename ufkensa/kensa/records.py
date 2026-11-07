@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
-from .model import Face, NORMAL, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format
+from .model import Face, NORMAL, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format, visual_under_name, visual_up_name
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -786,8 +786,8 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
     vi = sh.read_range(10, 1, 15, 2)
     bh = sh.read_range(10, 3, 14, 3)
     for i, f in enumerate(FACES):
-        out.set(f"{f}_UpVisual", vi[i][0])
-        out.set(f"{f}_UnderVisual", vi[i][1])
+        out.set(visual_up_name(f), vi[i][0])
+        out.set(visual_under_name(f), vi[i][1])
         if f != "F":
             out.set(bh_name(f), bh[i][0])
     ken_h = sh.read_range(9, 3, 9, 9)[0]
@@ -1037,8 +1037,8 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
                     av[5], bv[5] = six[0], six[-1]
         faces = FACES if not mimi else "SUCDE"
         for k, f in enumerate(faces):
-            v[f"{f}_UpVisual"] = cell_text(av[k]).replace("A_", "")
-            v[f"{f}_UnderVisual"] = cell_text(bv[k]).replace("B_", "")
+            v[visual_up_name(f)] = cell_text(av[k]).replace("A_", "")
+            v[visual_under_name(f)] = cell_text(bv[k]).replace("B_", "")
 
     if mimi:
         _history_load_mimi(out, c)

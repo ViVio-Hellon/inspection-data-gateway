@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
-from .model import NORMAL, Switch, diag_name, is_thick
+from .model import NORMAL, Switch, bad_name, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -722,4 +722,4 @@ def bad_mouse_down(state: KensaState, pos: str, hooks: Hooks) -> None:
     text = vbx.fmt(src.value, "0")
     dest = pos
     state.bad[dest].value = text if vbx.is_numeric(text) else ""     # ?Bad_Change: 数でなければ空
-    hooks.te_color(state, pos + "Bad")
+    hooks.te_color(state, bad_name(pos))
