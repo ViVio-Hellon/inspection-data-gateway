@@ -1,0 +1,11083 @@
+{
+"1_B面へ": {
+"sheets": {
+"Daily_HVC": {
+"2,1": "ﾛｯﾄNo",
+"2,10": "作業人数",
+"2,11": "合紙",
+"2,12": "枚数",
+"2,13": "包数",
+"2,14": "VC種別",
+"2,15": "etc",
+"2,16": " 停止①記号",
+"2,17": " 停止①時間",
+"2,18": " 停止②記号",
+"2,19": " 停止②時間",
+"2,2": "材・調質",
+"2,20": " 停止③記号",
+"2,21": " 停止③時間",
+"2,22": " 実績枚数",
+"2,23": " 実績重量",
+"2,24": " 作業時間",
+"2,25": " 単重",
+"2,3": "製品寸法",
+"2,4": "梱包No",
+"2,5": "検入枚数",
+"2,6": "開始時",
+"2,7": "開始分",
+"2,8": "終了時",
+"2,9": "終了分"
+},
+"Lot情報履歴": {
+"1,1": "登録日",
+"1,10": "用途ｺｰﾄﾞ",
+"1,11": "ｺｰｽ",
+"1,12": "得意先",
+"1,13": "納入先",
+"1,14": "送り先",
+"1,15": "前工程実績枚数",
+"1,16": "前工程実績重量",
+"1,17": "合紙",
+"1,18": "VC",
+"1,19": "VC_A",
+"1,2": "ｵｰﾀﾞｰNo",
+"1,20": "VC_B",
+"1,21": "単重",
+"1,22": "引当NO",
+"1,23": "引当調整NO",
+"1,24": "引当数量",
+"1,25": "引当ﾌｧｲﾙ登録",
+"1,26": "包装仕様NO",
+"1,3": "ﾛｯﾄNo",
+"1,4": "厚",
+"1,5": "巾",
+"1,6": "丈",
+"1,7": "検査No",
+"1,8": "材質",
+"1,9": "調質",
+"2,1": "2026-11-02 10:08:04",
+"2,10": "H165",
+"2,11": "HOT ST2 TUR ANF TUR PSW TUR VC KEN",
+"2,12": "ｸﾉｻﾝｷﾞﾖｳ(ｶ ﾎﾝｼﾔ",
+"2,13": "ｸﾉｻﾝｷﾞﾖｳ(ｶ ﾎﾝｼﾔ",
+"2,14": "ｳｴﾀﾞｳﾝﾕｿｳｺ(ｶ  (ｸﾉ)",
+"2,15": "17",
+"2,16": "2164.7",
+"2,17": "1",
+"2,18": "01",
+"2,19": "208WRYG",
+"2,2": "54033469",
+"2,20": "208WRYG",
+"2,21": "127.33628",
+"2,22": "61021053",
+"2,23": "0",
+"2,24": "16",
+"2,25": "2026-10-21 08:39:52",
+"2,26": "1P0116",
+"2,3": "H7345B0",
+"2,4": "15",
+"2,5": "1252",
+"2,6": "2502",
+"2,7": "H6X1355",
+"2,8": "995",
+"2,9": "R"
+},
+"作業保存_HVC": {
+"1,1": "H7345B0",
+"1,10": 2.0,
+"1,11": 14.65,
+"1,12": 15.35,
+"1,13": 1250.0,
+"1,14": 1254.0,
+"1,15": 2500.0,
+"1,16": 2504.0,
+"1,17": 995.0,
+"1,18": "R",
+"1,19": "H165",
+"1,2": 15.0,
+"1,20": 3.0,
+"1,23": 3.0,
+"1,24": 2.0,
+"1,25": 3.0,
+"1,26": 4.0,
+"1,28": "対角追記公差あり",
+"1,29": "厚板",
+"1,3": 1252.0,
+"1,34": 2.0,
+"1,35": 3.0,
+"1,38": "参照元:Q-S-QA-DIM-122_別表E",
+"1,39": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"1,4": 2502.0,
+"1,5": 0.35,
+"1,6": 0.35,
+"1,7": 2.0,
+"1,8": 2.0,
+"1,9": 2.0,
+"10,15": "__",
+"10,16": "__",
+"11,15": "__",
+"11,16": "__",
+"12,15": "__",
+"12,16": "__",
+"13,15": "__",
+"13,16": "__",
+"16,1": "前工程実績17枚",
+"17,1": "最終熱処理工程：ANF",
+"2,15": "幅_上_0.30",
+"2,16": "__0.20",
+"3,15": "__",
+"3,16": "__",
+"4,15": "__",
+"4,16": "__",
+"5,15": "__",
+"5,16": "__",
+"6,15": "__",
+"6,16": "__",
+"7,15": "__",
+"7,16": "__",
+"8,15": "__",
+"8,16": "__",
+"9,1": "H6X1355",
+"9,15": "__",
+"9,16": "__"
+},
+"保存用": {
+"1,1": "検査開始終了",
+"1,10": "丈-",
+"1,100": "F厚1",
+"1,101": "F厚2",
+"1,102": "F厚3",
+"1,103": "F厚4",
+"1,104": "F巾1",
+"1,105": "F巾2",
+"1,106": "F丈1",
+"1,107": "F丈2",
+"1,108": "F対角A",
+"1,109": "F対角B",
+"1,11": "丈+",
+"1,110": "F定盤歪",
+"1,111": "Fゲージ歪",
+"1,112": "Fﾗﾃﾗﾙﾎﾞｰ",
+"1,113": "F外観",
+"1,114": "F_直角度",
+"1,12": "S厚1",
+"1,13": "S厚2",
+"1,14": "S厚3",
+"1,15": "S厚4",
+"1,16": "S巾1",
+"1,17": "S巾2",
+"1,18": "S丈1",
+"1,19": "S丈2",
+"1,2": "LOTNO",
+"1,20": "S対角A",
+"1,21": "S対角B",
+"1,22": "S定盤歪",
+"1,23": "Sゲージ歪",
+"1,24": "U厚1",
+"1,25": "U厚2",
+"1,26": "U厚3",
+"1,27": "U厚4",
+"1,28": "U巾1",
+"1,29": "U巾2",
+"1,3": "厚",
+"1,30": "U丈1",
+"1,31": "U丈2",
+"1,32": "U対角A",
+"1,33": "U対角B",
+"1,34": "U定盤歪",
+"1,35": "Uゲージ歪",
+"1,36": "C厚1",
+"1,37": "C厚2",
+"1,38": "C厚3",
+"1,39": "C厚4",
+"1,4": "幅",
+"1,40": "C巾1",
+"1,41": "C巾2",
+"1,42": "C丈1",
+"1,43": "C丈2",
+"1,44": "C対角A",
+"1,45": "C対角B",
+"1,46": "C定盤歪",
+"1,47": "Cゲージ歪",
+"1,48": "D厚1",
+"1,49": "D厚2",
+"1,5": "丈",
+"1,50": "D厚3",
+"1,51": "D厚4",
+"1,52": "D巾1",
+"1,53": "D巾2",
+"1,54": "D丈1",
+"1,55": "D丈2",
+"1,56": "D対角A",
+"1,57": "D対角B",
+"1,58": "D定盤歪",
+"1,59": "Dゲージ歪",
+"1,6": "厚-",
+"1,60": "E厚1",
+"1,61": "E厚2",
+"1,62": "E厚3",
+"1,63": "E厚4",
+"1,64": "E巾1",
+"1,65": "E巾2",
+"1,66": "E丈1",
+"1,67": "E丈2",
+"1,68": "E対角A",
+"1,69": "E対角B",
+"1,7": "厚+",
+"1,70": "E定盤歪",
+"1,71": "Eゲージ歪",
+"1,72": "Sﾗﾃﾗﾙﾎﾞｰ",
+"1,73": "Uﾗﾃﾗﾙﾎﾞｰ",
+"1,74": "Cﾗﾃﾗﾙﾎﾞｰ",
+"1,75": "Dﾗﾃﾗﾙﾎﾞｰ",
+"1,76": "Eﾗﾃﾗﾙﾎﾞｰ",
+"1,77": "検査員",
+"1,78": "公差修正",
+"1,79": "材質",
+"1,8": "幅-",
+"1,80": "調質",
+"1,81": "用途コード",
+"1,82": "LoadFile",
+"1,83": "検査頻度",
+"1,84": "フリー反り",
+"1,85": "S外観",
+"1,86": "U外観",
+"1,87": "C外観",
+"1,88": "D外観",
+"1,89": "E外観",
+"1,9": "幅+",
+"1,90": "S_BH",
+"1,91": "U_BH",
+"1,92": "C_BH",
+"1,93": "D_BH",
+"1,94": "E_BH",
+"1,95": "S_直角度",
+"1,96": "U_直角度",
+"1,97": "C_直角度",
+"1,98": "D_直角度",
+"1,99": "E_直角度"
+},
+"印刷履歴管理": {
+"1,1": "LOT番号",
+"1,2": "印刷日時",
+"1,3": "ライン名"
+},
+"校正記録": {
+"2,1": "2026.11.02",
+"2,4": "1直"
+},
+"検査員_HVC": {
+"1,1": "2026.11.02  10:06",
+"1,2": "検査員01"
+},
+"耳用": {
+"1,1": "検査開始終了",
+"1,10": "丈-",
+"1,100": "U外観",
+"1,101": "C外観",
+"1,102": "D外観",
+"1,103": "E外観",
+"1,104": "S_BH",
+"1,105": "U_BH",
+"1,106": "C_BH",
+"1,107": "D_BH",
+"1,108": "E_BH",
+"1,11": "丈+",
+"1,12": "S厚1",
+"1,13": "S厚2",
+"1,14": "S厚3",
+"1,15": "S厚4",
+"1,16": "S巾1",
+"1,17": "S巾2",
+"1,18": "S巾3",
+"1,19": "S巾4",
+"1,2": "LOTNO",
+"1,20": "S巾5",
+"1,21": "S巾6",
+"1,22": "S丈1",
+"1,23": "S丈2",
+"1,24": "S丈3",
+"1,25": "S丈4",
+"1,26": "S定盤歪",
+"1,27": "Sゲージ歪",
+"1,28": "U厚1",
+"1,29": "U厚2",
+"1,3": "厚",
+"1,30": "U厚3",
+"1,31": "U厚4",
+"1,32": "U巾1",
+"1,33": "U巾2",
+"1,34": "U巾3",
+"1,35": "U巾4",
+"1,36": "U巾5",
+"1,37": "U巾6",
+"1,38": "U丈1",
+"1,39": "U丈2",
+"1,4": "幅",
+"1,40": "U丈3",
+"1,41": "U丈4",
+"1,42": "U定盤歪",
+"1,43": "Uゲージ歪",
+"1,44": "C厚1",
+"1,45": "C厚2",
+"1,46": "C厚3",
+"1,47": "C厚4",
+"1,48": "C巾1",
+"1,49": "C巾2",
+"1,5": "丈",
+"1,50": "C巾3",
+"1,51": "C巾4",
+"1,52": "C巾5",
+"1,53": "C巾6",
+"1,54": "C丈1",
+"1,55": "C丈2",
+"1,56": "C丈3",
+"1,57": "C丈4",
+"1,58": "C定盤歪",
+"1,59": "Cゲージ歪",
+"1,6": "厚-",
+"1,60": "D厚1",
+"1,61": "D厚2",
+"1,62": "D厚3",
+"1,63": "D厚4",
+"1,64": "D巾1",
+"1,65": "D巾2",
+"1,66": "D巾3",
+"1,67": "D巾4",
+"1,68": "D巾5",
+"1,69": "D巾6",
+"1,7": "厚+",
+"1,70": "D丈1",
+"1,71": "D丈2",
+"1,72": "D丈3",
+"1,73": "D丈4",
+"1,74": "D定盤歪",
+"1,75": "Dゲージ歪",
+"1,76": "E厚1",
+"1,77": "E厚2",
+"1,78": "E厚3",
+"1,79": "E厚4",
+"1,8": "幅-",
+"1,80": "E巾1",
+"1,81": "E巾2",
+"1,82": "E巾3",
+"1,83": "E巾4",
+"1,84": "E巾5",
+"1,85": "E巾6",
+"1,86": "E丈1",
+"1,87": "E丈2",
+"1,88": "E丈3",
+"1,89": "E丈4",
+"1,9": "幅+",
+"1,90": "E定盤歪",
+"1,91": "Eゲージ歪",
+"1,92": "検査員",
+"1,93": "公差修正",
+"1,94": "材質",
+"1,95": "調質",
+"1,96": "用途コード",
+"1,97": "LoadFile",
+"1,98": "検査頻度",
+"1,99": "S外観"
+}
+},
+"snapshot": {
+"additional": "対角追記公差あり",
+"am": "0.350",
+"amk": "14.650",
+"aorb": "Now_B",
+"ap": "0.350",
+"apk": "15.350",
+"at_butt_visible": false,
+"at_count": "",
+"atsuita_caption": "H",
+"atu": "15.000",
+"bh": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"data_loading": "",
+"delete_c": "",
+"delete_p": "",
+"diag": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"diag_kou": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"distortion_frame": "参照元:Q-S-QA-DIM-122_別表E",
+"end_time": "",
+"flatnes": "4",
+"flatnes_text": "",
+"hab": "1252.0",
+"hahiz": "2.0",
+"height_formula": "",
+"hiz_come": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"hm": "2.0",
+"hmk": "1250.0",
+"hp": "2.0",
+"hpk": "1254.0",
+"huris": "",
+"inspe_butt_caption": "検入≦25",
+"inspe_butt_visible": false,
+"ken_count": "",
+"ken_h": "前工程実績17枚",
+"ken_hbox": [
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"ken_no": "H6X1355",
+"kind": "厚板",
+"last_hot": "最終熱処理工程：ANF",
+"lateral": "3",
+"lateral_face": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"lateral_text": "3.0",
+"lateral_text_backcolor": 0,
+"lateral_text_backstyle": 0,
+"lateral_text_tag": "",
+"lgs_caption": "ｹﾞｰｼﾞ",
+"line_name": "HVC",
+"lot": "H7345B0",
+"lot_source_lot": "",
+"lzs_caption": "定盤",
+"machin": "",
+"measure": {
+"C": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"D": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"E": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"F": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"S": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"U": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+]
+},
+"mg": "",
+"mimi": "",
+"naka": "",
+"ng": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"positions": {
+"C": "2",
+"D": "E1",
+"E": "E",
+"F": "",
+"S": "S",
+"U": "S1"
+},
+"qf": "",
+"resize_tag": "",
+"start_time": "",
+"strain": {
+"C": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"D": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"E": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"F": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"S": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"U": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+}
+},
+"strain_tag": {
+"C": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"D": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"E": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"F": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"S": {
+"cb1": "幅",
+"cb2": "上",
+"cb3": "",
+"cb4": "",
+"g": "0.20",
+"z": "0.30"
+},
+"U": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+}
+},
+"sumisei": "",
+"t1": "検査員01",
+"t2": "",
+"t3": "",
+"tahiz": "3.0",
+"taik": "3",
+"taik_text": "2.0",
+"tak": "2502.0",
+"tm": "2.0",
+"tmk": "2500.0",
+"tp": "2.0",
+"tpk": "2504.0",
+"tyu": "R",
+"usuita_caption": "薄板",
+"visual_under": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"visual_up": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"worker_shift": "1",
+"yama": "",
+"yama_lb": "",
+"yama_visible": false,
+"youto": "H165",
+"zai": "995"
+},
+"uf1": {
+"ng": [],
+"text": {
+"AL1": "厚1",
+"AL2": "厚2",
+"AL3": "厚3",
+"AL4": "厚4",
+"AMax": "",
+"AMin": "",
+"ATU": "15.000",
+"Abno": "異常値on",
+"Abno.Tag": "",
+"Additional": "対角追記公差あり",
+"Am": "0.350",
+"AmK": "14.650",
+"AorB": "Now_B",
+"Ap": "0.350",
+"ApK": "15.350",
+"AtButt": "厚2ヵ所",
+"AtCount": "",
+"Auto": "on",
+"C": "2",
+"C1": "",
+"C10": "",
+"C11": "",
+"C12": "",
+"C13": "",
+"C14": "",
+"C2": "",
+"C3": "",
+"C4": "",
+"C5": "",
+"C6": "",
+"C7": "",
+"C8": "",
+"C9": "",
+"CBC1": "",
+"CBC2": "",
+"CBC3": "",
+"CBC4": "",
+"CBD1": "",
+"CBD2": "",
+"CBD3": "",
+"CBD4": "",
+"CBE1": "",
+"CBE2": "",
+"CBE3": "",
+"CBE4": "",
+"CBF1": "",
+"CBF2": "",
+"CBF3": "",
+"CBF4": "",
+"CBH": "",
+"CBS1": "",
+"CBS2": "",
+"CBS3": "",
+"CBS4": "",
+"CBU1": "",
+"CBU2": "",
+"CBU3": "",
+"CBU4": "",
+"CBad": "",
+"C_UnderVisual": "",
+"C_UpVisual": "",
+"CheckTC": "",
+"CheckTD": "",
+"CheckTE": "",
+"CheckTF": "",
+"CheckTS": "",
+"CheckTU": "",
+"Comment": "",
+"Conductiv": "",
+"ConductivL": "",
+"ConductivText": "",
+"D": "E1",
+"D1": "",
+"D10": "",
+"D11": "",
+"D12": "",
+"D13": "",
+"D14": "",
+"D2": "",
+"D3": "",
+"D4": "",
+"D5": "",
+"D6": "",
+"D7": "",
+"D8": "",
+"D9": "",
+"DBH": "",
+"DBad": "",
+"DBflag": "",
+"D_UnderVisual": "",
+"D_UpVisual": "",
+"Day1": "2026.11.02  10:06",
+"Day2": "",
+"Day3": "",
+"DebugLate": "",
+"DebugTaikaku": "",
+"DeleteC": "",
+"DeleteP": "",
+"DiagC": "",
+"DiagCKou": "",
+"DiagD": "",
+"DiagDKou": "",
+"DiagE": "",
+"DiagEKou": "",
+"DiagF": "",
+"DiagFKou": "",
+"DiagS": "",
+"DiagSKou": "",
+"DiagU": "",
+"DiagUKou": "",
+"DistortionFrame": "参照元:Q-S-QA-DIM-122_別表E",
+"E": "E",
+"E1": "",
+"E10": "",
+"E11": "",
+"E12": "",
+"E13": "",
+"E14": "",
+"E2": "",
+"E3": "",
+"E4": "",
+"E5": "",
+"E6": "",
+"E7": "",
+"E8": "",
+"E9": "",
+"EBH": "",
+"EBad": "",
+"E_UnderVisual": "",
+"E_UpVisual": "",
+"EachTime": "",
+"EachValue": "",
+"EndTime": "",
+"F": "",
+"F1": "",
+"F10": "",
+"F2": "",
+"F3": "",
+"F4": "",
+"F5": "",
+"F6": "",
+"F7": "",
+"F8": "",
+"F9": "",
+"FBad": "",
+"FC": "2",
+"FD": "E1",
+"FE": "E",
+"FF": "",
+"FMC": "",
+"FMD": "",
+"FME": "",
+"FMF": "",
+"FMS": "",
+"FMU": "",
+"FS": "S",
+"FU": "S1",
+"F_UnderVisual": "",
+"F_UpVisual": "",
+"GC": "",
+"GD": "",
+"GE": "",
+"GF": "",
+"GS": "",
+"GU": "",
+"HL1": "",
+"HL2": "",
+"HL3": "",
+"HL4": "",
+"HL5": "",
+"HL6": "",
+"HMax": "",
+"HMin": "",
+"HURIS": "",
+"HaHiz": "2.0",
+"Hab": "1252.0",
+"HizCome": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"Hm": "2.0",
+"HmK": "1250.0",
+"Hp": "2.0",
+"HpK": "1254.0",
+"INP": "",
+"INP.Tag": "GS",
+"InspeButt": "検入≦25",
+"IzyouFl": "",
+"KenCount": "",
+"KenH": "前工程実績17枚",
+"KenHBox1": "",
+"KenHBox2": "",
+"KenHBox3": "",
+"KenHBox4": "",
+"KenHBox5": "",
+"KenHBox6": "",
+"KenHBox7": "",
+"KenHL1": "",
+"KenHL10": "",
+"KenHL2": "",
+"KenHL3": "",
+"KenHL4": "",
+"KenHL5": "",
+"KenHL6": "",
+"KenHL7": "",
+"KenHL8": "",
+"KenHL9": "",
+"KenNo": "H6X1355",
+"L1": "幅1",
+"L10": "直角度",
+"L11": "ﾗﾃﾗﾙﾎﾞｰ",
+"L12": "",
+"L13": "",
+"L2": "幅2",
+"L3": "丈1",
+"L4": "丈2",
+"L5": "対角A",
+"L6": "対角B",
+"L7": "",
+"L8": "",
+"L9": "対角線差",
+"LC1": "",
+"LC10": "",
+"LC11": "",
+"LC12": "",
+"LC2": "",
+"LC3": "",
+"LC4": "",
+"LC5": "",
+"LC6": "",
+"LC7": "",
+"LC8": "",
+"LC9": "",
+"LGC": "ｹﾞｰｼﾞ",
+"LGD": "ｹﾞｰｼﾞ",
+"LGE": "ｹﾞｰｼﾞ",
+"LGF": "ｹﾞｰｼﾞ",
+"LGS": "ｹﾞｰｼﾞ",
+"LGU": "ｹﾞｰｼﾞ",
+"LZC": "定盤",
+"LZD": "定盤",
+"LZE": "定盤",
+"LZF": "定盤",
+"LZS": "定盤",
+"LZU": "定盤",
+"LastHot": "最終熱処理工程：ANF",
+"Lateral": "3",
+"LateralC": "",
+"LateralD": "",
+"LateralE": "",
+"LateralF": "",
+"LateralS": "",
+"LateralText": "3.0",
+"LateralText.Tag": "",
+"LateralU": "",
+"LineName": "HVC",
+"LineNo": "",
+"Load": "on",
+"Loading": "",
+"Lot": "H7345B0",
+"MG": "",
+"MPEX.Tag": "",
+"Machin": "",
+"Mimi": "",
+"MoveFlag": "",
+"NGC": "",
+"NGD": "",
+"NGE": "",
+"NGF": "",
+"NGS": "",
+"NGU": "",
+"Naka": "",
+"OPE1": "S",
+"OPE2": "S1",
+"OPE3": "2",
+"OPE4": "E1",
+"OPE5": "E",
+"OPE6": "F",
+"OPS1": "S",
+"OPS2": "S1",
+"OPS3": "2",
+"OPS4": "E1",
+"OPS5": "E",
+"OPS6": "F",
+"PakeD": "",
+"PicFM.Tag": "0",
+"ProofreadFlag": "ok",
+"QF": "",
+"ReSize.Tag": "",
+"Reien": "",
+"S": "S",
+"S1": "",
+"S10": "",
+"S11": "",
+"S12": "",
+"S13": "",
+"S14": "",
+"S2": "",
+"S3": "",
+"S4": "",
+"S5": "",
+"S6": "",
+"S7": "",
+"S8": "",
+"S9": "",
+"SBH": "",
+"SBad": "",
+"SFM.Tag": "",
+"S_UnderVisual": "",
+"S_UpVisual": "",
+"StartTime": "",
+"Sumisei": "",
+"T1": "検査員01",
+"T2": "",
+"T3": "",
+"TAIK": "3",
+"TEC": "",
+"TED": "",
+"TEE": "",
+"TEF": "",
+"TES": "",
+"TEU": "",
+"TMax": "",
+"TMin": "",
+"TSC": "",
+"TSD": "",
+"TSE": "",
+"TSF": "",
+"TSS": "",
+"TSU": "",
+"TaHiz": "3.0",
+"Tagtext": "GS",
+"TaikText": "2.0",
+"Tak": "2502.0",
+"Tm": "2.0",
+"TmK": "2500.0",
+"Tp": "2.0",
+"TpK": "2504.0",
+"Tyu": "R",
+"U": "S1",
+"U1": "",
+"U10": "",
+"U11": "",
+"U12": "",
+"U13": "",
+"U14": "",
+"U2": "",
+"U3": "",
+"U4": "",
+"U5": "",
+"U6": "",
+"U7": "",
+"U8": "",
+"U9": "",
+"UBH": "",
+"UBad": "",
+"UFTag": "",
+"U_UnderVisual": "",
+"U_UpVisual": "",
+"WorkButton.Tag": "",
+"Yama": "",
+"Yama.Tag": "",
+"YamaLB": "",
+"YamaLabel": "",
+"Youto": "H165",
+"ZC": "",
+"ZD": "",
+"ZE": "",
+"ZEB": "全数.三菱.5N",
+"ZF": "",
+"ZS": "",
+"ZU": "",
+"Zai": "995",
+"blindfold.Tag": "",
+"dataLoding": "",
+"flatnes": "4",
+"flatnesText": "",
+"スラブ.Caption": "スラブ",
+"厚板.Caption": "H",
+"少枚数.Caption": "少枚数",
+"極厚.Caption": "耳付",
+"薄板.Caption": "薄板",
+"高さ計算式": ""
+},
+"visible": {
+"AL1": true,
+"AL2": true,
+"AL3": true,
+"AL4": true,
+"Abno": true,
+"AtButt": false,
+"C": true,
+"C1": true,
+"C10": true,
+"C11": false,
+"C12": false,
+"C13": false,
+"C14": false,
+"C2": true,
+"C3": true,
+"C4": true,
+"C5": true,
+"C6": true,
+"C7": true,
+"C8": true,
+"C9": true,
+"CBC1": true,
+"CBC2": true,
+"CBC3": true,
+"CBC4": true,
+"CBD1": true,
+"CBD2": true,
+"CBD3": true,
+"CBD4": true,
+"CBE1": true,
+"CBE2": true,
+"CBE3": true,
+"CBE4": true,
+"CBF1": true,
+"CBF2": true,
+"CBF3": true,
+"CBF4": true,
+"CBH": true,
+"CBS1": true,
+"CBS2": true,
+"CBS3": true,
+"CBS4": true,
+"CBU1": true,
+"CBU2": true,
+"CBU3": true,
+"CBU4": true,
+"CBad": true,
+"C_UnderVisual": true,
+"C_UpVisual": true,
+"CheckTC": true,
+"CheckTD": true,
+"CheckTE": true,
+"CheckTF": false,
+"CheckTS": true,
+"CheckTU": true,
+"Conductiv": true,
+"ConductivL": false,
+"D": true,
+"D1": true,
+"D10": false,
+"D11": false,
+"D12": false,
+"D13": false,
+"D14": false,
+"D2": true,
+"D3": true,
+"D4": true,
+"D5": false,
+"D6": false,
+"D7": false,
+"D8": false,
+"D9": false,
+"DBH": true,
+"DBad": true,
+"D_UnderVisual": true,
+"D_UpVisual": true,
+"Day1": true,
+"Day2": true,
+"Day3": true,
+"DebugLate": true,
+"DebugTaikaku": true,
+"DiagC": true,
+"DiagCKou": false,
+"DiagD": false,
+"DiagDKou": false,
+"DiagE": true,
+"DiagEKou": false,
+"DiagF": false,
+"DiagFKou": false,
+"DiagS": true,
+"DiagSKou": false,
+"DiagU": false,
+"DiagUKou": false,
+"DistortionFrame": true,
+"E": true,
+"E1": true,
+"E10": true,
+"E11": false,
+"E12": false,
+"E13": false,
+"E14": false,
+"E2": true,
+"E3": true,
+"E4": true,
+"E5": true,
+"E6": true,
+"E7": true,
+"E8": true,
+"E9": true,
+"EBH": true,
+"EBad": true,
+"E_UnderVisual": true,
+"E_UpVisual": true,
+"EndTime": true,
+"F": false,
+"F1": false,
+"F10": false,
+"F2": false,
+"F3": false,
+"F4": false,
+"F5": false,
+"F6": false,
+"F7": false,
+"F8": false,
+"F9": false,
+"FBad": false,
+"FC": true,
+"FD": true,
+"FE": true,
+"FF": false,
+"FMC": true,
+"FMD": true,
+"FME": true,
+"FMF": false,
+"FMS": true,
+"FMU": true,
+"FS": true,
+"FU": true,
+"F_UnderVisual": false,
+"F_UpVisual": false,
+"GC": true,
+"GD": true,
+"GE": true,
+"GF": true,
+"GS": true,
+"GU": true,
+"HL1": true,
+"HL2": true,
+"HL3": true,
+"HL4": true,
+"HL5": true,
+"HL6": true,
+"HaHiz": true,
+"HizCome": true,
+"InspeButt": false,
+"IzyouFl": true,
+"KenCount": true,
+"KenH": true,
+"KenHBox1": false,
+"KenHBox2": false,
+"KenHBox3": false,
+"KenHBox4": false,
+"KenHBox5": false,
+"KenHBox6": false,
+"KenHBox7": false,
+"KenHL1": true,
+"KenHL10": true,
+"KenHL2": true,
+"KenHL3": true,
+"KenHL4": true,
+"KenHL5": true,
+"KenHL6": true,
+"KenHL7": true,
+"KenHL8": true,
+"KenHL9": true,
+"L1": true,
+"L10": false,
+"L11": false,
+"L12": false,
+"L13": false,
+"L2": true,
+"L3": true,
+"L4": true,
+"L5": true,
+"L6": true,
+"L7": false,
+"L8": false,
+"L9": true,
+"LC1": true,
+"LC10": true,
+"LC11": true,
+"LC12": false,
+"LC2": true,
+"LC3": true,
+"LC4": true,
+"LC5": true,
+"LC6": false,
+"LC7": true,
+"LC8": true,
+"LC9": true,
+"LGC": true,
+"LGD": true,
+"LGE": true,
+"LGF": true,
+"LGS": true,
+"LGU": true,
+"LZC": true,
+"LZD": true,
+"LZE": true,
+"LZF": true,
+"LZS": true,
+"LZU": true,
+"LastHot": true,
+"LateralC": false,
+"LateralD": false,
+"LateralE": false,
+"LateralF": false,
+"LateralS": false,
+"LateralU": false,
+"Loading": false,
+"MG": true,
+"Mimi": true,
+"NGC": true,
+"NGD": true,
+"NGE": true,
+"NGF": false,
+"NGS": true,
+"NGU": true,
+"Naka": true,
+"OPE1": true,
+"OPE2": true,
+"OPE3": true,
+"OPE4": true,
+"OPE5": true,
+"OPE6": false,
+"OPS1": true,
+"OPS2": true,
+"OPS3": true,
+"OPS4": true,
+"OPS5": true,
+"OPS6": false,
+"QF": true,
+"S": true,
+"S1": true,
+"S10": true,
+"S11": false,
+"S12": false,
+"S13": false,
+"S14": false,
+"S2": true,
+"S3": true,
+"S4": true,
+"S5": true,
+"S6": true,
+"S7": true,
+"S8": true,
+"S9": true,
+"SBH": true,
+"SBad": true,
+"S_UnderVisual": true,
+"S_UpVisual": true,
+"StartTime": true,
+"T1": true,
+"T2": true,
+"T3": true,
+"TEC": true,
+"TED": true,
+"TEE": true,
+"TEF": false,
+"TES": true,
+"TEU": true,
+"TSC": true,
+"TSD": true,
+"TSE": true,
+"TSF": false,
+"TSS": true,
+"TSU": true,
+"TaHiz": true,
+"TaikText": true,
+"U": true,
+"U1": true,
+"U10": false,
+"U11": false,
+"U12": false,
+"U13": false,
+"U14": false,
+"U2": true,
+"U3": true,
+"U4": true,
+"U5": false,
+"U6": false,
+"U7": false,
+"U8": false,
+"U9": false,
+"UBH": true,
+"UBad": true,
+"U_UnderVisual": true,
+"U_UpVisual": true,
+"Yama": false,
+"YamaLB": true,
+"YamaLabel": false,
+"ZC": true,
+"ZD": true,
+"ZE": true,
+"ZEB": true,
+"ZF": true,
+"ZS": true,
+"ZU": true,
+"dataLoding": true,
+"flatnes": true,
+"高さ計算式": true
+},
+"work": "厚板"
+},
+"view": {
+"bad": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"bh": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"pos": "F",
+"visible": false
+}
+],
+"bh_note": {
+"last_hot": "最終熱処理工程：ANF",
+"qf": ""
+},
+"blind": "",
+"buttons": {
+"abno": "異常値on",
+"aorb": "Now_B",
+"byousya": false,
+"conductiv": false,
+"izyou": false,
+"print": "印刷",
+"print_reset": false,
+"resize": false
+},
+"calibration_required": false,
+"cb_choices": {
+"C": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"D": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"E": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"F": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"S": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"U": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+}
+},
+"checks": [],
+"confi": null,
+"grid": {
+"diag": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"diag_kou": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"diag_kou_label": "直角度",
+"diag_label": "対角線差",
+"lateral": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"lateral_label": "ﾗﾃﾗﾙﾎﾞｰ",
+"ng": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"positions": [
+{
+"key": "S",
+"label": "S",
+"visible": true
+},
+{
+"key": "U",
+"label": "S1",
+"visible": true
+},
+{
+"key": "C",
+"label": "2",
+"visible": true
+},
+{
+"key": "D",
+"label": "E1",
+"visible": true
+},
+{
+"key": "E",
+"label": "E",
+"visible": true
+},
+{
+"key": "F",
+"label": "F",
+"visible": false
+}
+],
+"rows": [
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F1",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚1",
+"no": 1,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F2",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚2",
+"no": 2,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F3",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚3",
+"no": 3,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F4",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚4",
+"no": 4,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U5",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D5",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F5",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "幅1",
+"no": 5,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U6",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D6",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F6",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "幅2",
+"no": 6,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U7",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D7",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F7",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "丈1",
+"no": 7,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U8",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D8",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F8",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "丈2",
+"no": 8,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U9",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D9",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F9",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "対角A",
+"no": 9,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U10",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D10",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F10",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "対角B",
+"no": 10,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 11,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 12,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 13,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 14,
+"visible": false
+}
+]
+},
+"header": {
+"at_butt": {
+"caption": "厚2ヵ所",
+"visible": false
+},
+"at_count": "",
+"comment": "",
+"inspe_butt": {
+"caption": "検入≦25",
+"visible": false
+},
+"ken_no": "H6X1355",
+"line": "HVC",
+"line_no": "",
+"lot": "H7345B0",
+"proofread": true,
+"reien": "",
+"tyu": "R",
+"work": "厚板",
+"works": [
+{
+"caption": "H",
+"key": "厚板",
+"visible": true
+},
+{
+"caption": "薄板",
+"key": "薄板",
+"visible": false
+},
+{
+"caption": "少枚数",
+"key": "少枚数",
+"visible": true
+},
+{
+"caption": "耳付",
+"key": "極厚",
+"visible": false
+},
+{
+"caption": "スラブ",
+"key": "スラブ",
+"visible": false
+}
+],
+"yama": "",
+"yama_visible": false,
+"youto": "H165",
+"zai": "995"
+},
+"inp_tag": "GS",
+"ken_count": "",
+"ken_count_visible": true,
+"ken_formula": "",
+"ken_h": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 1,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 2,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 3,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 4,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 5,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 6,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 7,
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"ken_h_label": "前工程実績17枚",
+"ken_hl": {
+"HL1": {
+"value": "",
+"visible": true
+},
+"HL2": {
+"value": "",
+"visible": true
+},
+"HL3": {
+"value": "",
+"visible": true
+},
+"HL4": {
+"value": "",
+"visible": true
+},
+"HL5": {
+"value": "",
+"visible": true
+},
+"HL6": {
+"value": "",
+"visible": true
+},
+"KenHL1": {
+"value": "",
+"visible": true
+},
+"KenHL10": {
+"value": "",
+"visible": true
+},
+"KenHL2": {
+"value": "",
+"visible": true
+},
+"KenHL3": {
+"value": "",
+"visible": true
+},
+"KenHL4": {
+"value": "",
+"visible": true
+},
+"KenHL5": {
+"value": "",
+"visible": true
+},
+"KenHL6": {
+"value": "",
+"visible": true
+},
+"KenHL7": {
+"value": "",
+"visible": true
+},
+"KenHL8": {
+"value": "",
+"visible": true
+},
+"KenHL9": {
+"value": "",
+"visible": true
+}
+},
+"lists": {
+"defect": [
+{
+"code": "01",
+"name": "フクレ"
+},
+{
+"code": "02",
+"name": "　"
+},
+{
+"code": "11",
+"name": "ムシレ"
+},
+{
+"code": "12",
+"name": "汚"
+},
+{
+"code": "13",
+"name": "リックアップ"
+},
+{
+"code": "14",
+"name": " "
+},
+{
+"code": "21",
+"name": "圧込"
+},
+{
+"code": "22",
+"name": "汚"
+},
+{
+"code": "23",
+"name": "フラットネス"
+},
+{
+"code": "24",
+"name": "厚"
+},
+{
+"code": "25",
+"name": " "
+},
+{
+"code": "31",
+"name": "汚"
+},
+{
+"code": "32",
+"name": "飛込"
+},
+{
+"code": "33",
+"name": "当り"
+},
+{
+"code": "34",
+"name": "擢"
+},
+{
+"code": "35",
+"name": "付着油"
+},
+{
+"code": "36",
+"name": "切断面"
+},
+{
+"code": "37",
+"name": "巾丈"
+},
+{
+"code": "38",
+"name": "特寸"
+},
+{
+"code": "39",
+"name": " "
+},
+{
+"code": "41",
+"name": "他"
+},
+{
+"code": "",
+"name": "TP"
+},
+{
+"code": "",
+"name": "ｽﾎﾟｯﾄ処理"
+}
+],
+"visual": [
+"",
+"当り跡ﾞ",
+"扱いｷｽﾞ",
+"圧込み",
+"油圧込み",
+"油残り跡",
+"油焼け",
+"油汚れ",
+"油寄り",
+"AL片圧込み",
+"AL付着跡",
+"板厚外れ",
+"異物圧込み",
+"折れ",
+"ｷｽﾞ",
+"承台跡",
+"ｽｼﾞ",
+"ｽﾘｷｽﾞ",
+"ｽﾘｯﾌﾟｷｽﾞ",
+"寸法外れ",
+"段",
+"突上げ",
+"突下げ",
+"ﾃｰﾙﾏｰｸ",
+"ﾄﾋﾞｺﾐ",
+"共ｽﾞﾚ",
+"刃跡",
+"肌荒れ",
+"歪",
+"腐食",
+"ﾍｺ",
+"偏析",
+"Hot共ｽﾞﾚ",
+"巻付段",
+"ﾑｼﾚ",
+"焼刃",
+"汚れ",
+"QF白ﾎﾟﾁ汚れ",
+"QF湯流れ",
+"ﾚﾍﾞﾗｰｽｼﾞ",
+"ﾛｰﾙｷｽﾞ",
+"ﾛｰﾙﾏｰｸ",
+"割れ",
+"巻付跡",
+"ﾊﾟｯﾄｽｼﾞ",
+"鋳造剥離",
+"欠陥ﾅｼ",
+"当りｷｽﾞ",
+"圧込み状ﾑｼﾚ",
+"AL粉圧込み",
+"異物巻込み",
+"ｴｯｼﾞﾞ酸化",
+"外注欠陥",
+"ｶﾐｺﾐ跡",
+"ｺｰﾃｨﾝｸﾞﾑﾗ",
+"ｼｮｯｸ跡",
+"ｽﾄﾘｰｸﾑｼﾚ",
+"ｽﾍﾟｰｻｰｷｽﾞ",
+"ｽﾘｯﾌﾟ跡",
+"ｽﾘｰﾛｰﾙｽﾘｯﾌﾟ跡",
+"切断面異常",
+"ﾁｬﾀﾘﾝｸﾞ",
+"ﾂﾔﾑﾗ",
+"ﾃｰﾌﾞﾙｽﾘ跡",
+"共ｽﾞﾚ圧込み",
+"ﾊﾟｲﾗｰｷｽﾞ",
+"ﾌｸﾚ",
+"ﾍﾘﾝｸﾞﾎﾞｰﾝ",
+"補助ﾛｰﾙｷｽﾞ",
+"QF汚れ",
+"QF黒ﾎﾟﾁ汚れ",
+"ﾚﾍﾞﾗｰｷｽﾞ",
+"ﾋﾞﾋﾞﾘ段",
+"ﾎﾞﾀ落ち汚れ",
+"SSﾏｰｸ",
+"ｶｯﾌﾟﾙ跡"
+],
+"yama": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"枚数"
+]
+},
+"lot_source": {
+"active": false,
+"lot": "",
+"mode": "オフライン",
+"on": false
+},
+"minmax": {
+"amax": "",
+"amin": "",
+"hmax": "",
+"hmin": "",
+"tmax": "",
+"tmin": ""
+},
+"name_list": null,
+"next": {
+"auto": true,
+"kind": "",
+"label": "GS",
+"machin": "",
+"name": "GS"
+},
+"order": {
+"comment": "",
+"form": "",
+"list": [
+"54033469"
+],
+"no": "",
+"value": ""
+},
+"pack": null,
+"print_ready": false,
+"proofread": "ok",
+"range": {
+"labels": [
+"S",
+"S1",
+"2",
+"E1",
+"E",
+""
+],
+"ope": 0,
+"ops": 0
+},
+"report": null,
+"strain": {
+"cb": {
+"CBC1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+}
+},
+"face": "Now_B",
+"g": [
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": true
+}
+],
+"z": [
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": true
+}
+]
+},
+"strain_frame": {
+"C": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"D": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"E": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"F": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": false
+},
+"S": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"U": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+}
+},
+"strain_note": "B面歪 入力画面です",
+"taik_text": "2.0",
+"tolerance": {
+"additional": "対角追記公差あり",
+"am": "0.350",
+"amk": "14.650",
+"ap": "0.350",
+"apk": "15.350",
+"atu": "15.000",
+"conductiv_text": "",
+"flatnes_text": "",
+"hab": "1252.0",
+"hm": "2.0",
+"hmk": "1250.0",
+"hp": "2.0",
+"hpk": "1254.0",
+"lateral_grade": "3",
+"lateral_text": "3.0",
+"sumisei": "",
+"taik": "3",
+"tak": "2502.0",
+"tm": "2.0",
+"tmk": "2500.0",
+"tp": "2.0",
+"tpk": "2504.0"
+},
+"vc": {
+"a": {
+"image": "",
+"label": "A面:ｴﾝｶﾋﾞﾆﾙ_ｲｴﾛ-ｸﾞﾘ-ﾝ",
+"visible": false
+},
+"b": {
+"image": "",
+"label": "B面:ｴﾝｶﾋﾞﾆﾙ_ｲｴﾛ-ｸﾞﾘ-ﾝ",
+"visible": false
+},
+"nothing": "208WRYG.JPG写真登録がないかﾈｯﾄﾜｰｸに繋がっていません：\\\\nlmsrvngy03\\各課共有\\0130_日軽稲沢\\梱包課\\AIM\\VC種類画像\\"
+},
+"visual": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 1,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 2,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 3,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 4,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 5,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 6,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 7,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 8,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 9,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 10,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 11,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 12,
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"visual_caps": {
+"C_UnderVisual": {
+"value": "",
+"visible": true
+},
+"C_UpVisual": {
+"value": "",
+"visible": true
+},
+"D_UnderVisual": {
+"value": "",
+"visible": true
+},
+"D_UpVisual": {
+"value": "",
+"visible": true
+},
+"E_UnderVisual": {
+"value": "",
+"visible": true
+},
+"E_UpVisual": {
+"value": "",
+"visible": true
+},
+"F_UnderVisual": {
+"value": "",
+"visible": false
+},
+"F_UpVisual": {
+"value": "",
+"visible": false
+},
+"S_UnderVisual": {
+"value": "",
+"visible": true
+},
+"S_UpVisual": {
+"value": "",
+"visible": true
+},
+"U_UnderVisual": {
+"value": "",
+"visible": true
+},
+"U_UpVisual": {
+"value": "",
+"visible": true
+}
+},
+"worker_needed": false,
+"workers": [
+"T1: 検査員01(2026.11.02  10:06)"
+],
+"yama_lb": ""
+}
+},
+"2_A面へ戻す": {
+"sheets": {
+"Daily_HVC": {
+"2,1": "ﾛｯﾄNo",
+"2,10": "作業人数",
+"2,11": "合紙",
+"2,12": "枚数",
+"2,13": "包数",
+"2,14": "VC種別",
+"2,15": "etc",
+"2,16": " 停止①記号",
+"2,17": " 停止①時間",
+"2,18": " 停止②記号",
+"2,19": " 停止②時間",
+"2,2": "材・調質",
+"2,20": " 停止③記号",
+"2,21": " 停止③時間",
+"2,22": " 実績枚数",
+"2,23": " 実績重量",
+"2,24": " 作業時間",
+"2,25": " 単重",
+"2,3": "製品寸法",
+"2,4": "梱包No",
+"2,5": "検入枚数",
+"2,6": "開始時",
+"2,7": "開始分",
+"2,8": "終了時",
+"2,9": "終了分"
+},
+"Lot情報履歴": {
+"1,1": "登録日",
+"1,10": "用途ｺｰﾄﾞ",
+"1,11": "ｺｰｽ",
+"1,12": "得意先",
+"1,13": "納入先",
+"1,14": "送り先",
+"1,15": "前工程実績枚数",
+"1,16": "前工程実績重量",
+"1,17": "合紙",
+"1,18": "VC",
+"1,19": "VC_A",
+"1,2": "ｵｰﾀﾞｰNo",
+"1,20": "VC_B",
+"1,21": "単重",
+"1,22": "引当NO",
+"1,23": "引当調整NO",
+"1,24": "引当数量",
+"1,25": "引当ﾌｧｲﾙ登録",
+"1,26": "包装仕様NO",
+"1,3": "ﾛｯﾄNo",
+"1,4": "厚",
+"1,5": "巾",
+"1,6": "丈",
+"1,7": "検査No",
+"1,8": "材質",
+"1,9": "調質",
+"2,1": "2026-11-02 10:08:04",
+"2,10": "H165",
+"2,11": "HOT ST2 TUR ANF TUR PSW TUR VC KEN",
+"2,12": "ｸﾉｻﾝｷﾞﾖｳ(ｶ ﾎﾝｼﾔ",
+"2,13": "ｸﾉｻﾝｷﾞﾖｳ(ｶ ﾎﾝｼﾔ",
+"2,14": "ｳｴﾀﾞｳﾝﾕｿｳｺ(ｶ  (ｸﾉ)",
+"2,15": "17",
+"2,16": "2164.7",
+"2,17": "1",
+"2,18": "01",
+"2,19": "208WRYG",
+"2,2": "54033469",
+"2,20": "208WRYG",
+"2,21": "127.33628",
+"2,22": "61021053",
+"2,23": "0",
+"2,24": "16",
+"2,25": "2026-10-21 08:39:52",
+"2,26": "1P0116",
+"2,3": "H7345B0",
+"2,4": "15",
+"2,5": "1252",
+"2,6": "2502",
+"2,7": "H6X1355",
+"2,8": "995",
+"2,9": "R"
+},
+"作業保存_HVC": {
+"1,1": "H7345B0",
+"1,10": 2.0,
+"1,11": 14.65,
+"1,12": 15.35,
+"1,13": 1250.0,
+"1,14": 1254.0,
+"1,15": 2500.0,
+"1,16": 2504.0,
+"1,17": 995.0,
+"1,18": "R",
+"1,19": "H165",
+"1,2": 15.0,
+"1,20": 3.0,
+"1,23": 3.0,
+"1,24": 2.0,
+"1,25": 3.0,
+"1,26": 4.0,
+"1,28": "対角追記公差あり",
+"1,29": "厚板",
+"1,3": 1252.0,
+"1,34": 2.0,
+"1,35": 3.0,
+"1,38": "参照元:Q-S-QA-DIM-122_別表E",
+"1,39": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"1,4": 2502.0,
+"1,5": 0.35,
+"1,6": 0.35,
+"1,7": 2.0,
+"1,8": 2.0,
+"1,9": 2.0,
+"10,15": "__",
+"10,16": "__",
+"11,15": "__",
+"11,16": "__",
+"12,15": "__",
+"12,16": "__",
+"13,15": "__",
+"13,16": "__",
+"16,1": "前工程実績17枚",
+"17,1": "最終熱処理工程：ANF",
+"2,15": "幅_上_0.30",
+"2,16": "__0.20",
+"3,15": "__",
+"3,16": "__",
+"4,15": "__",
+"4,16": "__",
+"5,15": "__",
+"5,16": "__",
+"6,15": "__",
+"6,16": "__",
+"7,15": "__",
+"7,16": "__",
+"8,15": "__0.40",
+"8,16": "__",
+"9,1": "H6X1355",
+"9,15": "__",
+"9,16": "__"
+},
+"保存用": {
+"1,1": "検査開始終了",
+"1,10": "丈-",
+"1,100": "F厚1",
+"1,101": "F厚2",
+"1,102": "F厚3",
+"1,103": "F厚4",
+"1,104": "F巾1",
+"1,105": "F巾2",
+"1,106": "F丈1",
+"1,107": "F丈2",
+"1,108": "F対角A",
+"1,109": "F対角B",
+"1,11": "丈+",
+"1,110": "F定盤歪",
+"1,111": "Fゲージ歪",
+"1,112": "Fﾗﾃﾗﾙﾎﾞｰ",
+"1,113": "F外観",
+"1,114": "F_直角度",
+"1,12": "S厚1",
+"1,13": "S厚2",
+"1,14": "S厚3",
+"1,15": "S厚4",
+"1,16": "S巾1",
+"1,17": "S巾2",
+"1,18": "S丈1",
+"1,19": "S丈2",
+"1,2": "LOTNO",
+"1,20": "S対角A",
+"1,21": "S対角B",
+"1,22": "S定盤歪",
+"1,23": "Sゲージ歪",
+"1,24": "U厚1",
+"1,25": "U厚2",
+"1,26": "U厚3",
+"1,27": "U厚4",
+"1,28": "U巾1",
+"1,29": "U巾2",
+"1,3": "厚",
+"1,30": "U丈1",
+"1,31": "U丈2",
+"1,32": "U対角A",
+"1,33": "U対角B",
+"1,34": "U定盤歪",
+"1,35": "Uゲージ歪",
+"1,36": "C厚1",
+"1,37": "C厚2",
+"1,38": "C厚3",
+"1,39": "C厚4",
+"1,4": "幅",
+"1,40": "C巾1",
+"1,41": "C巾2",
+"1,42": "C丈1",
+"1,43": "C丈2",
+"1,44": "C対角A",
+"1,45": "C対角B",
+"1,46": "C定盤歪",
+"1,47": "Cゲージ歪",
+"1,48": "D厚1",
+"1,49": "D厚2",
+"1,5": "丈",
+"1,50": "D厚3",
+"1,51": "D厚4",
+"1,52": "D巾1",
+"1,53": "D巾2",
+"1,54": "D丈1",
+"1,55": "D丈2",
+"1,56": "D対角A",
+"1,57": "D対角B",
+"1,58": "D定盤歪",
+"1,59": "Dゲージ歪",
+"1,6": "厚-",
+"1,60": "E厚1",
+"1,61": "E厚2",
+"1,62": "E厚3",
+"1,63": "E厚4",
+"1,64": "E巾1",
+"1,65": "E巾2",
+"1,66": "E丈1",
+"1,67": "E丈2",
+"1,68": "E対角A",
+"1,69": "E対角B",
+"1,7": "厚+",
+"1,70": "E定盤歪",
+"1,71": "Eゲージ歪",
+"1,72": "Sﾗﾃﾗﾙﾎﾞｰ",
+"1,73": "Uﾗﾃﾗﾙﾎﾞｰ",
+"1,74": "Cﾗﾃﾗﾙﾎﾞｰ",
+"1,75": "Dﾗﾃﾗﾙﾎﾞｰ",
+"1,76": "Eﾗﾃﾗﾙﾎﾞｰ",
+"1,77": "検査員",
+"1,78": "公差修正",
+"1,79": "材質",
+"1,8": "幅-",
+"1,80": "調質",
+"1,81": "用途コード",
+"1,82": "LoadFile",
+"1,83": "検査頻度",
+"1,84": "フリー反り",
+"1,85": "S外観",
+"1,86": "U外観",
+"1,87": "C外観",
+"1,88": "D外観",
+"1,89": "E外観",
+"1,9": "幅+",
+"1,90": "S_BH",
+"1,91": "U_BH",
+"1,92": "C_BH",
+"1,93": "D_BH",
+"1,94": "E_BH",
+"1,95": "S_直角度",
+"1,96": "U_直角度",
+"1,97": "C_直角度",
+"1,98": "D_直角度",
+"1,99": "E_直角度"
+},
+"印刷履歴管理": {
+"1,1": "LOT番号",
+"1,2": "印刷日時",
+"1,3": "ライン名"
+},
+"校正記録": {
+"2,1": "2026.11.02",
+"2,4": "1直"
+},
+"検査員_HVC": {
+"1,1": "2026.11.02  10:06",
+"1,2": "検査員01"
+},
+"耳用": {
+"1,1": "検査開始終了",
+"1,10": "丈-",
+"1,100": "U外観",
+"1,101": "C外観",
+"1,102": "D外観",
+"1,103": "E外観",
+"1,104": "S_BH",
+"1,105": "U_BH",
+"1,106": "C_BH",
+"1,107": "D_BH",
+"1,108": "E_BH",
+"1,11": "丈+",
+"1,12": "S厚1",
+"1,13": "S厚2",
+"1,14": "S厚3",
+"1,15": "S厚4",
+"1,16": "S巾1",
+"1,17": "S巾2",
+"1,18": "S巾3",
+"1,19": "S巾4",
+"1,2": "LOTNO",
+"1,20": "S巾5",
+"1,21": "S巾6",
+"1,22": "S丈1",
+"1,23": "S丈2",
+"1,24": "S丈3",
+"1,25": "S丈4",
+"1,26": "S定盤歪",
+"1,27": "Sゲージ歪",
+"1,28": "U厚1",
+"1,29": "U厚2",
+"1,3": "厚",
+"1,30": "U厚3",
+"1,31": "U厚4",
+"1,32": "U巾1",
+"1,33": "U巾2",
+"1,34": "U巾3",
+"1,35": "U巾4",
+"1,36": "U巾5",
+"1,37": "U巾6",
+"1,38": "U丈1",
+"1,39": "U丈2",
+"1,4": "幅",
+"1,40": "U丈3",
+"1,41": "U丈4",
+"1,42": "U定盤歪",
+"1,43": "Uゲージ歪",
+"1,44": "C厚1",
+"1,45": "C厚2",
+"1,46": "C厚3",
+"1,47": "C厚4",
+"1,48": "C巾1",
+"1,49": "C巾2",
+"1,5": "丈",
+"1,50": "C巾3",
+"1,51": "C巾4",
+"1,52": "C巾5",
+"1,53": "C巾6",
+"1,54": "C丈1",
+"1,55": "C丈2",
+"1,56": "C丈3",
+"1,57": "C丈4",
+"1,58": "C定盤歪",
+"1,59": "Cゲージ歪",
+"1,6": "厚-",
+"1,60": "D厚1",
+"1,61": "D厚2",
+"1,62": "D厚3",
+"1,63": "D厚4",
+"1,64": "D巾1",
+"1,65": "D巾2",
+"1,66": "D巾3",
+"1,67": "D巾4",
+"1,68": "D巾5",
+"1,69": "D巾6",
+"1,7": "厚+",
+"1,70": "D丈1",
+"1,71": "D丈2",
+"1,72": "D丈3",
+"1,73": "D丈4",
+"1,74": "D定盤歪",
+"1,75": "Dゲージ歪",
+"1,76": "E厚1",
+"1,77": "E厚2",
+"1,78": "E厚3",
+"1,79": "E厚4",
+"1,8": "幅-",
+"1,80": "E巾1",
+"1,81": "E巾2",
+"1,82": "E巾3",
+"1,83": "E巾4",
+"1,84": "E巾5",
+"1,85": "E巾6",
+"1,86": "E丈1",
+"1,87": "E丈2",
+"1,88": "E丈3",
+"1,89": "E丈4",
+"1,9": "幅+",
+"1,90": "E定盤歪",
+"1,91": "Eゲージ歪",
+"1,92": "検査員",
+"1,93": "公差修正",
+"1,94": "材質",
+"1,95": "調質",
+"1,96": "用途コード",
+"1,97": "LoadFile",
+"1,98": "検査頻度",
+"1,99": "S外観"
+}
+},
+"snapshot": {
+"additional": "対角追記公差あり",
+"am": "0.350",
+"amk": "14.650",
+"aorb": "Now_A",
+"ap": "0.350",
+"apk": "15.350",
+"at_butt_visible": false,
+"at_count": "",
+"atsuita_caption": "H",
+"atu": "15.000",
+"bh": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"data_loading": "",
+"delete_c": "",
+"delete_p": "",
+"diag": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"diag_kou": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"distortion_frame": "参照元:Q-S-QA-DIM-122_別表E",
+"end_time": "",
+"flatnes": "4",
+"flatnes_text": "",
+"hab": "1252.0",
+"hahiz": "2.0",
+"height_formula": "",
+"hiz_come": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"hm": "2.0",
+"hmk": "1250.0",
+"hp": "2.0",
+"hpk": "1254.0",
+"huris": "",
+"inspe_butt_caption": "検入≦25",
+"inspe_butt_visible": false,
+"ken_count": "",
+"ken_h": "前工程実績17枚",
+"ken_hbox": [
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"ken_no": "H6X1355",
+"kind": "厚板",
+"last_hot": "最終熱処理工程：ANF",
+"lateral": "3",
+"lateral_face": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"lateral_text": "3.0",
+"lateral_text_backcolor": 0,
+"lateral_text_backstyle": 0,
+"lateral_text_tag": "",
+"lgs_caption": "ｹﾞｰｼﾞ",
+"line_name": "HVC",
+"lot": "H7345B0",
+"lot_source_lot": "",
+"lzs_caption": "定盤",
+"machin": "",
+"measure": {
+"C": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"D": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"E": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"F": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"S": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"U": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+]
+},
+"mg": "",
+"mimi": "",
+"naka": "",
+"ng": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"positions": {
+"C": "2",
+"D": "E1",
+"E": "E",
+"F": "",
+"S": "S",
+"U": "S1"
+},
+"qf": "",
+"resize_tag": "",
+"start_time": "",
+"strain": {
+"C": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"D": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"E": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"F": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"S": {
+"cb1": "幅",
+"cb2": "上",
+"cb3": "",
+"cb4": "",
+"g": "0.20",
+"z": "0.30"
+},
+"U": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+}
+},
+"strain_tag": {
+"C": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"D": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"E": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"F": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"S": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": "0.40"
+},
+"U": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+}
+},
+"sumisei": "",
+"t1": "検査員01",
+"t2": "",
+"t3": "",
+"tahiz": "3.0",
+"taik": "3",
+"taik_text": "2.0",
+"tak": "2502.0",
+"tm": "2.0",
+"tmk": "2500.0",
+"tp": "2.0",
+"tpk": "2504.0",
+"tyu": "R",
+"usuita_caption": "薄板",
+"visual_under": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"visual_up": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"worker_shift": "1",
+"yama": "",
+"yama_lb": "",
+"yama_visible": false,
+"youto": "H165",
+"zai": "995"
+},
+"uf1": {
+"ng": [],
+"text": {
+"AL1": "厚1",
+"AL2": "厚2",
+"AL3": "厚3",
+"AL4": "厚4",
+"AMax": "",
+"AMin": "",
+"ATU": "15.000",
+"Abno": "異常値on",
+"Abno.Tag": "",
+"Additional": "対角追記公差あり",
+"Am": "0.350",
+"AmK": "14.650",
+"AorB": "Now_A",
+"Ap": "0.350",
+"ApK": "15.350",
+"AtButt": "厚2ヵ所",
+"AtCount": "",
+"Auto": "on",
+"C": "2",
+"C1": "",
+"C10": "",
+"C11": "",
+"C12": "",
+"C13": "",
+"C14": "",
+"C2": "",
+"C3": "",
+"C4": "",
+"C5": "",
+"C6": "",
+"C7": "",
+"C8": "",
+"C9": "",
+"CBC1": "",
+"CBC2": "",
+"CBC3": "",
+"CBC4": "",
+"CBD1": "",
+"CBD2": "",
+"CBD3": "",
+"CBD4": "",
+"CBE1": "",
+"CBE2": "",
+"CBE3": "",
+"CBE4": "",
+"CBF1": "",
+"CBF2": "",
+"CBF3": "",
+"CBF4": "",
+"CBH": "",
+"CBS1": "幅",
+"CBS2": "上",
+"CBS3": "",
+"CBS4": "",
+"CBU1": "",
+"CBU2": "",
+"CBU3": "",
+"CBU4": "",
+"CBad": "",
+"C_UnderVisual": "",
+"C_UpVisual": "",
+"CheckTC": "",
+"CheckTD": "",
+"CheckTE": "",
+"CheckTF": "",
+"CheckTS": "",
+"CheckTU": "",
+"Comment": "",
+"Conductiv": "",
+"ConductivL": "",
+"ConductivText": "",
+"D": "E1",
+"D1": "",
+"D10": "",
+"D11": "",
+"D12": "",
+"D13": "",
+"D14": "",
+"D2": "",
+"D3": "",
+"D4": "",
+"D5": "",
+"D6": "",
+"D7": "",
+"D8": "",
+"D9": "",
+"DBH": "",
+"DBad": "",
+"DBflag": "",
+"D_UnderVisual": "",
+"D_UpVisual": "",
+"Day1": "2026.11.02  10:06",
+"Day2": "",
+"Day3": "",
+"DebugLate": "",
+"DebugTaikaku": "",
+"DeleteC": "",
+"DeleteP": "",
+"DiagC": "",
+"DiagCKou": "",
+"DiagD": "",
+"DiagDKou": "",
+"DiagE": "",
+"DiagEKou": "",
+"DiagF": "",
+"DiagFKou": "",
+"DiagS": "",
+"DiagSKou": "",
+"DiagU": "",
+"DiagUKou": "",
+"DistortionFrame": "参照元:Q-S-QA-DIM-122_別表E",
+"E": "E",
+"E1": "",
+"E10": "",
+"E11": "",
+"E12": "",
+"E13": "",
+"E14": "",
+"E2": "",
+"E3": "",
+"E4": "",
+"E5": "",
+"E6": "",
+"E7": "",
+"E8": "",
+"E9": "",
+"EBH": "",
+"EBad": "",
+"E_UnderVisual": "",
+"E_UpVisual": "",
+"EachTime": "",
+"EachValue": "",
+"EndTime": "",
+"F": "",
+"F1": "",
+"F10": "",
+"F2": "",
+"F3": "",
+"F4": "",
+"F5": "",
+"F6": "",
+"F7": "",
+"F8": "",
+"F9": "",
+"FBad": "",
+"FC": "2",
+"FD": "E1",
+"FE": "E",
+"FF": "",
+"FMC": "",
+"FMD": "",
+"FME": "",
+"FMF": "",
+"FMS": "",
+"FMU": "",
+"FS": "S",
+"FU": "S1",
+"F_UnderVisual": "",
+"F_UpVisual": "",
+"GC": "",
+"GD": "",
+"GE": "",
+"GF": "",
+"GS": "0.20",
+"GU": "",
+"HL1": "",
+"HL2": "",
+"HL3": "",
+"HL4": "",
+"HL5": "",
+"HL6": "",
+"HMax": "",
+"HMin": "",
+"HURIS": "",
+"HaHiz": "2.0",
+"Hab": "1252.0",
+"HizCome": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"Hm": "2.0",
+"HmK": "1250.0",
+"Hp": "2.0",
+"HpK": "1254.0",
+"INP": "",
+"INP.Tag": "ZS",
+"InspeButt": "検入≦25",
+"IzyouFl": "",
+"KenCount": "",
+"KenH": "前工程実績17枚",
+"KenHBox1": "",
+"KenHBox2": "",
+"KenHBox3": "",
+"KenHBox4": "",
+"KenHBox5": "",
+"KenHBox6": "",
+"KenHBox7": "",
+"KenHL1": "",
+"KenHL10": "",
+"KenHL2": "",
+"KenHL3": "",
+"KenHL4": "",
+"KenHL5": "",
+"KenHL6": "",
+"KenHL7": "",
+"KenHL8": "",
+"KenHL9": "",
+"KenNo": "H6X1355",
+"L1": "幅1",
+"L10": "直角度",
+"L11": "ﾗﾃﾗﾙﾎﾞｰ",
+"L12": "",
+"L13": "",
+"L2": "幅2",
+"L3": "丈1",
+"L4": "丈2",
+"L5": "対角A",
+"L6": "対角B",
+"L7": "",
+"L8": "",
+"L9": "対角線差",
+"LC1": "",
+"LC10": "",
+"LC11": "",
+"LC12": "",
+"LC2": "",
+"LC3": "",
+"LC4": "",
+"LC5": "",
+"LC6": "",
+"LC7": "",
+"LC8": "",
+"LC9": "",
+"LGC": "ｹﾞｰｼﾞ",
+"LGD": "ｹﾞｰｼﾞ",
+"LGE": "ｹﾞｰｼﾞ",
+"LGF": "ｹﾞｰｼﾞ",
+"LGS": "ｹﾞｰｼﾞ",
+"LGU": "ｹﾞｰｼﾞ",
+"LZC": "定盤",
+"LZD": "定盤",
+"LZE": "定盤",
+"LZF": "定盤",
+"LZS": "定盤",
+"LZU": "定盤",
+"LastHot": "最終熱処理工程：ANF",
+"Lateral": "3",
+"LateralC": "",
+"LateralD": "",
+"LateralE": "",
+"LateralF": "",
+"LateralS": "",
+"LateralText": "3.0",
+"LateralText.Tag": "",
+"LateralU": "",
+"LineName": "HVC",
+"LineNo": "",
+"Load": "on",
+"Loading": "",
+"Lot": "H7345B0",
+"MG": "",
+"MPEX.Tag": "",
+"Machin": "",
+"Mimi": "",
+"MoveFlag": "",
+"NGC": "",
+"NGD": "",
+"NGE": "",
+"NGF": "",
+"NGS": "",
+"NGU": "",
+"Naka": "",
+"OPE1": "S",
+"OPE2": "S1",
+"OPE3": "2",
+"OPE4": "E1",
+"OPE5": "E",
+"OPE6": "F",
+"OPS1": "S",
+"OPS2": "S1",
+"OPS3": "2",
+"OPS4": "E1",
+"OPS5": "E",
+"OPS6": "F",
+"PakeD": "",
+"PicFM.Tag": "0",
+"ProofreadFlag": "ok",
+"QF": "",
+"ReSize.Tag": "",
+"Reien": "",
+"S": "S",
+"S1": "",
+"S10": "",
+"S11": "",
+"S12": "",
+"S13": "",
+"S14": "",
+"S2": "",
+"S3": "",
+"S4": "",
+"S5": "",
+"S6": "",
+"S7": "",
+"S8": "",
+"S9": "",
+"SBH": "",
+"SBad": "",
+"SFM.Tag": "",
+"S_UnderVisual": "",
+"S_UpVisual": "",
+"StartTime": "",
+"Sumisei": "",
+"T1": "検査員01",
+"T2": "",
+"T3": "",
+"TAIK": "3",
+"TEC": "",
+"TED": "",
+"TEE": "",
+"TEF": "",
+"TES": "",
+"TEU": "",
+"TMax": "",
+"TMin": "",
+"TSC": "",
+"TSD": "",
+"TSE": "",
+"TSF": "",
+"TSS": "",
+"TSU": "",
+"TaHiz": "3.0",
+"Tagtext": "ZS",
+"TaikText": "2.0",
+"Tak": "2502.0",
+"Tm": "2.0",
+"TmK": "2500.0",
+"Tp": "2.0",
+"TpK": "2504.0",
+"Tyu": "R",
+"U": "S1",
+"U1": "",
+"U10": "",
+"U11": "",
+"U12": "",
+"U13": "",
+"U14": "",
+"U2": "",
+"U3": "",
+"U4": "",
+"U5": "",
+"U6": "",
+"U7": "",
+"U8": "",
+"U9": "",
+"UBH": "",
+"UBad": "",
+"UFTag": "",
+"U_UnderVisual": "",
+"U_UpVisual": "",
+"WorkButton.Tag": "",
+"Yama": "",
+"Yama.Tag": "",
+"YamaLB": "",
+"YamaLabel": "",
+"Youto": "H165",
+"ZC": "",
+"ZD": "",
+"ZE": "",
+"ZEB": "全数.三菱.5N",
+"ZF": "",
+"ZS": "0.30",
+"ZU": "",
+"Zai": "995",
+"blindfold.Tag": "",
+"dataLoding": "",
+"flatnes": "4",
+"flatnesText": "",
+"スラブ.Caption": "スラブ",
+"厚板.Caption": "H",
+"少枚数.Caption": "少枚数",
+"極厚.Caption": "耳付",
+"薄板.Caption": "薄板",
+"高さ計算式": ""
+},
+"visible": {
+"AL1": true,
+"AL2": true,
+"AL3": true,
+"AL4": true,
+"Abno": true,
+"AtButt": false,
+"C": true,
+"C1": true,
+"C10": true,
+"C11": false,
+"C12": false,
+"C13": false,
+"C14": false,
+"C2": true,
+"C3": true,
+"C4": true,
+"C5": true,
+"C6": true,
+"C7": true,
+"C8": true,
+"C9": true,
+"CBC1": true,
+"CBC2": true,
+"CBC3": true,
+"CBC4": true,
+"CBD1": true,
+"CBD2": true,
+"CBD3": true,
+"CBD4": true,
+"CBE1": true,
+"CBE2": true,
+"CBE3": true,
+"CBE4": true,
+"CBF1": true,
+"CBF2": true,
+"CBF3": true,
+"CBF4": true,
+"CBH": true,
+"CBS1": true,
+"CBS2": true,
+"CBS3": true,
+"CBS4": true,
+"CBU1": true,
+"CBU2": true,
+"CBU3": true,
+"CBU4": true,
+"CBad": true,
+"C_UnderVisual": true,
+"C_UpVisual": true,
+"CheckTC": true,
+"CheckTD": true,
+"CheckTE": true,
+"CheckTF": false,
+"CheckTS": true,
+"CheckTU": true,
+"Conductiv": true,
+"ConductivL": false,
+"D": true,
+"D1": true,
+"D10": false,
+"D11": false,
+"D12": false,
+"D13": false,
+"D14": false,
+"D2": true,
+"D3": true,
+"D4": true,
+"D5": false,
+"D6": false,
+"D7": false,
+"D8": false,
+"D9": false,
+"DBH": true,
+"DBad": true,
+"D_UnderVisual": true,
+"D_UpVisual": true,
+"Day1": true,
+"Day2": true,
+"Day3": true,
+"DebugLate": true,
+"DebugTaikaku": true,
+"DiagC": true,
+"DiagCKou": false,
+"DiagD": false,
+"DiagDKou": false,
+"DiagE": true,
+"DiagEKou": false,
+"DiagF": false,
+"DiagFKou": false,
+"DiagS": true,
+"DiagSKou": false,
+"DiagU": false,
+"DiagUKou": false,
+"DistortionFrame": true,
+"E": true,
+"E1": true,
+"E10": true,
+"E11": false,
+"E12": false,
+"E13": false,
+"E14": false,
+"E2": true,
+"E3": true,
+"E4": true,
+"E5": true,
+"E6": true,
+"E7": true,
+"E8": true,
+"E9": true,
+"EBH": true,
+"EBad": true,
+"E_UnderVisual": true,
+"E_UpVisual": true,
+"EndTime": true,
+"F": false,
+"F1": false,
+"F10": false,
+"F2": false,
+"F3": false,
+"F4": false,
+"F5": false,
+"F6": false,
+"F7": false,
+"F8": false,
+"F9": false,
+"FBad": false,
+"FC": true,
+"FD": true,
+"FE": true,
+"FF": false,
+"FMC": true,
+"FMD": true,
+"FME": true,
+"FMF": false,
+"FMS": true,
+"FMU": true,
+"FS": true,
+"FU": true,
+"F_UnderVisual": false,
+"F_UpVisual": false,
+"GC": true,
+"GD": true,
+"GE": true,
+"GF": true,
+"GS": true,
+"GU": true,
+"HL1": true,
+"HL2": true,
+"HL3": true,
+"HL4": true,
+"HL5": true,
+"HL6": true,
+"HaHiz": true,
+"HizCome": true,
+"InspeButt": false,
+"IzyouFl": true,
+"KenCount": true,
+"KenH": true,
+"KenHBox1": false,
+"KenHBox2": false,
+"KenHBox3": false,
+"KenHBox4": false,
+"KenHBox5": false,
+"KenHBox6": false,
+"KenHBox7": false,
+"KenHL1": true,
+"KenHL10": true,
+"KenHL2": true,
+"KenHL3": true,
+"KenHL4": true,
+"KenHL5": true,
+"KenHL6": true,
+"KenHL7": true,
+"KenHL8": true,
+"KenHL9": true,
+"L1": true,
+"L10": false,
+"L11": false,
+"L12": false,
+"L13": false,
+"L2": true,
+"L3": true,
+"L4": true,
+"L5": true,
+"L6": true,
+"L7": false,
+"L8": false,
+"L9": true,
+"LC1": true,
+"LC10": true,
+"LC11": true,
+"LC12": false,
+"LC2": true,
+"LC3": true,
+"LC4": true,
+"LC5": true,
+"LC6": false,
+"LC7": true,
+"LC8": true,
+"LC9": true,
+"LGC": true,
+"LGD": true,
+"LGE": true,
+"LGF": true,
+"LGS": true,
+"LGU": true,
+"LZC": true,
+"LZD": true,
+"LZE": true,
+"LZF": true,
+"LZS": true,
+"LZU": true,
+"LastHot": true,
+"LateralC": false,
+"LateralD": false,
+"LateralE": false,
+"LateralF": false,
+"LateralS": false,
+"LateralU": false,
+"Loading": false,
+"MG": true,
+"Mimi": true,
+"NGC": true,
+"NGD": true,
+"NGE": true,
+"NGF": false,
+"NGS": true,
+"NGU": true,
+"Naka": true,
+"OPE1": true,
+"OPE2": true,
+"OPE3": true,
+"OPE4": true,
+"OPE5": true,
+"OPE6": false,
+"OPS1": true,
+"OPS2": true,
+"OPS3": true,
+"OPS4": true,
+"OPS5": true,
+"OPS6": false,
+"QF": true,
+"S": true,
+"S1": true,
+"S10": true,
+"S11": false,
+"S12": false,
+"S13": false,
+"S14": false,
+"S2": true,
+"S3": true,
+"S4": true,
+"S5": true,
+"S6": true,
+"S7": true,
+"S8": true,
+"S9": true,
+"SBH": true,
+"SBad": true,
+"S_UnderVisual": true,
+"S_UpVisual": true,
+"StartTime": true,
+"T1": true,
+"T2": true,
+"T3": true,
+"TEC": true,
+"TED": true,
+"TEE": true,
+"TEF": false,
+"TES": true,
+"TEU": true,
+"TSC": true,
+"TSD": true,
+"TSE": true,
+"TSF": false,
+"TSS": true,
+"TSU": true,
+"TaHiz": true,
+"TaikText": true,
+"U": true,
+"U1": true,
+"U10": false,
+"U11": false,
+"U12": false,
+"U13": false,
+"U14": false,
+"U2": true,
+"U3": true,
+"U4": true,
+"U5": false,
+"U6": false,
+"U7": false,
+"U8": false,
+"U9": false,
+"UBH": true,
+"UBad": true,
+"U_UnderVisual": true,
+"U_UpVisual": true,
+"Yama": false,
+"YamaLB": true,
+"YamaLabel": false,
+"ZC": true,
+"ZD": true,
+"ZE": true,
+"ZEB": true,
+"ZF": true,
+"ZS": true,
+"ZU": true,
+"dataLoding": true,
+"flatnes": true,
+"高さ計算式": true
+},
+"work": "厚板"
+},
+"view": {
+"bad": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"bh": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"pos": "F",
+"visible": false
+}
+],
+"bh_note": {
+"last_hot": "最終熱処理工程：ANF",
+"qf": ""
+},
+"blind": "",
+"buttons": {
+"abno": "異常値on",
+"aorb": "Now_A",
+"byousya": false,
+"conductiv": false,
+"izyou": false,
+"print": "印刷",
+"print_reset": false,
+"resize": false
+},
+"calibration_required": false,
+"cb_choices": {
+"C": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"D": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"E": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"F": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"S": {
+"1": [
+"幅",
+"丈"
+],
+"2": [
+"上",
+"下"
+],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"U": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+}
+},
+"checks": [],
+"confi": null,
+"grid": {
+"diag": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"diag_kou": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"diag_kou_label": "直角度",
+"diag_label": "対角線差",
+"lateral": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"lateral_label": "ﾗﾃﾗﾙﾎﾞｰ",
+"ng": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"positions": [
+{
+"key": "S",
+"label": "S",
+"visible": true
+},
+{
+"key": "U",
+"label": "S1",
+"visible": true
+},
+{
+"key": "C",
+"label": "2",
+"visible": true
+},
+{
+"key": "D",
+"label": "E1",
+"visible": true
+},
+{
+"key": "E",
+"label": "E",
+"visible": true
+},
+{
+"key": "F",
+"label": "F",
+"visible": false
+}
+],
+"rows": [
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F1",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚1",
+"no": 1,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F2",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚2",
+"no": 2,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F3",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚3",
+"no": 3,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "U4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "D4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F4",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚4",
+"no": 4,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U5",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D5",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F5",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "幅1",
+"no": 5,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U6",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D6",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F6",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "幅2",
+"no": 6,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U7",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D7",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F7",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "丈1",
+"no": 7,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U8",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D8",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F8",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "丈2",
+"no": 8,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U9",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D9",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F9",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "対角A",
+"no": 9,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "S10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U10",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "C10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D10",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "E10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"name": "F10",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "対角B",
+"no": 10,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 11,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 12,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 13,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "S14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "U14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "C14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "D14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"name": "E14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 14,
+"visible": false
+}
+]
+},
+"header": {
+"at_butt": {
+"caption": "厚2ヵ所",
+"visible": false
+},
+"at_count": "",
+"comment": "",
+"inspe_butt": {
+"caption": "検入≦25",
+"visible": false
+},
+"ken_no": "H6X1355",
+"line": "HVC",
+"line_no": "",
+"lot": "H7345B0",
+"proofread": true,
+"reien": "",
+"tyu": "R",
+"work": "厚板",
+"works": [
+{
+"caption": "H",
+"key": "厚板",
+"visible": true
+},
+{
+"caption": "薄板",
+"key": "薄板",
+"visible": false
+},
+{
+"caption": "少枚数",
+"key": "少枚数",
+"visible": true
+},
+{
+"caption": "耳付",
+"key": "極厚",
+"visible": false
+},
+{
+"caption": "スラブ",
+"key": "スラブ",
+"visible": false
+}
+],
+"yama": "",
+"yama_visible": false,
+"youto": "H165",
+"zai": "995"
+},
+"inp_tag": "ZS",
+"ken_count": "",
+"ken_count_visible": true,
+"ken_formula": "",
+"ken_h": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 1,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 2,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 3,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 4,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 5,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 6,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 7,
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"ken_h_label": "前工程実績17枚",
+"ken_hl": {
+"HL1": {
+"value": "",
+"visible": true
+},
+"HL2": {
+"value": "",
+"visible": true
+},
+"HL3": {
+"value": "",
+"visible": true
+},
+"HL4": {
+"value": "",
+"visible": true
+},
+"HL5": {
+"value": "",
+"visible": true
+},
+"HL6": {
+"value": "",
+"visible": true
+},
+"KenHL1": {
+"value": "",
+"visible": true
+},
+"KenHL10": {
+"value": "",
+"visible": true
+},
+"KenHL2": {
+"value": "",
+"visible": true
+},
+"KenHL3": {
+"value": "",
+"visible": true
+},
+"KenHL4": {
+"value": "",
+"visible": true
+},
+"KenHL5": {
+"value": "",
+"visible": true
+},
+"KenHL6": {
+"value": "",
+"visible": true
+},
+"KenHL7": {
+"value": "",
+"visible": true
+},
+"KenHL8": {
+"value": "",
+"visible": true
+},
+"KenHL9": {
+"value": "",
+"visible": true
+}
+},
+"lists": {
+"defect": [
+{
+"code": "01",
+"name": "フクレ"
+},
+{
+"code": "02",
+"name": "　"
+},
+{
+"code": "11",
+"name": "ムシレ"
+},
+{
+"code": "12",
+"name": "汚"
+},
+{
+"code": "13",
+"name": "リックアップ"
+},
+{
+"code": "14",
+"name": " "
+},
+{
+"code": "21",
+"name": "圧込"
+},
+{
+"code": "22",
+"name": "汚"
+},
+{
+"code": "23",
+"name": "フラットネス"
+},
+{
+"code": "24",
+"name": "厚"
+},
+{
+"code": "25",
+"name": " "
+},
+{
+"code": "31",
+"name": "汚"
+},
+{
+"code": "32",
+"name": "飛込"
+},
+{
+"code": "33",
+"name": "当り"
+},
+{
+"code": "34",
+"name": "擢"
+},
+{
+"code": "35",
+"name": "付着油"
+},
+{
+"code": "36",
+"name": "切断面"
+},
+{
+"code": "37",
+"name": "巾丈"
+},
+{
+"code": "38",
+"name": "特寸"
+},
+{
+"code": "39",
+"name": " "
+},
+{
+"code": "41",
+"name": "他"
+},
+{
+"code": "",
+"name": "TP"
+},
+{
+"code": "",
+"name": "ｽﾎﾟｯﾄ処理"
+}
+],
+"visual": [
+"",
+"当り跡ﾞ",
+"扱いｷｽﾞ",
+"圧込み",
+"油圧込み",
+"油残り跡",
+"油焼け",
+"油汚れ",
+"油寄り",
+"AL片圧込み",
+"AL付着跡",
+"板厚外れ",
+"異物圧込み",
+"折れ",
+"ｷｽﾞ",
+"承台跡",
+"ｽｼﾞ",
+"ｽﾘｷｽﾞ",
+"ｽﾘｯﾌﾟｷｽﾞ",
+"寸法外れ",
+"段",
+"突上げ",
+"突下げ",
+"ﾃｰﾙﾏｰｸ",
+"ﾄﾋﾞｺﾐ",
+"共ｽﾞﾚ",
+"刃跡",
+"肌荒れ",
+"歪",
+"腐食",
+"ﾍｺ",
+"偏析",
+"Hot共ｽﾞﾚ",
+"巻付段",
+"ﾑｼﾚ",
+"焼刃",
+"汚れ",
+"QF白ﾎﾟﾁ汚れ",
+"QF湯流れ",
+"ﾚﾍﾞﾗｰｽｼﾞ",
+"ﾛｰﾙｷｽﾞ",
+"ﾛｰﾙﾏｰｸ",
+"割れ",
+"巻付跡",
+"ﾊﾟｯﾄｽｼﾞ",
+"鋳造剥離",
+"欠陥ﾅｼ",
+"当りｷｽﾞ",
+"圧込み状ﾑｼﾚ",
+"AL粉圧込み",
+"異物巻込み",
+"ｴｯｼﾞﾞ酸化",
+"外注欠陥",
+"ｶﾐｺﾐ跡",
+"ｺｰﾃｨﾝｸﾞﾑﾗ",
+"ｼｮｯｸ跡",
+"ｽﾄﾘｰｸﾑｼﾚ",
+"ｽﾍﾟｰｻｰｷｽﾞ",
+"ｽﾘｯﾌﾟ跡",
+"ｽﾘｰﾛｰﾙｽﾘｯﾌﾟ跡",
+"切断面異常",
+"ﾁｬﾀﾘﾝｸﾞ",
+"ﾂﾔﾑﾗ",
+"ﾃｰﾌﾞﾙｽﾘ跡",
+"共ｽﾞﾚ圧込み",
+"ﾊﾟｲﾗｰｷｽﾞ",
+"ﾌｸﾚ",
+"ﾍﾘﾝｸﾞﾎﾞｰﾝ",
+"補助ﾛｰﾙｷｽﾞ",
+"QF汚れ",
+"QF黒ﾎﾟﾁ汚れ",
+"ﾚﾍﾞﾗｰｷｽﾞ",
+"ﾋﾞﾋﾞﾘ段",
+"ﾎﾞﾀ落ち汚れ",
+"SSﾏｰｸ",
+"ｶｯﾌﾟﾙ跡"
+],
+"yama": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"枚数"
+]
+},
+"lot_source": {
+"active": false,
+"lot": "",
+"mode": "オフライン",
+"on": false
+},
+"minmax": {
+"amax": "",
+"amin": "",
+"hmax": "",
+"hmin": "",
+"tmax": "",
+"tmin": ""
+},
+"name_list": null,
+"next": {
+"auto": true,
+"kind": "",
+"label": "ZS",
+"machin": "",
+"name": "ZS"
+},
+"order": {
+"comment": "",
+"form": "",
+"list": [
+"54033469"
+],
+"no": "",
+"value": ""
+},
+"pack": null,
+"print_ready": false,
+"proofread": "ok",
+"range": {
+"labels": [
+"S",
+"S1",
+"2",
+"E1",
+"E",
+""
+],
+"ope": 0,
+"ops": 0
+},
+"report": null,
+"strain": {
+"cb": {
+"CBC1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "幅",
+"visible": true
+},
+"CBS2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "上",
+"visible": true
+},
+"CBS3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+}
+},
+"face": "Now_A",
+"g": [
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "0.20",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": true
+}
+],
+"z": [
+{
+"border": "",
+"color": "OK",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "0.30",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": true
+}
+]
+},
+"strain_frame": {
+"C": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"D": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"E": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"F": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": false
+},
+"S": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"U": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+}
+},
+"strain_note": "",
+"taik_text": "2.0",
+"tolerance": {
+"additional": "対角追記公差あり",
+"am": "0.350",
+"amk": "14.650",
+"ap": "0.350",
+"apk": "15.350",
+"atu": "15.000",
+"conductiv_text": "",
+"flatnes_text": "",
+"hab": "1252.0",
+"hm": "2.0",
+"hmk": "1250.0",
+"hp": "2.0",
+"hpk": "1254.0",
+"lateral_grade": "3",
+"lateral_text": "3.0",
+"sumisei": "",
+"taik": "3",
+"tak": "2502.0",
+"tm": "2.0",
+"tmk": "2500.0",
+"tp": "2.0",
+"tpk": "2504.0"
+},
+"vc": {
+"a": {
+"image": "",
+"label": "A面:ｴﾝｶﾋﾞﾆﾙ_ｲｴﾛ-ｸﾞﾘ-ﾝ",
+"visible": false
+},
+"b": {
+"image": "",
+"label": "B面:ｴﾝｶﾋﾞﾆﾙ_ｲｴﾛ-ｸﾞﾘ-ﾝ",
+"visible": false
+},
+"nothing": "208WRYG.JPG写真登録がないかﾈｯﾄﾜｰｸに繋がっていません：\\\\nlmsrvngy03\\各課共有\\0130_日軽稲沢\\梱包課\\AIM\\VC種類画像\\"
+},
+"visual": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 1,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 2,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 3,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 4,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 5,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 6,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 7,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 8,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 9,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 10,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 11,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 12,
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"visual_caps": {
+"C_UnderVisual": {
+"value": "",
+"visible": true
+},
+"C_UpVisual": {
+"value": "",
+"visible": true
+},
+"D_UnderVisual": {
+"value": "",
+"visible": true
+},
+"D_UpVisual": {
+"value": "",
+"visible": true
+},
+"E_UnderVisual": {
+"value": "",
+"visible": true
+},
+"E_UpVisual": {
+"value": "",
+"visible": true
+},
+"F_UnderVisual": {
+"value": "",
+"visible": false
+},
+"F_UpVisual": {
+"value": "",
+"visible": false
+},
+"S_UnderVisual": {
+"value": "",
+"visible": true
+},
+"S_UpVisual": {
+"value": "",
+"visible": true
+},
+"U_UnderVisual": {
+"value": "",
+"visible": true
+},
+"U_UpVisual": {
+"value": "",
+"visible": true
+}
+},
+"worker_needed": false,
+"workers": [
+"T1: 検査員01(2026.11.02  10:06)"
+],
+"yama_lb": ""
+}
+},
+"3_読み戻し": {
+"sheets": {
+"Daily_HVC": {
+"2,1": "ﾛｯﾄNo",
+"2,10": "作業人数",
+"2,11": "合紙",
+"2,12": "枚数",
+"2,13": "包数",
+"2,14": "VC種別",
+"2,15": "etc",
+"2,16": " 停止①記号",
+"2,17": " 停止①時間",
+"2,18": " 停止②記号",
+"2,19": " 停止②時間",
+"2,2": "材・調質",
+"2,20": " 停止③記号",
+"2,21": " 停止③時間",
+"2,22": " 実績枚数",
+"2,23": " 実績重量",
+"2,24": " 作業時間",
+"2,25": " 単重",
+"2,3": "製品寸法",
+"2,4": "梱包No",
+"2,5": "検入枚数",
+"2,6": "開始時",
+"2,7": "開始分",
+"2,8": "終了時",
+"2,9": "終了分"
+},
+"Lot情報履歴": {
+"1,1": "登録日",
+"1,10": "用途ｺｰﾄﾞ",
+"1,11": "ｺｰｽ",
+"1,12": "得意先",
+"1,13": "納入先",
+"1,14": "送り先",
+"1,15": "前工程実績枚数",
+"1,16": "前工程実績重量",
+"1,17": "合紙",
+"1,18": "VC",
+"1,19": "VC_A",
+"1,2": "ｵｰﾀﾞｰNo",
+"1,20": "VC_B",
+"1,21": "単重",
+"1,22": "引当NO",
+"1,23": "引当調整NO",
+"1,24": "引当数量",
+"1,25": "引当ﾌｧｲﾙ登録",
+"1,26": "包装仕様NO",
+"1,3": "ﾛｯﾄNo",
+"1,4": "厚",
+"1,5": "巾",
+"1,6": "丈",
+"1,7": "検査No",
+"1,8": "材質",
+"1,9": "調質",
+"2,1": "2026-11-02 10:08:04",
+"2,10": "H165",
+"2,11": "HOT ST2 TUR ANF TUR PSW TUR VC KEN",
+"2,12": "ｸﾉｻﾝｷﾞﾖｳ(ｶ ﾎﾝｼﾔ",
+"2,13": "ｸﾉｻﾝｷﾞﾖｳ(ｶ ﾎﾝｼﾔ",
+"2,14": "ｳｴﾀﾞｳﾝﾕｿｳｺ(ｶ  (ｸﾉ)",
+"2,15": "17",
+"2,16": "2164.7",
+"2,17": "1",
+"2,18": "01",
+"2,19": "208WRYG",
+"2,2": "54033469",
+"2,20": "208WRYG",
+"2,21": "127.33628",
+"2,22": "61021053",
+"2,23": "0",
+"2,24": "16",
+"2,25": "2026-10-21 08:39:52",
+"2,26": "1P0116",
+"2,3": "H7345B0",
+"2,4": "15",
+"2,5": "1252",
+"2,6": "2502",
+"2,7": "H6X1355",
+"2,8": "995",
+"2,9": "R"
+},
+"作業保存_HVC": {
+"1,1": "H7345B0",
+"1,10": 2.0,
+"1,11": 14.65,
+"1,12": 15.35,
+"1,13": 1250.0,
+"1,14": 1254.0,
+"1,15": 2500.0,
+"1,16": 2504.0,
+"1,17": 995.0,
+"1,18": "R",
+"1,19": "H165",
+"1,2": 15.0,
+"1,20": 3.0,
+"1,23": 3.0,
+"1,24": 2.0,
+"1,25": 3.0,
+"1,26": 4.0,
+"1,28": "対角追記公差あり",
+"1,29": "厚板",
+"1,3": 1252.0,
+"1,34": 2.0,
+"1,35": 3.0,
+"1,38": "参照元:Q-S-QA-DIM-122_別表E",
+"1,39": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"1,4": 2502.0,
+"1,5": 0.35,
+"1,6": 0.35,
+"1,7": 2.0,
+"1,8": 2.0,
+"1,9": 2.0,
+"10,15": "__",
+"10,16": "__",
+"11,15": "__",
+"11,16": "__",
+"12,15": "__",
+"12,16": "__",
+"13,15": "__",
+"13,16": "__",
+"16,1": "前工程実績17枚",
+"17,1": "最終熱処理工程：ANF",
+"2,15": "幅_上_0.30",
+"2,16": "__0.20",
+"3,15": "__",
+"3,16": "__",
+"4,15": "__",
+"4,16": "__",
+"5,15": "__",
+"5,16": "__",
+"6,15": "__",
+"6,16": "__",
+"7,15": "__",
+"7,16": "__",
+"8,15": "__0.40",
+"8,16": "__",
+"9,1": "H6X1355",
+"9,15": "__",
+"9,16": "__"
+},
+"保存用": {
+"1,1": "検査開始終了",
+"1,10": "丈-",
+"1,100": "F厚1",
+"1,101": "F厚2",
+"1,102": "F厚3",
+"1,103": "F厚4",
+"1,104": "F巾1",
+"1,105": "F巾2",
+"1,106": "F丈1",
+"1,107": "F丈2",
+"1,108": "F対角A",
+"1,109": "F対角B",
+"1,11": "丈+",
+"1,110": "F定盤歪",
+"1,111": "Fゲージ歪",
+"1,112": "Fﾗﾃﾗﾙﾎﾞｰ",
+"1,113": "F外観",
+"1,114": "F_直角度",
+"1,12": "S厚1",
+"1,13": "S厚2",
+"1,14": "S厚3",
+"1,15": "S厚4",
+"1,16": "S巾1",
+"1,17": "S巾2",
+"1,18": "S丈1",
+"1,19": "S丈2",
+"1,2": "LOTNO",
+"1,20": "S対角A",
+"1,21": "S対角B",
+"1,22": "S定盤歪",
+"1,23": "Sゲージ歪",
+"1,24": "U厚1",
+"1,25": "U厚2",
+"1,26": "U厚3",
+"1,27": "U厚4",
+"1,28": "U巾1",
+"1,29": "U巾2",
+"1,3": "厚",
+"1,30": "U丈1",
+"1,31": "U丈2",
+"1,32": "U対角A",
+"1,33": "U対角B",
+"1,34": "U定盤歪",
+"1,35": "Uゲージ歪",
+"1,36": "C厚1",
+"1,37": "C厚2",
+"1,38": "C厚3",
+"1,39": "C厚4",
+"1,4": "幅",
+"1,40": "C巾1",
+"1,41": "C巾2",
+"1,42": "C丈1",
+"1,43": "C丈2",
+"1,44": "C対角A",
+"1,45": "C対角B",
+"1,46": "C定盤歪",
+"1,47": "Cゲージ歪",
+"1,48": "D厚1",
+"1,49": "D厚2",
+"1,5": "丈",
+"1,50": "D厚3",
+"1,51": "D厚4",
+"1,52": "D巾1",
+"1,53": "D巾2",
+"1,54": "D丈1",
+"1,55": "D丈2",
+"1,56": "D対角A",
+"1,57": "D対角B",
+"1,58": "D定盤歪",
+"1,59": "Dゲージ歪",
+"1,6": "厚-",
+"1,60": "E厚1",
+"1,61": "E厚2",
+"1,62": "E厚3",
+"1,63": "E厚4",
+"1,64": "E巾1",
+"1,65": "E巾2",
+"1,66": "E丈1",
+"1,67": "E丈2",
+"1,68": "E対角A",
+"1,69": "E対角B",
+"1,7": "厚+",
+"1,70": "E定盤歪",
+"1,71": "Eゲージ歪",
+"1,72": "Sﾗﾃﾗﾙﾎﾞｰ",
+"1,73": "Uﾗﾃﾗﾙﾎﾞｰ",
+"1,74": "Cﾗﾃﾗﾙﾎﾞｰ",
+"1,75": "Dﾗﾃﾗﾙﾎﾞｰ",
+"1,76": "Eﾗﾃﾗﾙﾎﾞｰ",
+"1,77": "検査員",
+"1,78": "公差修正",
+"1,79": "材質",
+"1,8": "幅-",
+"1,80": "調質",
+"1,81": "用途コード",
+"1,82": "LoadFile",
+"1,83": "検査頻度",
+"1,84": "フリー反り",
+"1,85": "S外観",
+"1,86": "U外観",
+"1,87": "C外観",
+"1,88": "D外観",
+"1,89": "E外観",
+"1,9": "幅+",
+"1,90": "S_BH",
+"1,91": "U_BH",
+"1,92": "C_BH",
+"1,93": "D_BH",
+"1,94": "E_BH",
+"1,95": "S_直角度",
+"1,96": "U_直角度",
+"1,97": "C_直角度",
+"1,98": "D_直角度",
+"1,99": "E_直角度"
+},
+"印刷履歴管理": {
+"1,1": "LOT番号",
+"1,2": "印刷日時",
+"1,3": "ライン名"
+},
+"校正記録": {
+"2,1": "2026.11.02",
+"2,4": "1直"
+},
+"検査員_HVC": {
+"1,1": "2026.11.02  10:06",
+"1,2": "検査員01"
+},
+"耳用": {
+"1,1": "検査開始終了",
+"1,10": "丈-",
+"1,100": "U外観",
+"1,101": "C外観",
+"1,102": "D外観",
+"1,103": "E外観",
+"1,104": "S_BH",
+"1,105": "U_BH",
+"1,106": "C_BH",
+"1,107": "D_BH",
+"1,108": "E_BH",
+"1,11": "丈+",
+"1,12": "S厚1",
+"1,13": "S厚2",
+"1,14": "S厚3",
+"1,15": "S厚4",
+"1,16": "S巾1",
+"1,17": "S巾2",
+"1,18": "S巾3",
+"1,19": "S巾4",
+"1,2": "LOTNO",
+"1,20": "S巾5",
+"1,21": "S巾6",
+"1,22": "S丈1",
+"1,23": "S丈2",
+"1,24": "S丈3",
+"1,25": "S丈4",
+"1,26": "S定盤歪",
+"1,27": "Sゲージ歪",
+"1,28": "U厚1",
+"1,29": "U厚2",
+"1,3": "厚",
+"1,30": "U厚3",
+"1,31": "U厚4",
+"1,32": "U巾1",
+"1,33": "U巾2",
+"1,34": "U巾3",
+"1,35": "U巾4",
+"1,36": "U巾5",
+"1,37": "U巾6",
+"1,38": "U丈1",
+"1,39": "U丈2",
+"1,4": "幅",
+"1,40": "U丈3",
+"1,41": "U丈4",
+"1,42": "U定盤歪",
+"1,43": "Uゲージ歪",
+"1,44": "C厚1",
+"1,45": "C厚2",
+"1,46": "C厚3",
+"1,47": "C厚4",
+"1,48": "C巾1",
+"1,49": "C巾2",
+"1,5": "丈",
+"1,50": "C巾3",
+"1,51": "C巾4",
+"1,52": "C巾5",
+"1,53": "C巾6",
+"1,54": "C丈1",
+"1,55": "C丈2",
+"1,56": "C丈3",
+"1,57": "C丈4",
+"1,58": "C定盤歪",
+"1,59": "Cゲージ歪",
+"1,6": "厚-",
+"1,60": "D厚1",
+"1,61": "D厚2",
+"1,62": "D厚3",
+"1,63": "D厚4",
+"1,64": "D巾1",
+"1,65": "D巾2",
+"1,66": "D巾3",
+"1,67": "D巾4",
+"1,68": "D巾5",
+"1,69": "D巾6",
+"1,7": "厚+",
+"1,70": "D丈1",
+"1,71": "D丈2",
+"1,72": "D丈3",
+"1,73": "D丈4",
+"1,74": "D定盤歪",
+"1,75": "Dゲージ歪",
+"1,76": "E厚1",
+"1,77": "E厚2",
+"1,78": "E厚3",
+"1,79": "E厚4",
+"1,8": "幅-",
+"1,80": "E巾1",
+"1,81": "E巾2",
+"1,82": "E巾3",
+"1,83": "E巾4",
+"1,84": "E巾5",
+"1,85": "E巾6",
+"1,86": "E丈1",
+"1,87": "E丈2",
+"1,88": "E丈3",
+"1,89": "E丈4",
+"1,9": "幅+",
+"1,90": "E定盤歪",
+"1,91": "Eゲージ歪",
+"1,92": "検査員",
+"1,93": "公差修正",
+"1,94": "材質",
+"1,95": "調質",
+"1,96": "用途コード",
+"1,97": "LoadFile",
+"1,98": "検査頻度",
+"1,99": "S外観"
+}
+},
+"snapshot": {
+"additional": "対角追記公差あり",
+"am": "0.350",
+"amk": "14.650",
+"aorb": "Now_A",
+"ap": "0.350",
+"apk": "15.350",
+"at_butt_visible": false,
+"at_count": "",
+"atsuita_caption": "H",
+"atu": "15.000",
+"bh": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"data_loading": "",
+"delete_c": "",
+"delete_p": "",
+"diag": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"diag_kou": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"distortion_frame": "参照元:Q-S-QA-DIM-122_別表E",
+"end_time": "",
+"flatnes": "4",
+"flatnes_text": "",
+"hab": "1252.0",
+"hahiz": "2.0",
+"height_formula": "",
+"hiz_come": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"hm": "2.0",
+"hmk": "1250.0",
+"hp": "2.0",
+"hpk": "1254.0",
+"huris": "",
+"inspe_butt_caption": "検入≦25",
+"inspe_butt_visible": false,
+"ken_count": "",
+"ken_h": "前工程実績17枚",
+"ken_hbox": [
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"ken_no": "H6X1355",
+"kind": "厚板",
+"last_hot": "最終熱処理工程：ANF",
+"lateral": "3",
+"lateral_face": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"lateral_text": "3.0",
+"lateral_text_backcolor": 0,
+"lateral_text_backstyle": 0,
+"lateral_text_tag": "",
+"lgs_caption": "ｹﾞｰｼﾞ",
+"line_name": "HVC",
+"lot": "H7345B0",
+"lot_source_lot": "",
+"lzs_caption": "定盤",
+"machin": "",
+"measure": {
+"C": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"D": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"E": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"F": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"S": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+"U": [
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+]
+},
+"mg": "",
+"mimi": "",
+"naka": "",
+"ng": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"positions": {
+"C": "2",
+"D": "E1",
+"E": "E",
+"F": "",
+"S": "S",
+"U": "S1"
+},
+"qf": "",
+"resize_tag": "",
+"start_time": "",
+"strain": {
+"C": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"D": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"E": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"F": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"S": {
+"cb1": "幅",
+"cb2": "上",
+"cb3": "",
+"cb4": "",
+"g": "0.20",
+"z": "0.30"
+},
+"U": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+}
+},
+"strain_tag": {
+"C": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"D": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"E": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"F": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+},
+"S": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": "0.40"
+},
+"U": {
+"cb1": "",
+"cb2": "",
+"cb3": "",
+"cb4": "",
+"g": "",
+"z": ""
+}
+},
+"sumisei": "",
+"t1": "検査員01",
+"t2": "",
+"t3": "",
+"tahiz": "3.0",
+"taik": "3",
+"taik_text": "2.0",
+"tak": "2502.0",
+"tm": "2.0",
+"tmk": "2500.0",
+"tp": "2.0",
+"tpk": "2504.0",
+"tyu": "R",
+"usuita_caption": "薄板",
+"visual_under": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"visual_up": {
+"C": "",
+"D": "",
+"E": "",
+"F": "",
+"S": "",
+"U": ""
+},
+"worker_shift": "1",
+"yama": "",
+"yama_lb": "",
+"yama_visible": false,
+"youto": "H165",
+"zai": "995"
+},
+"uf1": {
+"ng": [],
+"text": {
+"AL1": "厚1",
+"AL2": "厚2",
+"AL3": "厚3",
+"AL4": "厚4",
+"AMax": "",
+"AMin": "",
+"ATU": "15.000",
+"Abno": "異常値on",
+"Abno.Tag": "",
+"Additional": "対角追記公差あり",
+"Am": "0.350",
+"AmK": "14.650",
+"AorB": "Now_A",
+"Ap": "0.350",
+"ApK": "15.350",
+"AtButt": "厚2ヵ所",
+"AtCount": "",
+"Auto": "on",
+"C": "2",
+"C1": "",
+"C10": "",
+"C11": "",
+"C12": "",
+"C13": "",
+"C14": "",
+"C2": "",
+"C3": "",
+"C4": "",
+"C5": "",
+"C6": "",
+"C7": "",
+"C8": "",
+"C9": "",
+"CBC1": "",
+"CBC2": "",
+"CBC3": "",
+"CBC4": "",
+"CBD1": "",
+"CBD2": "",
+"CBD3": "",
+"CBD4": "",
+"CBE1": "",
+"CBE2": "",
+"CBE3": "",
+"CBE4": "",
+"CBF1": "",
+"CBF2": "",
+"CBF3": "",
+"CBF4": "",
+"CBH": "",
+"CBS1": "幅",
+"CBS2": "上",
+"CBS3": "",
+"CBS4": "",
+"CBU1": "",
+"CBU2": "",
+"CBU3": "",
+"CBU4": "",
+"CBad": "",
+"C_UnderVisual": "",
+"C_UpVisual": "",
+"CheckTC": "",
+"CheckTD": "",
+"CheckTE": "",
+"CheckTF": "",
+"CheckTS": "",
+"CheckTU": "",
+"Comment": "",
+"Conductiv": "",
+"ConductivL": "",
+"ConductivText": "",
+"D": "E1",
+"D1": "",
+"D10": "",
+"D11": "",
+"D12": "",
+"D13": "",
+"D14": "",
+"D2": "",
+"D3": "",
+"D4": "",
+"D5": "",
+"D6": "",
+"D7": "",
+"D8": "",
+"D9": "",
+"DBH": "",
+"DBad": "",
+"DBflag": "",
+"D_UnderVisual": "",
+"D_UpVisual": "",
+"Day1": "2026.11.02  10:06",
+"Day2": "",
+"Day3": "",
+"DeleteC": "",
+"DeleteP": "",
+"DiagC": "",
+"DiagCKou": "",
+"DiagD": "",
+"DiagDKou": "",
+"DiagE": "",
+"DiagEKou": "",
+"DiagF": "",
+"DiagFKou": "",
+"DiagS": "",
+"DiagSKou": "",
+"DiagU": "",
+"DiagUKou": "",
+"DistortionFrame": "参照元:Q-S-QA-DIM-122_別表E",
+"E": "E",
+"E1": "",
+"E10": "",
+"E11": "",
+"E12": "",
+"E13": "",
+"E14": "",
+"E2": "",
+"E3": "",
+"E4": "",
+"E5": "",
+"E6": "",
+"E7": "",
+"E8": "",
+"E9": "",
+"EBH": "",
+"EBad": "",
+"E_UnderVisual": "",
+"E_UpVisual": "",
+"EachTime": "",
+"EachValue": "",
+"EndTime": "",
+"F": "",
+"F1": "",
+"F10": "",
+"F2": "",
+"F3": "",
+"F4": "",
+"F5": "",
+"F6": "",
+"F7": "",
+"F8": "",
+"F9": "",
+"FBad": "",
+"FC": "2",
+"FD": "E1",
+"FE": "E",
+"FF": "",
+"FMC": "",
+"FMD": "",
+"FME": "",
+"FMF": "",
+"FMS": "",
+"FMU": "",
+"FS": "S",
+"FU": "S1",
+"F_UnderVisual": "",
+"F_UpVisual": "",
+"GC": "",
+"GD": "",
+"GE": "",
+"GF": "",
+"GS": "0.20",
+"GU": "",
+"HL1": "",
+"HL2": "",
+"HL3": "",
+"HL4": "",
+"HL5": "",
+"HL6": "",
+"HMax": "",
+"HMin": "",
+"HURIS": "",
+"HaHiz": "2.0",
+"Hab": "1252.0",
+"HizCome": "※製板カードに「Q-S-QA-DIM-122に従う」とコメントがない場合は、製板カードの品質等級で判定すること\r\nわからない場合は品証に連絡すること\r\n",
+"Hm": "2.0",
+"HmK": "1250.0",
+"Hp": "2.0",
+"HpK": "1254.0",
+"INP": "",
+"INP.Tag": "S1",
+"InspeButt": "検入≦25",
+"IzyouFl": "",
+"KenCount": "",
+"KenH": "前工程実績17枚",
+"KenHBox1": "",
+"KenHBox2": "",
+"KenHBox3": "",
+"KenHBox4": "",
+"KenHBox5": "",
+"KenHBox6": "",
+"KenHBox7": "",
+"KenHL1": "",
+"KenHL10": "",
+"KenHL2": "",
+"KenHL3": "",
+"KenHL4": "",
+"KenHL5": "",
+"KenHL6": "",
+"KenHL7": "",
+"KenHL8": "",
+"KenHL9": "",
+"KenNo": "H6X1355",
+"L1": "幅1",
+"L10": "直角度",
+"L11": "ﾗﾃﾗﾙﾎﾞｰ",
+"L12": "",
+"L13": "",
+"L2": "幅2",
+"L3": "丈1",
+"L4": "丈2",
+"L5": "対角A",
+"L6": "対角B",
+"L7": "",
+"L8": "",
+"L9": "対角線差",
+"LC1": "",
+"LC10": "",
+"LC11": "",
+"LC12": "",
+"LC2": "",
+"LC3": "",
+"LC4": "",
+"LC5": "",
+"LC6": "",
+"LC7": "",
+"LC8": "",
+"LC9": "",
+"LGC": "ｹﾞｰｼﾞ",
+"LGD": "ｹﾞｰｼﾞ",
+"LGE": "ｹﾞｰｼﾞ",
+"LGF": "ｹﾞｰｼﾞ",
+"LGS": "ｹﾞｰｼﾞ",
+"LGU": "ｹﾞｰｼﾞ",
+"LZC": "定盤",
+"LZD": "定盤",
+"LZE": "定盤",
+"LZF": "定盤",
+"LZS": "定盤",
+"LZU": "定盤",
+"LastHot": "最終熱処理工程：ANF",
+"Lateral": "3",
+"LateralC": "",
+"LateralD": "",
+"LateralE": "",
+"LateralF": "",
+"LateralS": "",
+"LateralText": "3.0",
+"LateralText.Tag": "",
+"LateralU": "",
+"LineName": "HVC",
+"LineNo": "",
+"Load": "on",
+"Loading": "",
+"Lot": "H7345B0",
+"MG": "",
+"MPEX.Tag": "",
+"Machin": "",
+"Mimi": "",
+"MoveFlag": "",
+"NGC": "",
+"NGD": "",
+"NGE": "",
+"NGF": "",
+"NGS": "",
+"NGU": "",
+"Naka": "",
+"OPE1": "S",
+"OPE2": "S1",
+"OPE3": "2",
+"OPE4": "E1",
+"OPE5": "E",
+"OPE6": "F",
+"OPS1": "S",
+"OPS2": "S1",
+"OPS3": "2",
+"OPS4": "E1",
+"OPS5": "E",
+"OPS6": "F",
+"PakeD": "",
+"PicFM.Tag": "0",
+"ProofreadFlag": "ok",
+"QF": "",
+"ReSize.Tag": "",
+"Reien": "",
+"ResizText": "",
+"S": "S",
+"S1": "",
+"S10": "",
+"S11": "",
+"S12": "",
+"S13": "",
+"S14": "",
+"S2": "",
+"S3": "",
+"S4": "",
+"S5": "",
+"S6": "",
+"S7": "",
+"S8": "",
+"S9": "",
+"SBH": "",
+"SBad": "",
+"SFM.Tag": "",
+"S_UnderVisual": "",
+"S_UpVisual": "",
+"StartTime": "",
+"Sumisei": "",
+"T1": "検査員01",
+"T2": "",
+"T3": "",
+"TAIK": "3",
+"TEC": "",
+"TED": "",
+"TEE": "",
+"TEF": "",
+"TES": "",
+"TEU": "",
+"TMax": "",
+"TMin": "",
+"TSC": "",
+"TSD": "",
+"TSE": "",
+"TSF": "",
+"TSS": "",
+"TSU": "",
+"TaHiz": "3.0",
+"Tagtext": "S1",
+"TaikText": "2.0",
+"Tak": "2502.0",
+"Tm": "2.0",
+"TmK": "2500.0",
+"Tp": "2.0",
+"TpK": "2504.0",
+"Tyu": "R",
+"U": "S1",
+"U1": "",
+"U10": "",
+"U11": "",
+"U12": "",
+"U13": "",
+"U14": "",
+"U2": "",
+"U3": "",
+"U4": "",
+"U5": "",
+"U6": "",
+"U7": "",
+"U8": "",
+"U9": "",
+"UBH": "",
+"UBad": "",
+"UFTag": "",
+"U_UnderVisual": "",
+"U_UpVisual": "",
+"WorkButton.Tag": "",
+"Yama": "",
+"Yama.Tag": "",
+"YamaLB": "",
+"YamaLabel": "",
+"Youto": "H165",
+"ZC": "",
+"ZD": "",
+"ZE": "",
+"ZEB": "全数.三菱.5N",
+"ZF": "",
+"ZS": "0.30",
+"ZU": "",
+"Zai": "995",
+"blindfold.Tag": "",
+"dataLoding": "",
+"flatnes": "4",
+"flatnesText": "",
+"スラブ.Caption": "スラブ",
+"厚板.Caption": "H",
+"少枚数.Caption": "少枚数",
+"極厚.Caption": "耳付",
+"薄板.Caption": "薄板",
+"高さ計算式": ""
+},
+"visible": {
+"AL1": true,
+"AL2": true,
+"AL3": true,
+"AL4": true,
+"Abno": true,
+"AtButt": false,
+"C": true,
+"C1": true,
+"C10": true,
+"C11": false,
+"C12": false,
+"C13": false,
+"C14": false,
+"C2": true,
+"C3": true,
+"C4": true,
+"C5": true,
+"C6": true,
+"C7": true,
+"C8": true,
+"C9": true,
+"CBC1": true,
+"CBC2": true,
+"CBC3": true,
+"CBC4": true,
+"CBD1": true,
+"CBD2": true,
+"CBD3": true,
+"CBD4": true,
+"CBE1": true,
+"CBE2": true,
+"CBE3": true,
+"CBE4": true,
+"CBF1": true,
+"CBF2": true,
+"CBF3": true,
+"CBF4": true,
+"CBH": true,
+"CBS1": true,
+"CBS2": true,
+"CBS3": true,
+"CBS4": true,
+"CBU1": true,
+"CBU2": true,
+"CBU3": true,
+"CBU4": true,
+"CBad": true,
+"C_UnderVisual": true,
+"C_UpVisual": true,
+"CheckTC": true,
+"CheckTD": true,
+"CheckTE": true,
+"CheckTF": false,
+"CheckTS": true,
+"CheckTU": true,
+"Conductiv": true,
+"ConductivL": false,
+"D": true,
+"D1": true,
+"D10": false,
+"D11": false,
+"D12": false,
+"D13": false,
+"D14": false,
+"D2": true,
+"D3": true,
+"D4": true,
+"D5": false,
+"D6": false,
+"D7": false,
+"D8": false,
+"D9": false,
+"DBH": true,
+"DBad": true,
+"D_UnderVisual": true,
+"D_UpVisual": true,
+"Day1": true,
+"Day2": true,
+"Day3": true,
+"DiagC": true,
+"DiagCKou": false,
+"DiagD": false,
+"DiagDKou": false,
+"DiagE": true,
+"DiagEKou": false,
+"DiagF": false,
+"DiagFKou": false,
+"DiagS": true,
+"DiagSKou": false,
+"DiagU": false,
+"DiagUKou": false,
+"DistortionFrame": true,
+"E": true,
+"E1": true,
+"E10": true,
+"E11": false,
+"E12": false,
+"E13": false,
+"E14": false,
+"E2": true,
+"E3": true,
+"E4": true,
+"E5": true,
+"E6": true,
+"E7": true,
+"E8": true,
+"E9": true,
+"EBH": true,
+"EBad": true,
+"E_UnderVisual": true,
+"E_UpVisual": true,
+"EndTime": true,
+"F": false,
+"F1": false,
+"F10": false,
+"F2": false,
+"F3": false,
+"F4": false,
+"F5": false,
+"F6": false,
+"F7": false,
+"F8": false,
+"F9": false,
+"FBad": false,
+"FC": true,
+"FD": true,
+"FE": true,
+"FF": false,
+"FMC": true,
+"FMD": true,
+"FME": true,
+"FMF": false,
+"FMS": true,
+"FMU": true,
+"FS": true,
+"FU": true,
+"F_UnderVisual": false,
+"F_UpVisual": false,
+"GC": true,
+"GD": true,
+"GE": true,
+"GF": true,
+"GS": true,
+"GU": true,
+"HL1": true,
+"HL2": true,
+"HL3": true,
+"HL4": true,
+"HL5": true,
+"HL6": true,
+"HaHiz": true,
+"HizCome": true,
+"InspeButt": false,
+"IzyouFl": true,
+"KenCount": true,
+"KenH": true,
+"KenHBox1": false,
+"KenHBox2": false,
+"KenHBox3": false,
+"KenHBox4": false,
+"KenHBox5": false,
+"KenHBox6": false,
+"KenHBox7": false,
+"KenHL1": true,
+"KenHL10": true,
+"KenHL2": true,
+"KenHL3": true,
+"KenHL4": true,
+"KenHL5": true,
+"KenHL6": true,
+"KenHL7": true,
+"KenHL8": true,
+"KenHL9": true,
+"L1": true,
+"L10": false,
+"L11": false,
+"L12": false,
+"L13": false,
+"L2": true,
+"L3": true,
+"L4": true,
+"L5": true,
+"L6": true,
+"L7": false,
+"L8": false,
+"L9": true,
+"LC1": true,
+"LC10": true,
+"LC11": true,
+"LC12": false,
+"LC2": true,
+"LC3": true,
+"LC4": true,
+"LC5": true,
+"LC6": false,
+"LC7": true,
+"LC8": true,
+"LC9": true,
+"LGC": true,
+"LGD": true,
+"LGE": true,
+"LGF": true,
+"LGS": true,
+"LGU": true,
+"LZC": true,
+"LZD": true,
+"LZE": true,
+"LZF": true,
+"LZS": true,
+"LZU": true,
+"LastHot": true,
+"LateralC": false,
+"LateralD": false,
+"LateralE": false,
+"LateralF": false,
+"LateralS": false,
+"LateralU": false,
+"Loading": false,
+"MG": true,
+"Mimi": true,
+"NGC": true,
+"NGD": true,
+"NGE": true,
+"NGF": false,
+"NGS": true,
+"NGU": true,
+"Naka": true,
+"OPE1": true,
+"OPE2": true,
+"OPE3": true,
+"OPE4": true,
+"OPE5": true,
+"OPE6": false,
+"OPS1": true,
+"OPS2": true,
+"OPS3": true,
+"OPS4": true,
+"OPS5": true,
+"OPS6": false,
+"QF": true,
+"ResizText": true,
+"S": true,
+"S1": true,
+"S10": true,
+"S11": false,
+"S12": false,
+"S13": false,
+"S14": false,
+"S2": true,
+"S3": true,
+"S4": true,
+"S5": true,
+"S6": true,
+"S7": true,
+"S8": true,
+"S9": true,
+"SBH": true,
+"SBad": true,
+"S_UnderVisual": true,
+"S_UpVisual": true,
+"StartTime": true,
+"T1": true,
+"T2": true,
+"T3": true,
+"TEC": true,
+"TED": true,
+"TEE": true,
+"TEF": false,
+"TES": true,
+"TEU": true,
+"TSC": true,
+"TSD": true,
+"TSE": true,
+"TSF": false,
+"TSS": true,
+"TSU": true,
+"TaHiz": true,
+"TaikText": true,
+"U": true,
+"U1": true,
+"U10": false,
+"U11": false,
+"U12": false,
+"U13": false,
+"U14": false,
+"U2": true,
+"U3": true,
+"U4": true,
+"U5": false,
+"U6": false,
+"U7": false,
+"U8": false,
+"U9": false,
+"UBH": true,
+"UBad": true,
+"U_UnderVisual": true,
+"U_UpVisual": true,
+"Yama": false,
+"YamaLB": true,
+"YamaLabel": false,
+"ZC": true,
+"ZD": true,
+"ZE": true,
+"ZEB": true,
+"ZF": true,
+"ZS": true,
+"ZU": true,
+"dataLoding": true,
+"flatnes": true,
+"高さ計算式": true
+},
+"work": "厚板"
+},
+"view": {
+"bad": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"bh": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"pos": "F",
+"visible": false
+}
+],
+"bh_note": {
+"last_hot": "最終熱処理工程：ANF",
+"qf": ""
+},
+"blind": "",
+"buttons": {
+"abno": "異常値on",
+"aorb": "Now_A",
+"byousya": false,
+"conductiv": false,
+"izyou": false,
+"print": "印刷",
+"print_reset": false,
+"resize": false
+},
+"calibration_required": false,
+"cb_choices": {
+"C": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"D": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"E": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"F": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"S": {
+"1": [
+"幅",
+"丈"
+],
+"2": [
+"上",
+"下"
+],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+},
+"U": {
+"1": [
+"幅",
+"丈"
+],
+"2": [],
+"3": [
+"幅",
+"丈"
+],
+"4": []
+}
+},
+"checks": [],
+"confi": null,
+"grid": {
+"diag": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": false,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"diag_kou": [
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"diag_kou_label": "直角度",
+"diag_label": "対角線差",
+"lateral": [
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"lateral_label": "ﾗﾃﾗﾙﾎﾞｰ",
+"ng": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"positions": [
+{
+"key": "S",
+"label": "S",
+"visible": true
+},
+{
+"key": "U",
+"label": "S1",
+"visible": true
+},
+{
+"key": "C",
+"label": "2",
+"visible": true
+},
+{
+"key": "D",
+"label": "E1",
+"visible": true
+},
+{
+"key": "E",
+"label": "E",
+"visible": true
+},
+{
+"key": "F",
+"label": "F",
+"visible": false
+}
+],
+"rows": [
+{
+"cells": [
+{
+"border": "RED",
+"color": "YELLOW",
+"enabled": true,
+"name": "S1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "U1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "D1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E1",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F1",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚1",
+"no": 1,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "U2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "D2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E2",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F2",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚2",
+"no": 2,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "U3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "D3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E3",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F3",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚3",
+"no": 3,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "U4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "D4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E4",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F4",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "厚4",
+"no": 4,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U5",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D5",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E5",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F5",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "幅1",
+"no": 5,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U6",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D6",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E6",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F6",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "幅2",
+"no": 6,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U7",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D7",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E7",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F7",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "丈1",
+"no": 7,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U8",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D8",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E8",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F8",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "丈2",
+"no": 8,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U9",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D9",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E9",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F9",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "対角A",
+"no": 9,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "S10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U10",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "C10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D10",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "E10",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": true,
+"name": "F10",
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"label": "対角B",
+"no": 10,
+"visible": true
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "S11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "C11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "E11",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 11,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "S12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "C12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "E12",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 12,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "S13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "C13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "E13",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 13,
+"visible": false
+},
+{
+"cells": [
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "S14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "U14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "C14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "D14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "BLACK",
+"color": "WHITE",
+"enabled": false,
+"name": "E14",
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"color": "",
+"name": "",
+"value": "",
+"visible": false
+}
+],
+"label": "",
+"no": 14,
+"visible": false
+}
+]
+},
+"header": {
+"at_butt": {
+"caption": "厚2ヵ所",
+"visible": false
+},
+"at_count": "",
+"comment": "",
+"inspe_butt": {
+"caption": "検入≦25",
+"visible": false
+},
+"ken_no": "H6X1355",
+"line": "HVC",
+"line_no": "",
+"lot": "H7345B0",
+"proofread": true,
+"reien": "",
+"tyu": "R",
+"work": "厚板",
+"works": [
+{
+"caption": "H",
+"key": "厚板",
+"visible": true
+},
+{
+"caption": "薄板",
+"key": "薄板",
+"visible": false
+},
+{
+"caption": "少枚数",
+"key": "少枚数",
+"visible": true
+},
+{
+"caption": "耳付",
+"key": "極厚",
+"visible": false
+},
+{
+"caption": "スラブ",
+"key": "スラブ",
+"visible": false
+}
+],
+"yama": "",
+"yama_visible": false,
+"youto": "H165",
+"zai": "995"
+},
+"inp_tag": "S1",
+"ken_count": "",
+"ken_count_visible": true,
+"ken_formula": "",
+"ken_h": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 1,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 2,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 3,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 4,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 5,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 6,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 7,
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"ken_h_label": "前工程実績17枚",
+"ken_hl": {
+"HL1": {
+"value": "",
+"visible": true
+},
+"HL2": {
+"value": "",
+"visible": true
+},
+"HL3": {
+"value": "",
+"visible": true
+},
+"HL4": {
+"value": "",
+"visible": true
+},
+"HL5": {
+"value": "",
+"visible": true
+},
+"HL6": {
+"value": "",
+"visible": true
+},
+"KenHL1": {
+"value": "",
+"visible": true
+},
+"KenHL10": {
+"value": "",
+"visible": true
+},
+"KenHL2": {
+"value": "",
+"visible": true
+},
+"KenHL3": {
+"value": "",
+"visible": true
+},
+"KenHL4": {
+"value": "",
+"visible": true
+},
+"KenHL5": {
+"value": "",
+"visible": true
+},
+"KenHL6": {
+"value": "",
+"visible": true
+},
+"KenHL7": {
+"value": "",
+"visible": true
+},
+"KenHL8": {
+"value": "",
+"visible": true
+},
+"KenHL9": {
+"value": "",
+"visible": true
+}
+},
+"lists": {
+"defect": [
+{
+"code": "01",
+"name": "フクレ"
+},
+{
+"code": "02",
+"name": "　"
+},
+{
+"code": "11",
+"name": "ムシレ"
+},
+{
+"code": "12",
+"name": "汚"
+},
+{
+"code": "13",
+"name": "リックアップ"
+},
+{
+"code": "14",
+"name": " "
+},
+{
+"code": "21",
+"name": "圧込"
+},
+{
+"code": "22",
+"name": "汚"
+},
+{
+"code": "23",
+"name": "フラットネス"
+},
+{
+"code": "24",
+"name": "厚"
+},
+{
+"code": "25",
+"name": " "
+},
+{
+"code": "31",
+"name": "汚"
+},
+{
+"code": "32",
+"name": "飛込"
+},
+{
+"code": "33",
+"name": "当り"
+},
+{
+"code": "34",
+"name": "擢"
+},
+{
+"code": "35",
+"name": "付着油"
+},
+{
+"code": "36",
+"name": "切断面"
+},
+{
+"code": "37",
+"name": "巾丈"
+},
+{
+"code": "38",
+"name": "特寸"
+},
+{
+"code": "39",
+"name": " "
+},
+{
+"code": "41",
+"name": "他"
+},
+{
+"code": "",
+"name": "TP"
+},
+{
+"code": "",
+"name": "ｽﾎﾟｯﾄ処理"
+}
+],
+"visual": [
+"",
+"当り跡ﾞ",
+"扱いｷｽﾞ",
+"圧込み",
+"油圧込み",
+"油残り跡",
+"油焼け",
+"油汚れ",
+"油寄り",
+"AL片圧込み",
+"AL付着跡",
+"板厚外れ",
+"異物圧込み",
+"折れ",
+"ｷｽﾞ",
+"承台跡",
+"ｽｼﾞ",
+"ｽﾘｷｽﾞ",
+"ｽﾘｯﾌﾟｷｽﾞ",
+"寸法外れ",
+"段",
+"突上げ",
+"突下げ",
+"ﾃｰﾙﾏｰｸ",
+"ﾄﾋﾞｺﾐ",
+"共ｽﾞﾚ",
+"刃跡",
+"肌荒れ",
+"歪",
+"腐食",
+"ﾍｺ",
+"偏析",
+"Hot共ｽﾞﾚ",
+"巻付段",
+"ﾑｼﾚ",
+"焼刃",
+"汚れ",
+"QF白ﾎﾟﾁ汚れ",
+"QF湯流れ",
+"ﾚﾍﾞﾗｰｽｼﾞ",
+"ﾛｰﾙｷｽﾞ",
+"ﾛｰﾙﾏｰｸ",
+"割れ",
+"巻付跡",
+"ﾊﾟｯﾄｽｼﾞ",
+"鋳造剥離",
+"欠陥ﾅｼ",
+"当りｷｽﾞ",
+"圧込み状ﾑｼﾚ",
+"AL粉圧込み",
+"異物巻込み",
+"ｴｯｼﾞﾞ酸化",
+"外注欠陥",
+"ｶﾐｺﾐ跡",
+"ｺｰﾃｨﾝｸﾞﾑﾗ",
+"ｼｮｯｸ跡",
+"ｽﾄﾘｰｸﾑｼﾚ",
+"ｽﾍﾟｰｻｰｷｽﾞ",
+"ｽﾘｯﾌﾟ跡",
+"ｽﾘｰﾛｰﾙｽﾘｯﾌﾟ跡",
+"切断面異常",
+"ﾁｬﾀﾘﾝｸﾞ",
+"ﾂﾔﾑﾗ",
+"ﾃｰﾌﾞﾙｽﾘ跡",
+"共ｽﾞﾚ圧込み",
+"ﾊﾟｲﾗｰｷｽﾞ",
+"ﾌｸﾚ",
+"ﾍﾘﾝｸﾞﾎﾞｰﾝ",
+"補助ﾛｰﾙｷｽﾞ",
+"QF汚れ",
+"QF黒ﾎﾟﾁ汚れ",
+"ﾚﾍﾞﾗｰｷｽﾞ",
+"ﾋﾞﾋﾞﾘ段",
+"ﾎﾞﾀ落ち汚れ",
+"SSﾏｰｸ",
+"ｶｯﾌﾟﾙ跡"
+],
+"yama": [
+"1",
+"2",
+"3",
+"4",
+"5",
+"6",
+"枚数"
+]
+},
+"lot_source": {
+"active": false,
+"lot": "",
+"mode": "オフライン",
+"on": false
+},
+"minmax": {
+"amax": "",
+"amin": "",
+"hmax": "",
+"hmin": "",
+"tmax": "",
+"tmin": ""
+},
+"name_list": null,
+"next": {
+"auto": true,
+"kind": "",
+"label": "S1",
+"machin": "",
+"name": "S1"
+},
+"order": {
+"comment": "",
+"form": "",
+"list": [],
+"no": "",
+"value": ""
+},
+"pack": null,
+"print_ready": false,
+"proofread": "ok",
+"range": {
+"labels": [
+"S",
+"S1",
+"2",
+"E1",
+"E",
+""
+],
+"ope": 0,
+"ops": 0
+},
+"report": null,
+"strain": {
+"cb": {
+"CBC1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBC4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBD4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBE4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBF4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "幅",
+"visible": true
+},
+"CBS2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "上",
+"visible": true
+},
+"CBS3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBS4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU1": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU2": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU3": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+},
+"CBU4": {
+"border": "",
+"color": "",
+"enabled": true,
+"underline": false,
+"value": "",
+"visible": true
+}
+},
+"face": "Now_A",
+"g": [
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "0.20",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": true
+}
+],
+"z": [
+{
+"border": "",
+"color": "OK",
+"enabled": true,
+"pos": "S",
+"underline": false,
+"value": "0.30",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "U",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "C",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "D",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "E",
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "WHITE",
+"enabled": true,
+"pos": "F",
+"underline": false,
+"value": "",
+"visible": true
+}
+]
+},
+"strain_frame": {
+"C": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"D": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"E": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"F": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": false
+},
+"S": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+},
+"U": {
+"lg": "ｹﾞｰｼﾞ",
+"lz": "定盤",
+"visible": true
+}
+},
+"strain_note": "",
+"taik_text": "2.0",
+"tolerance": {
+"additional": "対角追記公差あり",
+"am": "0.350",
+"amk": "14.650",
+"ap": "0.350",
+"apk": "15.350",
+"atu": "15.000",
+"conductiv_text": "",
+"flatnes_text": "",
+"hab": "1252.0",
+"hm": "2.0",
+"hmk": "1250.0",
+"hp": "2.0",
+"hpk": "1254.0",
+"lateral_grade": "3",
+"lateral_text": "3.0",
+"sumisei": "",
+"taik": "3",
+"tak": "2502.0",
+"tm": "2.0",
+"tmk": "2500.0",
+"tp": "2.0",
+"tpk": "2504.0"
+},
+"vc": {
+"a": {
+"image": "",
+"label": "A面:ｴﾝｶﾋﾞﾆﾙ_ｲｴﾛ-ｸﾞﾘ-ﾝ",
+"visible": false
+},
+"b": {
+"image": "",
+"label": "B面:ｴﾝｶﾋﾞﾆﾙ_ｲｴﾛ-ｸﾞﾘ-ﾝ",
+"visible": false
+},
+"nothing": "208WRYG.JPG写真登録がないかﾈｯﾄﾜｰｸに繋がっていません：\\\\nlmsrvngy03\\各課共有\\0130_日軽稲沢\\梱包課\\AIM\\VC種類画像\\"
+},
+"visual": [
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 1,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 2,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 3,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 4,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 5,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 6,
+"underline": false,
+"value": "",
+"visible": false
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 7,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 8,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 9,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 10,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 11,
+"underline": false,
+"value": "",
+"visible": true
+},
+{
+"border": "",
+"color": "",
+"enabled": true,
+"no": 12,
+"underline": false,
+"value": "",
+"visible": false
+}
+],
+"visual_caps": {
+"C_UnderVisual": {
+"value": "",
+"visible": true
+},
+"C_UpVisual": {
+"value": "",
+"visible": true
+},
+"D_UnderVisual": {
+"value": "",
+"visible": true
+},
+"D_UpVisual": {
+"value": "",
+"visible": true
+},
+"E_UnderVisual": {
+"value": "",
+"visible": true
+},
+"E_UpVisual": {
+"value": "",
+"visible": true
+},
+"F_UnderVisual": {
+"value": "",
+"visible": false
+},
+"F_UpVisual": {
+"value": "",
+"visible": false
+},
+"S_UnderVisual": {
+"value": "",
+"visible": true
+},
+"S_UpVisual": {
+"value": "",
+"visible": true
+},
+"U_UnderVisual": {
+"value": "",
+"visible": true
+},
+"U_UpVisual": {
+"value": "",
+"visible": true
+}
+},
+"worker_needed": false,
+"workers": [
+"T1: 検査員01(2026.11.02  10:06)"
+],
+"yama_lb": ""
+}
+}
+}
