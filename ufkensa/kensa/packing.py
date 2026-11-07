@@ -2,7 +2,7 @@
 
 ロットを読み込んだあと、`Lot情報履歴` の包装仕様NO と 使用パス(QualityPath)の `包装仕様書` フォルダの画像を
 突き合わせ、一致すれば包装仕様書の画像と引当の一覧を出す(モーダル。「確認」を付けないと閉じられない)。
-通常検査(UF1.CB_Change)・全ヵ所/H494(UFMitsubishi.ComboBox1_Change)・キャスク(UFCask.ComboBox1_Change)から使う。
+通常検査(UF1.CB_Change)・全ヵ所(UFMitsubishi.ComboBox1_Change)・キャスク(UFCask.ComboBox1_Change)から使う。
 
 | VBA | Python |
 |---|---|

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}全ヵ所・H494 — {{ display_name }}{% endblock %}
+{% block title %}全ヵ所 — {{ display_name }}{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/zenkasho.css') }}">
@@ -20,7 +20,7 @@
     <!-- 左: ロット・検査員・MINMAX と検査法・検入高さ・シート発行(VBA のフォーム) -->
     <div class="zk__col">
       <section class="card">
-        <header><h3>ロット</h3><span class="lv lv--ng" id="h494Badge" hidden>幅300未満(H494)</span></header>
+        <header><h3>ロット</h3></header>
         <div class="pad zk-form">
           <label>LotNo<input class="input" id="fLot" maxlength="7" autocomplete="off" placeholder="7桁"></label>
           <label>検査番号<input class="input" id="fKenNo" autocomplete="off"></label>

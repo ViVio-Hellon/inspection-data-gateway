@@ -101,11 +101,6 @@ class MinMaxTest(QuirkCase):
         minmax.min_max(s, FakeHooks(sheets=5))
         self.assertEqual(s.hmin, "1.0")                              # th=5 は D → C
 
-    def test_h494(self) -> None:
-        s = atuita(youto="H494")
-        s.hab = "250"
-        minmax.min_max(s, FakeHooks())
-        self.assertEqual((s.hmin, s.hmax), ("999.50", "1001.00"))
 
     def test_empty_and_guards(self) -> None:
         s = KensaState(work="厚板", atu="3", ops=1, ope=5)

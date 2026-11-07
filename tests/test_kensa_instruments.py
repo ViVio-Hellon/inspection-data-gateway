@@ -91,27 +91,12 @@ class MicroJugeTest(_Base):
         self.assertEqual(r.stop.text, "測定するﾏｲｸﾛを正しく選定して下さい M1を使用の事")
         self.assertTrue(ins.micro_juge(self.mi(machin="")).ok)           # Machin 空は何もしない (MT:167)
 
-    def test_h494_narrow(self) -> None:
-        h = dict(youto="H494", hab="250.0")
-        self.assertTrue(ins.micro_juge(self.mi(st="S5", machin="10005", **h)).ok)
-        r = ins.micro_juge(self.mi(st="S5", machin="10006", **h))
-        self.assertEqual(r.stop.text, "用途コード_H494の幅測定はノギスで行ってください *Not:L-1N5")
-        self.assertEqual(r.stop.level, "warn")
-        self.assertTrue(ins.micro_juge(self.mi(st="S1", machin="99999", **h)).ok)       # 幅以外は確かめない
-        self.assertTrue(ins.micro_juge(self.mi(st="S6", machin="99999", youto="H494", hab="299.5")).ok)
-        self.assertFalse(ins.micro_juge(self.mi(st="S6", machin="99999", youto="H494", hab="300.0")).ok)
-        # L-1 以外は H494 でも通常の判定
-        self.assertFalse(ins.micro_juge(self.mi(st="S5", machin="10005", lname="HVC", **h)).ok)
-        # S10 は右 2 文字 "10"(座標 5〜6 でない)
-        self.assertTrue(ins.micro_juge(self.mi(st="S10", machin="99999", **h)).ok)
 
     def test_type_errors(self) -> None:
         with self.assertRaises(vbx.TypeMismatch):
             ins.micro_juge(self.mi(atu=""))                               # Single への代入 (MT:170)
         with self.assertRaises(vbx.TypeMismatch):
             ins.micro_juge(self.mi(hab="幅"))
-        with self.assertRaises(vbx.TypeMismatch):
-            ins.micro_juge(self.mi(st="SX", youto="H494", hab="250"))     # Case 5 To 6 と "X"
 
 
 class MachineTransferTest(_Base):
@@ -134,15 +119,6 @@ class MachineTransferTest(_Base):
         got = ins.machine_transfer(self.t(atu="300", cells=lambda r, c: 5 if (r, c) == (14, 3) else None))
         self.assertEqual(len(got), 2)                                     # 奇数列は見ない
 
-    def test_h494(self) -> None:
-        got = ins.machine_transfer(self.t(yout="H494", hab="250.0", haba="250"))
-        self.assertEqual(got[-2:], [(8, 7, "幅:ﾉｷﾞｽ , 丈:ｺﾝﾍﾞｯｸｽ"), (9, 7, "L-1N5, C12")])
-        got = ins.machine_transfer(self.t(yout="H494", hab="250.0", haba="0.5"))
-        self.assertEqual(len(got), 2)
-        got = ins.machine_transfer(self.t(yout="H494", hab="300.0", haba="250"))
-        self.assertEqual(len(got), 2)
-        with self.assertRaises(vbx.TypeMismatch):                         # UF1.Hab < 300# は And でも評価される
-            ins.machine_transfer(self.t(hab=""))
 
 
 if __name__ == "__main__":

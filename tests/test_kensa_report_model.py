@@ -94,13 +94,6 @@ class PrintTransferTest(Base):
         s2 = make_snap(atu="74.000")
         self.assertEqual(self.run_print(s2).report.text("G12"), "49.776")
 
-    def test_h494_width(self) -> None:
-        s = make_snap(youto="H494", hab="250.0")
-        for f in "SUCDE":
-            s.measure[f][4] = "250.123"
-        rep = self.run_print(s).report
-        self.assertEqual(rep.text("C19"), "250.12")
-        self.assertEqual(rep.cell("C19")["number_format"], "0.00_);[赤](0.00)")
 
     def test_thin_yama_labels(self) -> None:
         s = make_snap(kind="薄板", usuita_caption="L", yama="3")

@@ -1,4 +1,4 @@
-"""キャスク・全ヵ所・H494 に共通の部品(再構築 第6段)。
+"""キャスク・全ヵ所に共通の部品(再構築 第6段)。
 
 VBA では UFCask と UFMitsubishi が同じ処理(HistorySave の反映・包装仕様書・Register_Check・Daily_Create の見出し)を
 それぞれ持っていた。ここに 1 つだけ置き、両方の画面のセッションが使う(業務の中身は VBA のまま)。
@@ -162,7 +162,7 @@ class SubInspectionCommon:
 
     def _run_save_plan(self, plan: sh.SavePlan,
                        write: Callable[[Path, str], list[Path]]) -> tuple[list[str], list[Message]]:
-        """SavePlan の手順(mkdir / save / copy)を実行する。キャスク・全ヵ所・H494 で同じ。
+        """SavePlan の手順(mkdir / save / copy)を実行する。キャスク・全ヵ所で同じ。
 
         save: `write(フォルダ, 名前)` で xlsx(+ 見せる用の HTML/PDF)を書く。
         copy: save で作ったファイルを、写し先の名前に付け替えて写す(VBA の FileCopy)。

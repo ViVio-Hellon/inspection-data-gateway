@@ -1,26 +1,27 @@
-"""全ヵ所検査(一般 / 5N / 三菱受託)と H494 検査の画面のセッション(VBA の UFMitsubishi + 全ヵ所検査 / H494検査 シート)
+"""全ヵ所検査(一般 / 5N / 三菱受託)の画面のセッション(VBA の UFMitsubishi + 全ヵ所検査 シート)
 
-画面(app/routes/zenkasho.py)はここだけを呼ぶ。判断はすべて部品(`modes/zenkasho.py`・`modes/h494.py`・
+H494 検査は 2026-11-07 に不要になったため削除した。
+
+画面(app/routes/zenkasho.py)はここだけを呼ぶ。判断はすべて部品(`modes/zenkasho.py`・
 `modes/sheet.py`)が行い、ここは「部品を呼ぶ順番」と「部品が返した Effects の後始末」だけを受け持つ。
 
 **状態**: ブック(`sheet.Book`: 作業シート 2 枚と UFMitsubishi の状態)をプロセスに 1 つ持つ。
-操作のたびに手元DB(通常検査と同じ `store.LocalStore()`)の `全ヵ所作業中保存` / `H494作業中保存` に
+操作のたびに手元DB(通常検査と同じ `store.LocalStore()`)の `全ヵ所作業中保存` に
 シートの中身(値・数式・塗り)を書き、アプリを開き直したらそこから読み戻して `OpenMitubisi` を呼ぶ
-(VBA でブックを開き直してから「全数」「H494」を押したのと同じ。フォームだけの値は消え、シートから戻る)。
+(VBA でブックを開き直してから「全数」を押したのと同じ。フォームだけの値は消え、シートから戻る)。
 
 **操作と VBA のイベント**:
-    start()                    UF1 の「全数」/「H494」→ OpenMitubisi + UserForm_Activate(開いていなければ)
+    start()                    UF1 の「全数」→ OpenMitubisi + UserForm_Activate(開いていなければ)
     choose(mode)               作業の切替。一般 = 一般_Click、5N = FiveOP_Click、三菱 = Choice へ「三菱」(Choice_Change)、
-                               H494 = 閉じて OpenMitubisi("H494")(VBA も P_H494 ページへの切替)
     select(r, c)               セルを選ぶ(Worksheet_SelectionChange)
     receive(text)              選んでいるセルへの入力(測定器の伝送文字列 DT…/#L…、手入力)→ Worksheet_Change。
                                Change が選択を動かさなかったときは Excel の Enter と同じく 1 つ下へ(ENTER_MOVES_DOWN)
     erase()                    選んでいるセルを消す(Delete キー。Change は走る・選択は動かない)
-    set_form(name, value)      フォームの入力欄(LotBox・KenNo・Kname・MINText・検査法・KenHBox1〜7・YamaLB、H494_*)
+    set_form(name, value)      フォームの入力欄(LotBox・KenNo・Kname・MINText・検査法・KenHBox1〜7・YamaLB)
     save_height()              MLP_Click(検入高さを AD1:AD3 へ・重量のゲージ要否)
     weight()                   Frame4 などのクリック(重量のゲージ要否の知らせ)
     transfer()                 CommandButton3 / CommandButton19「決定」(最大最少 → Aインプット)
-    print(which, answers)      CommandButton7(一般)/ 15(5N)/ 2(三菱)/ 23(H494)
+    print(which, answers)      CommandButton7(一般)/ 15(5N)/ 2(三菱)
     new_sheet(answers)         CommandButton1 / ws_out「ｼｰﾄ発行」
     resume()                   CommandButton16 / 21「処理再開」(EnableEvents = True)
     next_empty()               SB_SpinDown(MoveTg: 厚の最初の空き欄へ)
@@ -42,7 +43,7 @@
     AddWS/Pesute・不良要因印刷_B1・不良要因印刷範囲・不良要因の PrintJob
                                 手元DB の `不良要因印刷_<Line>`(通常検査と同じシート)→ `report_model` → 帳票の HTML
     Register_Check/Daily_Create Worker.Register_Check(UF1 の検査員)→ Daily_Create(`Daily_<UFMitsubishi.LineName>`)
-    Daily_Report                Worker.Daily_Report(全ヵ所・H494 表示中は `Daily_`)
+    Daily_Report                Worker.Daily_Report(全ヵ所表示中は `Daily_`)
     UF対角(フォーム)           2 秒の演出。UFOK/UFNG を閉じる → 画面の大きな表示を「対角」に
 VBA の実行時エラーは、ComboBox1_Change の中なら部品のエラー処理(「DB読み込みエラー:」)へ渡すため `sh.VbaError` にする。
 """
@@ -66,22 +67,21 @@ from . import lot as lotmod
 from . import sound as snd
 from .xlsx_writer import grid_rows, write_xlsx
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
-from .modes import h494 as hm
 from .modes import sheet as sh
 from .modes import zenkasho as zk
-from .modes.sheet import H494, ZEN
+from .modes.sheet import ZEN
 from .report_model import ReportModel
 from .session import Result
 from .special_common import SubInspectionCommon
 from .store import HOZON, LOT_HISTORY, LocalStore
 
 #: 作業シート → 手元DB のシート名(VBA の作業中保存のシート名)
-SAVE_SHEETS = {ZEN: "全ヵ所作業中保存", H494: "H494作業中保存"}
+SAVE_SHEETS = {ZEN: "全ヵ所作業中保存"}
 #: 画面の状態(ページ・選んでいるセル・D2 の赤字)を JSON で 1 セルに持つシート
 META_SHEET = "全ヵ所作業中保存_画面"
 #: 三菱受託の未回答の確認(docs/04 W2)
 W2_NOTICE = "三菱受託は確認待ちの項目があります(docs/04 W2)"
-#: UF1.ZEB_Click / H494B_Click の Register_Check が真のとき(UF1:4873 / 606)
+#: UF1.ZEB_Click の Register_Check が真のとき(UF1:4873 / 606)
 NEED_WORKER = "検査員登録をして下さい"
 #: Excel の既定(Enter で下へ)。Change が選択を動かさなかったとき(ラテラル・歪・外観など)に効く
 ENTER_MOVES_DOWN = True
@@ -90,9 +90,9 @@ ENTER_MOVES_DOWN = True
 SOUNDS = snd.by_procedure(snd.ZENKASHO_OK, snd.ZENKASHO_NG, snd.ZENKASHO_DIAG)
 YAMA_LIST = ("1", "2", "3", "4", "5", "6", "枚数")          # YamaLB.List (UFMit:2305)
 METHODS = ("L1", "L2", "M6")                               # Inspection1〜3 / op1〜3 の Caption
-MODES = (("一般", "一般"), ("5N", "5N"), ("三菱", "三菱受託"), ("H494", "H494"))
+MODES = (("一般", "一般"), ("5N", "5N"), ("三菱", "三菱受託"))
 #: 決定 D21(W2・W3): 三菱受託・5N は使っていないので切り替えには出さない(コードは残す。いまその作業中なら出す)
-SHOWN_MODES = ("一般", "H494")
+SHOWN_MODES = ("一般",)
 
 #: 表の列(列番号, 見出し, 種類, まとまり)。種類 v=測定値 j=判定 c=計算 t=文字 l=原紙の固定文字
 ZEN_COLS: tuple[tuple[int, str, str, str], ...] = (
@@ -108,19 +108,10 @@ ZEN_COLS: tuple[tuple[int, str, str, str], ...] = (
 MITSU_COLS: tuple[tuple[int, str, str, str], ...] = (
     (31, "元板NO", "t", "三菱"), (33, "切断ﾌﾞﾛｯｸNO", "t", "三菱"), (34, "ﾌﾞﾛｯｸ", "l", "三菱"),
 )
-H494_COLS: tuple[tuple[int, str, str, str], ...] = (
-    (2, "厚1", "v", "厚"), (3, "判", "j", "厚"), (4, "厚2", "v", "厚"), (5, "判", "j", "厚"),
-    (6, "厚3", "v", "厚"), (7, "判", "j", "厚"), (8, "厚4", "v", "厚"), (9, "判", "j", "厚"),
-    (11, "幅1", "v", "幅"), (12, "判", "j", "幅"), (13, "幅2", "v", "幅"), (14, "判", "j", "幅"),
-    (15, "幅3", "v", "幅"), (16, "判", "j", "幅"),
-    (17, "丈1", "v", "丈"), (18, "判", "j", "丈"), (19, "丈2", "v", "丈"), (20, "判", "j", "丈"),
-    (21, "対角1", "v", "対角"), (22, "対角2", "v", "対角"), (23, "判", "j", "対角"), (24, "差", "c", "対角"),
-    (25, "ﾗﾃﾗﾙ", "v", "ラテラル"), (26, "定盤", "v", "歪"), (27, "ｹﾞｰｼﾞ", "v", "歪"), (28, "外観", "t", "外観"),
-)
-SHEET_ROWS = {ZEN: (7, 76), H494: (7, 16)}
+SHEET_ROWS = {ZEN: (7, 76)}
 DEFECT_PREFIX = "不良要因印刷_"                            # 不良要因印刷 & "_" & Lname
 TYPE_MISMATCH = "型が一致しません。"
-SHEET_COLS = {ZEN: 35, H494: 28}
+SHEET_COLS = {ZEN: 35}
 
 
 def _rgb_int(rgb: Any) -> Optional[int]:
@@ -232,7 +223,7 @@ class _Book(sh.Book):
 
 
 class ZenkashoSession(SubInspectionCommon):
-    """プロセスに 1 つの全ヵ所・H494 のセッション。操作は `_lock` で 1 つずつ通す。
+    """プロセスに 1 つの全ヵ所のセッション。操作は `_lock` で 1 つずつ通す。
 
     試験では `store`(手元DB)・`now`(時計)・`kensa_state`(通常検査の状態。読むだけ)・`write_logs` を差し替える。
     """
@@ -283,7 +274,7 @@ class ZenkashoSession(SubInspectionCommon):
             return None
 
     def _sheet(self) -> str:
-        return ZEN if self.page == "P1" else H494
+        return ZEN
 
     def _sink(self) -> list[Message]:
         return self._msgs
@@ -450,7 +441,6 @@ class ZenkashoSession(SubInspectionCommon):
     def _get_lot_info(self) -> bool:
         """`TempArry = GetLotInfo("Lot情報履歴", UFMitsubishi.LotBox.Text)`(UFMit:807-809)。Empty なら抜ける(偽)。
 
-        H494 でも LotBox(全ヵ所のロット欄)で引く(VBA どおり)。
         """
         from . import wiring
         try:
@@ -463,7 +453,7 @@ class ZenkashoSession(SubInspectionCommon):
         """UFMit:810-845。引当ごとの納入先で DbReturnItem(前回と同じ納入先は飛ばす)。
 
         用途コード・材質・調質・厚・幅・丈は**最後の行**の値(VBA のループで上書き)。DbReturnItem は
-        UFMitsubishi 表示中ならシート(全ヵ所検査 / H494検査)の O1・M1・AC6 に書く。UF1 に書く分(HURIS の空け、
+        UFMitsubishi 表示中ならシート(全ヵ所検査)の O1・M1・AC6 に書く。UF1 に書く分(HURIS の空け、
         該当なしのときの Sumisei・Additional・LateralText、表示前の LateralText など)は通常検査の状態なので書かない。
         """
         rows = self._lot_rows or []
@@ -572,15 +562,15 @@ class ZenkashoSession(SubInspectionCommon):
 
         - シート名は `不良要因印刷_` & UF1.LineName & UF1.LineNo。全ヵ所が作るのは `不良要因印刷_` & UFMitsubishi.LineName
           なので、号機のある丸徳では別のシート(通常検査のもの)を見る/無ければ何もしない(VBA どおり)
-        - 右ヘッダは UF1.Lot と検査員名、右フッターの開始は 全ヵ所検査!B1(UFMitsubishi 表示中。H494 でも)
+        - 右ヘッダは UF1.Lot と検査員名、右フッターの開始は 全ヵ所検査!B1(UFMitsubishi 表示中)
         """
         b = self.book
         st = self._kstate()
         lname = getattr(st, "lname", "") if st is not None else ""
         lot_c = getattr(st, "lot", "") if st is not None else ""
-        # 直した側: 全ヵ所(H494)のライン名・ロットで動く(LotN を渡す形と同じ)。フッターは今までどおり付ける
+        # 直した側: 全ヵ所のライン名・ロットで動く(LotN を渡す形と同じ)。フッターは今までどおり付ける
         lname = b.mit.line_name
-        lot_c = b.mit.h494_lot if self.page == "P_H494" else b.mit.lot_box
+        lot_c = b.mit.lot_box
         start = None
         if b.mit.visible:
             v = b.ws(ZEN).get(1, 2)                        # 全ヵ所検査 が無ければ実行時エラー 9
@@ -615,7 +605,7 @@ class ZenkashoSession(SubInspectionCommon):
         """新規発行の `If Register_Check(…) Then Call Daily_Create`(UFMit:1253 / 2117)。
 
         Daily_Create は UF1 が隠れているので Lname = UFMitsubishi.LineName(Worker:721-725)。
-        見出しの後の Daily_Report(1)(3) は全ヵ所・H494 表示中のため `Daily_` を探す。
+        見出しの後の Daily_Report(1)(3) は全ヵ所表示中のため `Daily_` を探す。
         """
         st = self._kstate()
         if st is None or not self._registered(st):
@@ -626,9 +616,9 @@ class ZenkashoSession(SubInspectionCommon):
         self._daily_report(3)
 
     def _daily_report(self, n: int) -> None:
-        """Worker.Daily_Report(n)。全ヵ所・H494 が表示中なので Lname = "" → `Daily_` シート(普通は無い → 何もしない)。"""
+        """Worker.Daily_Report(n)。全ヵ所が表示中なので Lname = "" → `Daily_` シート(普通は無い → 何もしない)。"""
         from . import wiring
-        mode = "全ヵ所" if self.page == "P1" else "H494"
+        mode = "全ヵ所"
         name = workers.daily_sheet_name(mode, "")
         cells = wiring.sheet_cells(self.store, name)
         if cells is None:
@@ -636,8 +626,7 @@ class ZenkashoSession(SubInspectionCommon):
         b = self.book
         env = self.env()
         hist = wiring.sheet_rows(self.store, LOT_HISTORY)
-        lot_sheet = ZEN if ZEN in b.sheets and b.sheets[ZEN].visible else H494
-        working = sh.cell_str(b.ws(lot_sheet).get(2, 4)) if lot_sheet in b.sheets else ""
+        working = sh.cell_str(b.ws(ZEN).get(2, 4)) if ZEN in b.sheets else ""
         ctx = workers.DailyContext(exists=True, cells=dict(cells), history_rows=hist[1:] if hist is not None else None,
                                    working_lot=working, now=self.now(),
                                    facility=terminal.facility() or workers.DEFAULT_FACILITY, shifts=env.shift_times(),
@@ -709,13 +698,12 @@ class ZenkashoSession(SubInspectionCommon):
     # 実行の枠
     # ------------------------------------------------------------------
     def _reads_second(self) -> bool:
-        """D28: 全ヵ所 / H494 のロットが、通常検査で「控え(第2)から読む」を選んだロットなら第2だけから読む。"""
+        """D28: 全ヵ所のロットが、通常検査で「控え(第2)から読む」を選んだロットなら第2だけから読む。"""
         b = self.book
         if b is None:
             return False
         from . import wiring
-        lot = b.mit.h494_lot if self.page == "P_H494" else b.mit.lot_box
-        return wiring.reads_second(self._kstate(), lot)
+        return wiring.reads_second(self._kstate(), b.mit.lot_box)
 
     def _run(self, fn: Callable[..., Any], *args: Any) -> Result:
         with self._lock, paths.lot_source(self._reads_second):
@@ -789,7 +777,7 @@ class ZenkashoSession(SubInspectionCommon):
             return
         st = self.store
         trace.note_used(st.path, "save")
-        with trace.timed("db.save", "全ヵ所・H494 の作業中保存", path=str(st.path), table="全ヵ所作業中保存") as info:
+        with trace.timed("db.save", "全ヵ所の作業中保存", path=str(st.path), table="全ヵ所作業中保存") as info:
             with st._lock, st.conn:
                 for name in list(SAVE_SHEETS.values()) + [META_SHEET]:
                     st.conn.execute('DELETE FROM "セル" WHERE "シート" = ?', (name,))
@@ -803,7 +791,7 @@ class ZenkashoSession(SubInspectionCommon):
         st, b = self.store, self.book
         if not st.exists(META_SHEET):
             return
-        with trace.timed("db.read", "全ヵ所・H494 の作業中保存を読む", path=str(st.path)) as info:
+        with trace.timed("db.read", "全ヵ所の作業中保存を読む", path=str(st.path)) as info:
             meta_v = st.sheet(META_SHEET).get(1, 1)
             meta = json.loads(meta_v) if isinstance(meta_v, str) else {}
             n = 0
@@ -825,7 +813,7 @@ class ZenkashoSession(SubInspectionCommon):
                 ws.underline = {tuple(x) for x in (meta.get("underline") or {}).get(wname, [])}
                 b.sheets[wname] = ws
             info["cells"] = n
-        self.page = meta.get("page", "P1") if meta.get("page") in ("P1", "P_H494") else "P1"
+        self.page = "P1"
         b.events_enabled = bool(meta.get("events_enabled", True))
         if meta.get("active_name") in b.sheets:
             b.active_name = meta["active_name"]
@@ -852,7 +840,7 @@ class ZenkashoSession(SubInspectionCommon):
             self._pending(f"印刷:{job.sheet}")
             return
         lot = sh.cell_str(job.snapshot.get("D2") or "") if job.sheet != "転送済" else ""
-        stem = _safe_name(f"{job.sheet}_{lot or self.book.mit.lot_box or self.book.mit.h494_lot}")
+        stem = _safe_name(f"{job.sheet}_{lot or self.book.mit.lot_box}")
         folder = self._print_dir()
         with trace.timed("db.save", "帳票の HTML", path=str(folder), table=stem) as info:
             folder.mkdir(parents=True, exist_ok=True)
@@ -936,7 +924,7 @@ class ZenkashoSession(SubInspectionCommon):
         return self._open(self.page, choice_input)
 
     def _need_worker(self) -> bool:
-        """UF1.ZEB_Click (UF1:4870-4875) / H494B_Click (UF1:604-609)。開く前の検査員チェック。
+        """UF1.ZEB_Click (UF1:4870-4875)。開く前の検査員チェック。
 
         `If Register_Check(Format$(Now, "hh:mm:ss"), "") Then MsgError "検査員登録をして下さい", Lname, 2: Exit Sub`。
         UF1(通常検査の状態)が無ければ登録が無いのと同じに扱う(キャスクの画面と同じ)。真なら開かない。
@@ -962,8 +950,7 @@ class ZenkashoSession(SubInspectionCommon):
             self._sel[b.active_name] = b.active_cell        # シートごとの選択(Excel はシートごとに覚えている)
         prev = b.active_name
         self.page = page
-        temp = "全数" if page == "P1" else "H494"
-        res = self._call(zk.open_mitubisi, b, temp, line_name=self._line_name(), worker_text=self._worker_text(),
+        res = self._call(zk.open_mitubisi, b, "全数", line_name=self._line_name(), worker_text=self._worker_text(),
                          choice_input=choice_input, **self._lot_kw())
         if isinstance(res, Question):
             return res
@@ -991,14 +978,6 @@ class ZenkashoSession(SubInspectionCommon):
     def _choose(self, mode: str, choice_input: Optional[str]) -> Optional[Question]:
         b = self.book
         f = b.mit
-        if mode == "H494":
-            if f.visible and f.work_flag == "P_H494":
-                return None
-            if f.visible:
-                self._call(zk.query_close, b)
-            elif self._need_worker():                  # 閉じている → UF1 の H494B_Click と同じ
-                return None
-            return self._open("P_H494", None)
         if mode not in ("一般", "5N", "三菱"):
             raise Stop("正しい作業選択名を入力してください", level=WARN, source="UFMit:513")
         if not (f.visible and f.work_flag == "P1"):
@@ -1084,21 +1063,15 @@ class ZenkashoSession(SubInspectionCommon):
         if name == "LotBox":
             f.lot_box = upper
             self._call(zk.lot_box_change, b, **self._lot_kw())
-        elif name == "H494_Lot":
-            f.h494_lot = upper
-            self._call(hm.h494_lot_change, b, **self._lot_kw())
-        elif name in ("KenNo", "H494_KenNo"):
-            setattr(f, "ken_no" if name == "KenNo" else "h494_ken_no", upper)
-        elif name in ("Kname", "H494_Kname", "YoutoNo", "H494_Youto", "MINText", "MAXText", "H494_MINText",
-                      "H494_MAXText"):
-            attr = {"Kname": "kname", "H494_Kname": "h494_kname", "YoutoNo": "youto_no", "H494_Youto": "h494_youto",
-                    "MINText": "min_text", "MAXText": "max_text", "H494_MINText": "h494_min_text",
-                    "H494_MAXText": "h494_max_text"}[name]
+        elif name == "KenNo":
+            f.ken_no = upper
+        elif name in ("Kname", "YoutoNo", "MINText", "MAXText"):
+            attr = {"Kname": "kname", "YoutoNo": "youto_no", "MINText": "min_text", "MAXText": "max_text"}[name]
             setattr(f, attr, v)
-        elif name in ("Inspection", "op"):
+        elif name == "Inspection":
             if v not in METHODS and v != "":
                 raise Stop("検査法を選択してください", level=WARN, source="UFMit:1617")
-            setattr(f, "inspection_method" if name == "Inspection" else "h494_method", v)
+            f.inspection_method = v
         elif re.match(r"KenHBox[1-7]$", name):
             n = int(name[-1])
             f.kenh[n] = v
@@ -1130,19 +1103,15 @@ class ZenkashoSession(SubInspectionCommon):
         return self._run(self._transfer)
 
     def _transfer(self) -> None:
-        if self.page == "P1":
-            self._call(zk.transfer, self.book)
-        else:
-            self._call(hm.transfer, self.book)
+        self._call(zk.transfer, self.book)
 
     def print(self, which: str, answers: Optional[dict[str, bool]] = None) -> Result:
         return self._run(self._print, which, answers or {})
 
     def _print(self, which: str, answers: dict[str, bool]) -> Any:
         b = self.book
-        fn = {"normal": zk.ippan_print, "fini": zk.fiven_print, "mitsubishi": zk.mitsubishi_print,
-              "h494": hm.print_and_save}.get(which)
-        if fn is None or (which == "h494") != (self.page == "P_H494"):
+        fn = {"normal": zk.ippan_print, "fini": zk.fiven_print, "mitsubishi": zk.mitsubishi_print}.get(which)
+        if fn is None:
             raise Stop("この作業ではその印刷は使えません", level=WARN)
         return self._call(fn, b, answers)
 
@@ -1151,8 +1120,7 @@ class ZenkashoSession(SubInspectionCommon):
 
     def _new_sheet(self, answers: dict[str, bool]) -> Any:
         b = self.book
-        fn = zk.new_sheet if self.page == "P1" else hm.new_sheet
-        res = self._call(fn, b, answers)
+        res = self._call(zk.new_sheet, b, answers)
         name = self._sheet()
         if not isinstance(res, Question) and name in b.sheets and b.active_name == name:
             b.active_cell = self._first_empty(name) or (7, 2)
@@ -1172,9 +1140,9 @@ class ZenkashoSession(SubInspectionCommon):
         b = self.book
         f = b.mit
         name = self._sheet()
-        ws = b.sheets.get(name) or sh.template(sh.ZEN_TEMPLATE if name == ZEN else sh.H494_TEMPLATE)
-        mode = "H494" if self.page == "P_H494" else (f.choice if f.choice in ("一般", "5N", "三菱") else "")
-        cols = list(H494_COLS if name == H494 else ZEN_COLS + (MITSU_COLS if mode == "三菱" else ()))
+        ws = b.sheets.get(name) or sh.template(sh.ZEN_TEMPLATE)
+        mode = f.choice if f.choice in ("一般", "5N", "三菱") else ""
+        cols = list(ZEN_COLS + (MITSU_COLS if mode == "三菱" else ()))
         lo, hi = SHEET_ROWS[name]
         rows = []
         for r in range(lo, hi + 1):
@@ -1196,33 +1164,25 @@ class ZenkashoSession(SubInspectionCommon):
                        "caption": (layout.hl_captions.get(f"HL{i}", "") if layout else "") if i < 7 else "枚"}
                       for i in range(1, 8)]
         prints = []
-        if self.page == "P_H494":
-            prints.append({"which": "h494", "label": "検査印刷"})
-        else:
-            if f.normal_visible:
-                prints.append({"which": "normal", "label": "検査印刷"})
-            if f.fini_visible:
-                prints.append({"which": "fini", "label": "5N印刷"})
-            if f.mitsubishi_visible:
-                prints.append({"which": "mitsubishi", "label": "三菱印刷"})
-        h = self.page == "P_H494"
+        if f.normal_visible:
+            prints.append({"which": "normal", "label": "検査印刷"})
+        if f.fini_visible:
+            prints.append({"which": "fini", "label": "5N印刷"})
+        if f.mitsubishi_visible:
+            prints.append({"which": "mitsubishi", "label": "三菱印刷"})
         return {
             "page": self.page, "mode": mode, "open": f.visible, "line": f.line_name,
             "modes": [{"key": k, "label": lb, "active": k == mode} for k, lb in MODES
                       if k in SHOWN_MODES or k == mode],
             "notice": W2_NOTICE if mode == "三菱" else "", "suspect": list(zk.MITSUBISHI_SUSPECT) if mode == "三菱" else [],
             "events_enabled": b.events_enabled,
-            "form": {"lot": f.h494_lot if h else f.lot_box, "ken_no": f.h494_ken_no if h else f.ken_no,
-                     "kname": f.h494_kname if h else f.kname, "youto": f.h494_youto if h else f.youto_no,
-                     "min": f.h494_min_text if h else f.min_text, "max": f.h494_max_text if h else f.max_text,
-                     "method": f.h494_method if h else f.inspection_method, "methods": list(METHODS),
-                     "h494": f.h494, "yama": YAMA_LIST[f.yama_index] if isinstance(f.yama_index, int)
+            "form": {"lot": f.lot_box, "ken_no": f.ken_no, "kname": f.kname, "youto": f.youto_no,
+                     "min": f.min_text, "max": f.max_text, "method": f.inspection_method, "methods": list(METHODS),
+                     "yama": YAMA_LIST[f.yama_index] if isinstance(f.yama_index, int)
                      and 0 <= f.yama_index < len(YAMA_LIST) else "", "yama_list": list(YAMA_LIST),
                      "kenh": kenh_boxes, "takasa_formula": f.takasa_formula,
-                     "names": {"lot": "H494_Lot" if h else "LotBox", "ken_no": "H494_KenNo" if h else "KenNo",
-                               "kname": "H494_Kname" if h else "Kname", "youto": "H494_Youto" if h else "YoutoNo",
-                               "min": "H494_MINText" if h else "MINText", "max": "H494_MAXText" if h else "MAXText",
-                               "method": "op" if h else "Inspection"}},
+                     "names": {"lot": "LotBox", "ken_no": "KenNo", "kname": "Kname", "youto": "YoutoNo",
+                               "min": "MINText", "max": "MAXText", "method": "Inspection"}},
             "prints": prints,
             "header": self._header(ws, name, mode),
             "groups": self._groups(ws, name, mode, cols),
@@ -1291,9 +1251,7 @@ class ZenkashoSession(SubInspectionCommon):
             return f"{_fmt_num(a, pat)}〜{_fmt_num(z, pat)}"
 
         m1, s1 = _fmt_num(ws.get(1, 13), "0.0"), _fmt_num(ws.get(1, 19), "0.0")
-        if name == H494:
-            hiz = "判定なし"
-        elif mode == "5N":
+        if mode == "5N":
             hiz = "幅 2.0 / 丈 3.0(5N 固定)"
         elif mode == "一般":
             hiz = f"幅 {_fmt_num(ws.get(5, 13), '0.0') or '(空)'} / 丈 {_fmt_num(ws.get(5, 15), '0.0') or '(空)'}"
@@ -1303,7 +1261,7 @@ class ZenkashoSession(SubInspectionCommon):
             hiz = ""
         tol = {"厚": rng(2, "0.000"), "幅": rng(3, "0.0"), "丈": rng(4, "0.0"),
                "対角": f"公差 {s1}" if s1 else "公差なし",
-               "ラテラル": (f"公差 {m1}" if m1 else "公差なし") + ("(7〜10行のみ判定)" if name == H494 else ""),
+               "ラテラル": (f"公差 {m1}" if m1 else "公差なし"),
                "歪": hiz, "ゲージ": "", "外観": "", "三菱": "ﾌﾞﾛｯｸNO"}
         out: list[dict[str, Any]] = []
         for _c, _lb, _k, g in cols:

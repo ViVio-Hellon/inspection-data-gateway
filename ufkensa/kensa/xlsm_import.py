@@ -26,7 +26,7 @@ NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
       "rel": "http://schemas.openxmlformats.org/package/2006/relationships"}
 
 FIXED_SHEETS = ("保存用", "耳用", "Lot情報履歴", "印刷履歴管理", "校正記録", "品証検証", "Accesslog",
-                "全ヵ所作業中保存", "H494作業中保存", "ｷｬｽｸ作業中保存")
+                "全ヵ所作業中保存", "ｷｬｽｸ作業中保存")
 LINE_PREFIXES = ("作業保存_", "WorkerTime_", "検査員_", "Daily_", "異常ロット用_", "不良要因印刷_", "印刷用_",
                  "梱包枚数計算_")
 

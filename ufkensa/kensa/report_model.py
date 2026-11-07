@@ -1030,14 +1030,6 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
         sh.number_format(12, 7, 16, 10, "0.00_);[赤](0.00)")
     else:
         sh.number_format(12, 7, 16, 10, "0.000_);[赤](0.00)")
-    h494 = snap.youto == "H494"
-    hab_lt = vbx.compare_typed(snap.hab, 300.0, vbx.VAR, vbx.NUM) < 0   # And は両辺を評価(Hab が空なら型エラー)
-    hab_val = vbx.val(snap.hab)
-    if h494 and hab_lt:                                          # Print:632-639
-        if 1.0 <= hab_val <= 299.0:
-            sh.number_format(19, 3, 23, 4, "0.00_);[赤](0.00)")
-        else:
-            sh.number_format(19, 3, 23, 4, "0.00_);[赤](0.0)")
 
     # 公差外データ (Print:641-717)
     abn_name = line_sheet(ABNORMAL_SHEET, lname)
@@ -1071,13 +1063,6 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
             else:
                 sh.number_format(lr + 1, 1, last, 5, "0.000_);[赤](0.00)")
                 sh.number_format(lr + 1, 6, last, 11, "0.0_);[赤](0.0)")
-            if h494 and hab_lt:
-                if 1.0 <= hab_val <= 299.0:
-                    sh.number_format(lr + 1, 1, last, 5, "0.00_);[赤](0.00)")
-                    sh.number_format(lr + 1, 6, last, 11, "0.0_);[赤](0.0)")
-                else:
-                    sh.number_format(lr + 1, 1, last, 5, "0.00_);[赤](0.0)")
-                    sh.number_format(lr + 1, 6, last, 11, "0.0_);[赤](0.0)")
             _page_area_abnormal(sh, snap, worker_text)
         else:
             # B36: VBA は C2(LOT)ではなく D4(厚)と比べる。一致するとページ設定をしない

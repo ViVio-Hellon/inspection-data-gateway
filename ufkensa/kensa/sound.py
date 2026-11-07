@@ -109,13 +109,13 @@ SOUNDS: tuple[SoundSpec, ...] = (
               "KySh 音楽対角"),
     SoundSpec(CASK_PRINT, "印刷", CASK, "印刷(保存)を始めたとき", "印刷.wav", "印刷します", "UFCask:138"),
     SoundSpec(CASK_DONE, "完了", CASK, "印刷・保存が済んだとき", "完了.wav", "完了しました", "UFCask:164"),
-    # ---- 全ヵ所(UFMitsubishi。全ヵ所・H494 のシート)
+    # ---- 全ヵ所(UFMitsubishi。全ヵ所のシート)
     SoundSpec(ZENKASHO_OK, "合格", ZENKASHO, "測定値を判定して公差内だったとき", "chime2.wav", "合格",
               "補助:305 音楽合格"),
     SoundSpec(ZENKASHO_NG, "不合格", ZENKASHO, "測定値を判定して公差外だったとき", "tada.wav", "不合格",
               "補助:357 音楽不合格"),
     SoundSpec(ZENKASHO_DIAG, "対角線", ZENKASHO, "対角線の欄を判定するとき", "chimes.wav", "対角線を判定しました",
-              "ZenSh / H494_SH 音楽対角"),
+              "ZenSh 音楽対角"),
     SoundSpec(ZENKASHO_WAIT, "お待ちください", ZENKASHO, "保存・印刷を始めたとき", "おまちください.wav",
               "お待ちください", "UFMitsubishi:153"),
     SoundSpec(ZENKASHO_PRINT, "印刷", ZENKASHO, "印刷するとき", "印刷.wav", "印刷します", "UFMitsubishi:170"),

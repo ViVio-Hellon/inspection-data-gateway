@@ -13,7 +13,7 @@ from typing import Any, Optional
 
 from . import paths, vbx
 from .flow import ERROR, INFO, Message
-from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, hab_lt_300, ken_flags, small_count_th, typed_cmp,
+from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
 
 #: VBA の On Error Resume Next で飛ばされる実行時エラーに当たる Python の例外
@@ -147,7 +147,7 @@ def num_dig(state: KensaState) -> None:
     """FormRelat.NumDig (FormRelat:345-428)。測定値の表示桁(LoopText の最後に呼ぶ)。
 
     厚(行1〜4): ATU > 74 なら "0.00"、ほかは "0.000"。
-    幅(行5〜6): 用途 H494 かつ 巾 < 300 で、巾が 1〜299 なら "0.00"(ノギス)、ほかは "0.0"。
+    幅(行5〜6): "0.0"。
     丈(S..E は行7〜12、F は 7〜10)・対角・直角度: "0.0"。
     """
     if state.atu == "":
@@ -157,11 +157,7 @@ def num_dig(state: KensaState) -> None:
         for p in FIVE + ("F",):
             c = state.cells[f"{p}{i}"]
             c.value = vbx.fmt(c.value, pat)
-    h494 = state.youto == "H494"
-    hab = hab_lt_300(state)                    # And は両辺を評価する
     pat = "0.0"
-    if h494 and hab and 1.0 <= vbx.val(state.hab) <= 299.0:
-        pat = "0.00"
     for i in range(5, 7):
         for p in FIVE + ("F",):
             c = state.cells[f"{p}{i}"]

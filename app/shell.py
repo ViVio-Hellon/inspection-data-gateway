@@ -29,7 +29,7 @@ class NavItem:
 NAV: tuple[tuple[str, str, str, str], ...] = (
     ("kensa", "検査", "/kensa", "測る・判定・Min/Max・印刷"),
     ("cask", "キャスク", "/cask", "キャスク検査(最大700枚)"),
-    ("zenkasho", "全ヵ所・H494", "/zenkasho", "全ヵ所(一般/5N/三菱受託)・H494"),
+    ("zenkasho", "全ヵ所", "/zenkasho", "全ヵ所(一般/5N/三菱受託)"),
     ("ainput", "Aインプット", "/ainput", "梱包高さ・アイカス送信"),
     ("calibration", "校正", "/calibration", "直尺の校正"),
     ("quality", "品質基準", "/quality", "このロットの品質基準を見る"),
@@ -46,7 +46,7 @@ READY_SCREENS = frozenset({"settings", "import", "kensa", "history", "ainput", "
 PENDING_SCREENS: dict[str, tuple[str, str, str]] = {
     "kensa": ("工程 8c", "ロット登録から測定・判定・Min/Max・印刷まで、1画面で行えるようになります(A案)。", "VBA の UF検査判定.xlsm"),
     "cask": ("工程 8e", "キャスク検査の入力・判定・印刷・保存。", "VBA の UF検査判定.xlsm"),
-    "zenkasho": ("工程 8e", "全ヵ所検査(一般・5N・三菱受託)と H494 検査。", "VBA の UF検査判定.xlsm"),
+    "zenkasho": ("工程 8e", "全ヵ所検査(一般・5N・三菱受託)。", "VBA の UF検査判定.xlsm"),
     "ainput": ("工程 8c", "梱包高さチェックとアイカスへの送信。", "VBA の UF検査判定.xlsm"),
     "calibration": ("工程 8c", "直尺の校正の記録と判定。", "VBA の UF検査判定.xlsm"),
     "quality": ("工程 8c", "ロットの品質基準(外観・歪・BH・ラテラル)の表示。", "VBA の UF検査判定.xlsm"),

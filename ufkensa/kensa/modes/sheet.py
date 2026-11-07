@@ -1,4 +1,4 @@
-"""特殊検査モードの作業シート(キャスク検査・全ヵ所検査・H494検査)の共通部分
+"""特殊検査モードの作業シート(キャスク検査・全ヵ所検査。H494 検査は 2026-11-07 に削除)の共通部分
 
 VBA では、測定値を**シートに直接入力**し(キーボードウェッジの `DT…`/`#L…` パケット・手入力)、
 シートモジュールの `Worksheet_Change` / `Worksheet_SelectionChange` が判定を動かしていた。
@@ -37,10 +37,8 @@ from .. import flow, lines, paths, vbx
 # ------------------------------------------------------------------
 CASK = "キャスク検査"
 ZEN = "全ヵ所検査"
-H494 = "H494検査"
 CASK_TEMPLATE = "キャスク原紙"
 ZEN_TEMPLATE = "全ヵ所検査用原紙"
-H494_TEMPLATE = "H494_原紙"
 MITSU_TEMPLATE = "三菱受託原紙"
 
 RGB = tuple
@@ -515,7 +513,7 @@ class Sheet:
 
 
 def template(name: str) -> Sheet:
-    """原紙シート(xlsm の `キャスク原紙`・`全ヵ所検査用原紙`・`H494_原紙`・`三菱受託原紙`)の中身。"""
+    """原紙シート(xlsm の `キャスク原紙`・`全ヵ所検査用原紙`・`三菱受託原紙`)の中身。"""
     ws = Sheet(name)
 
     def put(cells: Iterable[tuple[str, Any]]) -> None:
@@ -554,18 +552,6 @@ def template(name: str) -> Sheet:
             ws.set(r, col_number("AF"), "-")
             ws.set(r, col_number("AH"), "ﾌﾞﾛｯｸ上")
             ws.set(r + 1, col_number("AH"), "ﾌﾞﾛｯｸ下")
-    elif name == H494_TEMPLATE:
-        put(common_head)
-        put(thick_head)
-        put([("K1", "ﾗﾃﾗﾙﾎﾞｰ等級"), ("Q1", "対角公差"), ("R2", "~"), ("V2", "厚"), ("W2", "巾"), ("X2", "丈"),
-             ("R3", "~"), ("U3", "MAX"), ("V3", 0.0), ("W3", 0.0), ("X3", 0.0), ("R4", "~"), ("U4", "MIN"),
-             ("V4", 0.0), ("W4", 0.0), ("X4", 0.0),
-             ("B5", "対角線差4級内＝○、対角線差3級内=△、対角線差3級外れ＝×"), ("K5", "自動判定するのは、厚巾丈対角だけです"),
-             ("Y5", "ﾀｲﾋﾟﾝｸﾞ入力の事"), ("A6", "MinMax\n指定用番号"), ("O6", "幅3"), ("P6", "判定"), ("Q6", "丈1"),
-             ("R6", "判定"), ("S6", "丈2"), ("T6", "判定"), ("U6", "対角1"), ("V6", "対角2"), ("W6", "判定"),
-             ("X6", "対角線差"), ("Y6", "ﾗﾃﾗﾙﾎﾞｰ"), ("Z6", "定盤"), ("AA6", "ｹﾞｰｼﾞ"), ("AB6", "外観")])
-        for i in range(1, 11):
-            ws.set(i + 6, 1, float(i))
     elif name == MITSU_TEMPLATE:
         put([("B2", "検査番号"), ("C2", "NLM"), ("F2", "検査機器"), ("Q2", "承認"), ("R2", "確認"),
              ("B3", "スラブ番号"), ("C3", "顧客"), ("B4", "合金－質別"), ("C4", "顧客"), ("D4", "MR664-H112"),
@@ -631,7 +617,7 @@ class MitForm:
     """UFMitsubishi の状態。"""
     visible: bool = False
     line_name: str = ""
-    work_flag: str = ""          # "P1"(全ヵ所) / "P_H494"
+    work_flag: str = ""          # "P1"(全ヵ所)
     lot_box: str = ""
     combo: str = ""
     ken_no: str = ""
@@ -642,17 +628,9 @@ class MitForm:
     ippan: bool = False
     work: str = "OFF"
     inflag: str = ""
-    h494: bool = False           # CheckBox「用途ｺｰﾄﾞH494」(幅 1〜299)
     min_text: str = ""
     max_text: str = ""
     inspection_method: str = ""  # Inspection1〜3 で選ばれた Caption(無ければ "")
-    h494_lot: str = ""
-    h494_ken_no: str = ""
-    h494_kname: str = ""
-    h494_youto: str = ""
-    h494_min_text: str = ""
-    h494_max_text: str = ""
-    h494_method: str = ""        # op1〜3 の Caption
     kenh: dict = field(default_factory=lambda: {i: "" for i in range(1, 8)})   # KenHBox1〜7
     takasa_formula: str = ""     # 高さ計算式.Caption
     yama_index: Any = None       # YamaLB.ListIndex(0〜5 = 1〜6 山、6 = 枚数)
@@ -708,7 +686,7 @@ class Book:
         self.extra: dict[str, Sheet] = {}
         self._undo: Optional[tuple[str, int, int, Any]] = None
         if with_work_sheets:
-            for tname, wname in ((CASK_TEMPLATE, CASK), (ZEN_TEMPLATE, ZEN), (H494_TEMPLATE, H494)):
+            for tname, wname in ((CASK_TEMPLATE, CASK), (ZEN_TEMPLATE, ZEN)):
                 ws = template(tname)
                 ws.name = wname
                 self.sheets[wname] = ws
@@ -911,12 +889,6 @@ def al_ter_range(book: Book, r: int, c: int, befor: str = "") -> None:
                 special_move_l(book, TR, TC, befor)
             else:
                 clear_here()
-        elif inrow and TC in (11, 13) and book.mit.h494:
-            if temp == "DT":
-                conv_here()
-                ws.number_format[(TR, TC)] = "0.00_);[赤](0.00)"
-            else:
-                special_move_l(book, TR, TC, befor)
         elif inrow and TC in (11, 13, 15, 17, 19, 20):
             if temp == "DT":
                 special_move_dt(book, TR, TC, befor)
@@ -942,47 +914,6 @@ def al_ter_range(book: Book, r: int, c: int, befor: str = "") -> None:
                 jump(range(7, 77), range(11, 18, 2))
             else:
                 conv_here()
-    elif ws.name == H494:
-        book.mit.cnt = "1"
-        inrow = 7 <= TR <= 16
-        if inrow and TC in (2, 4, 6, 8):
-            if temp == "DT":
-                conv_here()
-            elif temp == "#L":
-                special_move_l(book, TR, TC, befor)
-            else:
-                clear_here()
-        elif inrow and TC in (11, 13, 15):
-            if temp == "DT":
-                conv_here()
-                ws.number_format[(TR, TC)] = "0.00_);[赤](0.00)"
-            else:
-                special_move_l(book, TR, TC, befor)
-        elif inrow and TC in (17, 19, 21, 22):
-            if temp == "DT":
-                special_move_dt(book, TR, TC, befor)
-            elif temp == "#L":
-                conv_here()
-                ws.number_format[(TR, TC)] = "0.0_);[赤](0.0)"
-        elif inrow and TC in (26, 27):
-            if temp == "DT":
-                special_move_dt(book, TR, TC, befor)
-            elif temp == "#L":
-                special_move_l(book, TR, TC, befor)
-            else:
-                conv_here()
-        elif inrow and TC == 25:
-            if temp == "DT":
-                special_move_dt(book, TR, TC, befor)
-            elif temp == "#L":
-                special_move_l(book, TR, TC, befor)
-        else:
-            if temp == "DT":
-                jump(range(7, 17), range(2, 9, 2))
-            elif temp == "#L":
-                jump(range(7, 17), range(11, 20, 2))
-            else:
-                conv_here()
 
 
 def _set_undo_count(book: Book, start: bool, ch_befor: str) -> None:
@@ -995,7 +926,7 @@ def _set_undo_count(book: Book, start: bool, ch_befor: str) -> None:
         return
     if book.visible(CASK):
         book.cask.undo_count = "0" if ch_befor == "" else "1"
-    elif book.visible(ZEN) or book.visible(H494):
+    elif book.visible(ZEN):
         book.mit.undo_count = "0" if ch_befor == "" else "1"
 
 
@@ -1033,24 +964,9 @@ def special_move_dt(book: Book, TR: int, TC: int, befor: str = "") -> None:
                     _move_into(book, ws, i, j, TR, TC, ch_after, ch_befor, kensa_hantei)
                     found = True
                     break
-            if book.mit.h494 and not found:
-                for nj in (11, 13):
-                    if blank(ws.get(i, nj)):
-                        _move_into(book, ws, i, nj, TR, TC, ch_after, ch_befor, kensa_hantei)
-                        found = True
-                        break
             if found:
                 break
-    elif ws.name == H494:
-        for i in range(TR, 17):
-            for j in (2, 4, 6, 8, 11, 13, 15):
-                if blank(ws.get(i, j)):
-                    _move_into(book, ws, i, j, TR, TC, ch_after, ch_befor, kensa_hantei)
-                    found = True
-                    break
-            if found:
-                break
-    if ws.name in (CASK, ZEN, H494) and not found:
+    if ws.name in (CASK, ZEN) and not found:
         book.fx.msg("厚欄はすべて埋まっています", flow.ERROR, "Cask:1634")
         book.write(ws, TR, TC, ch_befor)
     _set_undo_count(book, False, ch_befor)
@@ -1084,28 +1000,20 @@ def special_move_l(book: Book, TR: int, TC: int, befor: str = "") -> None:
             book.fx.msg("巾丈測定がONになっていません", flow.ERROR, "Cask:1776")
             book.write(ws, TR, TC, ch_befor)
     elif ws.name == ZEN:
-        plan = [] if book.mit.h494 else [(11, kensa_hantei), (13, kensa_hantei)]
-        plan += [(15, kensa_hantei), (17, kensa_hantei), (19, taikaku), (20, taikaku)]
+        plan = [(11, kensa_hantei), (13, kensa_hantei), (15, kensa_hantei), (17, kensa_hantei), (19, taikaku), (20, taikaku)]
         found = scan(76, plan)
         if not found:
             book.fx.msg("巾丈対角欄はすべて埋まっています", flow.ERROR, "Cask:1828")
-            book.write(ws, TR, TC, ch_befor)
-    elif ws.name == H494:
-        found = scan(16, [(17, kensa_hantei), (19, kensa_hantei), (21, taikaku), (22, taikaku)])
-        if not found:
-            book.fx.msg("巾丈対角欄はすべて埋まっています", flow.ERROR, "Cask:1865")
             book.write(ws, TR, TC, ch_befor)
     _set_undo_count(book, False, ch_befor)
 
 
 def _lname_judge(book: Book) -> str:
-    """判定付け系の Lname (Cask:1373-1376)。全ヵ所 → キャスク の順。H494 は無い(B30)。"""
+    """判定付け系の Lname (Cask:1373-1376)。全ヵ所 → キャスク の順。"""
     if book.visible(ZEN):
         return book.mit.line_name
     if book.visible(CASK):
         return book.cask.line_name
-    if book.visible(H494):
-        return book.mit.line_name
     return ""
 
 
@@ -1115,8 +1023,6 @@ def kensa_hantei(book: Book, r: int, c: int) -> None:
         lname = book.mit.line_name
     elif book.visible(CASK):
         lname = book.cask.line_name
-    elif book.visible(H494):
-        lname = book.mit.line_name
     else:
         lname = ""
     if book.cask.visible:
@@ -1156,15 +1062,6 @@ def kensa_hantei(book: Book, r: int, c: int) -> None:
         elif 7 <= r <= 76 and c in (15, 17):
             hantei_tsuke(book, ken_judg(ter, take2, take1), r, c)
         book.mit.tag = ""
-    elif ws.name == H494:
-        book.mit.tag = "off"
-        if 7 <= r <= 16 and c in (2, 4, 6, 8):
-            hantei_tsuke(book, ken_judg(ter, atu2, atu1), r, c)
-        elif 7 <= r <= 16 and c in (11, 13, 15):
-            hantei_tsuke(book, ken_judg(ter, haba2, haba1), r, c)
-        elif 7 <= r <= 16 and c in (17, 19):
-            hantei_tsuke(book, ken_judg(ter, take2, take1), r, c)
-        book.mit.tag = ""
 
 
 def _judge_logs(book: Book, ws: Sheet, r: int, c: int, mark: str, lname: str, word: str = "*座標:",
@@ -1194,7 +1091,7 @@ def hantei_tsuke(book: Book, judg: bool, r: int, c: int) -> None:
         if book.cask.undo_count == "1":
             book.cask.undo_count = "0"
             return
-    elif book.visible(ZEN) or book.visible(H494):
+    elif book.visible(ZEN):
         if book.mit.undo_count == "1":
             book.mit.undo_count = "0"
             return
@@ -1214,9 +1111,9 @@ def hantei_tsuke(book: Book, judg: bool, r: int, c: int) -> None:
 
 
 def taikaku(book: Book, r: int, c: int) -> None:
-    """Cask.対角 (Cask:1117-1235)。全ヵ所・H494 の公差は S1(Single)、キャスクはフォームの対角公差。"""
+    """Cask.対角 (Cask:1117-1235)。全ヵ所の公差は S1(Single)、キャスクはフォームの対角公差。"""
     ws = book.active
-    zen = {"P1": ZEN, "P_H494": H494}.get(book.mit.work_flag)
+    zen = {"P1": ZEN}.get(book.mit.work_flag)
     kou = 0.0
     if not book.cask.visible:
         if zen is None:
@@ -1231,8 +1128,6 @@ def taikaku(book: Book, r: int, c: int) -> None:
         taikaku_tsuke(book, tai_judg(ws.get(r, 19), ws.get(r, 20), kou), r, c, kou)
     if ws.name == ZEN and c == 20:
         taikaku_tsuke(book, tai_judg(ws.get(r, 19), ws.get(r, 20), kou), r, c, kou)
-    if ws.name == H494 and c == 22:
-        taikaku_tsuke(book, tai_judg(ws.get(r, 21), ws.get(r, 22), kou), r, c, kou)
 
 
 def _diff_text(a: Any, b: Any) -> float:
@@ -1286,27 +1181,10 @@ def taikaku_tsuke(book: Book, judg: bool, r: int, c: int, kou: float) -> None:
                 _judge_logs(book, ws, r, c, "×", lname, word="*位置:", with_sheet=False)
                 book.fx.sounds.append("音楽不合格")
                 book.fx.forms.append(FormShow("UFNG"))
-    elif ws.name == H494:
-        u, v = ws.get(r, 21), ws.get(r, 22)
-        book.write(ws, r, 24, _diff_text(v, u))
-        u, v = ws.get(r, 21), ws.get(r, 22)
-        if is_numeric(u) and is_numeric(v) and not blank(u) and not blank(v):
-            if judg:
-                book.write(ws, r, 23, "○")
-                ws.interior[(r, 23)] = LIGHT_BLUE
-                _judge_logs(book, ws, r, c, "○", lname, word="*位置:", with_sheet=False)
-                book.fx.sounds.append("音楽合格")
-                book.fx.forms.append(FormShow("UFOK"))
-            else:
-                ws.interior[(r, 23)] = NG_RED
-                book.write(ws, r, 23, "×")
-                _judge_logs(book, ws, r, c, "×", lname, word="*位置:", with_sheet=False)
-                book.fx.sounds.append("音楽不合格")
-                book.fx.forms.append(FormShow("UFNG"))
 
 
 def lateralbow_z(book: Book, r: int, c: int) -> None:
-    """Cask.Lateralbow_Z (Cask:2040-2076)。全ヵ所 W 列(7-76 行)、H494 Y 列(**7-10 行**)。公差は M1(Val を String に)。"""
+    """Cask.Lateralbow_Z (Cask:2040-2076)。全ヵ所 W 列(7-76 行)。公差は M1(Val を String に)。"""
     ws = book.active
     book.visible(ZEN)
     if (not is_numeric(ws.get(3, 2))) and is_numeric(ws.get(3, 4)) and is_numeric(ws.get(3, 6)):
@@ -1322,15 +1200,10 @@ def lateralbow_z(book: Book, r: int, c: int) -> None:
         if 7 <= r <= 76 and c == 23:
             lateralbow_tsuke(book, lateral_j(ter, kou), r, c)
         book.mit.tag = ""
-    elif ws.name == H494:
-        book.mit.tag = "off"
-        if 7 <= r <= 10 and c == 25:
-            lateralbow_tsuke(book, lateral_j(ter, kou), r, c)
-        book.mit.tag = ""
 
 
 def lateralbow_tsuke(book: Book, judg: bool, r: int, c: int) -> None:
-    """Cask.Lateralbow_判定付け (Cask:2077-2158)。全ヵ所は X 列に ○/×、キャスク・H494 はセル自体を塗る。"""
+    """Cask.Lateralbow_判定付け (Cask:2077-2158)。全ヵ所は X 列に ○/×、キャスクはセル自体を塗る。"""
     ws = book.active
     if not is_numeric(ws.get(r, c)):
         return
@@ -1343,7 +1216,7 @@ def lateralbow_tsuke(book: Book, judg: bool, r: int, c: int) -> None:
     if ws.name == ZEN:
         book.write(ws, r, c + 1, mark)
         ws.interior[(r, c + 1)] = COLOR_INDEX[10 if judg else 3]
-    elif ws.name in (CASK, H494):
+    elif ws.name == CASK:
         ws.interior[(r, c)] = COLOR_INDEX[10] if judg else NG_RED
     _judge_logs(book, ws, r, c, mark, lname)
     book.fx.sounds.append("音楽合格" if judg else "音楽不合格")
@@ -1409,7 +1282,7 @@ def hizumi_tsuke(book: Book, judg: bool, r: int, c: int) -> None:
         book.fx.forms.append(FormShow("UFOK" if judg else "UFNG"))
 
 
-WORK_SAVE_SHEET = {ZEN: "全ヵ所作業中保存", CASK: "ｷｬｽｸ作業中保存", H494: "H494作業中保存"}
+WORK_SAVE_SHEET = {ZEN: "全ヵ所作業中保存", CASK: "ｷｬｽｸ作業中保存"}
 
 
 def koshagai_kensaku(book: Book, r: int, c: int) -> None:
@@ -1421,9 +1294,6 @@ def koshagai_kensaku(book: Book, r: int, c: int) -> None:
             sagyo_hozon(book)
     elif ws.name == ZEN:
         if c in (4, 8, 13, 17, 20, 23):
-            sagyo_hozon(book)
-    elif ws.name == H494:
-        if c in (4, 8, 15, 19, 22, 28):
             sagyo_hozon(book)
 
 
@@ -1447,8 +1317,6 @@ def uf_taikaku(book: Book, r: int, c: int) -> None:
     if ws.name == CASK and c == 19 and not blank(ws.get(r, 19)):
         book.fx.forms.append(FormShow("UF対角", "", r, c))
     elif ws.name == "全ヵ所検査検査" and c == 19 and not blank(ws.get(r, 19)):
-        book.fx.forms.append(FormShow("UF対角", "", r, c))
-    elif ws.name == H494 and c == 21 and not blank(ws.get(r, 21)):
         book.fx.forms.append(FormShow("UF対角", "", r, c))
 
 

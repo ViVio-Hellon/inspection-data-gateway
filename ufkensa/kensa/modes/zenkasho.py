@@ -1,7 +1,7 @@
 """全ヵ所検査(一般 / 5N / 三菱受託)— UFMitsubishi(P1) + 全ヵ所検査シート + Mitsubishi モジュール
 
 - シートのイベント: `ZenSh1`(= `ZenSh`)の Worksheet_Change / SelectionChange。`ZenSh2` は旧版の残骸(移植しない)
-- 作業選択(Choice = 三菱 / 5N / 一般)と `ForN_Select`、ロット読込(H494 モードと共用)、検入高さ
+- 作業選択(Choice = 三菱 / 5N / 一般)と `ForN_Select`、ロット読込、検入高さ
 - MAX/MIN、`ｺﾋﾟ-用`・`転送済`(三菱受託原紙)への転記、測定機器の文字列、印刷の設定、保存の手順
 
 三菱受託モードは 2024.1.11 の列追加に追従していない疑いがある(W2)。**VBA どおりの列で再現**し、
@@ -16,7 +16,7 @@ from .. import datasource, flow, paths, vbx
 from .. import sound as snd
 from . import cask as ck
 from . import sheet as sh
-from .sheet import H494, ZEN, Book, Call, Effects, LogCall, PrintJob, SavePlan, SaveStep, VbaError
+from .sheet import ZEN, Book, Call, Effects, LogCall, PrintJob, SavePlan, SaveStep, VbaError
 
 #: 三菱受託モードで列がずれていると思われる所(W2。VBA どおりに再現している)
 MITSUBISHI_SUSPECT = (
@@ -382,7 +382,7 @@ def mlp_click(book: Book) -> Effects:
     """UFMitsubishi.MLP_Click (UFMit:1833-1892)。重量のゲージ要否と、検入高さ(AD1=計算式・AD2=山数・AD3)の保存。"""
     fx = book.begin()
     f = book.mit
-    name = {"P1": ZEN, "P_H494": H494}.get(f.work_flag)
+    name = {"P1": ZEN}.get(f.work_flag)
     if name is None or name not in book.sheets:
         return fx
     book.activate_sheet(name)
@@ -412,7 +412,7 @@ def mlp_click(book: Book) -> Effects:
 def weight_click(book: Book) -> Effects:
     """Frame2/4/6・シート発行・UserForm_Click の重量メッセージ(UFMit:276-308 ほか)。UserForm_Click は EnableEvents も戻す。"""
     fx = book.begin()
-    name = {"P1": ZEN, "P_H494": H494}.get(book.mit.work_flag)
+    name = {"P1": ZEN}.get(book.mit.work_flag)
     if name is None:
         return fx
     if name in book.sheets:
@@ -433,7 +433,7 @@ def userform_click(book: Book) -> Effects:
 
 
 # ------------------------------------------------------------------
-# ロット読込(全ヵ所 / H494 共用)
+# ロット読込(全ヵ所)
 # ------------------------------------------------------------------
 def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], float]] = None,
                  re_diagonal: Optional[Callable[[float, float], float]] = None,
@@ -459,7 +459,7 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
         return fx
     if len(f.combo) != 7:
         return fx
-    name = {"P1": ZEN, "P_H494": H494}.get(f.work_flag)
+    name = {"P1": ZEN}.get(f.work_flag)
     if name is None:
         raise flow.Stop("実行時エラー '91':" + "\r\n\r\n" + "オブジェクト変数または With ブロック変数が設定されていません。",
                         source="UFMit:617")
@@ -483,12 +483,7 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
             val = lambda n: vbx.val(nn(n))  # noqa: E731
             book.write(zs, 2, 4, f.combo)
             f.ken_no = nn("検査番号")
-            f.h494_ken_no = nn("検査番号")
             f.youto_no = nn("用途ｺｰﾄﾞ")
-            f.h494_youto = nn("用途ｺｰﾄﾞ")
-            if 1.0 <= val("製造板幅") <= 299.0:
-                f.h494 = True
-                zs.font_color[(2, 4)] = (255, 0, 0)
             book.write(zs, 3, 2, vbx.fmt(val("製造板厚"), "0.000"))
             book.write(zs, 3, 4, vbx.fmt(val("製造板幅"), "0.0"))
             book.write(zs, 3, 6, vbx.fmt(val("製造板丈"), "0.0"))
@@ -554,7 +549,7 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
         book.activate_sheet(name)
         book.events_enabled = True
         lot_no = book.cask.lot_box if book.cask.visible else ""
-        lot_no = {"P1": f.lot_box, "P_H494": f.h494_lot}.get(f.work_flag, lot_no)
+        lot_no = {"P1": f.lot_box}.get(f.work_flag, lot_no)
         if f.pack_no_on_off != "off":
             fx.calls.append(Call("PackingNoCheck/UFPack_Open", (lot_no,)))
         return fx
@@ -631,11 +626,6 @@ def max_min(book: Book, temp: str = ZEN) -> None:
             return
         n, k = vbx.clng(vbx.val(f.min_text) + 6), vbx.clng(vbx.val(f.max_text) + 6)
         erow, ecol = 76, 13              # D22(W12): VBA は Erow = 36(Mit:156)。31 枚以上もあるので下線の消去を全行に
-    elif f.work_flag == "P_H494":
-        if f.h494_min_text == "" or f.h494_max_text == "":
-            return
-        n, k = vbx.clng(vbx.val(f.h494_min_text) + 6), vbx.clng(vbx.val(f.h494_max_text) + 6)
-        erow, ecol = 16, 15
     else:
         n = k = erow = ecol = 0
     ws = book.ws(temp)
@@ -672,12 +662,6 @@ def max_min(book: Book, temp: str = ZEN) -> None:
         max_take = vbx.single(max(mx(15), mx(17)))
         min_take = vbx.single(cmin(15, 17))
         ta, th, tt = 23, 25, 27
-    elif f.work_flag == "P_H494":
-        max_haba = vbx.single(max(mx(11), mx(13), mx(15)))
-        min_haba = vbx.single(cmin(11, 13, 15))
-        max_take = vbx.single(max(mx(17), mx(19)))
-        min_take = vbx.single(cmin(17, 19))
-        ta, th, tt = 22, 23, 24
     else:
         max_haba = min_haba = max_take = min_take = 0.0
         ta = th = tt = 0
@@ -743,9 +727,6 @@ def kiki_tensou(book: Book, ws: sh.Sheet, x: int, y: int, atu: str, haba: str, y
             book.write(ws, x, y, "ﾉｷﾞｽ" + line + "N5" + sp + "ｺﾝﾍﾞｯｸｽ:" + line + "C11")
         elif hi and not lo:
             book.write(ws, x, y, "ﾉｷﾞｽ" + line + "N6" + sp + "ｺﾝﾍﾞｯｸｽ:" + line + "C11")
-    if yout == "H494":
-        if 1.0 <= vbx.val(haba) <= 299.0:
-            book.write(ws, x, y, "ﾏｲｸﾛ:" + line + "M1" + sp + "幅:ﾉｷﾞｽ:" + "N5" + "_丈:ｺﾝﾍﾞｯｸｽ:" + line + conb)
 
 
 # ------------------------------------------------------------------
@@ -880,17 +861,13 @@ def _mitsubishi_abort(book: Book, text: str) -> None:
 # ------------------------------------------------------------------
 def _kname_for(book: Book) -> str:
     f = book.mit
-    if f.work_flag == "P_H494":
-        if f.h494_kname == "":
-            return f.kname
-        return f.h494_kname
     return f.kname if f.work_flag == "P1" else ""
 
 
 def zen_print_setup(book: Book, temp: str = ZEN) -> Optional[PrintJob]:
-    """Mitsubishi.全ヵ所用印刷範囲 (Mit:860-938)。全ヵ所 A6:AD{n} / H494 A6:AB{n}、A4 横 1×1、ヘッダ/フッタ。
+    """Mitsubishi.全ヵ所用印刷範囲 (Mit:860-938)。全ヵ所 A6:AD{n}、A4 横 1×1、ヘッダ/フッタ。
 
-    B30: フッタの測定機器は AC3(全ヵ所の書き込み先)を見る。H494 は Y2 に書くので空欄になる。
+    フッタの測定機器は AC3(全ヵ所の書き込み先)を見る。
     """
     if not book.has(temp) or temp not in book.sheets:
         return None
@@ -900,8 +877,6 @@ def zen_print_setup(book: Book, temp: str = ZEN) -> Optional[PrintJob]:
     area = ""
     if f.work_flag == "P1":
         area = "$A$6:$AD$" + str(n)
-    elif f.work_flag == "P_H494":
-        area = "$A$6:$AB$" + str(n)
     kname = _kname_for(book)
     book.activate_sheet(temp)
     ws.fill(7, 2, 76, 28, sh.WHITE)
@@ -909,8 +884,6 @@ def zen_print_setup(book: Book, temp: str = ZEN) -> Optional[PrintJob]:
     x, y, z = v(3, 2), v(3, 4), v(3, 6)
     am, ap, hm, hp, tm, tp = v(2, 13), v(2, 15), v(3, 13), v(3, 15), v(4, 13), v(4, 15)
     device = ws.get(3, 29)
-    if temp == H494:
-        device = ws.get(2, 25)
     return PrintJob(
         sheet=temp, print_area=area,
         right_footer='&"Meiryo UI"&8' + "*" + sh.fmt_date(ws.get(1, 2), "yyyy/mm/dd  h:mm") + "～"
@@ -967,8 +940,6 @@ def _save_copy(book: Book, temp: str, kname: str, *, widths: str) -> sh.Sheet:
     put(1, 4, sh.fmt_date(book.now(), "yyyy/mm/dd h:mm"))
     if widths == "P1":
         s.col_width.update({2: 7.7, 11: 7.7, 24: 7.7})
-    elif widths == "P_H494":
-        s.col_width.update({2: 7.7, 11: 7.7, 25: 7.7})
     elif widths == "5N":
         s.col_width.update({c: 8.75 for c in range(1, 31)})
         s.col_width.update({c: 2.5 for c in (3, 5, 7, 9, 10, 12, 14, 16, 18, 21, 24, 26, 28)})
@@ -990,7 +961,7 @@ def _snap(book: Book, names: list[str]) -> dict[str, Any]:
 def justincase_zn_save(book: Book, temp: str = ZEN) -> Optional[SavePlan]:
     """Mitsubishi.JustinCase_ZnSave (Mit:324-426)。新規発行の前の念のための保存(検査履歴\\JustinCaseSave)。
 
-    含めるのは表示中の `{temp}保存` と `全ヵ所検査`(H494 でも 全ヵ所検査 の名前で探す)。
+    含めるのは表示中の `{temp}保存` と `全ヵ所検査`。
     """
     if not book.has(temp):
         return None
@@ -1032,7 +1003,7 @@ def zen_save(book: Book, temp: str = ZEN) -> Optional[SavePlan]:
         fx.msg(temp + "がありません", flow.ERROR, "Mit:429")
         return None
     f = book.mit
-    kname = f.kname if f.work_flag == "P1" else (_kname_for(book) if f.work_flag == "P_H494" else "")
+    kname = f.kname if f.work_flag == "P1" else ""
     s = _save_copy(book, temp, kname, widths=f.work_flag)
     book.add_sheet(s)
     dname = _defect_sheet_name(book)
@@ -1197,9 +1168,8 @@ def new_sheet(book: Book, answers: Optional[dict] = None) -> Union[Effects, flow
 
 
 def zen_copy(book: Book, temp: str = ZEN) -> None:
-    """Mitsubishi.全ヵ所用コピー (Mit:95-133)。原紙から作業シート(全ヵ所検査 / H494検査)を作り直す。"""
-    tname = sh.ZEN_TEMPLATE if temp == ZEN else sh.H494_TEMPLATE
-    ws = sh.template(tname)
+    """Mitsubishi.全ヵ所用コピー (Mit:95-133)。原紙から作業シート(全ヵ所検査)を作り直す。"""
+    ws = sh.template(sh.ZEN_TEMPLATE)
     ws.name = temp
     ws.visible = True
     ws.tab_color = 16764108
@@ -1414,7 +1384,7 @@ def open_mitubisi(book: Book, temp: str, *, line_name: str, worker_text: Optiona
                   choice_input: Optional[str] = None, **lot_kw: Any) -> Union[Effects, flow.Question]:
     """Mitsubishi.OpenMitubisi (Mit:3-76) + UserForm_Initialize + Show(Activate)。
 
-    `temp`: "全数"(全ヵ所) / "H494"。`worker_text`: UF1 の当日の検査員(T1/T2/T3 の Caption。"_" 区切りの最後の人)。
+    `temp`: "全数"(全ヵ所)。`worker_text`: UF1 の当日の検査員(T1/T2/T3 の Caption。"_" 区切りの最後の人)。
     シートからロット・検査No・作業選択・用途・高さ式を戻す。ロット欄を戻すと LotBox_Change → ロット読込が走る(`lot_kw`)。
     作業選択が空なら InputBox(`choice_input`。None なら `flow.Question(buttons="input")` を返す)。
     """
@@ -1423,8 +1393,8 @@ def open_mitubisi(book: Book, temp: str, *, line_name: str, worker_text: Optiona
     f = book.mit
     f.pack_no_on_off = "off"
     worker = worker_text.split("_") if worker_text is not None else None
-    name = ZEN if temp == "全数" else H494
-    f.work_flag = "P1" if temp == "全数" else "P_H494"
+    name = ZEN
+    f.work_flag = "P1"
     if name in book.sheets:
         ws = book.ws(name)
         book.activate_sheet(name)
@@ -1433,24 +1403,13 @@ def open_mitubisi(book: Book, temp: str, *, line_name: str, worker_text: Optiona
             new = worker[-1] + " " + h3 if h3 != "" else worker[-1]
             f.kname = remove_duplicates(new)
         lot = sh.cell_str(ws.get(2, 4))
-        if temp == "全数":
-            if f.lot_box != lot:
-                f.lot_box = lot
-                lot_box_change(book, **lot_kw)
-            f.ken_no = sh.cell_str(ws.get(2, 8))
-            _set_choice(book, sh.cell_str(ws.get(1, 22)))
-            f.youto_no = sh.cell_str(ws.get(4, 8))
-            f.takasa_formula = sh.cell_str(ws.get(1, 30))
-            if ws.font_color.get((2, 4)) == (255, 0, 0):
-                f.h494 = True
-        else:
-            if f.h494_lot != lot:
-                f.h494_lot = lot
-                from . import h494 as h
-                h.h494_lot_change(book, **lot_kw)
-            f.h494_ken_no = sh.cell_str(ws.get(2, 8))
-            f.h494_youto = sh.cell_str(ws.get(4, 8))
-            f.takasa_formula = sh.cell_str(ws.get(1, 30))
+        if f.lot_box != lot:
+            f.lot_box = lot
+            lot_box_change(book, **lot_kw)
+        f.ken_no = sh.cell_str(ws.get(2, 8))
+        _set_choice(book, sh.cell_str(ws.get(1, 22)))
+        f.youto_no = sh.cell_str(ws.get(4, 8))
+        f.takasa_formula = sh.cell_str(ws.get(1, 30))
     res = activate(book, choice_input=choice_input)
     if isinstance(res, flow.Question):
         return res
@@ -1486,21 +1445,14 @@ def activate(book: Book, *, choice_input: Optional[str] = None) -> Union[Effects
                 book.ws(name).visible = True
         if ZEN in book.sheets:
             book.activate_sheet(ZEN)
-    elif f.work_flag == "P_H494":
-        for name in (H494, "H494検査保存", "H494作業中保存"):
-            if name in book.sheets or name in book.extra:
-                book.ws(name).visible = True
-        if H494 not in book.sheets:
-            zen_copy(book, H494)
-        book.activate_sheet(H494)
     book.events_enabled = True
     return fx
 
 
 def query_close(book: Book) -> Effects:
-    """UFMitsubishi.UserForm_QueryClose (UFMit:2344-2366)。全ヵ所・H494 系のシートを隠す。"""
+    """UFMitsubishi.UserForm_QueryClose (UFMit:2344-2366)。全ヵ所系のシートを隠す。"""
     fx = book.begin()
-    for name in (ZEN, "全ヵ所検査保存", "全ヵ所作業中保存", H494, "H494検査保存", "H494作業中保存"):
+    for name in (ZEN, "全ヵ所検査保存", "全ヵ所作業中保存"):
         if name in book.sheets or name in book.extra:
             book.ws(name).visible = False
     book.mit.visible = False

@@ -457,9 +457,6 @@ class ReturnItemTest(unittest.TestCase):
         args = ("ﾊｸﾄﾞｳ(ｶ)ｶﾅｶﾞﾜｼﾞｷﾞﾖｳｼﾖ", "ﾊｸﾄﾞｳ(ｶ", "H279", "F52S", "R", 36, 1528, 3053)
         r = q.db_return_item(*args, lateral_lot=lot)
         self.assertEqual(r.uf1["LateralText"], "3.0")
-        r = q.db_return_item(*args, lateral_lot=lot, mitsubishi_visible=True, work_flag="P_H494")
-        self.assertEqual((r.sheet, r.cells), ("H494検査", {(1, 15): "ﾊｸﾄﾞｳ(ｶ)ｶﾅｶﾞﾜｼﾞｷﾞﾖｳｼﾖF52S", (1, 13): "3.0"}))
-        self.assertNotIn("LateralText", r.uf1)
 
     def test_no_match_messages(self) -> None:
         # 該当なし: 最後に評価した行(管理番号11 ﾀﾞｲｹﾝ)で判定。納入先で外れ → C4 偽 → 「_製造材質」(B27)

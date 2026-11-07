@@ -1,4 +1,4 @@
-"""全ヵ所検査(一般 / 5N / 三菱受託)・H494 検査の画面(VBA の UFMitsubishi + 全ヵ所検査 / H494検査 シート)
+"""全ヵ所検査(一般 / 5N / 三菱受託)の画面(VBA の UFMitsubishi + 全ヵ所検査 シート)
 
 画面の操作 1 つ = `zenkasho_session.ZenkashoSession` のメソッド 1 つ。返り値は `Result`(view・messages・question・stop)。
 判断はすべてセッション(業務ロジック)が行い、ここは受け渡すだけ。
@@ -84,6 +84,6 @@ def operate(op: str):
     body = request.get_json(silent=True) or {}
     kwargs = {n: body[n] for n in names if n in body}
     s = zenkasho_session.get()
-    with trace.timed(f"zenkasho.{op}", f"全ヵ所・H494 画面: {op}", expected=(Stop,), page=s.page):
+    with trace.timed(f"zenkasho.{op}", f"全ヵ所画面: {op}", expected=(Stop,), page=s.page):
         result = getattr(s, method)(**kwargs)
     return jsonify(result.to_dict())

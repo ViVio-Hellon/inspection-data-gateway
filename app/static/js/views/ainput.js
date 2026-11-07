@@ -238,7 +238,7 @@ function render(v) {
 
 // ------------------------------------------------------------------
 const QS = new URLSearchParams(location.search);
-const FROM = QS.get("from") || "";          // 呼び元(Cask / Mitsubishi / H494)。無ければ通常検査
+const FROM = QS.get("from") || "";          // 呼び元(Cask / Mitsubishi)。無ければ通常検査
 const METHOD = QS.get("method") || "";
 
 function init() {
@@ -276,7 +276,7 @@ function init() {
   api.get("/api/ainput/state").then((res) => {
     render(res.view);
     const v = res.view;
-    // キャスク・全ヵ所・H494 の「Aインプットへ」から来た: 呼び元のシートのロット・Min/Max で開く(Input:247-252)
+    // キャスク・全ヵ所の「Aインプットへ」から来た: 呼び元のシートのロット・Min/Max で開く(Input:247-252)
     if (FROM) return op("open", { ken_m: METHOD || v.ken_m, source: FROM });
     // 開いていない・検査画面のロットが変わった → 前に選んだ検査法で開き直す(VBA は毎回 Ainput_Startup)
     if (v.ken_m && (!v.ready || (v.kensa.lot && v.lot.lot !== v.kensa.lot && !v.lot.db_flag))) return op("open", { ken_m: v.ken_m });
