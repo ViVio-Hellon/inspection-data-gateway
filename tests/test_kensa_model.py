@@ -48,3 +48,21 @@ class ModelTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NamedValuesTest(unittest.TestCase):
+    """第3段10: 「VBA の名前 → 値」を型に分けて入れる(wiring.NamedValues)。"""
+
+    def test_split_and_apply(self) -> None:
+        from ufkensa.kensa import wiring
+        d = wiring.NamedValues.of({"S1": "15.012", "Lot": "H1", "厚板.Caption": "H", "TaikText": "2.0",
+                                   "HizCome.Caption": "x", "VC_L_A.Tag": "t", "LateralText.BackColor": 0})
+        self.assertEqual(d.measures, {CellKey("S", 1): "15.012"})
+        self.assertEqual(d.attrs, {"lot": "H1"})
+        self.assertEqual(d.captions, {"厚板": "H"})
+        self.assertEqual(d.ctls, {"TaikText": "2.0", "HizCome": "x"})
+        self.assertEqual(set(d.props), {"VC_L_A.Tag", "LateralText.BackColor"})
+        st = grid.KensaState()
+        d.apply(st)
+        self.assertEqual((st.cells["S1"].value, st.lot, st.work_caption["厚板"]), ("15.012", "H1", "H"))
+        self.assertEqual((st.v("TaikText").value, st.v("HizCome").value, st.v("VC_L_A").tag), ("2.0", "x", "t"))

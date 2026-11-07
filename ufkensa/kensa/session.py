@@ -508,15 +508,13 @@ class Session:
             ken = st.ken_no_caption or ken_no_of(st.lot, lot_data, st.dbflag)
             qp = quality.dist_array(st.lot, ken, quality.hiki_arr_create(st.lot), lot_data)
             env.messages.extend(qp.messages)
-            for k, v in qp.uf1.items():
-                wiring.put(st, k, v)
+            wiring.apply_values(st, qp.uf1)
         except (vbx.TypeMismatch, quality.VbaRuntimeError, IndexError) as e:
             env.messages.append(Message(str(e), ERROR, source="QP.DistArray"))
         layout.op_forced_selection(st)
         if qp is not None and qp.kousa:
             r = quality.form_reflect_dist(qp.kousa, quality_visible=False, mitsubishi_visible=False)
-            for k, v in r.values.items():
-                wiring.put(st, k, v)
+            wiring.apply_values(st, r.values)
         return None
 
     # ------------------------------------------------------------------
@@ -956,8 +954,7 @@ class Session:
             self._ng_posting(posi)
             self._ng_erase(posi)
         elif tb1 in ("許容", "保留"):
-            for k, v in checks.ng_pass(posi, tb1).items():
-                wiring.put(st, k, v)
+            wiring.apply_values(st, checks.ng_pass(posi, tb1))
         elif tb1 == "再測定":
             hooks.apply_erase(st, checks.ng_back(wiring.to_uf1(st), posi, knum))
         self.confi = None
@@ -1404,8 +1401,7 @@ class Session:
         if ans is None:
             return Question("hold", temp + "で保留処理を行いますか？", source="UF1:169")
         if ans:
-            for k, v in checks.ng_pass(left, "保留").items():
-                wiring.put(st, k, v)
+            wiring.apply_values(st, checks.ng_pass(left, "保留"))
             self.confi = None                                             # NG_Pass: Unload UFConfi
         return None
 
