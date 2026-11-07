@@ -53,7 +53,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import logging
 import threading
 from datetime import datetime
@@ -285,16 +284,6 @@ class ZenkashoSession(SubInspectionCommon):
 
     def _sheet(self) -> str:
         return ZEN if self.page == "P1" else H494
-
-    def _exists(self, p: str) -> bool:
-        """保存の連番の判定(VBA は .xlsx を探す。D7 で xlsx の代わりに .html/.pdf/.csv を書くので、それも見る)。"""
-        lp = legacy_log.local_path(p)
-        if lp.exists():
-            return True
-        if p.lower().endswith(".xlsx"):
-            stem = lp.name[:-5]
-            return any((lp.parent / (stem + ext)).exists() for ext in (".html", ".pdf"))
-        return False
 
     def _sink(self) -> list[Message]:
         return self._msgs
@@ -880,33 +869,13 @@ class ZenkashoSession(SubInspectionCommon):
         return out.replace("</style>", ".hf span{white-space:pre-line}\n</style>", 1)
 
     def _save_plan(self, plan: sh.SavePlan, msgs: list[Message]) -> None:
-        """SavePlan の手順を実行する。D7: xlsx の代わりに、保存先のファイル名で .html(+ Windows で Edge があれば .pdf)と
-        シートごとの .csv を書く。FileCopy はそれらを写す。パスワード・読み取り専用(SetAttr)は付けない。"""
-        produced: dict[str, list[Path]] = {}
+        """SavePlan の実行: 1 つの xlsx と、最初のシートの見せる用 HTML(Windows で Edge があれば PDF)。"""
         edge = paths.to_local(paths.get("edge"))
         edge_s = str(edge) if edge.is_file() and os.name == "nt" else None
-        for step in plan.steps:
-            try:
-                if step.kind == "mkdir":
-                    if step.path:
-                        legacy_log.local_path(step.path).mkdir(parents=True, exist_ok=True)
-                elif step.kind == "save":
-                    with trace.timed("db.save", f"保存({plan.name})", path=step.path) as info:
-                        files = self._write_book(plan, step.path, edge_s, msgs)
-                        info["files"] = len(files)
-                    produced[step.path] = files
-                    self.saved.extend(str(f) for f in files)
-                elif step.kind == "copy":
-                    dest = legacy_log.local_path(step.path)
-                    with trace.timed("db.save", f"写し({plan.name})", path=step.path) as info:
-                        dest.parent.mkdir(parents=True, exist_ok=True)
-                        for f in produced.get(step.src, []):
-                            shutil.copyfile(f, dest.parent / f.name)
-                            trace.note_used(dest.parent / f.name, "save")
-                            self.saved.append(str(dest.parent / f.name))
-                        info["files"] = len(produced.get(step.src, []))
-            except OSError as e:
-                msgs.append(Message("保存できませんでした: " + step.path + "\r\n" + str(e), WARN, source=plan.name))
+        files, errs = self._run_save_plan(
+            plan, lambda folder, stem: self._write_book(plan, str(folder / f"{stem}.xlsx"), edge_s, msgs))
+        self.saved.extend(files)
+        msgs.extend(errs)
 
     def _write_book(self, plan: sh.SavePlan, xlsx_path: str, edge: Optional[str], msgs: list[Message]) -> list[Path]:
         lp = legacy_log.local_path(xlsx_path)

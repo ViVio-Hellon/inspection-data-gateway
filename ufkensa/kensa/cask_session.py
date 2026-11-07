@@ -36,10 +36,8 @@ ComboBox1_Change の続き: HistorySave(Lot情報履歴)→ PackingNoCheck / UFP
 """
 from __future__ import annotations
 
-import glob
 import json
 import re
-import shutil
 import logging
 import threading
 from datetime import datetime
@@ -304,14 +302,6 @@ class CaskSession(SubInspectionCommon):
         from . import session
         return session.get().state
 
-    def _exists(self, path_text: str) -> bool:
-        """保存の連番(numbered_path)の「もうあるか」。xlsx の代わりに作る `<名前>_<シート>.csv` も見る(D7)。"""
-        p = legacy_log.local_path(path_text)
-        if p.exists():
-            return True
-        stem = p.name[:-5] if p.name.lower().endswith(".xlsx") else p.name
-        return bool(glob.glob(str(p.parent / (glob.escape(stem) + "_*.csv"))))
-
     def _sink(self) -> list[Message]:
         return self.book.fx.messages
 
@@ -565,39 +555,10 @@ class CaskSession(SubInspectionCommon):
         return []
 
     def _save(self, plan: sh.SavePlan) -> list[Message]:
-        """SavePlan の実行(D7): xlsx の代わりに、シートごとの PDF(Edge。Windows 以外は HTML)と CSV。
-
-        - "mkdir": フォルダを作る / "save": `<名前>_<シート>.csv` と `.html`(+ `.pdf`)/ "copy": 作ったものを写す
-        - パスワード・読み取り専用(xlsx の保護)は PDF/CSV では付けない
-        """
-        msgs: list[Message] = []
-        made: dict[str, list[Path]] = {}
+        """SavePlan の実行: 1 つの xlsx(シートを並べる)と、シートごとの見せる用 HTML(Windows で Edge があれば PDF)。"""
         edge = paths.to_local(paths.get("edge"))
         edge_s = str(edge) if edge.is_file() else None
-        files: list[str] = []
-        for step in plan.steps:
-            target = legacy_log.local_path(step.path)
-            try:
-                if step.kind == "mkdir":
-                    target.mkdir(parents=True, exist_ok=True)
-                elif step.kind == "save":
-                    stem = target.name[:-5] if target.name.lower().endswith(".xlsx") else target.name
-                    with trace.timed("db.save", f"{plan.name}(PDF・CSV)", path=str(target.parent), table=stem) as info:
-                        made[step.path] = self._write_sheets(plan, target.parent, stem, edge_s)
-                        info["files"] = len(made[step.path])
-                    files.extend(str(p) for p in made[step.path])
-                elif step.kind == "copy":
-                    src_stem = Path(step.src.replace("\\", "/")).name
-                    src_stem = src_stem[:-5] if src_stem.lower().endswith(".xlsx") else src_stem
-                    dst_stem = target.name[:-5] if target.name.lower().endswith(".xlsx") else target.name
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    for p in made.get(step.src, []):
-                        dst = target.parent / (dst_stem + p.name[len(src_stem):])
-                        shutil.copyfile(p, dst)
-                        trace.note_used(dst, "save")
-                        files.append(str(dst))
-            except (OSError, report_html.PdfError) as e:
-                msgs.append(Message("保存できませんでした: " + str(target) + "\r\n" + str(e), WARN, source=plan.name))
+        files, msgs = self._run_save_plan(plan, lambda folder, stem: self._write_sheets(plan, folder, stem, edge_s))
         self.saved = {"name": plan.name, "files": files}
         return msgs
 
