@@ -119,6 +119,13 @@ class CaskScreenTest(SessionBase):
         cask_session.reset_for_test(self.cask_session())                     # キャスクでロットを開いていない
         self.assertIn("キャスク画面でロットを開いてから", empty.open("L2", "Cask").stop.text)
 
+    def test_stuck_events_recover(self) -> None:
+        """前の操作でイベントが止まったまま(EnableEvents = False の戻し忘れ)でも、次の操作でロットが読める。"""
+        self.post("open")
+        self.cs.book.events_enabled = False
+        d = self.post("lot", lot="rx021t0")
+        self.assertEqual(d["view"]["form"]["ken_no"], "T6X1913")
+
     def test_open_needs_worker(self) -> None:                # UF1.KYB_Click (UF1:3232-3234)
         cs = self.cask_session(uf1=lambda: KensaState())
         res = cs.open()

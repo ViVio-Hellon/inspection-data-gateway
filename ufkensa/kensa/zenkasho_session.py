@@ -54,6 +54,7 @@ import json
 import os
 import re
 import shutil
+import logging
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -64,7 +65,7 @@ from . import checks, datasource, judge, legacy_log, packing, paths, quality, qu
     terminal, vbx, workers
 from . import lot as lotmod
 from . import sound as snd
-from .flow import ERROR, INFO, WARN, Message, Question, Stop
+from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .modes import h494 as hm
 from .modes import sheet as sh
 from .modes import zenkasho as zk
@@ -820,6 +821,11 @@ class ZenkashoSession:
     def _run(self, fn: Callable[..., Any], *args: Any) -> Result:
         with self._lock, paths.lot_source(self._reads_second):
             b = self._ensure()
+            if not b.events_enabled:
+                # 前の操作が途中で止まり、イベントが止まったまま(VBA の EnableEvents = False の戻し忘れ)。戻さないと
+                # セルの入力に何も反応しなくなる。操作は 1 つずつ順に来るので、ここで止まっているのは残り物(2026-11-06)
+                logging.getLogger(__name__).warning("イベントが止まったままだったので戻します")
+                b.events_enabled = True
             self._acc, self._msgs = [], []
             self.flash, self.reports, self.saved, self.ainput, self.pending, self.errors = "", [], [], None, [], []
             self.diag = False
@@ -839,6 +845,10 @@ class ZenkashoSession:
                 stop = Stop("実行時エラー '13':" + "\r\n\r\n" + "型が一致しません。", source=str(e))
             except datasource.DbMissing as e:
                 stop = Stop(str(e), source="datasource")
+            except NotImplementedError:
+                raise
+            except Exception as e:                           # noqa: BLE001 - 想定外でも画面は止めない
+                stop = unexpected_stop(e, "zenkasho." + getattr(fn, "__name__", ""))
             finally:
                 self._harvest(b.fx)
             msgs = self._settle()

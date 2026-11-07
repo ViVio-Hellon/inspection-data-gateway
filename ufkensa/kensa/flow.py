@@ -75,3 +75,16 @@ class Stop(Exception):
     def to_dict(self) -> dict[str, Any]:
         return {"stop": {"text": self.text, "source": self.source, "level": self.level},
                 "messages": [m.to_dict() for m in self.messages]}
+
+
+def unexpected_stop(e: BaseException, where: str = "", messages: Optional[list] = None) -> "Stop":
+    """想定外のエラー(Python の誤りなど)を、画面を止めない「止まりました」の知らせにする(2026-11-06 の見直し)。
+
+    前は 500 で返り、画面に「思わぬエラー」が出て状態が半端なままだった。ログには詳細(トレースバック)を残す。
+    検査・キャスク・全ヵ所・Aインプット・校正の操作の入口で共通に使う。
+    """
+    import logging
+    logging.getLogger("ufkensa.kensa.flow").error("操作 %s で想定外のエラー", where or "?", exc_info=e)
+    return Stop(f"処理の途中でエラーになりました({type(e).__name__}: {e})。"
+                "この操作はやり直してください。続くときはログを管理者に渡してください",
+                messages=list(messages or []), source=where)

@@ -41,6 +41,7 @@ import glob
 import json
 import re
 import shutil
+import logging
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -50,7 +51,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import datasource, legacy_log, lot as lotmod, packing, paths, quality, report_html, terminal, vbx, wiring, workers
 from . import sound as snd
-from .flow import ERROR, INFO, WARN, Message, Question, Stop
+from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .modes import cask
 from .modes import sheet as sh
 from .report_model import ReportModel, format_cell
@@ -389,6 +390,11 @@ class CaskSession:
     def _run(self, fn: Callable[..., Any], *args: Any) -> Result:
         with self._lock, paths.lot_source(self._reads_second):
             book = self._ensure_book()
+            if not book.events_enabled:
+                # 前の操作が途中で止まり、イベントが止まったまま(VBA の EnableEvents = False の戻し忘れ)。戻さないと
+                # セルの入力に何も反応しなくなる。操作は 1 つずつ順に来るので、ここで止まっているのは残り物(2026-11-06)
+                logging.getLogger(__name__).warning("イベントが止まったままだったので戻します")
+                book.events_enabled = True
             book.begin()
             self._lot_error = False
             extra: list[Message] = []
@@ -403,6 +409,10 @@ class CaskSession:
                     raise Stop(f"実行時エラー '{e.number}':" + "\r\n\r\n" + e.description, source=e.where or "VBA") from e
                 except datasource.DbMissing as e:
                     raise Stop(str(e), source="datasource") from e
+                except (Stop, NotImplementedError):
+                    raise
+                except Exception as e:                       # noqa: BLE001 - 想定外でも画面は止めない
+                    raise unexpected_stop(e, "cask." + getattr(fn, "__name__", "")) from e
             except Stop as e:
                 stop = e
             fx = book.fx

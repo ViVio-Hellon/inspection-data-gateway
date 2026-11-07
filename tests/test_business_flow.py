@@ -405,3 +405,28 @@ class CalibrationAndShiftTest(FlowBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OtherScreensRecoveryTest(FlowBase):
+    """キャスク・全ヵ所・Aインプット・校正も、操作の途中の想定外のエラーで 500 にならず、知らせて止まる。"""
+
+    def boom(self, *a, **k):
+        raise ValueError("試験のエラー")
+
+    def test_each_screen_reports_instead_of_500(self) -> None:
+        from unittest import mock
+        from ufkensa.kensa import ainput_session, calibration_session, cask_session, zenkasho_session
+        self.op("start")
+        cases = [
+            (cask_session.CaskSession(self.store, now=self.clock, uf1=lambda: self.s.state), "_open", "open"),
+            (zenkasho_session.ZenkashoSession(self.store, now=self.clock, kensa_state=lambda: self.s.state),
+             "_start", "start"),
+            (ainput_session.AinputSession(self.s), "_open", "open"),
+            (calibration_session.CalibrationSession(self.store, now=self.clock), "_open", "open"),
+        ]
+        for obj, meth, public in cases:
+            with self.subTest(type(obj).__name__):
+                with mock.patch.object(type(obj), meth, self.boom):
+                    res = getattr(obj, public)()
+                self.assertIsNotNone(res.stop)
+                self.assertIn("試験のエラー", res.stop.text)
