@@ -672,6 +672,15 @@ class LSelectInfo:
     allocation: Optional[LotAllocation] = None
 
 
+def _safe(fn, *a, **k):
+    """LSelect は手続き全体が On Error Resume Next。呼んだ先の VBA の誤りは飛ばして None。"""
+    try:
+        return fn(*a, **k)
+    except VBA_ERRORS as _vba_e:
+        vba_swallow(_vba_e, "layout.py lselect")
+        return None
+
+
 def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False,
             msgs: Optional[list[Message]] = None) -> LSelectInfo:
     """FormRelat.LSelect (FormRelat:2579-3864)。作業選択ごとの表示・2HI 等のコース判定・ゲージ要否・引当判定。
@@ -680,18 +689,40 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
     強制描写(Byousya)と、住精で仕掛 DB が読めないときは `GoTo LineSkip`(薄板の Case の途中)へ飛ぶ。
     With UF1 の途中へ飛び込むので、With の `.` で書いた文はエラー91 で全部飛ばされる(UF1. と書いた文だけ効く)。
     B7: キャッシュ使用時のオーダー厚は IIf の両辺評価のエラーで 0 → 画面の厚(ATU)で 6mm 判定する。
+
+    2026-11-07: 310 行の 1 本を、VBA の上から順の 8 つの段に分けた(中身・順番は同じ):
+      1 ロットから決まること(検番・コース・2HI・6mm) 2 見出し 3 どの作業でも出す欄 4 作業ごとの行
+      5 住精 6 ゲージ 7 対角 8 引当の判定
+    目隠し(「少々お待ちください」)は途中で止まっても必ず消す。
     """
     msgs = msgs if msgs is not None else []
     info = LSelectInfo()
     state.blind_message = "少々お待ちください"            # frameblindfold("目隠し")
+    try:
+        _lselect_lot_facts(state, n, hooks, msgs, info)
+        ken_no, hi, atu_flag, course = info.ken_no, info.hi_flag, info.atu_flag, info.course
+        jumped = info.jumped
+        with_ok = not jumped
+        # B57: GoTo LineSkip が With UF1 の途中へ飛び、`.` の文がエラー91 で飛ばされる。直すと LineSkip 以降の `.` の文は効く
+        fix_jump = jumped and not quirks.reproduce("B57")
+        # B56: 2HI 通過・6mm 超で消した AtButt を LineSkip でまた表示する(検番 T 以外)。直すと消したまま(DB を見たときだけ)
+        keep_at_hidden = (not jumped) and (hi or not atu_flag) and not quirks.reproduce("B56")
+        _lselect_headers(state, n, hooks, ken_no, hi, atu_flag, with_ok, fix_jump, keep_at_hidden)
+        _lselect_common_cells(state)
+        _lselect_rows_by_work(state, n, hooks)
+        _lselect_sumisei(state, n, hooks, ken_no, with_ok, fix_jump, keep_at_hidden)
+        _lselect_gauge(state, n, hooks, course)
+        _lselect_diag(state, n, hooks, with_ok, fix_jump)
+        if not skip_db_check:
+            _lselect_allocations(state, hooks, info)
+    finally:
+        state.blind_message = ""                         # frameblindfold("通常")。途中で止まっても目隠しを残さない
+    return info
 
-    def safe(fn, *a, **k):
-        try:
-            return fn(*a, **k)
-        except VBA_ERRORS as _vba_e:
-            vba_swallow(_vba_e, "layout.py safe")
-            return None
 
+def _lselect_lot_facts(state: KensaState, n: str, hooks: Hooks, msgs: list[Message], info: LSelectInfo) -> None:
+    """段 1(FormRelat:2585-2760): 仕掛からロットの検番・設計コース・オーダー厚を読み、2HI・L-2/L-3・6mm 以下を決める。"""
+    safe = _safe
     if state.sika_set_atu != 0:
         try:
             all_ = hooks.sika_atu_create(state, state.lot)
@@ -792,12 +823,11 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                 atu_flag = True
     info.ken_no, info.hi_flag, info.fs4_flag, info.atu_flag = ken_no, hi, fs4, atu_flag
     info.new_atu, info.course, info.jumped = new_atu, course, jumped
-    with_ok = not jumped
-    # B57: GoTo LineSkip が With UF1 の途中へ飛び、`.` の文がエラー91 で飛ばされる。直すと LineSkip 以降の `.` の文は効く
-    fix_jump = jumped and not quirks.reproduce("B57")
-    # B56: 2HI 通過・6mm 超で消した AtButt を LineSkip でまた表示する(検番 T 以外)。直すと消したまま(DB を見たときだけ)
-    keep_at_hidden = (not jumped) and (hi or not atu_flag) and not quirks.reproduce("B56")
 
+
+def _lselect_headers(state: KensaState, n: str, hooks: Hooks, ken_no: str, hi: bool, atu_flag: bool,
+                     with_ok: bool, fix_jump: bool, keep_at_hidden: bool) -> None:
+    """段 2: 行の見出し(幅1…)・位置の見出し(S/S1/2…)・山数・AtButt。"""
     if with_ok:
         if n in ("厚板", "薄板", "少枚数"):
             _caps(state, L1="幅1", L2="幅2", L3="丈1", L4="丈2", L5="対角A", L6="対角B")
@@ -840,6 +870,10 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
         # B57 を直す: GoTo LineSkip の先(薄板の見出し・AtButt)を効かせる。薄板以外の作業では薄板の見出しにしない
         _line_skip(state, ken_no, at_butt=True)
 
+
+
+def _lselect_common_cells(state: KensaState) -> None:
+    """段 3: どの作業でも出す欄(E 列・厚 1〜4・外観・BH)と、隠す欄(ラテラル・R115 以外の直角度)。"""
     for name in ("TSE", "TEE", "E", "NGE", "LC2", "LC8"):
         _show(state, name, True)
     _cells(state, range(1, 5), FIVE, True, True)
@@ -859,6 +893,10 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
         for p in FIVE:
             _show(state, f"Diag{p}Kou", False)
 
+
+
+def _lselect_rows_by_work(state: KensaState, n: str, hooks: Hooks) -> None:
+    """段 4: 作業ごとの行(幅・丈・対角・極厚の 11〜14 行)の表示。"""
     if n in ("厚板", "薄板", "少枚数"):
         for i in (7, 8, 12, 13):
             _show(state, f"L{i}", False)
@@ -894,6 +932,11 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
             _cells(state, range(5, 15), FIVE, True, True)
             _lc_and_visual(state)
 
+
+
+def _lselect_sumisei(state: KensaState, n: str, hooks: Hooks, ken_no: str, with_ok: bool, fix_jump: bool,
+                     keep_at_hidden: bool) -> None:
+    """段 5: 住精(いまの作業が厚板か薄板かで、その作業の表示に合わせる)。"""
     if n == "住精":
         if state.is_work("厚板"):
             six_display(state, "off", hooks)
@@ -915,6 +958,11 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
             _thin_body(state, hooks, set_diag=True)
             _thin_yama_captions(state, ken_no, with_ok=with_ok or fix_jump, four=True, at_butt=not keep_at_hidden)
 
+
+
+def _lselect_gauge(state: KensaState, n: str, hooks: Hooks, course: str) -> None:
+    """段 6: ゲージが要るか(要れば 幅ｹﾞｰｼﾞ/丈ｹﾞｰｼﾞ と歪コンボ)。"""
+    safe = _safe
     if n in ("極厚", "厚板", "薄板", "少枚数", "スラブ"):
         try:
             gauge = hooks.is_gauge_required(vbx.val(state.atu), vbx.val(state.hab), vbx.val(state.tak),
@@ -934,6 +982,11 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
                 state.v("LZ" + p).value = "定盤"
                 state.v("LG" + p).value = "ｹﾞｰｼﾞ"
 
+
+
+def _lselect_diag(state: KensaState, n: str, hooks: Hooks, with_ok: bool, fix_jump: bool) -> None:
+    """段 7: 対角(極厚は出さない・スラブ・住精の山数・厚板/薄板/少枚数)。"""
+    safe = _safe
     if n == "極厚":
         if with_ok or fix_jump:
             _show(state, "L9", False)
@@ -972,22 +1025,24 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
         for p in FIVE:
             _show(state, "Diag" + p, True, True)
 
-    if not skip_db_check:
-        rows = safe(hooks.get_lot_info, state, state.lot)
-        if rows is not None:
-            alloc = LotAllocation()
-            info.allocation = alloc
-            safe(judge_lot_allocations, state, rows, hooks, alloc)
-            if alloc.need_lateral:
-                safe(lselect_lateral, state, alloc.ken_no)
-            if alloc.need_right:
-                safe(right_angle_display, state, alloc.ken_no)
-            if alloc.need_flat:
-                state.flatnes_text = "ﾌﾘｰｿﾘ要"
-            if state.lateral_text_colored:
-                safe(lselect_lateral, state, alloc.ken_no)
-    state.blind_message = ""                         # frameblindfold("通常")
-    return info
+
+
+def _lselect_allocations(state: KensaState, hooks: Hooks, info: LSelectInfo) -> None:
+    """段 8: Lot情報履歴の引当ごとの判定(ラテラル・直角度・フリーソリ。1 件でも要なら要)。"""
+    safe = _safe
+    rows = safe(hooks.get_lot_info, state, state.lot)
+    if rows is not None:
+        alloc = LotAllocation()
+        info.allocation = alloc
+        safe(judge_lot_allocations, state, rows, hooks, alloc)
+        if alloc.need_lateral:
+            safe(lselect_lateral, state, alloc.ken_no)
+        if alloc.need_right:
+            safe(right_angle_display, state, alloc.ken_no)
+        if alloc.need_flat:
+            state.flatnes_text = "ﾌﾘｰｿﾘ要"
+        if state.lateral_text_colored:
+            safe(lselect_lateral, state, alloc.ken_no)
 
 
 def _line_skip(state: KensaState, ken_no: str, *, at_butt: bool) -> None:
