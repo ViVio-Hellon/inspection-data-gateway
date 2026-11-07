@@ -50,7 +50,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
-from . import shadow
+from . import model, shadow
 from .model import CellKey, EXTREME, FormTag, NORMAL, Switch, Verdict, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace
 from . import sound as snd
@@ -655,6 +655,25 @@ class NamedValues:
             _ctl(state, name).value = v
         for name, v in self.props.items():
             accessor(name).set(state, v)
+
+
+@functools.lru_cache(maxsize=1)
+def _known_names() -> frozenset[str]:
+    """画面にある名前(コントロール・表示の欄・状態の項目・作業ボタン)。"""
+    names = set(all_controls(KensaState())) | set(grid.VIEW_NAMES) | set(SCALAR) | set(grid.WORKS)
+    return frozenset(names | {"AtButt", "InspeButt", "Yama"})
+
+
+def check_name(name: str, where: str = "") -> bool:
+    """名前(`名前.Prop` も可)が画面にあるか。無ければ [第3段10] でログへ(試験では失敗)。"""
+    base, prop = _split(name)
+    ok = base in _known_names() or (prop == "tag" and base in TAG_SCALAR)
+    if not ok:
+        shadow.report("10", where or "check_name", [f"画面に無い名前 {name!r} に書こうとしました"])
+    return ok
+
+
+model.name_check = check_name
 
 
 def apply_values(state: KensaState, values: dict[str, Any]) -> None:

@@ -254,3 +254,31 @@ def display_color(verdict: Verdict, current: str) -> str:
     """判定から出す色。判定が無ければ いまの表示の色(黄色の入力中・白など)のまま。"""
     return verdict.value if verdict in (Verdict.OK, Verdict.NG) else ("" if verdict_of_color(current) is not Verdict.NONE
                                                                        else current)
+
+
+# ----------------------------------------------------------------------
+# 画面へ入れる「VBA の名前 → 値」(第3段10)。名前を書いたその場で、画面にある名前かを確かめる
+# ----------------------------------------------------------------------
+#: 名前が画面にあるかを確かめる関数(wiring が読み込まれたときに入れる。model は wiring を読み込まない)
+name_check = None
+
+
+class UiValues(dict):
+    """業務の関数が画面へ返す「VBA の名前 → 値」。ふつうの dict と同じに使える(VBA の行と 1 対 1 で書けるように)。
+
+    名前を書いたとき、画面にない名前(打ち間違い)なら [第3段10] でログへ(試験では失敗)。
+    """
+
+    def __setitem__(self, name: str, value) -> None:
+        if name_check is not None:
+            name_check(name, "UiValues")
+        super().__setitem__(name, value)
+
+    def update(self, *args, **kw) -> None:          # type: ignore[override]
+        for k, v in dict(*args, **kw).items():
+            self[k] = v
+
+    def setdefault(self, name: str, value=None):    # type: ignore[override]
+        if name not in self:
+            self[name] = value
+        return self[name]

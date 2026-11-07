@@ -28,7 +28,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
 from . import datasource, paths, vbx
-from .model import Face, NORMAL, diag_name, ken_h_name, kou_name, lateral_name, visual_under_name, visual_up_name
+from .model import Face, NORMAL, UiValues, diag_name, ken_h_name, kou_name, lateral_name, visual_under_name, visual_up_name
 from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
@@ -485,7 +485,7 @@ def confi_decide(tb1: str, del_count_caption: str) -> ConfiDecision:
 
 def ng_pass(posi: str, temp: str = "許容") -> dict[str, str]:
     """NG? ラベルに「許容」「保留」を書く。`NG_Pass (O:1157-1170)`(この後 UF1 を出して UFConfi を閉じる)"""
-    return {"NG" + posi: temp} if posi in POSITIONS else {}
+    return UiValues({"NG" + posi: temp} if posi in POSITIONS else {})
 
 
 def ng_back(uf: Uf1, posi: str, n: int) -> EraseAction:
@@ -1518,7 +1518,7 @@ class ScreenChanges:
     """画面の変更(後から書いたものが残る)。書いていないコントロールは変えない。"""
     visible: dict[str, bool] = field(default_factory=dict)
     enabled: dict[str, bool] = field(default_factory=dict)
-    values: dict[str, str] = field(default_factory=dict)
+    values: dict[str, str] = field(default_factory=UiValues)
     lateral: bool = False            # ラテラルボー欄を出した(ラテflag かつ 検査不要でない)
     initial_setting: bool = True     # 最後に FormRelat.InitialSetting(UF1) を呼ぶ
 
