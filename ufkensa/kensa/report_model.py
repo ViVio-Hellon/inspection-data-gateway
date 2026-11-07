@@ -33,7 +33,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, time as dtime
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
 
-from . import flow, quirks, vbx
+from . import flow, vbx
 from . import sound as snd
 from .flow import Message, Question, Stop
 from .records import (FACES, KensaSnapshot, cmp_str_num, end_time_register, uf_array, uf_tag_array, vb_cdate,
@@ -472,7 +472,7 @@ def allow_check(ng_captions: Mapping[str, str], positions: Mapping[str, str]) ->
         else:
             continue
         if result == "":
-            result = name if quirks.reproduce("B34") else name + label
+            result = name + label
         else:
             result = result + ", " + name + label
     for face in FACES:
@@ -611,7 +611,7 @@ def clean_old_history(store: LocalStore, today: datetime) -> list[str]:
             if vb_isdate(v, dot_is_date=DOT_DATE_IS_DATE):
                 d = vb_cdate(v, dot_is_date=DOT_DATE_IS_DATE)
                 diff = (today.date() - d.date()).days
-                old = diff > 3 if quirks.reproduce("B37") else diff >= 30
+                old = diff > 3
                 if old:
                     removed.append(cell_text(sh.get(i, 1)))
                     sh.delete_row(i)
@@ -714,7 +714,7 @@ def calculate_column_sums(sh: GridSheet) -> None:
                 total = vbx.single(total + float(v))
             elif vbx.is_numeric(v):
                 total = vbx.single(total + vbx.cdbl(v))
-            elif not quirks.reproduce("B35"):
+            else:
                 n = _circled_value(v)
                 if n is not None:
                     total = vbx.single(total + n)
@@ -752,8 +752,6 @@ def convert_numbers_to_string(sh: GridSheet) -> None:
             for j, v in enumerate(row):
                 if is_target(v):
                     sh.set(3 + i, 3 + j, excel_value(conv(v), "V"))
-                elif quirks.reproduce("B35"):
-                    sh.set(3 + i, 3 + j, None)
     total = [sh.get(10, c) for c in range(3, 28)]
     flag2 = False
     out: list[Any] = [None] * len(total)          # None = VBA の ConvArr が Empty のまま
@@ -765,7 +763,7 @@ def convert_numbers_to_string(sh: GridSheet) -> None:
             out[j] = ""
     if flag2:
         for j, v in enumerate(out):
-            if v is None and not quirks.reproduce("B35"):
+            if v is None:
                 continue                          # 直す場合: 数でないセルはそのまま
             sh.set(10, 3 + j, excel_value(v, "V"))
 
@@ -792,7 +790,7 @@ def defect_print_range(store: LocalStore, lname: str, worker: str, lot_text: str
         start_a = _date_minute(start_override)
     now_s = now.replace(microsecond=0)
     t = now_s.time()
-    if quirks.reproduce("B38") or end_time_caption is None:
+    if end_time_caption is None:
         s1 = vb_cdate(start1).time() if start1 != "" else None
         e3 = vb_cdate(end3).time() if end3 != "" else None
         if s1 is None or e3 is None:
@@ -950,7 +948,7 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
     sh.border(4, 12, 6, 12, "left", weight="thick")
     sh.number_format(4, 12, 6, 12, "0.0")
     # B36: VBA は下罫線を耳歪(HizKousa(4))で決める。直すとフリー反り(HizKousa(6))で決める
-    under_key = snap.mimi if quirks.reproduce("B36") else snap.huris
+    under_key = snap.huris
     if under_key != "":
         sh.border(4, 12, 6, 12, "bottom", linestyle="double")
     else:
@@ -1083,7 +1081,7 @@ def print_transfer(store: LocalStore, snap: KensaSnapshot, env: PrintEnv) -> Pri
             _page_area_abnormal(sh, snap, worker_text)
         else:
             # B36: VBA は C2(LOT)ではなく D4(厚)と比べる。一致するとページ設定をしない
-            other = sh.get(4, 4) if quirks.reproduce("B36") else sh.get(2, 3)
+            other = sh.get(2, 3)
             if not variant_eq(other, iz.get(1, 1)):
                 _page_area_normal(sh, snap, worker_text)
     else:
@@ -1207,7 +1205,7 @@ def _print_borders(sh: XSheet, n: str, snap: KensaSnapshot, env: PrintEnv) -> No
                 lascol = 10
             if flag_color:
                 lascol = 10
-            if lascol == 0 and not quirks.reproduce("B77"):
+            if lascol == 0:
                 # 直した側: 住精あり・ラテラル検査不要・指示色なしは、ラテラルボーの列なし(住精なしと同じ 9 列目まで)
                 lascol = 9
             sh.copy(16, 2, 16, lascol, 17, 2, formats_only=True)                # B77: Lascol=0 だと 1004

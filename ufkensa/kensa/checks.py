@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
-from . import datasource, paths, quirks, vbx
+from . import datasource, paths, vbx
 from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
@@ -147,8 +147,6 @@ def last_worker(uf: Uf1) -> Optional[str]:
         return None
     parts = uf.t(key).split("_") if uf.t(key) != "" else []
     if not parts:
-        if quirks.reproduce("B48"):
-            raise VbaRuntimeError(9, "インデックスが有効範囲にありません(検査員欄が空)")
         return None
     return parts[-1]
 
@@ -564,10 +562,7 @@ def ng_posting(uf: Uf1, posi: str, sheet: Optional[AbnormalSheet]) -> AbnormalSh
         sheet = AbnormalSheet(lot, [])
     last = 1
     for idx, row in enumerate(sheet.rows):
-        if quirks.reproduce("B44"):
-            used = bool(row.values) and row.values[0] != ""
-        else:
-            used = any(v != "" for v in row.values)
+        used = any(v != "" for v in row.values)
         if used:
             last = idx + 2
     lr = last + 1
@@ -901,12 +896,8 @@ def withor_without_gauge(uf: Uf1, dist: Optional[WorkDist]) -> str:
     fag = [a[i][1] != "" for i in range(5)] + [yama4 and a[5][1] != ""]
     fbg = [b[i][1] != "" for i in range(5)] + [yama4 and b[5][1] != ""]
     atu = [uf.t(p + "1") != "" for p in POSITIONS[:5]] + [yama4 and uf.t("F1") != ""]
-    if quirks.reproduce("B10"):
-        names = ["S", "U", "2", "D", "E", "F"]
-        b_gauge_rows = 5
-    else:
-        names = list(POSITIONS)
-        b_gauge_rows = 6
+    names = list(POSITIONS)
+    b_gauge_rows = 6
     msg = ""
     for i in range(6):
         if atu[i] and not fa[i]:
@@ -1070,8 +1061,7 @@ def _zero_clear(uf: Uf1) -> tuple[dict[str, str], list[str]]:
     # 定盤は ZF → CBF1 が無い(VBA のとおり。B46)
     pairs = [("ZS", "CBS1"), ("ZU", "CBU1"), ("ZC", "CBC1"), ("ZD", "CBD1"), ("ZE", "CBE1"),
              ("GS", "CBS3"), ("GU", "CBU3"), ("GC", "CBC3"), ("GD", "CBD3"), ("GE", "CBE3"), ("GF", "CBF3")]
-    if not quirks.reproduce("B46"):
-        pairs.insert(5, ("ZF", "CBF1"))                      # 直した側: F 位置の定盤も 0 なら形状を空にする
+    pairs.insert(5, ("ZF", "CBF1"))                      # 直した側: F 位置の定盤も 0 なら形状を空にする
     for val_name, cb in pairs:
         if _num_eq(vals.get(val_name, ""), 0):
             vals[cb] = ""
@@ -1095,8 +1085,6 @@ def distortion_check(uf: Uf1, n: str) -> DistortionResult:
         fa = {p: g(f"CB{p}1") == "" or g(f"CB{p}2") == "" or g("Z" + p) == "" for p in POSITIONS}
         for p in POSITIONS:
             src = "Z" + p
-            if p == "F" and quirks.reproduce("B9"):
-                src = "ZE"
             nz = not _num_eq(g(src), 0)
             if tr[p] and fa[p] and nz:
                 text = "定盤:" + p
@@ -1211,10 +1199,7 @@ def print_precheck(uf: Uf1, dist: Optional[WorkDist]) -> PrecheckResult:
     chokkaku = angle_check(uf)
     cleared = tuple(dict.fromkeys(z.cleared + g.cleared))
 
-    if quirks.reproduce("B2"):
-        sumisei_ok = uf.t("Sumisei") != '"'
-    else:
-        sumisei_ok = uf.t("Sumisei") != ""
+    sumisei_ok = uf.t("Sumisei") != ""
     if z.text != "":
         return PrecheckResult(z.text + "入力なし", "UF1:3674", cleared)
     if g.text != "":
@@ -1251,7 +1236,7 @@ def allow_check(uf: Uf1) -> str:
         else:
             continue
         if result == "":
-            result = name if quirks.reproduce("B34") else name + " " + word
+            result = name + " " + word
         else:
             result = result + ", " + name + " " + word
     for p in POSITIONS:
@@ -1293,7 +1278,7 @@ def coolingtime_lookup(rows: Sequence[Sequence[object]], lot: str) -> str:
             a = _cell_text(r[0])
             value = a if a != "" else ""
     if not found:
-        return "LotNo記載がない" if quirks.reproduce("B12") else "LotNoがない"
+        return "LotNoがない"
     return value
 
 
@@ -1451,7 +1436,7 @@ def selection_input(selected_value: str, te_name: str, te_value: str, code_row: 
         return SelectionWrite(tuple(cells))
     a = {"S": 1, "U": 2, "C": 3, "D": 4, "E": 5, "F": 6}.get(vbx.left(te_name, 1), 0)
     codes = [_cell_text(v) for v in code_row]
-    if not quirks.reproduce("B45") and " " in selected_value.strip():
+    if " " in selected_value.strip():
         # 直した側(2026-11-02 の回答「1項目ずつしか入力しない」): 複数選んだときは書かずに知らせる
         raise Stop("不良要因は1つずつ選んでから枚数を入れてください", level=WARN, source="SelectionInput(B45)")
     parts = selected_value.split("_")
@@ -1592,41 +1577,23 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
         late = bool(need_lateral) and lot_rows is not None     # VBA: IsEmpty(TempArry) なら skipEnd(判定しない)
     elif lot_rows is not None:
         rows = [list(r) + [""] * 10 for r in lot_rows]
-        nounyu = [_cell_text(r[0]) for r in rows]
-        torihiki = [_cell_text(r[1]) for r in rows]
-        youto = zai = tyo = ""
-        atu = haba = take = 0.0
+        # 直した側: 行ごとの値で照合する(同じ照合値が続くときだけ省く)
+        prev_key: Optional[tuple] = None
         for r in rows:
-            youto, zai, tyo = _cell_text(r[2]), _cell_text(r[3]), _cell_text(r[4])
-            atu, haba, take = (vbx.single(vbx.cdbl(r[k])) for k in (5, 6, 7))
-        if quirks.reproduce("B47"):
-            prev = ""
-            for nou, tori in zip(nounyu, torihiki):
-                if nou != "":
-                    if nou == prev:
-                        continue
-                    prev = nou
-                    temp = db_return_item(nou, tori, youto, zai, tyo, atu, haba, take)
-                    if vbx.instr(temp, "ラテラルボー") > 0:
-                        late = True
-        else:
-            # 直した側: 行ごとの値で照合する(同じ照合値が続くときだけ省く)
-            prev_key: Optional[tuple] = None
-            for r in rows:
-                key = (_cell_text(r[0]), _cell_text(r[1]), _cell_text(r[2]), _cell_text(r[3]), _cell_text(r[4]),
-                       *(vbx.single(vbx.cdbl(r[k])) for k in (5, 6, 7)))
-                if key[0] != "":
-                    if key == prev_key:
-                        continue
-                    prev_key = key
-                    temp = db_return_item(*key)
-                    if vbx.instr(temp, "ラテラルボー") > 0:
-                        late = True
+            key = (_cell_text(r[0]), _cell_text(r[1]), _cell_text(r[2]), _cell_text(r[3]), _cell_text(r[4]),
+                   *(vbx.single(vbx.cdbl(r[k])) for k in (5, 6, 7)))
+            if key[0] != "":
+                if key == prev_key:
+                    continue
+                prev_key = key
+                temp = db_return_item(*key)
+                if vbx.instr(temp, "ラテラルボー") > 0:
+                    late = True
     show_late = late and ng_temp != "検査不要"
     ch.lateral = show_late
     if show_late:
         ch.vis(["L11"] + ["Lateral" + p for p in rows5], True)
-    elif not quirks.reproduce("B47"):
+    else:
         ch.vis(["L11"] + ["Lateral" + p for p in rows5], False)     # 前ロットの表示を残さない
     r115 = uf.t("Youto") == "R115"
     kou = [f"Diag{p}Kou" for p in rows5]
@@ -1641,7 +1608,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
         if r115:
             ch.vis(["L10"] + kou, True)
         ch.vis(["DiagU", "DiagD"], False, False)
-        if r115 and not quirks.reproduce("B47"):
+        if r115:
             ch.vis(["DiagUKou", "DiagDKou"], False, False)           # 隠した対角の直角度欄も隠す
     elif tb == 4:
         ch.set(E="", FE="", OPS5="", OPE5="")

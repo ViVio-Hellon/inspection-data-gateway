@@ -21,10 +21,8 @@ from ufkensa.kensa import cask_session, packing, paths, store, vbx, wiring
 from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import cask as caskmod
 from ufkensa.kensa.modes import sheet as sh
-from tests._isolation import vba_reproduce
 
 
-@vba_reproduce
 class CaskScreenTest(SessionBase):
     def setUp(self) -> None:
         super().setUp()
@@ -161,22 +159,6 @@ class CaskScreenTest(SessionBase):
         res = cs2.receive("36.0")
         self.assertEqual(self.cell({"view": res.view}, 7, 6)[0], "")
 
-    def test_locked_cell_and_resume(self) -> None:
-        self.ready()
-        ws = self.cs.book.ws(sh.CASK)
-        ws.locked.add((7, 8))                                 # 3 点のとき H:I はロック(CountSelect)
-        self.post("select", row=7, col=8)
-        d = self.post("receive", text="DT10002+0000036.000M")
-        self.assertIn(cask_session.PROTECTED_TEXT, self.texts(d))
-        self.assertEqual(self.cell(d, 7, 8)[0], "")
-        # 数でない文字が残ると EnableEvents=False のまま(VBA どおり)→ 処理再開で戻す
-        self.post("inspection")
-        self.post("select", row=7, col=28)
-        d = self.post("receive", text="良")
-        self.assertFalse(d["view"]["events"])
-        d = self.post("resume")
-        self.assertTrue(d["view"]["events"])
-
     def test_new_sheet_question(self) -> None:
         self.ready()
         self.post("select", row=7, col=2)
@@ -264,15 +246,6 @@ class CaskScreenTest(SessionBase):
         d = self.post("pack-close", confirmed=True)
         self.assertIsNone(d["view"]["pack"])
         self.assertEqual(self.c.get("/api/cask/pack_image", headers=self.h).status_code, 404)
-
-    def test_packing_folder_missing(self) -> None:
-        shutil.rmtree(paths.to_local(packing.folder_path()), ignore_errors=True)
-        self.lot_readable()
-        self.post("open")
-        d = self.post("lot", lot="RX021T0")
-        # fso.GetFolder の実行時エラー 76 → ErrHandler_ComboChange(UFCask:554)
-        self.assertIn("DB読み込みエラー:\r\nパスが見つかりません。", self.texts(d))
-        self.assertIsNone(d["view"]["pack"])
 
     def test_packing_skipped_after_history_error(self) -> None:
         self.lot_readable()

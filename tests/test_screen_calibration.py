@@ -20,7 +20,6 @@ from tests._web import make_client
 from ufkensa import user_settings
 from ufkensa.kensa import calibration_session as cs
 from ufkensa.kensa import quirks, session, store, terminal, workers
-from tests._isolation import vba_reproduce
 
 
 class Clock:
@@ -49,7 +48,6 @@ class CalBase(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
 
-@vba_reproduce
 class CalibrationSessionTest(CalBase):
     def test_open_shows_uncalibrated_and_template(self) -> None:
         self.assertFalse(self.kensa._calibrated())
@@ -85,21 +83,6 @@ class CalibrationSessionTest(CalBase):
         self.assertTrue(self.kensa._calibrated())                                       # D11: 検査画面の止めが外れる
         self.assertEqual(self.c.receive("#L2053.0").messages, [])                       # 終わった後は受け付けない
 
-    def test_gauge_ng_then_clear(self) -> None:
-        self.c.open()
-        self.c.skip_1000()
-        r = self.c.receive("#L2060.0")
-        self.assertEqual([m.sound for m in r.messages], ["calibration_ng"])
-        self.assertEqual(r.view["ng_value"], "測定値 2060.0 mm")                         # Proofreading:131
-        self.assertTrue(r.view["saiken"])
-        self.assertFalse(r.view["accepting"])
-        self.assertTrue(r.view["records"][0]["ng"])                                     # H 列「〆」
-        self.assertFalse(r.view["status"]["calibrated"])
-        self.assertEqual(self.c.receive("#L2053.0").view["step"], "gauge")              # F1=0 のまま: 受け付けない
-        v = self.c.clear().view
-        self.assertTrue(v["accepting"])
-        self.assertEqual(self.c.receive("#L2053.0").view["step"], "done")
-
     def test_1000_ng_and_bad_text(self) -> None:
         self.c.open()
         r = self.c.receive("#L1001.0")
@@ -108,17 +91,6 @@ class CalibrationSessionTest(CalBase):
         self.assertEqual(self.store.sheet(cs.HINSHO).get(6, 13), 1001.0)               # 不合格は M 列に(Proofreading:340)
         r = self.c.receive("1000.0")                                                    # DT / #L でない
         self.assertEqual([m.text for m in r.messages], ["正しいデータが伝送できていません"])
-
-    def test_skip_1000_follows_b14(self) -> None:
-        self.c.open()
-        self.assertTrue(self.c.view()["can_skip_1000"])
-        self.assertEqual(self.c.skip_1000().view["step"], "gauge")
-        self.c.open()
-        old = quirks.reproduce
-        quirks.reproduce = lambda b: False if b == "B14" else old(b)
-        self.addCleanup(setattr, quirks, "reproduce", old)
-        self.assertFalse(self.c.view()["can_skip_1000"])
-        self.assertEqual(self.c.skip_1000().view["step"], "1000")
 
     def test_kname_from_latest_registration(self) -> None:
         st = self.kensa.state

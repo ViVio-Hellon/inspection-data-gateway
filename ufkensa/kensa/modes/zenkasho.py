@@ -12,7 +12,7 @@ from __future__ import annotations
 import unicodedata
 from typing import Any, Callable, Optional, Union
 
-from .. import datasource, flow, paths, quirks, vbx
+from .. import datasource, flow, paths, vbx
 from .. import sound as snd
 from . import cask as ck
 from . import sheet as sh
@@ -134,7 +134,7 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
                 book.fx.sounds.append("音楽対角")
                 book.resume(lambda: sh.uf_taikaku(book, TR, TC))
                 book.events_enabled = False
-                last = 23 if quirks.reproduce("B32") else 22     # B32: ラテラルボー(W)まで消える
+                last = 22     # B32: ラテラルボー(W)まで消える
                 for cc in range(20, last + 1):
                     book.write(ws, TR, cc, "")
                 book.events_enabled = True
@@ -173,8 +173,7 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
         book.events_enabled = False
         book.resume(lambda: sh.al_ter_range(book, TR, TC, befor), "AlTerRange")
         if not sh.is_numeric(target.get(TR, TC)):
-            if not quirks.reproduce("B79"):
-                book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
+            book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
             return                                # B79: EnableEvents は False のまま(VBA どおり)
         book.events_enabled = True
         if TC in (2, 4, 6, 8, 11, 13, 15, 17, 19, 20):
@@ -361,7 +360,7 @@ def kenhbox_after_update(book: Book, n: int) -> Effects:
     fx = book.fx
     f = book.mit
     if n == 7:
-        tgt = 6 if quirks.reproduce("B31") else 7
+        tgt = 7
         f.kenh[tgt] = vbx.fmt(f.kenh[tgt], "0")
         fx.calls.append(Call("LogOut", (f"KenHBox{tgt}", "", "三菱")))
     else:
@@ -643,7 +642,7 @@ def max_min(book: Book, temp: str = ZEN) -> None:
     mx = lambda c: _wmax(ws, n, k, c)  # noqa: E731
     mn = lambda c: _wmin(ws, n, k, c)  # noqa: E731
     # B80: 空の列の MIN は 0 になり、空セル(Empty=0)と一致して 0 が書かれる。直すと空の列は除き、空セルとは一致させない
-    fix80 = not quirks.reproduce("B80")
+    fix80 = True
 
     def cmin(*cols: int) -> float:
         if fix80:
@@ -654,7 +653,7 @@ def max_min(book: Book, temp: str = ZEN) -> None:
     min_atu = vbx.single(min(mn(2), mn(4), mn(6), mn(8)))
     if min_atu == 0:
         atu = [0.0, 0.0, 0.0, 0.0]
-        idx = (1, 2, 6, 8) if quirks.reproduce("B28") else (1, 2, 3, 4)
+        idx = (1, 2, 3, 4)
         cols = {1: 2, 2: 4, 3: 6, 4: 8, 6: 6, 8: 8}
         slot = {1: 0, 2: 1, 3: 2, 4: 3, 6: 2, 8: 3}
         for i in range(1, 5):
@@ -882,7 +881,7 @@ def _mitsubishi_abort(book: Book, text: str) -> None:
 def _kname_for(book: Book) -> str:
     f = book.mit
     if f.work_flag == "P_H494":
-        if not quirks.reproduce("B30") and f.h494_kname == "":
+        if f.h494_kname == "":
             return f.kname
         return f.h494_kname
     return f.kname if f.work_flag == "P1" else ""
@@ -910,7 +909,7 @@ def zen_print_setup(book: Book, temp: str = ZEN) -> Optional[PrintJob]:
     x, y, z = v(3, 2), v(3, 4), v(3, 6)
     am, ap, hm, hp, tm, tp = v(2, 13), v(2, 15), v(3, 13), v(3, 15), v(4, 13), v(4, 15)
     device = ws.get(3, 29)
-    if temp == H494 and not quirks.reproduce("B30"):
+    if temp == H494:
         device = ws.get(2, 25)
     return PrintJob(
         sheet=temp, print_area=area,
@@ -1112,10 +1111,7 @@ def fiven_save(book: Book) -> Optional[SavePlan]:
     else:
         srv = ""
     _new_file_copy(plan, saved, srv)
-    if quirks.reproduce("B33"):
-        cond = f.inflag == "" and f.work == "OFF" and f.choice == "5N"
-    else:
-        cond = f.inflag == "" and f.choice == "5N"
+    cond = f.inflag == "" and f.choice == "5N"
     if cond:
         if f.line_name in FIVE_LINES:
             kou = paths.join(paths.get("factory"), "【梱包】５N", month)

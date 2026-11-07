@@ -26,7 +26,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
 
-from . import ado_filter, datasource, flow, lines, paths, quirks, vbx
+from . import ado_filter, datasource, flow, lines, paths, vbx
 from .flow import WARN
 from .lot import SubscriptOutOfRange
 
@@ -96,8 +96,6 @@ def _bounds(lower: Any, upper: Any) -> tuple[float, float]:
     再現: `Dim LowerT As Single: LowerT = Val(…)`。厚は `Val(ATU)`(Double)なので、Single(28.01) > 28.01 で
     境界ちょうどの厚が外れる(B52)。直した場合は `Val` のまま(Double)にして厚と同じ精度で比べる。
     """
-    if quirks.reproduce("B52"):
-        return _val_single(lower), _val_single(upper)
     return vbx.val(lower), vbx.val(upper)
 
 
@@ -106,8 +104,6 @@ def _master() -> Optional[tuple[list[str], list[list[str]], str]]:
     file_path = paths.join(paths.get("quality"), DENSO_FILE)
     fields = datasource.get_fields(file_path, TABLE, "")
     if fields is None:
-        if quirks.reproduce("B51"):
-            raise vbx.TypeMismatch("測定機器ID の列名が Empty (Dim PackF() への代入 MT:413)")
         # B51 を直す: PackingPath の伝送用ファイルへ切り替える(MT:415-420)。それも空なら None(Exit Function)
         file_path = paths.join(paths.get("packing"), DENSO_FILE)
         fields = datasource.get_fields(file_path, TABLE, "")
@@ -306,7 +302,7 @@ def machine_transfer(t: TransferInput, *, db: Callable[..., str] = db_return_mic
     out: list[tuple[int, int, str]] = []
     atu_val = _val_single(t.atu)
     mdevice = db(line, atu_val, t.yout, "機器名")
-    if mdevice == "" and line == "大板" and not quirks.reproduce("B53"):
+    if mdevice == "" and line == "大板":
         # B53 を直す: マスタに「大板」の行が無いので、帳票のライン名は「大板」のまま、
         # 機器は実際のライン(バランサー/トット)の行から引く。マスタに大板の行ができればそちらが先
         mdevice = db(official, atu_val, t.yout, "機器名")

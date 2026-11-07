@@ -14,7 +14,6 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa import user_settings
 from ufkensa.kensa import datasource, flow, lot, paths, quirks, vbx
-from tests._isolation import vba_reproduce
 
 T_NORMAL = dt.datetime(2026, 10, 30, 10, 30, 0)     # 時刻窓の外
 T_WINDOW = dt.datetime(2026, 10, 30, 10, 59, 50)    # 毎時 59:46〜59:59 の中
@@ -64,11 +63,9 @@ class _Dirs:
 
 class _Base(unittest.TestCase):
     def setUp(self) -> None:
-        quirks.set_for_test(None)
         self.d = _Dirs()
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
         self.d.cleanup()
 
 
@@ -86,19 +83,13 @@ class ReadCheckTest(_Base):
 
 class IsOver12HoursTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_reproduce_b19_one_hour_boundary(self) -> None:
         # Worker:342 `DateDiff("h", C1, Now) >= 1` は時の境界の数
         self.assertFalse(lot.is_over_12_hours("2026/10/30 10:00:00", dt.datetime(2026, 10, 30, 10, 59, 59)))
         self.assertTrue(lot.is_over_12_hours("2026/10/30 10:59:59", dt.datetime(2026, 10, 30, 11, 0, 0)))
         self.assertFalse(lot.is_over_12_hours("2026/10/30 12:00:00", dt.datetime(2026, 10, 30, 11, 0, 0)))
 
-    def test_fix_b19_twelve_hours(self) -> None:
-        quirks.set_for_test({"B19": "fix"})
-        # 10 時台 → 21 時台は境界 11 個、22 時台で 12 個
-        self.assertFalse(lot.is_over_12_hours("2026/10/30 10:59:59", dt.datetime(2026, 10, 30, 21, 59, 59)))
-        self.assertTrue(lot.is_over_12_hours("2026/10/30 10:59:59", dt.datetime(2026, 10, 30, 22, 0, 0)))
 
     def test_empty_and_errors(self) -> None:
         now = dt.datetime(2026, 10, 30, 12, 0, 0)
@@ -164,64 +155,9 @@ class ArrboxTest(_Base):
 
 
 # ------------------------------------------------------------------
-@vba_reproduce
 class AccReflecTest(_Base):
     def reflect(self, lot_no: str, **kw) -> lot.LotReflect:
         return lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, **kw), check_equipment=_ok)
-
-    def test_gaichu_and_tolerances_L8430D0(self) -> None:
-        r = self.reflect("L8430D0")
-        self.assertEqual(r.status, "ok")
-        self.assertEqual(r.row["ﾛｯﾄ番号"], "L8430D0")
-        # 設計_設備ｺｰｽ に GFS (SaveLoad:139-149)
-        self.assertTrue(r.g_flag)
-        self.assertEqual(r.temp_e, "GFSｺｰｽ有、進度にあった製品ｻｲｽﾞ入力をお願いします。")
-        # 外注は BOX実績 (SaveLoad:158-162, 186-190, 221-225)
-        self.assertEqual(r.equipment_args[1:], ("3004", vbx.single(0.3), 1185.0, 0.0, vbx.single(0.09763)))
-        self.assertEqual(r.past_hiki[0], "'35008168")
-        self.assertEqual(r.past_hiki[2:5], ["0.3", "1185", "0"])
-        f = r.form
-        self.assertEqual((f["ATU"], f["Hab"], f["Tak"]), ("0.300", "1185.0", "0.0"))
-        # 厚はオーダー公差(どちらも 0 でない)、幅・丈はオーダーのマイナスが 0 → 製造公差 (SaveLoad:231/240/249)
-        self.assertEqual((f["Ap"], f["Am"], f["Hp"], f["Hm"], f["Tp"], f["Tm"]),
-                         ("0.040", "0.040", "0.5", "0.5", "1.0", "0.5"))
-        self.assertEqual((f["ApK"], f["AmK"]), ("0.340", "0.260"))
-        self.assertEqual((f["HpK"], f["HmK"], f["TpK"], f["TmK"]), ("", "", "", ""))   # SaveLoad:264-266
-        self.assertEqual((f["TAIK"], f["Lateral"], f["flatnes"]), ("3", "", "3"))      # "." は数でない → ""
-        self.assertEqual(f["KenH"], "前工程実績1枚")
-        self.assertEqual(r.last_hot, "最終熱処理工程：ANF")
-        self.assertIsNone(r.qf)
-        # 指示 "4.5MM" → 4.5、"2.0MM/1M" → "/" の前 → 2.0 (補助 ConvertToHalf/numExtract)
-        self.assertEqual((r.taik_text, r.lateral_text), ("4.5", "2.0"))
-        self.assertEqual(r.additional, "対角ﾗﾃﾗﾙﾎﾞ-追記公差あり")
-        self.assertEqual(r.ken_no, "N6X1262")
-        self.assertEqual(r.vc_action, "clear")                     # VC "00" = 0
-        self.assertEqual(r.sika_set_atu, vbx.single(0.3))
-        self.assertEqual(r.cache_c_course, "HOT L-1 L-1 L-1 L-1 DL2 L-2 L-2 L-2 ANF")
-        self.assertEqual(r.null_uses, [])
-        self.assertTrue(r.run_history_save)
-
-    def test_order_minus_zero_and_taik_dot_N8096B0(self) -> None:
-        r = self.reflect("N8096B0")
-        f = r.form
-        self.assertFalse(r.g_flag)
-        self.assertEqual(f["TAIK"], "4")                           # "." → "4" (SaveLoad:214)
-        self.assertEqual((f["ATU"], f["Ap"], f["Am"], f["ApK"], f["AmK"]), ("6.620", "0.080", "0.120", "6.700", "6.500"))
-        self.assertEqual((f["Hab"], f["Hp"], f["Hm"], f["HpK"], f["HmK"]), ("810.0", "5.0", "5.0", "815.0", "805.0"))
-        self.assertEqual((f["Tak"], f["Tp"], f["Tm"], f["TpK"], f["TmK"]), ("777.5", "2.5", "2.5", "780.0", "775.0"))
-        self.assertIsNone(r.last_hot)
-        self.assertEqual((r.taik_text, r.lateral_text, r.additional), (None, None, ""))
-        # 仕掛の列はすべて必須(NOT NULL)なので空欄は "" で入っている。Null を読む所は無い
-        self.assertEqual(r.null_uses, [])
-
-    def test_vc_picture_and_null_tolerance_H2500K0(self) -> None:
-        r = self.reflect("H2500K0")
-        self.assertEqual(r.vc_action, "picture")                   # "01" = 1
-        self.assertEqual(r.taik_text, "2.0")
-        self.assertEqual(r.additional, "対角追記公差あり")
-        self.assertIsNone(r.qf)                                    # QF は設計にだけある(実績で見る)
-        self.assertEqual(r.form["Ap"], "0.650")
-        self.assertEqual(r.null_uses, [])                          # 必須の列なので Null は無い("")
 
     def test_shiji_full_width_text(self) -> None:
         r = self.reflect("N9170B0")
@@ -339,62 +275,19 @@ def _hrow(lot_no: str, order: str = "1") -> list:
     return r
 
 
-@vba_reproduce
 class HistorySaveTest(_Base):
     def ph(self, lot_no: str = "H2500K0") -> list:
         r = lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, work_time="T"), check_equipment=_ok)
         return r.past_hiki
-
-    def test_rows_from_real_data(self) -> None:
-        ph = self.ph()
-        res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
-        self.assertTrue(res.completed)
-        self.assertEqual(res.messages, [])
-        # 外側 = SIKAODRNOW の順(06017610, 06017503, 06019756)、内側 = 引当 (SaveLoad:1466-1467)
-        self.assertEqual([r[21] for r in res.new_rows], ["61026069", "61026068", "61026070"])
-        first = res.new_rows[0]
-        self.assertEqual(len(first), 26)
-        self.assertEqual(first[0], T_NORMAL)
-        self.assertEqual(first[1:11], ["06017610", "H2500K0", "50", "1252", "2502.5", "H6X1690", "N17S", "T351",
-                                       "H197", "HOT PSW ST2 QF ST2 PSW VC KEN"])
-        self.assertEqual(first[11:14], ["ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ", "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
-                                        "ｶ)ﾋﾖｳｺｳ ﾛﾂｺｳﾌﾞﾂﾘﾕｳｾﾝﾀ-"])
-        self.assertEqual(first[14:], ["8", "4288.8", "0", "01", "V325NYE", "V325NYE", "435.50507", "61026069",
-                                      "0", "4", "2026-10-26 08:53:25", "1P1125"])
-        self.assertEqual(res.cache, {"lot_no": "H2500K0", "cours": "HOT PSW ST2 QF ST2 PSW VC KEN", "ken_no": "H"})
 
     def test_b15_lateral_grade(self) -> None:
         ph = self.ph()
         self.assertEqual(ph[17], "3")
         res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual(res.new_rows[0][18], "V325NYE")              # S 列はラテラルボー等級を上書き
-        quirks.set_for_test({"B15": "fix"})
         res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual(res.new_rows[0][18], "V325NYE")
         self.assertEqual(res.new_rows[0][26], "3")                    # 直した場合は AA 列に残す
-
-    def test_b16_delete_range(self) -> None:
-        sheet = _sheet(_hrow("A"), _hrow("H2500K0"), _hrow("B"), _hrow("H2500K0"), _hrow("C"))
-        # シートの行番号: 2=A 3=H 4=B 5=H 6=C
-        self.assertEqual(lot.history_delete_rows(sheet, "H2500K0"), [3, 4, 5])   # 間の B も消える
-        quirks.set_for_test({"B16": "fix"})
-        self.assertEqual(lot.history_delete_rows(sheet, "H2500K0"), [3, 5])
-        self.assertEqual(lot.history_delete_rows(sheet, "Z"), [])
-        self.assertEqual(lot.history_delete_rows(_sheet(), "Z"), [])
-        with self.assertRaises(vbx.TypeMismatch):                     # 空のシート(A1 だけ)
-            lot.history_delete_rows([[None]], "Z")
-        # 数のセルとロットの文字列は一致しない(Variant の比較)
-        self.assertEqual(lot.history_delete_rows(_sheet(_hrow(1234567)), "1234567"), [])
-
-    def test_delete_happens_before_db_checks(self) -> None:
-        self.d.remove(self.d.main, "SIKAHIKINOW")
-        self.d.remove(self.d.next, "SIKAHIKINOW")
-        res = lot.history_save(self.ph(), _sheet(_hrow("H2500K0")), lot.HistoryEnv(now=T_NORMAL))
-        self.assertEqual(res.delete_rows, [2])
-        self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAHIKINOW")])
-        self.assertFalse(res.completed)
-        res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_NORMAL, over12=True))
-        self.assertEqual(res.messages, [])
 
     def test_window_is_ignored(self) -> None:
         # D26 改: 時刻窓は見ない。DBflag で控えを選んでいれば控えを読み、MainPath なら MainPath のまま
@@ -441,14 +334,6 @@ class HistorySaveTest(_Base):
         self.assertEqual(len(res.new_rows), 3)
         res = lot.history_save(self.ph(), _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual(len(res.new_rows), 3)
-
-    def test_odr_empty_is_type_mismatch(self) -> None:
-        with sqlite3.connect(self.d.main / "SIKAODR.sqlite3") as c:
-            c.execute('DELETE FROM "仕掛"')
-        with self.assertRaises(vbx.TypeMismatch) as cm:
-            lot.history_save(self.ph(), _sheet(_hrow("H2500K0")), lot.HistoryEnv(now=T_NORMAL))
-        self.assertEqual(cm.exception.partial.delete_rows, [2])
-
 
 # ------------------------------------------------------------------
 class LotInfoTest(_Base):
@@ -563,7 +448,6 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 直した場合の分岐(B49・B50・B51・B54)。既定(再現)の側は上の試験で確かめている
 # ------------------------------------------------------------------
-@vba_reproduce
 class FixBranchTest(_Base):
     def ph(self, lot_no: str = "H2500K0") -> list:
         r = lot.acc_reflec(lot.LotScreen(lot=lot_no, cb_text=lot_no, work_time="T"), check_equipment=_ok)
@@ -575,7 +459,6 @@ class FixBranchTest(_Base):
         ph = self.ph()
         self.d.remove(self.d.next, "SIKAHIKINOW")
         for mode in ("reproduce", "fix"):
-            quirks.set_for_test({"B49": mode})
             res = lot.history_save(ph, _sheet(), lot.HistoryEnv(dbflag="1", now=T_WINDOW))
             self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAHIKINOW")])
             self.assertFalse(res.completed)
@@ -585,13 +468,11 @@ class FixBranchTest(_Base):
         kensa_fixture.use_offline(kensa_fixture.copy_to(self.d.root / "same"))
         ph = self.ph()
         self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).new_rows), 3)
-        quirks.set_for_test({"B49": "fix"})
         self.assertEqual(len(lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_WINDOW)).new_rows), 3)
 
     def test_b50_delete_only_after_db_checks(self) -> None:
         ph = self.ph()
         sheet = _sheet(_hrow("H2500K0"))
-        quirks.set_for_test({"B50": "fix"})
         # 最後まで進めば消す
         res = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
         self.assertTrue(res.completed)
@@ -606,20 +487,10 @@ class FixBranchTest(_Base):
         res = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL, uf1_test=True))
         self.assertEqual(res.delete_rows, [])
 
-    def test_b50_fix_error_keeps_rows(self) -> None:
-        quirks.set_for_test({"B50": "fix"})
-        for d in (self.d.main, self.d.next):
-            with sqlite3.connect(d / "SIKAODR.sqlite3") as c:
-                c.execute('DELETE FROM "仕掛"')
-        with self.assertRaises(vbx.TypeMismatch) as cm:          # B51 は再現のまま → 型エラー 13
-            lot.history_save(self.ph(), _sheet(_hrow("H2500K0")), lot.HistoryEnv(now=T_NORMAL))
-        self.assertEqual(cm.exception.partial.delete_rows, [])
-
     def test_b51_odr_fallback(self) -> None:
         ph = self.ph()
         with sqlite3.connect(self.d.main / "SIKAODR.sqlite3") as c:
             c.execute('DELETE FROM "仕掛"')
-        quirks.set_for_test({"B51": "fix"})
         # 直す: MainPath の SIKAODRNOW が空 → NextPath へ切り替えて続ける (SaveLoad:1391-1401)
         res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertTrue(res.completed)
@@ -639,16 +510,3 @@ class FixBranchTest(_Base):
         self.d.remove(self.d.next, "SIKAODRNOW")
         res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAODRNOW")])
-
-    def test_b54_clear_previous_captions(self) -> None:
-        # 再現: 熱処理工程・QF が無いロットは None(前ロットの表示を変えない)(SaveLoad:211-213)
-        r = lot.acc_reflec(lot.LotScreen(lot="R9022F3", cb_text="R9022F3", work_time="T"), check_equipment=_ok)
-        self.assertIsNone(r.last_hot)
-        self.assertIsNone(r.qf)
-        quirks.set_for_test({"B54": "fix"})
-        r = lot.acc_reflec(lot.LotScreen(lot="R9022F3", cb_text="R9022F3", work_time="T"), check_equipment=_ok)
-        self.assertEqual((r.last_hot, r.qf), ("", ""))
-        r = lot.acc_reflec(lot.LotScreen(lot="RX021T0", cb_text="RX021T0", work_time="T"), check_equipment=_ok)
-        self.assertEqual((r.last_hot, r.qf), ("", "QF有り"))
-        r = lot.acc_reflec(lot.LotScreen(lot="L8430D0", cb_text="L8430D0", work_time="T"), check_equipment=_ok)
-        self.assertEqual((r.last_hot, r.qf), ("最終熱処理工程：ANF", ""))

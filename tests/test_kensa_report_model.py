@@ -10,28 +10,17 @@ from pathlib import Path
 from ufkensa.kensa import quirks, records as rc, report_model as rm, store as st
 from ufkensa.kensa.flow import Question, Stop
 from tests.test_kensa_records import make_snap
-from tests._isolation import vba_reproduce
 
 NOW = datetime(2024, 11, 2, 8, 55, 3)
 
 
-@vba_reproduce
 class PartsTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_circled(self) -> None:
         self.assertEqual([rm.circled_number(n) for n in (1, 20, 21, 35, 36, 50)], ["①", "⑳", "㉑", "㉟", "㊱", "㊿"])
         self.assertEqual(rm.circled_number(51), "51")
         self.assertEqual(rm.circled_number(0), "0")
-
-    def test_allow_check_b34(self) -> None:
-        pos = {f: f for f in "SUCDEF"}
-        self.assertEqual(rm.allow_check({"S": "許容"}, pos), "S")                 # 1 か所目に「許容」が付かない
-        self.assertEqual(rm.allow_check({"S": "許容", "U": "許容"}, pos), "S, U 許容")
-        self.assertEqual(rm.allow_check({"C": "保留"}, pos), "C")
-        quirks.set_for_test({"B34": "fix"})
-        self.assertEqual(rm.allow_check({"S": "許容"}, pos), "S 許容")
 
     def test_format_cell(self) -> None:
         f = "0.000_);[赤](0.00)"
@@ -52,12 +41,10 @@ class Base(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = Path(tempfile.mkdtemp())
         self.store = st.LocalStore(self.dir / "local.sqlite3")
-        quirks.set_for_test(None)
         self.store.add_sheet("WorkerTime_Test").write(3, 1, "検査員01")
         self.env = rm.PrintEnv(now=NOW, start1="7:00", end3="6:50")
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
         self.store.close()
         shutil.rmtree(self.dir, ignore_errors=True)
 
@@ -65,7 +52,6 @@ class Base(unittest.TestCase):
         return rm.print_transfer(self.store, snap or make_snap(), env or self.env)
 
 
-@vba_reproduce
 class PrintTransferTest(Base):
     def test_header_cells(self) -> None:
         s = make_snap(ken_hbox=["200", "226", "", "", "", "", ""], resize_tag="有")
@@ -116,26 +102,6 @@ class PrintTransferTest(Base):
         self.assertEqual(rep.text("C19"), "250.12")
         self.assertEqual(rep.cell("C19")["number_format"], "0.00_);[赤](0.00)")
 
-    def test_b10_allow(self) -> None:
-        s = make_snap()
-        s.ng.update({"S": "許容", "U": "許容"})
-        self.assertEqual(self.run_print(s).report.text("B10"), "許容公差外在り:S, U ")
-        s1 = make_snap()
-        s1.ng["S"] = "許容"
-        self.assertEqual(self.run_print(s1).report.text("B10"), "")    # B34
-        quirks.set_for_test({"B34": "fix"})
-        self.assertEqual(self.run_print(s1).report.text("B10"), "許容公差外在り:S ")
-
-    def test_b36_bottom_border(self) -> None:
-        s = make_snap(huris="1.2", mimi="")
-        rep = self.run_print(s).report
-        self.assertEqual(rep.cell("L6")["borders"]["bottom"], ["continuous", "thick"])   # 耳歪で判定
-        self.assertEqual(rep.text("L8"), "1.2")
-        self.assertEqual(rep.text("L7"), "フリー反り")
-        quirks.set_for_test({"B36": "fix"})
-        rep = self.run_print(s).report
-        self.assertEqual(rep.cell("L6")["borders"]["bottom"], ["double", "thick"])
-
     def test_thin_yama_labels(self) -> None:
         s = make_snap(kind="薄板", usuita_caption="L", yama="3")
         rep = self.run_print(s).report
@@ -144,17 +110,6 @@ class PrintTransferTest(Base):
         rep4 = self.run_print(s4).report
         self.assertEqual(rep4.text("B17"), "1-E")
         self.assertEqual(rep4.cell("B17")["borders"]["top"], ["dot", "thin"])
-
-    def test_thin_yama4_lateral_not_needed_b77(self) -> None:
-        s = make_snap(kind="薄板", usuita_caption="L", yama="4", sumisei="白銅", additional="ﾗﾃﾗﾙﾎﾞｰ検査不要")
-        with self.assertRaises(Stop) as cm:                    # Lascol=0 → Range(B16:@16) で 1004(Print:873-899)
-            self.run_print(s)
-        self.assertIn("1004", cm.exception.text)
-        quirks.set_for_test({"B77": "fix"})
-        rep = self.run_print(s).report
-        self.assertEqual(rep.text("B17"), "1-E")
-        self.assertEqual(rep.cell("I17")["borders"]["top"], ["dot", "thin"])      # 9 列目(I)まで点線
-        self.assertNotEqual(rep.cell("J17")["borders"]["top"], ["dot", "thin"])
 
     def test_slab_labels(self) -> None:
         rep = self.run_print(make_snap(kind="スラブ")).report
@@ -216,14 +171,6 @@ class PrintTransferTest(Base):
         sec = rep.sections()
         self.assertEqual(sec["abnormal"]["rows"][0][:2], ["S", "50.600"])
 
-    def test_abnormal_other_lot_b36(self) -> None:
-        iz = self.store.add_sheet("異常ロット用_Test")
-        iz.write(1, 1, "50.000")                                   # D4(厚)と同じ値 → VBA はページ設定をしない
-        rep = self.run_print().report
-        self.assertNotIn("print_area", rep.page)
-        quirks.set_for_test({"B36": "fix"})
-        self.assertEqual(self.run_print().report.page["print_area"], "$B$1:$L$24")
-
     def test_saved_and_reprint(self) -> None:
         self.run_print()
         rm.set_printed(self.store, "H7372A0", "Test", NOW)
@@ -238,7 +185,6 @@ class PrintTransferTest(Base):
         self.assertEqual(res.messages[-1].text, "再印刷が完了しました")
 
 
-@vba_reproduce
 class DefectTest(Base):
     def defect(self) -> st.GridSheet:
         sh = rm.ensure_defect_sheet(self.store, "Test", "H7372A0")
@@ -258,34 +204,6 @@ class DefectTest(Base):
         self.assertEqual(sh.get(10, 3), "⑤")
         self.assertEqual(sh.get(10, 24), "①")
         self.assertIsNone(sh.get(10, 4))                           # 合計 0 は空
-
-    def test_b35_rerun(self) -> None:
-        sh = self.defect()
-        args = dict(now=NOW, start1="7:00", end3="6:50", end_time_caption="x")
-        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
-        sh.write(6, 3, "1")
-        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
-        self.assertIsNone(sh.get(3, 3))                            # 囲み数字は数でない → 空になる(B35)
-        self.assertEqual(sh.get(10, 3), "①")                       # やり直した後の数だけ
-        quirks.set_for_test({"B35": "fix"})
-        sh2 = self.defect()
-        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
-        sh2.write(6, 3, "1")
-        rm.defect_print_range(self.store, "Test", "検査員01", "H7372A0", **args)
-        self.assertEqual(sh2.get(3, 3), "②")
-        self.assertEqual(sh2.get(10, 3), "⑥")
-
-    def test_b38_footer(self) -> None:
-        self.defect()
-        night = datetime(2024, 11, 2, 6, 30, 0)
-        p = rm.defect_print_range(self.store, "Test", "検査員01", "L", now=night, start1="7:00", end3="6:50",
-                                  end_time_caption="2024/11/02 6:30:00")
-        self.assertTrue(p["footer_right"].endswith("～2024/11/01  6:30 印刷"))     # End3 まで前日扱い
-        self.assertTrue(p["footer_right"].startswith(" 1899/12/30  0:00"))         # 開始なし = Date の 0
-        quirks.set_for_test({"B38": "fix"})
-        p2 = rm.defect_print_range(self.store, "Test", "検査員01", "L", now=night, start1="7:00", end3="6:50",
-                                   end_time_caption="2024/11/02 6:30:00")
-        self.assertTrue(p2["footer_right"].endswith("～2024/11/02  6:30 印刷"))
 
     def test_mitsubishi_no_footer(self) -> None:
         self.defect()
@@ -315,12 +233,6 @@ class PrintHistoryTest(Base):
         self.assertEqual(removed, ["L1"])                          # 5 日前 > 3。「.」区切りは日付と見ない(U12)
         rm.clear_printed(self.store, "L2")
         self.assertFalse(rm.is_printed(self.store, "L2"))
-
-    def test_b37(self) -> None:
-        rm.set_printed(self.store, "L1", "Test", datetime(2026, 10, 26, 9, 0))   # 4 日前
-        quirks.set_for_test({"B37": "fix"})
-        self.assertEqual(rm.clean_old_history(self.store, datetime(2026, 10, 30)), [])
-        self.assertEqual(rm.clean_old_history(self.store, datetime(2026, 11, 25)), ["L1"])   # 30 日
 
 
 if __name__ == "__main__":

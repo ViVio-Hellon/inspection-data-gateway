@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterator, Optional
 
-from . import quirks, vbx
+from . import vbx
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, hab_lt_300, ken_flags, small_count_th, yama_is)
@@ -272,7 +272,7 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
 
     # F(F11 以降は無い → KeyError = VBA の実行時エラー)
     # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見てエラー。直す: 極厚には F 列が無いので見ない
-    if f[6] and (quirks.reproduce("B63") or not state.is_work("極厚")):
+    if f[6] and (not state.is_work("極厚")):
         for i in rows:
             if _blank_vis(state, f"F{i}"):
                 return _set_target(state, f"F{i}")
@@ -350,8 +350,7 @@ def look_s_blank(state: KensaState, a: int, n: int, ken_no: str) -> None:
             return
         if f[6] and scan("F", True):
             return
-        if not quirks.reproduce("B60"):
-            return            # B60: 外の F ループは厚2ヵ所(4回検査)用。厚4ヵ所で隠れた F3/F4 を選ばない
+        return            # B60: 外の F ループは厚2ヵ所(4回検査)用。厚4ヵ所で隠れた F3/F4 を選ばない
     elif thin and state.at_butt_caption == "厚2ヵ所":
         def scan2(p: str) -> bool:
             for i in range(a, n + 1):
@@ -449,7 +448,7 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
             pick(f"E{i}")
             return
     # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見て実行時エラー。直す: 極厚には F 列が無いので見ない
-    if yama_is(state, 4) and (quirks.reproduce("B63") or not state.is_work("極厚")):
+    if yama_is(state, 4) and (not state.is_work("極厚")):
         for i in rows:
             if _blank(state, f"F{i}"):
                 pick(f"F{i}")
@@ -473,8 +472,6 @@ def next_blank(state: KensaState, ken_no: str) -> None:
 
 def ken_no_for_input(state: KensaState) -> str:
     """INP_Change の検番(UF1:4585)。B3: VBA は冷延欄 `Reien` の頭 1 文字(UserForm_Click は `KenNo`)。"""
-    if quirks.reproduce("B3"):
-        return vbx.left(state.reien, 1)
     return vbx.left(state.ken_no_caption, 1)
 
 
@@ -512,16 +509,15 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
     if state.auto == "on":
         pucket_move(state, state.paked, ken_no, youc, hooks, msgs)
         # B61: 「ﾊﾟｹｯﾄ無し」でも VBA は前回の INP.Tag の欄で LoopText・Posting まで進む。直す: そこで抜ける
-        if state.paked not in PACKETS and not quirks.reproduce("B61"):
+        if state.paked not in PACKETS:
             state.inp = ""
             state.flag_label = 1
             return msgs
 
     if state.inp_tag == "":
         # B55: VBA は FlagLabel=0 のまま抜け、フォームを押すまで次の伝送を受け付けない。直す: ほかの抜け方と同じく戻す
-        if not quirks.reproduce("B55"):
-            state.inp = ""
-            state.flag_label = 1
+        state.inp = ""
+        state.flag_label = 1
         return msgs
     st = state.inp_tag
     if maker(state.inp) in PACKETS:
@@ -638,7 +634,7 @@ def ng_erase(state: KensaState, name: str) -> None:
     """
     p = vbx.left(name, 1)
     count = 10 if p == "F" else 12
-    if p != "F" and not quirks.reproduce("B87"):
+    if p != "F":
         count = 14            # B87: 極厚の丈3・4(行13・14)も見る
     fl = False
     for i in range(1, count + 1):
@@ -732,7 +728,5 @@ def bad_mouse_down(state: KensaState, pos: str, hooks: Hooks) -> None:
     src = state.bad[pos]
     text = vbx.fmt(src.value, "0")
     dest = pos
-    if pos == "F" and quirks.reproduce("B4"):
-        dest = "E"
     state.bad[dest].value = text if vbx.is_numeric(text) else ""     # ?Bad_Change: 数でなければ空
     hooks.te_color(state, pos + "Bad")

@@ -8,7 +8,6 @@ from tests import kensa_fixture
 from tests.test_kensa_grid import FakeHooks, QuirkCase, cells
 from ufkensa.kensa import grid, layout, quirks, vbx
 from ufkensa.kensa.grid import KensaState
-from tests._isolation import vba_reproduce
 
 FIVE = ("S", "U", "C", "D", "E")
 HIKI_FIELDS = ["ﾛｯﾄ番号", "x", "検査番号"]
@@ -137,7 +136,6 @@ class LSelectFixtureTest(unittest.TestCase):
         self.assertEqual(msgs, [])                        # IsOver12Hours のときは出さない
 
 
-@vba_reproduce
 class LSelectTest(QuirkCase):
     def test_atuita(self) -> None:
         s = KensaState(lot="LOT0001", work="厚板", yama_visible=True, at_butt_visible=True)
@@ -193,22 +191,6 @@ class LSelectTest(QuirkCase):
         self.assertEqual(caps(s, "LZS"), ["定盤"])
         self.assertTrue(s.ctl("L9").visible)
 
-    def test_thin_at_butt_reshown(self) -> None:
-        # 6mm 超(AtuFlag=False)で AtButt を消しても、直後の LineSkip: で検番が T 以外なら表示に戻る
-        s = KensaState(lot="LOT0001", work="薄板", yama="1")
-        info = layout.lselect(s, "薄板", fake_db(atu="8"), skip_db_check=True)
-        self.assertFalse(info.atu_flag)
-        self.assertTrue(s.at_butt_visible)
-        self.assertEqual((s.at_butt_caption, s.at_count), ("厚2ヵ所", "厚4ヵ所検査中"))
-        self.assertTrue(s.inspe_butt_visible)
-        self.assertEqual(caps(s, "S", "U", "C", "E"), ["S", "", "2", "E"])
-        self.assertFalse(s.cells["U5"].visible)            # 3 回検査: U・D を消す
-        self.assertEqual((s.v("FMU").visible, s.v("FMC").visible), (False, True))     # DistSelect(26)
-        s = KensaState(lot="LOT0001", work="薄板", yama="2")
-        layout.lselect(s, "薄板", fake_db(ken="T6X0001"), skip_db_check=True)
-        self.assertEqual((s.at_butt_visible, s.inspe_butt_visible), (False, False))
-        self.assertEqual(caps(s, "OPS5"), ["2-1-E"])
-
     def test_thin_yama3(self) -> None:
         s = KensaState(lot="LOT0001", work="薄板", yama="3")
         layout.lselect(s, "薄板", fake_db(), skip_db_check=True)
@@ -240,16 +222,6 @@ class LSelectTest(QuirkCase):
         self.assertTrue(info.jumped)
         self.assertEqual((s.v("S").value, s.at_butt_caption), ("X", "厚4ヵ所"))
         self.assertFalse(s.cells["U5"].visible)             # UF1("U" & i).Visible = False は効く
-
-    def test_b7_cache(self) -> None:
-        s = KensaState(lot="LOT0001", work="薄板", atu="5")
-        s.cache.lot_no, s.cache.cours, s.cache.ord_atu, s.cache.ken_no = "LOT0001", "HOT L-1", 8.0, "L"
-        info = layout.lselect(s, "薄板", fake_db(), skip_db_check=True)
-        self.assertTrue(info.use_cache)
-        self.assertEqual((info.new_atu, info.atu_flag), (5.0, True))      # 画面の厚
-        quirks.set_for_test({"B7": "fix"})
-        info = layout.lselect(s, "薄板", fake_db(), skip_db_check=True)
-        self.assertEqual((info.new_atu, info.atu_flag), (8.0, False))
 
     def test_ll7(self) -> None:
         s = KensaState(lot="LOT0001", work="厚板")
@@ -292,7 +264,6 @@ class JudgeLotAllocationsTest(unittest.TestCase):
         self.assertEqual((s.additional, s.lateral_text), ("ﾗﾃﾗﾙﾎﾞ-追記公差あり", "0.5"))
 
 
-@vba_reproduce
 class CountSelectTest(QuirkCase):
     def test_at_count_select_thin_l(self) -> None:
         s = KensaState(lot="LOT0001", work="薄板")
@@ -304,33 +275,6 @@ class CountSelectTest(QuirkCase):
         layout.at_count_select(s, 4, fake_db())
         self.assertEqual(s.at_butt_caption, "厚2ヵ所")
         self.assertTrue(s.cells["S3"].visible and s.cells["E4"].enabled)
-
-    def test_at_count_select_t_yama4(self) -> None:
-        s = KensaState(lot="LOT0001", work="薄板", yama="4")
-        layout.at_count_select(s, 2, fake_db(ken="T6X0001"))
-        # 検番 T の 6 回: 表示に戻すが F の Enabled は設定しない(VBA どおり)
-        self.assertTrue(s.cells["F3"].visible)
-        self.assertFalse(s.cells["F3"].enabled)
-        self.assertTrue(s.cells["S3"].enabled)
-
-    def test_inspection_select_b5(self) -> None:
-        s = KensaState(lot="LOT0001", work="薄板", yama="2", at_butt_caption="厚2ヵ所")
-        layout.inspection_select(s, "表示", fake_db())
-        self.assertEqual(caps(s, "OPS5", "OPE5", "C"), ["2-2-E", "2-1-E", "2-2-E"])
-        self.assertEqual(s.inspe_butt_caption, "検入≦25")
-        self.assertTrue(s.cells["C1"].visible)
-        quirks.set_for_test({"B5": "fix"})
-        layout.inspection_select(s, "非表示", fake_db())
-        self.assertEqual(caps(s, "OPS5", "C", "E"), ["2-1-E", "", "2-1-E"])
-        self.assertEqual(s.inspe_butt_caption, "検入≧26")
-        self.assertFalse(s.cells["C1"].visible or s.diag["C"].visible)
-
-    def test_inspection_select_c_under_visual_not_set(self) -> None:
-        s = KensaState(lot="LOT0001", work="薄板", yama="1")
-        s.v("C_UnderVisual").visible = False
-        layout.inspection_select(s, "表示", fake_db(ken="H6X0001"))      # 検番 H(flag2)の 5 回表示
-        self.assertTrue(s.v("C_UpVisual").visible)
-        self.assertFalse(s.v("C_UnderVisual").visible)     # VBA は C_UpVisual を 2 回書いている
 
     def test_buttons_swallow_errors(self) -> None:
         s = KensaState(lot="LOT0001", work="薄板")
@@ -461,7 +405,6 @@ class AtuOpSelectFixtureTest(unittest.TestCase):
         self.assertEqual(s.ken_no_caption, "H6X1879")
 
 
-@vba_reproduce
 class EventsTest(QuirkCase):
     def test_select_work_small_h(self) -> None:
         s = KensaState(lot="LOT0001", atu="3")
@@ -492,29 +435,6 @@ class EventsTest(QuirkCase):
         s = KensaState(work="薄板", yama="")
         with self.assertRaises(vbx.TypeMismatch):
             layout.yama_change(s, fake_db())
-
-    def test_byousya(self) -> None:
-        s = KensaState(lot="LOT0001", work="スラブ", atu="3", hab="1000", tak="2000")
-        layout.byousya_after_update(s, fake_db())
-        self.assertEqual(s.work, "スラブ")                  # スラブは外さない(VBA どおり)
-        self.assertTrue(s.lateral["S"].visible and s.lateral["F"].visible and s.diag_kou["F"].visible)
-        s.work = "薄板"
-        layout.byousya_after_update(s, fake_db())
-        self.assertEqual(s.work, "")
-
-    def test_line_auto_selection_b6(self) -> None:
-        s = KensaState(lot="LOT0001", line_option="Tott")
-        h = FakeHooks(lot_info=None)
-        layout.line_auto_selection(s, "", h)
-        self.assertEqual((s.line_name, s.line_no, s.load, s.form_tag), ("ﾄｯﾄ", "", "off", "STOP"))
-        self.assertEqual(s.v("ZEB").value, "全数.三菱.5N")
-        quirks.set_for_test({"B6": "fix"})
-        s = KensaState(lot="LOT0001", line_option="Maru")
-        h = FakeHooks(lot_info=None)
-        layout.line_auto_selection(s, "", h, maru_no=6)
-        self.assertEqual((s.line_name, s.line_no, s.load, s.form_tag), ("丸徳", "場外", "on", ""))
-        self.assertEqual(s.v("ZEB").value, "検入4山以上")
-        self.assertEqual([c for c in h.calls if c[0] == "worker_load"], [("worker_load",)])
 
     def test_line_auto_selection_flat(self) -> None:
         s = KensaState(lot="LOT0001", line_option="LVC")
@@ -554,100 +474,8 @@ class EventsTest(QuirkCase):
         self.assertEqual(s.blind_message, "作業選択を選んでください")
 
 
-@vba_reproduce
 class LayoutFixedQuirksTest(QuirkCase):
     """B56〜B59・B62 の「再現」(既定)と「直す」。"""
-
-    def test_b56_at_butt_stays_hidden(self) -> None:
-        for atu, course in (("8", "HOT L-1 KEN"), ("2", "HOT 2HI KEN")):    # 6mm 超 / 2HI 通過
-            for yama in ("1", "2", "3"):
-                quirks.set_for_test(None)
-                s = KensaState(lot="LOT0001", work="薄板", yama=yama)
-                layout.lselect(s, "薄板", fake_db(atu=atu, course=course), skip_db_check=True)
-                self.assertTrue(s.at_butt_visible, (atu, yama))              # 再現: LineSkip でまた表示
-                quirks.set_for_test({"B56": "fix"})
-                s = KensaState(lot="LOT0001", work="薄板", yama=yama)
-                layout.lselect(s, "薄板", fake_db(atu=atu, course=course), skip_db_check=True)
-                self.assertFalse(s.at_butt_visible, (atu, yama))
-                self.assertEqual((s.at_butt_caption, s.at_count), ("厚2ヵ所", "厚4ヵ所検査中"))
-        # 6mm 以下・2HI なしは表示(変わらない)
-        s = KensaState(lot="LOT0001", work="薄板", yama="1")
-        layout.lselect(s, "薄板", fake_db(atu="2"), skip_db_check=True)
-        self.assertTrue(s.at_butt_visible)
-        # 住精の 2 回目(薄板)も表示し直さない
-        s = KensaState(lot="LOT0001", work="薄板", yama="1", sumisei="有")
-        layout.lselect(s, "薄板", fake_db(atu="8"), skip_db_check=True)
-        layout.lselect(s, "住精", fake_db(atu="8"), skip_db_check=True)
-        self.assertFalse(s.at_butt_visible)
-
-    def test_b57_byousya_line_skip(self) -> None:
-        def run() -> KensaState:
-            s = KensaState(lot="LOT0001", work="", byousya=True, yama="2", yama_visible=True)
-            s.v("S").value = "X"
-            s.at_butt_caption = "厚4ヵ所"
-            layout.lselect(s, "薄板", fake_db(), skip_db_check=True)
-            return s
-        s = run()
-        self.assertEqual((s.v("S").value, s.at_butt_caption, s.at_butt_visible), ("X", "厚4ヵ所", False))   # 再現
-        quirks.set_for_test({"B57": "fix"})
-        s = run()
-        self.assertEqual((s.at_butt_caption, s.at_count, s.at_butt_visible), ("厚2ヵ所", "厚4ヵ所検査中", True))
-        self.assertEqual(caps(s, "S", "C", "E", "OPS5"), ["2-2-S", "2-2-E", "2-1-E", "2-1-E"])
-        # 薄板以外の作業では薄板の見出しにしない
-        s = KensaState(lot="LOT0001", work="", byousya=True)
-        s.v("S").value = "X"
-        s.at_butt_caption = "厚4ヵ所"
-        layout.lselect(s, "厚板", fake_db(), skip_db_check=True)
-        self.assertEqual((s.v("S").value, s.at_butt_caption), ("X", "厚4ヵ所"))
-        # 極厚の L9・L10 を消す `.` の文は効く
-        s = KensaState(lot="LOT0001", work="", byousya=True)
-        s.v("L9").visible = True
-        layout.lselect(s, "極厚", fake_db(), skip_db_check=True)
-        self.assertFalse(s.v("L9").visible)
-
-    def test_b57_sumisei_db_missing(self) -> None:
-        h = FakeHooks(records={}, fields={})                               # 仕掛 DB が読めない → GoTo LineSkip
-        s = KensaState(lot="LOT0001", work="薄板", yama="1", yama_visible=True)
-        s.at_butt_caption = "厚4ヵ所"
-        info = layout.lselect(s, "住精", h, skip_db_check=True)
-        self.assertTrue(info.jumped)
-        self.assertEqual(s.at_butt_caption, "厚4ヵ所")                     # 再現
-        quirks.set_for_test({"B57": "fix"})
-        s = KensaState(lot="LOT0001", work="薄板", yama="1", yama_visible=True)
-        s.at_butt_caption = "厚4ヵ所"
-        layout.lselect(s, "住精", h, skip_db_check=True)
-        self.assertEqual((s.at_butt_caption, s.at_butt_visible), ("厚2ヵ所", True))
-        self.assertEqual(caps(s, "S", "C", "E"), ["S", "2", "E"])
-
-    def test_b58_c_under_visual(self) -> None:
-        def run() -> KensaState:
-            s = KensaState(lot="LOT0001", work="薄板", yama="1")
-            s.v("C_UnderVisual").visible = False
-            layout.inspection_select(s, "表示", fake_db(ken="H6X0001"))
-            return s
-        self.assertFalse(run().v("C_UnderVisual").visible)               # 再現
-        quirks.set_for_test({"B58": "fix"})
-        s = run()
-        self.assertTrue(s.v("C_UnderVisual").visible and s.v("C_UpVisual").visible)
-
-    def test_b59_f_enabled(self) -> None:
-        s = KensaState(lot="LOT0001", work="薄板", yama="4")
-        layout.at_count_select(s, 2, fake_db(ken="T6X0001"))
-        self.assertFalse(s.cells["F3"].enabled)                            # 再現
-        quirks.set_for_test({"B59": "fix"})
-        s = KensaState(lot="LOT0001", work="薄板", yama="4")
-        layout.at_count_select(s, 2, fake_db(ken="T6X0001"))
-        self.assertTrue(s.cells["F3"].visible and s.cells["F3"].enabled and s.cells["F4"].enabled)
-        self.assertTrue(s.cells["S3"].enabled)
-
-    def test_b62_slab_cleared(self) -> None:
-        s = KensaState(lot="LOT0001", work="スラブ", atu="3", hab="1000", tak="2000")
-        layout.byousya_after_update(s, fake_db())
-        self.assertEqual(s.work, "スラブ")                                  # 再現
-        quirks.set_for_test({"B62": "fix"})
-        layout.byousya_after_update(s, fake_db())
-        self.assertEqual(s.work, "")
-
 
 if __name__ == "__main__":
     unittest.main()

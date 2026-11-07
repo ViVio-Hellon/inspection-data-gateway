@@ -12,7 +12,7 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from . import datasource, paths, quirks, vbx
+from . import datasource, paths, vbx
 from .flow import ERROR, Message
 from .quality import (NUM, STR, VAR, LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
                       csng, find_indices, loop_array, rgb, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
@@ -225,14 +225,11 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
     join_arr = [list(fq2)] + aq2
 
     matching: list[int] = []
-    same = not quirks.reproduce("B71")          # B71(QDB:300-302): 直すと下・上も Double で比べる
+    same = True          # B71(QDB:300-302): 直すと下・上も Double で比べる
     for r in aq:
         c1 = check_condition(r, R["材質"], zai)
-        if quirks.reproduce("B25"):
-            c2 = c1 & check_condition(r, R["材質"], zai)        # B25: 調質を見ずに材質をもう一度
-        else:
-            # 直す: 調質で照合する(表に調質の列が無ければ条件なし。いまの別表2 には列が無い)
-            c2 = c1 & (check_condition(r, R["調質"], tyo) if R["調質"] else True)
+        # 直す: 調質で照合する(表に調質の列が無ければ条件なし。いまの別表2 には列が無い)
+        c2 = c1 & (check_condition(r, R["調質"], tyo) if R["調質"] else True)
         c3 = c2 & check_thickness(r, R["板厚下"], R["板厚上"], R["厚"], m_atu, same_precision=same)
         c4 = c3 & check_width(r, R["板幅下"], R["板幅上"], R["幅"], o_haba, same_precision=same)
         c5 = c4 & check_width(r, R["板丈下"], R["板丈上"], R["丈"], o_take, same_precision=same)
@@ -530,7 +527,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
                 goto = "skip122A"
             else:
                 # B89(QDB:1023): LIKE で絞った先頭行の用途コードだけを完全一致で見る。直すと全行を見る
-                look = rows[:1] if quirks.reproduce("B89") else rows
+                look = rows
                 found = any(vtrim(x) == youto for r0 in look for x in vsplit(vstr(cell(r0, C["用途コード"])), ","))
                 if found:
                     if len(zai) >= 4:
@@ -622,17 +619,13 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
             if not vbx.like(nou, "*" + vstr(cell(r, C["納入先名"])) + "*"):
                 continue
             # B71(QDB:1245-1247): 板厚下・上は Single、Val(オーダー厚) は Double。直すと下・上も Double
-            if quirks.reproduce("B71"):
-                lo = vbx.single(vbx.val(cell(r, C["板厚下"])))
-                hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
-            else:
-                lo = vbx.val(cell(r, C["板厚下"]))
-                hi = vbx.val(cell(r, C["板厚上"]))
+            lo = vbx.val(cell(r, C["板厚下"]))
+            hi = vbx.val(cell(r, C["板厚上"]))
             if not (lo <= vbx.val_single(o_atu) and hi >= vbx.val_single(o_atu)):
                 continue
             # B71(QDB:1251・1257): DB の幅(文字列 → Double)と Single のオーダー幅を比べる。
             # 直すとオーダー幅も Val(Single)(有効 7 桁の Double)にして同じ精度で比べる
-            w = o_haba if quirks.reproduce("B71") else vbx.val_single(o_haba)
+            w = vbx.val_single(o_haba)
             pat = cell(r, C["パターン"])
             hit = False
             if vstr(pat) != "":
@@ -649,7 +642,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
                 matched = True                       # 最後に一致した行が残る
         _zero_clear(form, "HaHiz1")
         _zero_clear(form, "TaHiz1")
-        if matched or quirks.reproduce("B27"):
+        if matched:
             # B27: 一致が無くても「不問」と参照元を付ける
             form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
             form.Sansyou1 = form.Sansyou1 + " Q-S-QA-DIM-122_O"
@@ -669,7 +662,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
         return res
     tyo_a, tyo_k = vbx.left(tyo, 1), vbx.right(tyo, 1)
     # VBA の For は上限を最初に決める。列番号(C)も最初の表のまま。配列だけ差し替わることがある(B27)
-    arr, fields = rows, f
+    arr = rows
     itti = False
     hit_any = False                 # 条件(調質・用途・納入先・厚)に当たった行があった(B73)
     for i in range(len(rows)):
@@ -703,26 +696,17 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
                 if sr is None:
                     return res
                 form.Sansyou1 = form.Sansyou1 + " 製品規格_" + sori
-            if quirks.reproduce("B27"):
-                # B27: ループ中の配列をソリ表に差し替え、列名が H/T 形式のソリ表を LoopArray で引く
-                # (数の列名が無いので LoopArray が添字エラーになる)
-                if sori:
-                    arr, fields = sr, sf
-                form.HaHiz1 = vbx.fmt(loop_array(arr, fields, o_haba, o_atu), "0.0")
-                form.TaHiz1 = vbx.fmt(loop_array(arr, fields, o_take, o_atu), "0.0")
-                form.Noun_BackColor = HX8_BLUE
-            else:
-                # 直す: ソリ表は DBQP と同じく FindIndices + SoriArray で引き、ここで止める
-                if sori:
-                    form.HaHiz1 = vbx.fmt(sori_array(sr, sf, o_atu, find_indices(sf, "H", o_haba)[0]), "0.0")
-                    form.TaHiz1 = vbx.fmt(sori_array(sr, sf, o_atu, find_indices(sf, "T", o_take)[0]), "0.0")
-                form.Noun_BackColor = HX8_BLUE
-                itti = True
+            # 直す: ソリ表は DBQP と同じく FindIndices + SoriArray で引き、ここで止める
+            if sori:
+                form.HaHiz1 = vbx.fmt(sori_array(sr, sf, o_atu, find_indices(sf, "H", o_haba)[0]), "0.0")
+                form.TaHiz1 = vbx.fmt(sori_array(sr, sf, o_atu, find_indices(sf, "T", o_take)[0]), "0.0")
+            form.Noun_BackColor = HX8_BLUE
+            itti = True
         if itti:
             break
     _zero_clear(form, "HaHiz1")
     _zero_clear(form, "TaHiz1")
-    if hit_any or quirks.reproduce("B73"):
+    if hit_any:
         # B73: VBA は一致が無くても中耳を「不問」で上書きする。直した場合は一致した行があったときだけ
         form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
     dedupe()

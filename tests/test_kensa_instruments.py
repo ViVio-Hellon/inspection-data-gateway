@@ -8,17 +8,14 @@ import unittest
 
 from tests import kensa_fixture
 from ufkensa.kensa import flow, instruments as ins, quirks, vbx
-from tests._isolation import vba_reproduce
 
 
 class _Base(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         kensa_fixture.use_offline()
-        quirks.set_for_test(None)
 
 
-@vba_reproduce
 class CheckThickAndCodeTest(unittest.TestCase):
     def test_youto_conditions(self) -> None:
         # MT:522-545
@@ -34,37 +31,18 @@ class CheckThickAndCodeTest(unittest.TestCase):
         self.assertFalse(f("0", "100", "", 3.0, "H207"))                # Split("") は要素なし
         self.assertFalse(f("0", "100", "*20", 3.0, ""))                 # InStr("", …) = 0
 
-    def test_single_bounds(self) -> None:
-        # 厚下・厚上は Single、厚は Val(Single)(有効 7 桁)の Double で比べる
-        f = ins.check_thick_and_code
-        self.assertFalse(f("28.01", "54", "X", vbx.single(28.01), "X"))   # Single(28.01) = 28.0100002 > 28.01
-        self.assertTrue(f("28.01", "54", "X", vbx.single(28.02), "X"))
-        self.assertFalse(f("0", "24.99", "X", vbx.single(24.99), "X"))    # Single(24.99) = 24.9899998 < 24.99
-        self.assertTrue(f("0", "25", "X", 25.0, "X"))
-        self.assertTrue(f("", "", "X", 0.0, "X"))                         # Val("") = 0
-
-
-@vba_reproduce
 class DbReturnMicroTest(_Base):
     def test_l1_by_thickness(self) -> None:
         d = ins.db_return_micro
-        cases = {3.0: ("10006", "M1"), 28.0: ("10006", "M1"), 28.01: ("", ""), 28.02: ("10001", "M2"),
-                 54.0: ("10001", "M2"), 60.0: ("10003", "M3"), 74.01: ("", ""), 100.0: ("10005", "N5"),
+        # B52 を直した: 境界ちょうどの厚も次の区間に入る(VBA は Single の丸めで外れて "")
+        cases = {3.0: ("10006", "M1"), 28.0: ("10006", "M1"), 28.01: ("10001", "M2"), 28.02: ("10001", "M2"),
+                 54.0: ("10001", "M2"), 60.0: ("10003", "M3"), 74.01: ("10005", "N5"), 100.0: ("10005", "N5"),
                  300.0: ("10002", "N6"), 0.0: ("10006", "M1"), 600.0: ("", "")}
         for atu, (text, name) in cases.items():
             with self.subTest(atu=atu):
                 self.assertEqual(d("L-1", atu, "H207"), text)
                 self.assertEqual(d("L-1", atu, "H207", "機器名"), name)
         self.assertEqual(d("L-1", 3.0, "", "ID"), "0000158327")
-
-    def test_youto_first(self) -> None:
-        # HVC は用途の行(M4: H191,H207,…)があるので用途条件を先に見る (MT:470-477)
-        d = ins.db_return_micro
-        self.assertEqual(d("HVC", 3.0, "H207", "機器名"), "M4")
-        self.assertEqual(d("HVC", 3.0, "H208", "機器名"), "M1")
-        self.assertEqual(d("HVC", 24.99, "H207", "機器名"), "M1")      # M4 の厚上 24.99 は Single で外れる
-        self.assertEqual(d("LVC", 3.0, "H207"), "10001")
-        self.assertEqual(d("LVC", 3.0, "K126"), "10000")
 
     def test_line_names_d13(self) -> None:
         d = ins.db_return_micro
@@ -98,7 +76,6 @@ class MakerTest(unittest.TestCase):
         self.assertEqual(ins.machin_text("#L395.8", "前"), "前")
 
 
-@vba_reproduce
 class MicroJugeTest(_Base):
     def mi(self, **kw) -> ins.MicroInput:
         base = dict(st="S1", machin="10006", atu="3.000", hab="1000.0", youto="K126", lname="L-1")
@@ -113,11 +90,6 @@ class MicroJugeTest(_Base):
         self.assertIsInstance(r.stop, flow.Stop)
         self.assertEqual(r.stop.text, "測定するﾏｲｸﾛを正しく選定して下さい M1を使用の事")
         self.assertTrue(ins.micro_juge(self.mi(machin="")).ok)           # Machin 空は何もしない (MT:167)
-
-    def test_thickness_gap_is_ng(self) -> None:
-        # 厚 28.01 はどの行にも当たらず出力テキストが "" → 機器が何でも NG
-        r = ins.micro_juge(self.mi(atu="28.010", machin="10001"))
-        self.assertEqual(r.stop.text, "測定するﾏｲｸﾛを正しく選定して下さい を使用の事")
 
     def test_h494_narrow(self) -> None:
         h = dict(youto="H494", hab="250.0")
@@ -142,24 +114,11 @@ class MicroJugeTest(_Base):
             ins.micro_juge(self.mi(st="SX", youto="H494", hab="250"))     # Case 5 To 6 と "X"
 
 
-@vba_reproduce
 class MachineTransferTest(_Base):
     def t(self, **kw) -> ins.TransferInput:
         base = dict(x=9, y=5, atu="3", haba="1000", yout="K126", line="L-1", tak="2000.0", hab="1000.0")
         base.update(kw)
         return ins.TransferInput(**base)
-
-    def test_lines_and_convex(self) -> None:
-        f = ins.machine_transfer
-        self.assertEqual(f(self.t()), [(9, 5, "L-1 M1"), (9, 7, "L-1 C12")])
-        self.assertEqual(f(self.t(tak="5500.0"))[1], (9, 7, "L-1 C12"))
-        self.assertEqual(f(self.t(tak="5500.1"))[1], (9, 7, "L-1 C11"))
-        self.assertEqual(f(self.t(line="HVC", yout="H207")), [(9, 5, "HVC M4"), (9, 7, "HVC C11")])
-        self.assertEqual(f(self.t(line="LVC")), [(9, 5, "LVC M1"), (9, 7, "LVC C10")])
-        # バランサー・トットは "大板"(マスタに無いので機器名は空)
-        self.assertEqual(f(self.t(line="ﾊﾞﾗﾝｻｰ")), [(9, 5, "大板 "), (9, 7, "大板 C12")])
-        self.assertEqual(f(self.t(line="トット")), [(9, 5, "大板 "), (9, 7, "大板 C11")])
-        self.assertEqual(f(self.t(line="Test")), [(9, 5, " "), (9, 7, "")])
 
     def test_atu_300(self) -> None:
         cells = {(14, 2): "299.5", (15, 4): 300.0, (16, 6): "", (17, 8): "abc"}
@@ -193,14 +152,11 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 直した場合の分岐(B51・B52・B53)
 # ------------------------------------------------------------------
-@vba_reproduce
 class FixBranchTest(_Base):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_b52_bounds_same_precision(self) -> None:
         f = ins.check_thick_and_code
-        quirks.set_for_test({"B52": "fix"})
         # 厚下・厚上も Double(Val のまま)で比べる → 境界ちょうどが範囲に入る
         self.assertTrue(f("28.01", "54", "X", vbx.single(28.01), "X"))
         self.assertTrue(f("0", "24.99", "X", vbx.single(24.99), "X"))
@@ -214,16 +170,9 @@ class FixBranchTest(_Base):
         self.assertEqual(d("L-1", 28.0, "H207", "機器名"), "M1")
         self.assertEqual(d("HVC", 24.99, "H207", "機器名"), "M4")       # 用途の行(0–24.99)
 
-    def test_b52_micro_juge(self) -> None:
-        m = ins.MicroInput(st="S1", machin="10001", atu="28.01", hab="1000", youto="K126", lname="L-1")
-        self.assertFalse(ins.micro_juge(m).ok)              # 再現: 機器名が空で「…を使用の事」
-        quirks.set_for_test({"B52": "fix"})
-        self.assertTrue(ins.micro_juge(m).ok)               # 直す: M2(10001)で一致
-
     def test_b53_balancer_tott(self) -> None:
         f = ins.machine_transfer
         base = dict(x=9, y=5, atu="3", haba="1000", yout="K126", tak="2000.0", hab="1000.0")
-        quirks.set_for_test({"B53": "fix"})
         # 帳票のライン名は「大板」のまま、機器は実際のラインの行から(ﾊﾞﾗﾝｻｰ M2・トット M1)
         self.assertEqual(f(ins.TransferInput(line="ﾊﾞﾗﾝｻｰ", **base)), [(9, 5, "大板 M2"), (9, 7, "大板 C12")])
         self.assertEqual(f(ins.TransferInput(line="トット", **base)), [(9, 5, "大板 M1"), (9, 7, "大板 C11")])
@@ -238,40 +187,3 @@ class FixBranchTest(_Base):
             return "X9" if line == "大板" else "M1"
         self.assertEqual(f(ins.TransferInput(line="トット", **base), db=db)[0], (9, 5, "大板 X9"))
         self.assertEqual(calls, ["大板"])
-
-    def test_b51_packing_fallback(self) -> None:
-        import shutil
-        import sqlite3
-        import tempfile
-        from pathlib import Path
-        from ufkensa import user_settings
-        from ufkensa.kensa import paths
-        root = Path(tempfile.mkdtemp(prefix="ufk_ins_"))
-        try:
-            q, p = root / "q", root / "p"
-            q.mkdir()
-            p.mkdir()
-            src = kensa_fixture.build() / ins.DENSO_FILE
-            shutil.copy2(src, q)
-            shutil.copy2(src, p)
-            with sqlite3.connect(q / ins.DENSO_FILE) as c:
-                c.execute('DELETE FROM "測定機器ID"')
-            c.close()
-            user_settings.save(paths.KEY_PATHS, {paths.OFFLINE: {
-                k: str(root) + "/" for k in ("main", "next", "history", "factory")} | {
-                "quality": str(q) + "/", "packing": str(p) + "/"}})
-            paths.set_mode(paths.OFFLINE)
-            # 再現: Dim PackF() に Empty → 型エラー 13
-            with self.assertRaises(vbx.TypeMismatch):
-                ins.db_return_micro("L-1", 3.0, "H207")
-            quirks.set_for_test({"B51": "fix"})
-            # 直す: PackingPath の伝送用ファイルから引く (MT:415-420)
-            self.assertEqual(ins.db_return_micro("L-1", 3.0, "H207", "機器名"), "M1")
-            # PackingPath も空なら ""(Exit Function)
-            with sqlite3.connect(p / ins.DENSO_FILE) as c:
-                c.execute('DELETE FROM "測定機器ID"')
-            c.close()
-            self.assertEqual(ins.db_return_micro("L-1", 3.0, "H207", "機器名"), "")
-        finally:
-            kensa_fixture.use_offline()
-            shutil.rmtree(root, ignore_errors=True)

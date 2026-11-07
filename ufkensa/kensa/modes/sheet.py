@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Iterable, Optional
 
-from .. import flow, lines, paths, quirks, vbx
+from .. import flow, lines, paths, vbx
 
 # ------------------------------------------------------------------
 # シート名
@@ -269,29 +269,9 @@ def unit_record(n: float) -> float:
     n = vbx.single(n)
     flag = n > 0
     n = vbx.single(abs(n))
-    if not quirks.reproduce("B13"):
-        from ..judge import unit_record_fixed      # 通常検査と同じ直し方(区間の間の値も落とさない)
-        r = vbx.single(unit_record_fixed(n))
-        return r if flag else vbx.single(vbx.val_single(r) * -1)
-    x = n
-    big_ok = lambda v: 5.01 <= v <= 999  # noqa: E731
-    table = ((0.1, 0.5, 0.5), (0.51, 1.0, 1.0), (1.01, 1.5, 1.5), (1.51, 2.0, 2.0), (2.01, 2.5, 2.5),
-             (2.51, 3.0, 3.0), (3.01, 3.5, 3.5), (3.51, 4.0, 4.0), (4.01, 4.5, 4.5), (4.51, 5.0, 5.0))
-    r = 0.0
-    if x == 0:
-        r = 0.0
-    else:
-        for lo, hi, out in table:
-            if lo <= x <= hi:
-                r = out
-                break
-        else:
-            if big_ok(x):
-                r = n
-    r = vbx.single(r)
-    if not flag:
-        r = vbx.single(vbx.val_single(r) * -1)
-    return r
+    from ..judge import unit_record_fixed      # 通常検査と同じ直し方(区間の間の値も落とさない)
+    r = vbx.single(unit_record_fixed(n))
+    return r if flag else vbx.single(vbx.val_single(r) * -1)
 
 
 def ken_judg(v: Any, kp: float, km: float) -> bool:
@@ -1124,7 +1104,7 @@ def _lname_judge(book: Book) -> str:
         return book.mit.line_name
     if book.visible(CASK):
         return book.cask.line_name
-    if not quirks.reproduce("B30") and book.visible(H494):
+    if book.visible(H494):
         return book.mit.line_name
     return ""
 
@@ -1551,12 +1531,8 @@ def history_row(book: Book, ws: Sheet, kind: str, *, cask_bug: bool = False) -> 
     if not book.has("保存用"):
         return None
     row: dict[int, Any] = {2: ws.get(2, 4), 83: kind}
-    if cask_bug and quirks.reproduce("B29"):
-        row[4] = ws.get(3, 2)
-        row[4] = ws.get(3, 4)
-    else:
-        row[3] = ws.get(3, 2)
-        row[4] = ws.get(3, 4)
+    row[3] = ws.get(3, 2)
+    row[4] = ws.get(3, 4)
     row[5] = ws.get(3, 6)
     row[1] = fmt_date(ws.get(1, 2), "yyyy/mm/dd  h:mm") + "～" + fmt_date(book.now(), "yyyy/mm/dd  h:mm")
     row[77] = "別ファイル参照"

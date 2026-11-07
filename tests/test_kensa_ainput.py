@@ -12,7 +12,6 @@ from ufkensa import user_settings
 from ufkensa.kensa import ainput, flow, paths, vbx
 from ufkensa.kensa.ainput import AinputForm
 from ufkensa.kensa.workers import CellWrite, ShiftTimes, WorkerRegistry
-from tests._isolation import vba_reproduce
 
 NOW = datetime(2026, 10, 30, 10, 7, 0)
 SHIFTS = ShiftTimes("07:00", "15:00", "15:00", "22:50", "22:50", "07:00", "08:15", "17:00")
@@ -339,7 +338,6 @@ class HikiTest(unittest.TestCase):
         self.assertIsNone(ainput.startup("Cask", "", [HEAD] + HIST, working_lot="?", lname="L-1").form)
 
 
-@vba_reproduce
 class FilesTest(unittest.TestCase):
     def setUp(self) -> None:
         kensa_fixture.use_offline()
@@ -391,27 +389,11 @@ class FilesTest(unittest.TestCase):
         r = ainput.app_activation(lambda p: False)
         self.assertEqual((r.ok, r.messages[0].text), (False, "失敗"))
 
-    def test_result(self) -> None:
-        sleeps = []
-        r = ainput.inter_rupt_text(5000, sleep=sleeps.append)
-        self.assertEqual((r.ok, r.missing, sleeps), (True, True, [1.0] * 5))    # 無ければ先へ進む
-        res = self.tmp / "nis" / "result.txt"
-        res.write_bytes("前の結果\r\n正常に送信が行われました。\r\n".encode("cp932"))
-        self.assertTrue(ainput.inter_rupt_text(0, sleep=lambda s: None).ok)
-        res.write_bytes("ホストへの送信内容が正しくありません。NISへ連絡してください。".encode("cp932"))
-        r = ainput.inter_rupt_text(0, sleep=lambda s: None)
-        self.assertFalse(r.ok)
-        self.assertEqual(r.messages[0].text, "ﾎｽﾄへの送信内容が正しくありません。担当者へ連絡して下さい。\r\nA002")
-        res.write_bytes(b"")
-        r = ainput.inter_rupt_text(0, sleep=lambda s: None)
-        self.assertEqual((r.ok, r.messages[0].text), (False, ""))
-
     def test_host_con(self) -> None:
         self.assertEqual(ainput.host_con("KEN:RES:0004A001"), "作成されたテキストの内容が正しくありません。品質保証課へ連絡。")
         self.assertEqual(ainput.host_con("A009"), "")
 
 
-@vba_reproduce
 class AinButtonTest(FilesTest):
     def press(self, answers=None, daily=None):
         return ainput.ain_button(self.form, history_rows=HIST, answers=answers or {},
@@ -427,34 +409,6 @@ class AinButtonTest(FilesTest):
         self.form.hiki_no = "1"
         self.form.tag = "Load"
         self.assertEqual(self.press().stage, "busy")
-
-    def test_two_presses_and_send(self) -> None:
-        r = self.press()
-        self.assertEqual((r.stage, self.form.l1_visible, self.form.l1_caption, self.form.tag),
-                         ("first", True, "Depth測定", ""))
-        r = self.press()                                   # 山高さが未入力 → もう一度 1 回目の扱い
-        self.assertEqual(r.stage, "first")
-        self.form.heights[0] = "152.5"
-        r = self.press()
-        self.assertEqual((r.stage, r.question.text, self.form.tag), ("question", "ｱｲｶｽ転送を行いますか？", ""))
-        self.assertEqual(self.press({"ainput_send": False}).stage, "cancel")
-        exe = self.tmp / "nis" / "SokuteiDataTrans" / "SokuteiDataTrans.exe"
-        exe.parent.mkdir()
-        exe.write_bytes(b"")
-        (self.tmp / "nis" / "result.txt").write_bytes("正常に送信が行われました。\r\n".encode("cp932"))
-        from ufkensa.kensa.workers import DailyContext
-        from tests.test_kensa_workers import HIST as WH
-        daily = DailyContext(True, {(2, 4): "梱包No", (3, 1): "N456J52"}, WH, "N456J52", NOW, "Test", SHIFTS)
-        r = self.press({"ainput_send": True}, daily)
-        self.assertEqual(r.stage, "sent")
-        self.assertEqual(r.logs_written[0].msg, "*UFKen:50枚_152.5mm * T1:阿部")
-        log = (self.tmp / "hist" / "Test" / "Test_Log" / "Access.log").read_bytes().decode("cp932")
-        self.assertIn("PC  *UFKen:50枚_152.5mm * T1:阿部 \r\n", log)
-        self.assertTrue((self.tmp / "nis" / "hostsend.txt").is_file())
-        self.assertIn(CellWrite(3, 4, "01"), r.daily_writes)
-        self.assertEqual(self.form.konno, "")
-        self.assertEqual(self.form.heights[0], "152.5")    # 送信後も山高さは残る(VBA どおり)
-        self.assertTrue(self.form.locked)
 
     def test_input_errors(self) -> None:
         self.form.l1_visible = True

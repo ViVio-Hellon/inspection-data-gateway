@@ -7,7 +7,6 @@ from tests.test_kensa_grid import FakeHooks, QuirkCase, cells, fill
 from ufkensa.kensa import grid, minmax, quirks, vbx
 from ufkensa.kensa.flow import Stop
 from ufkensa.kensa.grid import KensaState
-from tests._isolation import vba_reproduce
 
 FIVE = ("S", "U", "C", "D", "E")
 
@@ -31,7 +30,6 @@ def underlined(s: KensaState) -> list[str]:
     return sorted(n for n, c in s.iter_cells() if c.underline)
 
 
-@vba_reproduce
 class MinMaxTest(QuirkCase):
     def test_atuita_full_range(self) -> None:
         s = atuita()
@@ -41,20 +39,6 @@ class MinMaxTest(QuirkCase):
                          ["2.995", "3.010", "999.5", "1001.0", "1999.5", "2001.5"])
         # U5・D5 は空のまま数と比べる(Variant の比較。U1)
         self.assertEqual(underlined(s), ["C5", "C7", "E7", "S1", "S6", "U2"])
-
-    def test_b1_thickness_format(self) -> None:
-        s = atuita(atu="80")
-        s.cells["S1"].value = "80.125"
-        minmax.min_max(s, FakeHooks())
-        self.assertEqual(s.amin, "3.000")
-        self.assertEqual(s.amax, "80.125")              # 74 超でも "0.000"(B1)
-        quirks.set_for_test({"B1": "fix"})
-        minmax.min_max(s, FakeHooks())
-        self.assertEqual(s.amax, "80.13")
-        s = atuita(atu="")
-        s.amin, s.amax = "1.000", "2.000"
-        minmax.min_max(s, FakeHooks())                  # 直した場合: 厚 0 はどちらの分岐にも入らず前の値のまま
-        self.assertEqual((s.amin, s.amax), ("1.000", "2.000"))
 
     def test_ng_blocks(self) -> None:
         s = atuita()

@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import datasource, flow, paths, quirks, vbx
+from . import datasource, flow, paths, vbx
 from . import sound as snd
 
 # ------------------------------------------------------------------
@@ -401,39 +401,7 @@ def unit_record(n: float) -> float:
     n = vbx.single(n)
     positive = n > 0                       # Sgn(n) = 1
     n = abs(n)
-    if not quirks.reproduce("B13"):
-        r = vbx.single(unit_record_fixed(n))
-        if not positive:
-            r = vbx.single(vbx.val_single(r) * -1)
-        return r + 0.0 if r != 0 else 0.0
-    x = n                                  # Single を Double の区間と比べる
-    upper = 999.0
-    r = 0.0
-    if x == 0:
-        r = 0.0
-    elif 0.1 <= x <= 0.5:
-        r = 0.5
-    elif 0.51 <= x <= 1.0:
-        r = 1.0
-    elif 1.01 <= x <= 1.5:
-        r = 1.5
-    elif 1.51 <= x <= 2.0:
-        r = 2.0
-    elif 2.01 <= x <= 2.5:
-        r = 2.5
-    elif 2.51 <= x <= 3.0:
-        r = 3.0
-    elif 3.01 <= x <= 3.5:
-        r = 3.5
-    elif 3.51 <= x <= 4.0:
-        r = 4.0
-    elif 4.01 <= x <= 4.5:
-        r = 4.5
-    elif 4.51 <= x <= 5.0:
-        r = 5.0
-    elif 5.01 <= x <= upper:
-        r = n
-    r = vbx.single(r)
+    r = vbx.single(unit_record_fixed(n))
     if not positive:
         r = vbx.single(vbx.val_single(r) * -1)
     return r + 0.0 if r != 0 else 0.0
@@ -631,13 +599,6 @@ def simply_judge(form: Form, name: str, n: str, worker_name: str = "") -> Outcom
         4: d1 != "" and e1 == "",
         5: e1 != "",
     }
-    iti = ""
-    if count_l[1]:
-        if name == "SBH":
-            iti = form.captions["S"]
-    elif count_l[5]:
-        if name == "EBH":
-            iti = form.captions["E"]
     text = form.v(name)
     if n == "OK":
         out.states[name] = OK
@@ -647,18 +608,11 @@ def simply_judge(form: Form, name: str, n: str, worker_name: str = "") -> Outcom
         out.states[name] = NG
         out.sounds.append(SOUND_NG)
         out.logs.extend(_judge_logs(f"*BH|{text}|({name})|×|{lname}|{worker_name}", lname))
-        if quirks.reproduce("B39"):
-            # 見出しどうしの比較なので、Iti="" と見出し "" の位置(スラブの E など)でも出る
-            if iti == form.captions["S"]:
-                out.msg_errors.append(MsgErrorCall(BH_MSG_FIRST, lname, 1))
-            if iti == form.captions["E"]:
-                out.msg_errors.append(MsgErrorCall(BH_MSG_LAST, lname, 1))
-        else:
-            # 直した側: 最終検査位置が決まったときだけ(S だけ検査済みの SBH / E まで検査済みの EBH)
-            if count_l[1] and name == "SBH":
-                out.msg_errors.append(MsgErrorCall(BH_MSG_FIRST, lname, 1))
-            elif count_l[5] and name == "EBH":
-                out.msg_errors.append(MsgErrorCall(BH_MSG_LAST, lname, 1))
+        # 直した側: 最終検査位置が決まったときだけ(S だけ検査済みの SBH / E まで検査済みの EBH)
+        if count_l[1] and name == "SBH":
+            out.msg_errors.append(MsgErrorCall(BH_MSG_FIRST, lname, 1))
+        elif count_l[5] and name == "EBH":
+            out.msg_errors.append(MsgErrorCall(BH_MSG_LAST, lname, 1))
     elif n == "不要":
         out.states[name] = WHITE
     return out
@@ -873,10 +827,7 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
         if form.cells[f"Lateral{p}"].visible:
             st[f"Lateral{p}"] = NG
     kou_targets = [("S", "S"), ("U", "U"), ("C", "C")]
-    if quirks.reproduce("B8"):
-        kou_targets += [("E", "D"), ("D", "E")]         # 表示を見る欄と塗る欄が逆
-    else:
-        kou_targets += [("D", "D"), ("E", "E")]
+    kou_targets += [("D", "D"), ("E", "E")]
     kou_targets.append(("F", "F"))
     for seen, painted in kou_targets:
         if form.cells[f"Diag{seen}Kou"].visible:
@@ -1223,8 +1174,6 @@ def is_wildcard_match(pattern: str, target: str) -> bool:
         core = vbx.mid(core, 2)
     if has_tail:
         if len(core) - 1 < 0:
-            if quirks.reproduce("B42"):
-                raise VbaError(5, "プロシージャの呼び出し、または引数が不正です")
             return True                                      # 直した側: "*" 1 文字は何にでも合う(欄全体の "*" と同じ)
         core = vbx.left(core, len(core) - 1)
     if has_head and has_tail:
@@ -1267,9 +1216,8 @@ def _dims_in(row: Sequence[str], c: dict[str, int], thick: float, width: float, 
     lo_t, hi_t = vbx.val(_at(row, c["厚下"])), vbx.val(_at(row, c["厚上"]))
     lo_w, hi_w = vbx.val(_at(row, c["板幅下"])), vbx.val(_at(row, c["板幅上"]))
     lo_l, hi_l = vbx.val(_at(row, c["板丈下"])), vbx.val(_at(row, c["板丈上"]))
-    if not quirks.reproduce("B41"):
-        # 直した側: マスタの値も Single にして同じ精度で比べる(厚 1.2・上限 1.2 は範囲内)
-        lo_t, hi_t, lo_w, hi_w, lo_l, hi_l = (vbx.single(x) for x in (lo_t, hi_t, lo_w, hi_w, lo_l, hi_l))
+    # 直した側: マスタの値も Single にして同じ精度で比べる(厚 1.2・上限 1.2 は範囲内)
+    lo_t, hi_t, lo_w, hi_w, lo_l, hi_l = (vbx.single(x) for x in (lo_t, hi_t, lo_w, hi_w, lo_l, hi_l))
     return lo_t <= thick <= hi_t and lo_w <= width <= hi_w and lo_l <= length <= hi_l
 
 
@@ -1299,9 +1247,6 @@ def packaging_specification_no(packaging_no: str, youto: str, thick: float, widt
     datasource.get_fields(db, table, "")                     # Hikifields(使っていない)
     pack_f = datasource.get_fields(db, table, "")
     if pack_f is None:
-        if quirks.reproduce("B40"):
-            # `Dim PackF(): PackF = Empty` は動的配列に Empty を入れるので型エラー 13(IsEmpty の判定まで行かない)
-            raise vbx.TypeMismatch("PackF = GetFieldsArr(…) が Empty")
         return ""                                            # 直した側: `If IsEmpty(PackF) Then Exit Function` が効く
     c = {name: _last_index(pack_f, name) for name in _PACK_COLS}
     rows = datasource.get_records(db, table, "[包装仕様NO]='" + packaging_no + "'")
@@ -1347,10 +1292,7 @@ def packaging_specification_no(packaging_no: str, youto: str, thick: float, widt
         m = matched(r)
         if m is None:
             continue
-        if _at(r, c["フラグ"]) == "寸法納入" and quirks.reproduce("B11"):
-            result = m                                       # 上書き(J:2306)
-        else:
-            result = m + "," + result
+        result = m + "," + result
     return _at(rows[0], c["形状"]) + "_" + result
 
 
@@ -1378,7 +1320,6 @@ def materials_msgbox(form: Form, ord_no: str, *,
     lname = form.lname
     main, nxt = paths.get("main"), paths.get("next")
     fpath = main if form.DBflag == "" else nxt
-    target = "SIKAODRNOW.accdb"
     rc = read_check or (lambda p: datasource.exists(p))
 
     def file_of(base: str) -> str:
@@ -1435,7 +1376,7 @@ def materials_msgbox(form: Form, ord_no: str, *,
                     temp = temp + "," + s
         elif n_count <= 1:
             if n_count == -1:
-                if not quirks.reproduce("B11") and flag:
+                if flag:
                     out.msg_errors.append(MsgErrorCall(ADVANCE_MSG, lname, 4))
                     out.sounds.append(SOUND_NEED)
                 return out

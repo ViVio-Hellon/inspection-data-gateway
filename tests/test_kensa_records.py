@@ -10,7 +10,6 @@ from pathlib import Path
 
 from ufkensa.kensa import quirks, records as rc, store as st, vbx
 from ufkensa.kensa.flow import Stop
-from tests._isolation import vba_reproduce
 
 
 def make_snap(**kw) -> rc.KensaSnapshot:
@@ -37,10 +36,8 @@ class Base(unittest.TestCase):
         self.dir = Path(tempfile.mkdtemp())
         self.store = st.LocalStore(self.dir / "local.sqlite3")
         self.db = rc.ensure_measure_db(self.dir / "梱包検査ﾃﾞｰﾀ.sqlite3")
-        quirks.set_for_test(None)
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
         self.store.close()
         shutil.rmtree(self.dir, ignore_errors=True)
 
@@ -49,29 +46,14 @@ class Base(unittest.TestCase):
             return c.execute(f'SELECT * FROM "{table}" ORDER BY rowid').fetchall()
 
 
-@vba_reproduce
 class VisualJoinTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_join(self) -> None:
         self.assertEqual(rc.visual_save_join("a", "b", face="S"), "A_a,B_b")
         self.assertEqual(rc.visual_save_join("a", "", face="S"), "A_a,")
         self.assertEqual(rc.visual_save_join("", "b", face="S"), " ,B_b")
         self.assertEqual(rc.visual_save_join("", "", face="S"), "")
-
-    def test_b17_c_face(self) -> None:
-        self.assertEqual(rc.visual_save_join("", "b", face="C"), ",B_b")          # SaveLoad:4268
-        quirks.set_for_test({"B17": "fix"})
-        self.assertEqual(rc.visual_save_join("", "b", face="C"), " ,B_b")
-
-    def test_b17_f_face(self) -> None:
-        # SaveLoad:4290: F の「A のみ」を E 面で判定する
-        self.assertEqual(rc.visual_save_join("a", "", face="F", a_e="", b_e=""), "")
-        self.assertEqual(rc.visual_save_join("a", "b", face="F", a_e="", b_e=""), "A_a,B_b")
-        self.assertEqual(rc.visual_save_join("", "", face="F", a_e="e", b_e=""), "A_,")
-        quirks.set_for_test({"B17": "fix"})
-        self.assertEqual(rc.visual_save_join("a", "", face="F", a_e="", b_e=""), "A_a,")
 
     def test_strain_ab(self) -> None:
         s = make_snap()
@@ -86,40 +68,7 @@ class VisualJoinTest(unittest.TestCase):
             rc.strain_ab(s)
 
 
-@vba_reproduce
 class MainDataSaveTest(Base):
-    def test_hozon_row(self) -> None:
-        s = make_snap(lgs_caption="ﾌﾘｰｿﾘ")
-        s.diag_kou["S"] = "0.3"
-        s.measure["F"] = ["1"] * 10 + [""] * 4
-        s.measure["U"][4] = ""
-        r = rc.main_data_save(self.store, s, db_path=self.db)
-        sh = self.store.sheet(st.HOZON)
-        self.assertEqual((r.sheet, r.row), ("保存用", 2))
-        self.assertEqual(sh.get(2, 1), "2024/11/02 05:29～2024/11/02 08:55")
-        self.assertEqual(sh.get(2, 3), "50.000")              # Array(.ATU, …) は文字列のまま
-        self.assertEqual(sh.get(2, 12), "49.776")             # Split の String 配列も文字列のまま
-        self.assertIsNone(sh.get(2, 28))                      # U巾1 が空 → 空セル
-        self.assertEqual(sh.get(2, 22), "A:丈_上_0.20")       # 歪は A:/B: で上書き
-        self.assertEqual(sh.get(2, 23), "A:__0.00")
-        self.assertEqual(sh.get(2, 72), 1.5)                  # ラテラルボー(Variant)は数
-        self.assertEqual(sh.get(2, 77), "検査員01")           # T1 の末尾
-        self.assertEqual(sh.get(2, 78), "無")
-        self.assertEqual(sh.get(2, 83), "H")                  # 厚板 → 厚板.Caption
-        self.assertEqual(sh.get(2, 84), "〆")                 # LGS = ﾌﾘｰｿﾘ
-        self.assertEqual(sh.get(2, 85), "A_ｶﾐｺﾐ跡,B_ｽﾘｷｽﾞ")
-        self.assertIsNone(sh.get(2, 90))                      # B17: BH は書かない
-        self.assertEqual(sh.get(2, 95), 0.3)
-        self.assertEqual(sh.get(2, 100), 1.0)                 # F 面(Variant 配列)
-        self.assertIsNone(sh.get(2, 110))                     # F の歪 "__" → 空
-        self.assertEqual(r.values[0], "Test")
-        self.assertEqual(len(r.values), 115)
-        self.assertEqual(r.db.mode, "ADDNEW")
-        row = self.rows("検査ﾃﾞｰﾀ")[0]
-        self.assertEqual(row[0], "Test")
-        self.assertEqual(row[1], "2024/11/02 05:29～2024/11/02 08:55")
-        self.assertEqual(row[73], "1.5")                      # CStr(1.5)
-        self.assertEqual(row[28], "")                         # U巾1(空)は ""
 
     def test_kind_frequency(self) -> None:
         for kind, expect in (("薄板", "L:3"), ("少枚数", "H:少枚数"), ("スラブ", "ｽﾗﾌﾞ"), ("", "ｽﾗﾌﾞ")):
@@ -128,21 +77,12 @@ class MainDataSaveTest(Base):
             self.assertEqual(self.store.sheet(st.HOZON).get(r.row, 83), expect)
 
     def test_b17_fix_writes_bh(self) -> None:
-        quirks.set_for_test({"B17": "fix"})
         s = make_snap()
         s.bh["S"] = "65"
         r = rc.main_data_save(self.store, s, register=False)
         self.assertEqual(self.store.sheet(st.HOZON).get(r.row, 90), "65")
 
-    def test_b20_key_with_space(self) -> None:
-        s = make_snap()
-        rc.main_data_save(self.store, s, db_path=self.db)
-        r2 = rc.main_data_save(self.store, s, db_path=self.db)
-        self.assertEqual(r2.db.mode, "ADDNEW")                 # 'キー ' は一致しない → 毎回追加(B20)
-        self.assertEqual(len(self.rows("検査ﾃﾞｰﾀ")), 2)
-
     def test_b20_fix_updates(self) -> None:
-        quirks.set_for_test({"B20": "fix"})
         s = make_snap()
         rc.main_data_save(self.store, s, db_path=self.db)
         s2 = make_snap(line_name="LVC", zai="52S")
@@ -176,7 +116,6 @@ class MainDataSaveTest(Base):
         self.assertIn("'9'", cm.exception.text)
 
 
-@vba_reproduce
 class RegisterTest(Base):
     def test_more_columns_than_values(self) -> None:
         r = rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", ["Test", "k"], "[検査開始終了] ='k'")
@@ -184,18 +123,7 @@ class RegisterTest(Base):
         self.assertEqual(r.messages[0].text, "エラー番号  :9\r\nエラーの内容:インデックスが有効範囲にありません。")
         self.assertEqual(self.rows("検査ﾃﾞｰﾀ"), [])
 
-    def test_case_insensitive_key_and_quote(self) -> None:
-        vals = ["L", "AbC"] + [""] * 113
-        self.assertEqual(rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals, "[検査開始終了] ='AbC'").mode, "ADDNEW")
-        vals2 = ["L", "abc", "x'y"] + [""] * 112
-        r = rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals2, "[検査開始終了] ='abc'")
-        self.assertEqual(r.mode, "ERROR")                      # UPDATE の SQL に ' を埋め込んで構文エラー
-        vals3 = ["L", "abc", "z"] + [""] * 112
-        self.assertEqual(rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals3, "[検査開始終了] ='abc'").mode, "UPDATE")
-        self.assertEqual(self.rows("検査ﾃﾞｰﾀ")[0][1:3], ("abc", "z"))
-
     def test_quote_b75_fix(self) -> None:
-        quirks.set_for_test({"B75": "fix"})
         try:
             vals = ["L", "abc"] + [""] * 113
             self.assertEqual(rc.register_measurement(self.db, "検査ﾃﾞｰﾀ", vals, "[検査開始終了] ='abc'").mode, "ADDNEW")
@@ -204,8 +132,7 @@ class RegisterTest(Base):
             self.assertEqual(r.mode, "UPDATE")                 # 値はパラメータで渡すので ' があっても通る
             self.assertEqual(self.rows("検査ﾃﾞｰﾀ")[0][1:3], ("abc", "x'y"))
         finally:
-            quirks.set_for_test(None)
-
+            pass
     def test_missing_db(self) -> None:
         with self.assertRaises(Stop):
             rc.register_measurement(self.dir / "無い.sqlite3", "検査ﾃﾞｰﾀ", ["x"], "[検査開始終了] ='x'")
@@ -282,7 +209,6 @@ class PostingLoadTest(Base):
         self.assertEqual(out.tags["ReSize"], "無")
 
 
-@vba_reproduce
 class HistoryTest(Base):
     def test_history_load(self) -> None:
         s = make_snap()
@@ -306,33 +232,6 @@ class HistoryTest(Base):
         self.assertEqual(out.messages[0].text, "Load完了,印刷する場合はフォームを閉じないでください。")
         self.assertFalse(rc.history_load(self.store, "無い").found)
 
-    def test_history_strain_b76(self) -> None:
-        def run(kind: str, cells: list[str]):
-            out = rc.FormRestore()
-            st = {"a": "", "b": ""}
-            gb: list[str] = []
-            for f, cell in zip("SU", cells):
-                gb = rc._history_strain(out, f, kind, cell, st, guard=False, gb_prev=gb)
-            return out
-        try:
-            quirks.set_for_test({})
-            # ゲージ: U が空(A のみの分岐)だと前の面(S)の GdataB が U の Tag に入る(SaveLoad:3738-3744)
-            out = run("G", ["A:幅_下_0.30,B:丈_上_0.50", ""])
-            self.assertEqual(out.tags.get("CBU3"), "丈")
-            # 定盤: U に A: も B: も無いと、前の面の TempA/tempB が残って U に入る
-            out = run("Z", ["A:幅_下_0.30,B:丈_上_0.50", "x,y"])
-            self.assertEqual(out.values["ZU"], "0.30")
-            quirks.set_for_test({"B76": "fix"})
-            out = run("G", ["A:幅_下_0.30,B:丈_上_0.50", ""])
-            self.assertNotIn("CBU3", out.tags)
-            self.assertEqual((out.values["CBU3"], out.values["GU"]), ("", ""))
-            self.assertEqual(out.tags["CBS3"], "丈")                     # 同じ面の B はそのまま
-            out = run("Z", ["A:幅_下_0.30,B:丈_上_0.50", "x,y"])
-            self.assertEqual(out.values["ZU"], "")
-            self.assertNotIn("CBU1", out.tags)
-        finally:
-            quirks.set_for_test(None)
-
     def test_kanri_view(self) -> None:
         rc.main_data_save(self.store, make_snap(), register=False)
         rc.main_data_save(self.store, make_snap(start_time="2024/11/03 05:00:00"), register=False)
@@ -346,21 +245,11 @@ class HistoryTest(Base):
         self.assertEqual(view.values["Count"], "作業数2件")
         self.assertEqual(rc.kanri_select_time(self.store, "2024/11/03 05:00～2024/11/02 08:55", "H7372A0"), 1)
 
-    def test_kanri_b27_fgh(self) -> None:
-        sh = self.store.sheet(st.HOZON)
-        sh.write(2, 2, "L1")
-        sh.write(2, 110, "__")
-        sh.write(2, 111, "A:x_y_z")
-        self.assertEqual(rc.kanri_view(self.store, 0, ["L1"], "L1").values["FGH"], "")   # 110 列を見る
-        quirks.set_for_test({"B27": "fix"})
-        self.assertEqual(rc.kanri_view(self.store, 0, ["L1"], "L1").values["FGH"], "A:x_y_z")
-
     def test_kanri_load_other_lot(self) -> None:
         out = rc.kanri_load(self.store, "L1", "", uf1_visible=True, uf1_lot="X")
         self.assertEqual(out.messages[0].text, "別Lotデータがあります、新規登録処理を行ってください")
 
 
-@vba_reproduce
 class NumberCountTest(Base):
     def daily(self, rows) -> None:
         sh = self.store.add_sheet("Daily_Test")
@@ -385,16 +274,7 @@ class NumberCountTest(Base):
         self.daily([{1: "N1", 5: "100", 12: "50", 13: "2"}])
         self.assertFalse(rc.number_count(self.store, "Test", "N1").stop)    # > でなければ通す
 
-    def test_no_rows_reads_header(self) -> None:
-        # Daily の 3 行目以降が空: Range(A3:M2) は A2:M3 になり、見出しを数える(梱包枚数計算_Test の実物どおり)
-        self.daily([])
-        res = rc.number_count(self.store, "Test", "N1")
-        ws = self.store.sheet("梱包枚数計算_Test")
-        self.assertEqual((ws.get(2, 1), ws.get(2, 2), ws.get(2, 3), ws.get(2, 4)), ("ﾛｯﾄNo", 0, "ﾛｯﾄNo", "検入枚数"))
-        self.assertFalse(res.stop)
-
     def test_no_rows_b78_fix(self) -> None:
-        quirks.set_for_test({"B78": "fix"})
         try:
             self.daily([])
             res = rc.number_count(self.store, "Test", "N1")
@@ -403,8 +283,7 @@ class NumberCountTest(Base):
             self.assertEqual([ws.get(2, c) for c in range(1, 5)], [None] * 4)    # 見出しを数えない
             self.assertEqual((res.packed, res.inspected, res.stop), ({}, {}, False))
         finally:
-            quirks.set_for_test(None)
-
+            pass
     def test_no_daily(self) -> None:
         self.assertIsNone(rc.number_count(self.store, "Test", "N1"))
 

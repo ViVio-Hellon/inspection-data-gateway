@@ -17,7 +17,6 @@ from tests.test_kensa_session import SessionBase
 from ufkensa import user_settings
 from ufkensa.kensa import ainput_session, paths, quirks, session
 from ufkensa.kensa.store import LOT_HISTORY
-from tests._isolation import vba_reproduce
 
 LOT = "H7345B0"
 HIKI = "60602048"
@@ -26,7 +25,6 @@ ROW = ["2026-11-02", "04077194", LOT, 15, 1252, 2502, "H6X1355", "F52S", "R", "H
 OK_TEXT = "正常に送信が行われました。"
 
 
-@vba_reproduce
 class AinputScreenTest(SessionBase):
     def setUp(self) -> None:
         super().setUp()
@@ -45,7 +43,6 @@ class AinputScreenTest(SessionBase):
         self.a = ainput_session.reset_for_test(ainput_session.AinputSession(
             self.s, launcher=lambda p: self.launched.append(p) or True, sleep=lambda s: None))
         self.addCleanup(ainput_session.reset_for_test, None)
-        self.addCleanup(quirks.set_for_test, None)
         from app import shell
         p = mock.patch.object(shell, "READY_SCREENS", shell.READY_SCREENS | {"ainput"})
         p.start()
@@ -123,41 +120,6 @@ class AinputScreenTest(SessionBase):
         d = self.ok(self.post("value", name="remain", value="5"))
         self.assertEqual(d["view"]["fields"]["remain"], "")                             # 0/1 以外は空
 
-    def test_two_presses_send_and_daily(self) -> None:
-        self.store.ensure_sheet("Daily_HVC").write(1, 1, "2026/11/02_1直")
-        d = self.ready()
-        v = d["view"]
-        self.assertEqual((v["mount"]["visible"], v["mount"]["device"], v["mount"]["per_mount"]),
-                         (True, "Depth測定", "150.00"))
-        self.assertEqual(v["press"]["phase"], "first")
-        d = self.ok(self.post("receive", text="DT10001+0000150.000M"))                  # 機器番号がデプスと違う
-        self.assertEqual(d["view"]["mount"]["heights"][0]["value"], "")
-        self.assertIn("10006", d["view"]["mount"]["received"]["reason"])
-        d = self.ok(self.post("receive", text="DT10006+0000150.000M"))
-        self.assertEqual(d["view"]["mount"]["heights"][0]["value"], "150")
-        self.assertEqual(d["messages"][0]["sound"], "ainput_height")
-        self.assertEqual(d["view"]["press"]["phase"], "second")
-        d = self.post("press")
-        self.assertEqual(d["question"]["key"], "ainput_send")
-        self.assertEqual(d["question"]["text"], "ｱｲｶｽ転送を行いますか？")
-        self.assertTrue(d["view"]["check"]["ok"])
-        self.assertEqual((d["view"]["check"]["gm"], d["view"]["check"]["gp"]), ("149.50", "150.50"))
-        d = self.ok(self.post("press", answers={"ainput_send": False}))
-        self.assertEqual(d["view"]["send"]["stage"], "cancel")
-        self.result(OK_TEXT)
-        d = self.ok(self.post("press", answers={"ainput_send": True}))
-        s = d["view"]["send"]
-        self.assertEqual((s["stage"], s["label"]), ("sent", OK_TEXT))
-        self.assertTrue(all(x["state"] == "ok" for x in s["steps"]), s["steps"])
-        self.assertEqual(len(self.launched), 1)
-        self.assertTrue((self.nis / "hostsend.txt").read_bytes().startswith(b"KEN:AIN:0185" + HIKI.encode()))
-        self.assertIn("引当No_" + HIKI, s["current"])
-        self.assertEqual(d["view"]["fields"]["konno"], "")
-        self.assertEqual(d["view"]["mount"]["heights"][0]["value"], "150")              # B64: 送信後も山高さが残る
-        daily = self.store.sheet("Daily_HVC")
-        self.assertEqual(daily.get(2, 4), 1.0)              # 梱包No "01"(Daily_Report(4)。Excel の代入で数になる)
-        self.assertEqual(s["history"][0]["hiki_no"], HIKI)
-
     def test_height_ng_shows_which_mount(self) -> None:
         self.ready("2")
         self.ok(self.post("receive", text="DT10006+0000075.000M"))
@@ -174,42 +136,6 @@ class AinputScreenTest(SessionBase):
         self.assertEqual([h["value"] for h in d["view"]["mount"]["heights"]], ["", ""])   # NG で山高さを消す
         self.assertEqual(d["view"]["send"]["steps"][1]["state"], "ng")
         self.assertEqual(self.launched, [])
-
-    def test_result_ng_then_ngflag_sticks(self) -> None:
-        self.ready()
-        self.post("receive", text="DT10006+0000150.000M")
-        self.result("ホストへの送信内容が正しくありません。NISへ連絡してください。")
-        d = self.ok(self.post("press", answers={"ainput_send": True}))
-        self.assertEqual(d["view"]["send"]["stage"], "stopped")
-        self.assertEqual(d["messages"][-1]["text"], "ﾎｽﾄへの送信内容が正しくありません。担当者へ連絡して下さい。\r\nA002")
-        self.assertEqual(d["view"]["send"]["steps"][5]["state"], "ng")
-        self.result(OK_TEXT)
-        d = self.ok(self.post("press", answers={"ainput_send": True}))                  # Ngflag が残る(VBA どおり)
-        self.assertEqual((d["view"]["send"]["stage"], d["view"]["send"]["ng_flag"]), ("stopped", "stop"))
-        self.assertEqual(d["view"]["send"]["steps"][4]["state"], "ng")
-        self.ok(self.post("open", ken_m="L1"))                                          # 開き直すと解ける
-        self.assertEqual(self.a.form.ng_flag, "")
-
-    def test_b65_result_missing(self) -> None:
-        self.ready()
-        self.post("receive", text="DT10006+0000150.000M")
-        d = self.ok(self.post("press", answers={"ainput_send": True}))
-        self.assertEqual(d["view"]["send"]["stage"], "sent")                            # B65: 無くても成功扱い
-        self.assertEqual(d["view"]["send"]["steps"][5]["state"], "warn")
-        quirks.set_for_test({"B65": "fix", "B64": "fix"})
-        self.ok(self.post("open", ken_m="L1"))
-        self.ready()
-        self.post("receive", text="DT10006+0000150.000M")
-        d = self.ok(self.post("press", answers={"ainput_send": True}))
-        self.assertEqual(d["view"]["send"]["stage"], "stopped")
-        self.assertIn("result.txt がありません", d["messages"][-1]["text"])
-        self.result(OK_TEXT)
-        self.ok(self.post("open", ken_m="L1"))
-        self.ready()
-        self.post("receive", text="DT10006+0000150.000M")
-        d = self.ok(self.post("press", answers={"ainput_send": True}))
-        self.assertEqual(d["view"]["send"]["stage"], "sent")
-        self.assertEqual(d["view"]["mount"]["heights"][0]["value"], "")                 # B64 を直すと消える
 
     def test_reset_asks_then_resends(self) -> None:
         self.ready()

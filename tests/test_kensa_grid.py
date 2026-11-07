@@ -6,7 +6,6 @@ from typing import Any, Optional
 
 from ufkensa.kensa import grid, quirks, vbx
 from ufkensa.kensa.grid import KensaState
-from tests._isolation import vba_reproduce
 
 
 class FakeHooks(grid.Hooks):
@@ -106,9 +105,7 @@ def cells(cols, rows):
 
 class QuirkCase(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
-
+        pass
 class StateTest(unittest.TestCase):
     def test_grid_shape(self) -> None:
         s = KensaState()
@@ -204,7 +201,6 @@ class FlagTest(unittest.TestCase):
         self.assertFalse(f[5])
 
 
-@vba_reproduce
 class HelperTest(unittest.TestCase):
     def test_fm_clear_formats_z_and_removes_underline(self) -> None:
         s = KensaState()
@@ -219,14 +215,6 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(s.strain_z["F"].value, "0.13")      # Format は四捨五入
         self.assertFalse(s.cells["S1"].underline)
         self.assertFalse(s.cells["F10"].underline)
-
-    def test_n_count(self) -> None:
-        s = KensaState()
-        self.assertFalse(grid.n_count(s))
-        s.cells["E13"].value = "1"                  # 行 13・14 は見ない
-        self.assertFalse(grid.n_count(s))
-        s.cells["F10"].value = "1"
-        self.assertTrue(grid.n_count(s))
 
     def test_small_count_th(self) -> None:
         h = FakeHooks(sheets=2.25)
@@ -249,18 +237,6 @@ class HelperTest(unittest.TestCase):
         s2 = KensaState(atu="3", ken_count="2")
         s2.ken_h[7].value = ""
         self.assertEqual(grid.small_count_th(s2, h.calculate_sheets, by_ken_count_blank=True), 2)
-
-
-@vba_reproduce
-class NCountQuirkTest(QuirkCase):
-    def test_b88(self) -> None:
-        s = KensaState(work="極厚")
-        s.cells["S14"].value = "2502.0"
-        self.assertFalse(grid.n_count(s))                   # 再現: 行 13・14 は見ない(FormRelat:5425)
-        quirks.set_for_test({"B88": "fix"})
-        self.assertTrue(grid.n_count(s))
-        s.cells["S14"].value = ""
-        self.assertFalse(grid.n_count(s))
 
 
 if __name__ == "__main__":

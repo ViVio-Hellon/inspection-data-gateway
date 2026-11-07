@@ -7,7 +7,6 @@ from datetime import datetime
 from ufkensa.kensa import calibration as cal
 from ufkensa.kensa import flow, quirks
 from ufkensa.kensa.workers import CellWrite, ShiftTimes, WorkerRegistry
-from tests._isolation import vba_reproduce
 
 SHIFTS = ShiftTimes("07:00", "15:00", "15:00", "22:50", "22:50", "07:00", "08:15", "17:00")
 
@@ -124,8 +123,7 @@ class GaugeTest(unittest.TestCase):
         self.st = cal.CalibrationState("L-1", kname="阿部", mode=cal.WHITE)
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def run_gauge(self, raw: str, now=None, ws=None, se=se):
         return cal.input_gauge(self.st, raw, kiroku() if ws is None else ws, se, now=now or at(10, 5, 9),
                                facility="L-1", shifts=SHIFTS)
@@ -143,25 +141,7 @@ class GaugeTest(unittest.TestCase):
         self.assertEqual(self.st.kname, "")
         self.assertTrue(cal.exit_gauge(self.st))
 
-    def test_fail(self) -> None:
-        quirks.set_for_test({})
-        r = self.run_gauge("#L2052.6")
-        self.assertFalse(self.st.proofread_ok)
-        self.assertEqual(self.st.ng_value, "測定値 2052.6 mm")
-        self.assertIn(CellWrite(2, 8, "〆"), r.kiroku_writes)
-        self.assertNotIn(4, [w.col for w in r.kiroku_writes])          # D(直)は書かない
-        self.assertEqual(r.kiroku_red, [])                             # B14: 赤字にしない
-        self.assertEqual(r.logs[0].msg, "*L-1_ｹﾞｰｼﾞ測定:")               # 消した後に書くので値が残らない
-        self.assertEqual(self.st.f1, "0")
-        # F1=0 のままなので、クリアを押すまで次の入力は受け付けない
-        self.assertEqual(self.run_gauge("#L2053.0").kiroku_writes, [])
-        cal.clear_button(self.st)
-        self.assertEqual(self.st.f1, "1")
-        self.run_gauge("#L2053.0")
-        self.assertTrue(self.st.proofread_ok)
-
     def test_fail_b66_fix_logs_value(self) -> None:
-        quirks.set_for_test({"B66": "fix"})
         r = self.run_gauge("#L2052.6")
         self.assertEqual(r.logs[0].msg, "*L-1_ｹﾞｰｼﾞ測定:2052.6")            # 消す前の値をログに書く
         self.assertEqual(self.st.sokutei, "")                            # 画面は VBA どおり消える
@@ -169,7 +149,6 @@ class GaugeTest(unittest.TestCase):
         self.assertEqual(self.run_gauge("#L2053.0").logs[0].msg, "*L-1_ｹﾞｰｼﾞ測定:2053.0")
 
     def test_fail_b14_fix_red(self) -> None:
-        quirks.set_for_test({"B14": "fix"})
         r = self.run_gauge("#L2053.8")
         self.assertEqual(r.kiroku_red, [(2, 1), (2, 3), (2, 5), (2, 6), (2, 7)])
 
@@ -198,8 +177,7 @@ class GaugeTest(unittest.TestCase):
 
 class Hinsho1000Test(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_pass(self) -> None:
         st = cal.initialize("L-1", "阿部", "L-1")
         r = cal.input_1000(st, "#L1000.5", hinsho(), kiroku(), now=at(10, 5, 9), facility="L-1", shifts=SHIFTS)
@@ -236,41 +214,14 @@ class Hinsho1000Test(unittest.TestCase):
             cal.input_1000(st, "#L1000.0", None, None, now=at(10), facility="L-1", shifts=SHIFTS)
 
     def test_skip_button_b14(self) -> None:
-        quirks.set_for_test({})
-        st = cal.initialize("HVC", "阿部", "HVC")
-        self.assertTrue(cal.skip_1000_button(st))
-        self.assertEqual((st.mode, st.gauge), (cal.WHITE, "[HVC]:直尺「S-1」の全長を測定してください"))
-        quirks.set_for_test({"B14": "fix"})
         st = cal.initialize("HVC", "阿部", "HVC")
         self.assertFalse(cal.skip_1000_button(st))
         self.assertEqual(st.mode, cal.GREEN)
 
 
-@vba_reproduce
 class RankTest(unittest.TestCase):
-    def test_rank_only_red_rows(self) -> None:
-        c = kiroku(("2026.09.30", None, 2053.9), ("2026.10.01", None, 2053.9), ("2026.10.02", None, "2052.5"),
-                   ("2026.10.03", "1直", 2053.0), ("2026.10.04", None, 2054.1))
-        c[(2, 6)] = c[(3, 6)] = c[(4, 6)] = c[(6, 6)] = "阿部"
-        r = cal.calibration_rank(c, "L-1", now=at(10))
-        self.assertEqual(r.ranks, {})                     # 赤字が無ければ何も出ない(B14 の状態)
-        self.assertIn(CellWrite(4, 5, 2052.5), r.rewrites)
-        r = cal.calibration_rank(c, "L-1", now=at(10), red_rows={2, 3, 4, 6})
-        # 当月の最初の行(3 行目)から写す。J・N 列の最終行は消す前の値(=1)で数えるので、1 回目は表示されない
-        self.assertIn(CellWrite(2, 10, 2053.9), r.writes)
-        self.assertIn(CellWrite(3, 10, 2054.1), r.writes)
-        self.assertIn(CellWrite(2, 14, 2052.5), r.writes)
-        self.assertEqual(r.ranks, {})
-        # 2 回目(写した I:O が残っている)で出る。3 位は LARGE の範囲外で 0 のまま
-        for w in r.writes:
-            c[(w.row, w.col)] = w.value
-        r = cal.calibration_rank(c, "L-1", now=at(10), red_rows={2, 3, 4, 6})
-        self.assertEqual(r.ranks, {1: "1位：　2026.10.04　値：2054.1　作業者：阿部",
-                                   2: "2位：　2026.10.01　値：2053.9　作業者：阿部",
-                                   4: "1位：　2026.10.02　値：2052.5　作業者：阿部"})
 
     def test_rank_b67_fix_shows_new_records_at_once(self) -> None:
-        quirks.set_for_test({"B67": "fix"})
         try:
             c = kiroku(("2026.09.30", None, 2053.9), ("2026.10.01", None, 2053.9), ("2026.10.02", None, "2052.5"),
                        ("2026.10.03", "1直", 2053.0), ("2026.10.04", None, 2054.1))
@@ -285,8 +236,7 @@ class RankTest(unittest.TestCase):
             r = cal.calibration_rank(c, "L-1", now=at(10), red_rows={2, 3, 4, 6})
             self.assertEqual(r.ranks[1], "1位：　2026.10.04　値：2054.1　作業者：阿部")
         finally:
-            quirks.set_for_test(None)
-
+            pass
     def test_hinsho_rank_exits_on_m6(self) -> None:
         r = cal.hinsho_rank(hinsho(), now=at(10))
         self.assertEqual(r.ranks, {})

@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, time as dtime
 from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
-from . import ado_filter, datasource, flow, lines, paths, quirks, vbx
+from . import ado_filter, datasource, flow, lines, paths, vbx
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -295,15 +295,7 @@ def visual_save_join(a: str, b: str, *, face: str = "", a_e: str = "", b_e: str 
 
     B17: C 面だけ B のみのとき先頭の空白が無い(",B_yyy")。F 面は 2 つ目の条件で E 面(a_e, b_e)を見る。
     """
-    if face == "F" and quirks.reproduce("B17"):
-        if a != "" and b != "":
-            return "A_" + a + ",B_" + b
-        if a_e != "" and b_e == "":
-            return "A_" + a + ","
-        if a == "" and b != "":
-            return " " + ",B_" + b
-        return ""
-    lead = "" if (face == "C" and quirks.reproduce("B17")) else " "
+    lead = " "
     if a != "" and b != "":
         return "A_" + a + ",B_" + b
     if a != "" and b == "":
@@ -434,8 +426,7 @@ def main_data_save(store: LocalStore, snap: KensaSnapshot, *, db_path: Optional[
         if snap.lgs_caption == "ﾌﾘｰｿﾘ":
             sh.write(n, 84, "〆")
         sh.write_row(n, 85, vis_item)
-        if not quirks.reproduce("B17"):
-            sh.write_row(n, 90, bh_data, "O")                       # B17: VBA はコメントアウトで書かない
+        sh.write_row(n, 90, bh_data, "O")                       # B17: VBA はコメントアウトで書かない
         for i, col in enumerate((22, 34, 46, 58, 70)):
             sh.write_row(n, col, hz[i])
         if snap.data_loading == "Load":
@@ -445,7 +436,7 @@ def main_data_save(store: LocalStore, snap: KensaSnapshot, *, db_path: Optional[
     end_c = sh.last_col(1)
     values: list[Value] = [snap.line_name] + [sh.get(end_r, c) for c in range(1, end_c + 1)]
     key = cell_text(values[1])
-    fil = "[検査開始終了] ='" + key + (" '" if quirks.reproduce("B20") else "'")
+    fil = "[検査開始終了] ='" + key + ("'")
     table = "耳付検査ﾃﾞｰﾀ" if extreme else "検査ﾃﾞｰﾀ"
     result = SaveResult(sheet=sh.name, row=n, values=values, db_table=table)
     if register:
@@ -530,8 +521,7 @@ def register_measurement(path: Union[str, Path], table: str, values: Sequence[Va
                     if len(texts) < jcnt:
                         raise _SqlError(9, "インデックスが有効範囲にありません。")
                     upd = texts[1:jcnt]
-                    if (quirks.reproduce("B75") and any("'" in t for t in upd)) \
-                            or "'" in key_filter.split("=", 1)[-1].strip()[1:-1]:
+                    if "'" in key_filter.split("=", 1)[-1].strip()[1:-1]:
                         # VBA は値を '…' で囲んで SQL に埋め込む(エスケープなし)→ 構文エラー
                         # B75 を直すと、値はパラメータで渡す(下の UPDATE)ので値の ' は通る。
                         # 照合キー(keySQLfilter)の ' は ADO の Filter でも通らないので直した側でも同じ
@@ -1155,7 +1145,7 @@ def _history_strain(out: FormRestore, face: str, kind: str, cell: Value, state: 
     """
     src = "SaveLoad:3631"
     text = cell_text(cell)
-    fix = not quirks.reproduce("B76")
+    fix = True
     if fix:
         state["a"] = state["b"] = ""
         gb_prev = None
@@ -1310,7 +1300,7 @@ def kanri_view(store: LocalStore, list_index: int, cb1_list: Sequence[str], cb1_
         for f, col in zip("SUCDE", (23, 35, 47, 59, 71)):
             if t(col) != "__":
                 v[f"{f}GH"] = t(col)
-        cond = 110 if quirks.reproduce("B27") else 111
+        cond = 111
         if t(cond) != "__":
             v["FGH"] = t(111)
         for f in "SUCDE":
@@ -1436,7 +1426,7 @@ def number_count(store: LocalStore, lname: str, lotname: str) -> Optional[Number
         if sh.color(r, 5) is not None:
             sh.set_color(r, 5, None)
     ur1 = sh.last_row(1)
-    if ur1 < 3 and not quirks.reproduce("B78"):
+    if ur1 < 3:
         total = []                       # 直した側: 3 行目以降が空なら数える行なし(見出しの 2 行目を数えない)
     else:
         total = [list(row) for row in sh.read_range(3, 1, ur1, 13)]   # B78: A3:M2 は A2:M3 になり見出しを数える

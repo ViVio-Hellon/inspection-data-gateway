@@ -16,7 +16,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Any, Callable, Mapping, Optional
 
-from . import datasource, legacy_log, lines, paths, quirks, vbx
+from . import datasource, legacy_log, lines, paths, vbx
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
 
@@ -468,8 +468,6 @@ def get_worker_name(day_max: str, reg: WorkerRegistry) -> str:
     if t is None:
         return ""
     if t == "":
-        if quirks.reproduce("B69"):
-            raise IndexError("GetWorkerName: 直の検査員が空(VBA の実行時エラー 9)")
         return ""                                  # 直した側: 空なら名前なし(w = "" と同じ扱い)
     return t.split("_")[-1]
 
@@ -517,10 +515,7 @@ def end_time_register(now: datetime, shifts: Optional[ShiftTimes] = None) -> tup
     0:00〜7:00(7:00 を含む)は**前日の日付で時刻はそのまま**。7:00 は DB を使わない固定値。
     B38: 直すときは境界を DB の End3 にする(不良要因票と同じ)。
     """
-    if quirks.reproduce("B38"):
-        bound = 7 * 3600
-    else:
-        bound = _seconds((shifts or ShiftTimes()).end3)
+    bound = _seconds((shifts or ShiftTimes()).end3)
     t = now.hour * 3600 + now.minute * 60 + now.second
     if t > bound and t <= _2359:
         text = _vba_date_text(now)
@@ -554,11 +549,9 @@ def is_over_12_hours(c1: Any, now: datetime, *, sheet_exists: bool = True) -> bo
     if not sheet_exists or _empty(c1):
         return False
     target = _cdate(c1)
-    if quirks.reproduce("B19"):
-        hours = (now.replace(minute=0, second=0, microsecond=0)
-                 - target.replace(minute=0, second=0, microsecond=0)).total_seconds() // 3600
-        return hours >= 1
-    return (now - target) >= timedelta(hours=12)
+    hours = (now.replace(minute=0, second=0, microsecond=0)
+             - target.replace(minute=0, second=0, microsecond=0)).total_seconds() // 3600
+    return hours >= 1
 
 
 @dataclass
@@ -576,13 +569,12 @@ def name_match(cells: Cells, reg: WorkerRegistry) -> NameMatchResult:
     書く場所: N(番号)・O(作業済検査員履歴)・P(登録検査員)・Q(一致無し検査員)・R1="OUT"。
     B21: VBA は 3-7 行(S〜E)× 1-12 列だけ読み、F 面(8 行)と 13-14 列を見ない。R1 の "OUT" を消さない。
     """
-    fix = not quirks.reproduce("B21")
+    fix = True
     last_r, last_c = (8, 14) if fix else (7, 12)
     writes: list[CellWrite] = []
     # B86: R1 の "OUT"(起動時の不一致の印)は N:Q の外なので消えず、起動のたびに不一致の画面が出る。
     # 直すと照合のたびに消し、まだ不一致があれば下で "OUT" を書き直す(B21 を直した場合も同じ)
-    if fix or not quirks.reproduce("B86"):
-        writes.append(CellWrite(1, 18, ""))
+    writes.append(CellWrite(1, 18, ""))
     done: dict[str, int] = {}
     for c in range(1, last_c + 1):                 # 列 → 行の順(VBA の For i(列) / For a(行))
         for r in range(3, last_r + 1):
@@ -594,11 +586,8 @@ def name_match(cells: Cells, reg: WorkerRegistry) -> NameMatchResult:
     for j, (name, no) in enumerate(done.items(), start=2):
         writes += [CellWrite(j, 14, no), CellWrite(j, 15, name)]
     # 登録検査員: Split(Join(Split(T1,"_")) & " " & …)(名前に半角空白があると分かれる)
-    if quirks.reproduce("B68"):
-        words = " ".join(t.replace("_", " ") for t in (reg.t1, reg.t2, reg.t3)).split(" ")
-    else:
-        # 直した側: 氏名の区切りの "_" だけで分ける(半角空白を含む氏名もそのまま照合)
-        words = [w for t in (reg.t1, reg.t2, reg.t3) for w in t.split("_")]
+    # 直した側: 氏名の区切りの "_" だけで分ける(半角空白を含む氏名もそのまま照合)
+    words = [w for t in (reg.t1, reg.t2, reg.t3) for w in t.split("_")]
     registered: dict[str, int] = {}
     for w in words:
         if w != "" and w not in registered:
@@ -693,8 +682,6 @@ def daily_report(n: int, ctx: DailyContext) -> list[CellWrite]:
     if not ctx.exists:
         return writes
     if ctx.history_rows is None:
-        if quirks.reproduce("B69"):
-            raise IndexError("Lot情報履歴 がありません(VBA は空のシートを作り実行時エラー 9)")
         return writes                              # 直した側: 履歴が無い = ロットの一致なしと同じく何もしない
     cells = ctx.cells
 
@@ -753,7 +740,7 @@ def daily_report(n: int, ctx: DailyContext) -> list[CellWrite]:
         put(lr, 6, _two(now.hour))
         mi = str(now.minute)
         if len(mi) == 1:
-            put(lr, 6 if quirks.reproduce("B18") else 7, "0" + mi)
+            put(lr, 7, "0" + mi)
         else:
             put(lr, 7, mi)
     elif n == 4:
@@ -797,9 +784,6 @@ def _daily_a1(now: datetime, ctx: DailyContext) -> str:
     B70: VBA は日付を YeaDayrCheck("hh:mm")、直を TimeCheck("hh:mm:ss") で出すので、7:00:01〜7:00:59 は
     「前日_1直」になる。直すと両方 "hh:mm:ss" で比べる(7:00:01〜7:00:59 は「当日_1直」。2026-11-02 の回答)。
     """
-    if quirks.reproduce("B70"):
-        day = yea_dayr_check(hhmm(now), now=now, facility=ctx.facility, shifts=ctx.shifts)
-        return day + "_" + time_check(hhmmss(now), facility=ctx.facility, shifts=ctx.shifts)
     # 直した側(2026-11-02 の回答): 7:00 ちょうどから「当日_1直」。日付も直も "hh:mm:ss" で比べる
     t = hhmmss(now)
     return (yea_dayr_check(t, now=now, facility=ctx.facility, shifts=ctx.shifts) + "_"
@@ -837,7 +821,7 @@ def name_list_write_back(items: list[list[str]], lname: str, col_count: int) -> 
     items は ListView の行(各行の SubItems(1..) = 日報の 1 列目から)。col_count は `UC(sh, 2)`。
     B22: VBA の CommandButton3 は `Daily_Test` に固定で書く。直すと `Daily_<ライン>`(ListPosting と同じ)。
     """
-    sheet = "Daily_Test" if quirks.reproduce("B22") else "Daily_" + lname
+    sheet = "Daily_" + lname
     cont = len(items)
     writes = []
     for i, row in enumerate(items, start=1):

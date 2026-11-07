@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from . import datasource, legacy_log, lines, paths, quirks, vbx
+from . import datasource, legacy_log, lines, paths, vbx
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .workers import AinputValues, DailyContext, WorkerRegistry, daily_report, workers_text
@@ -822,8 +822,6 @@ def inter_rupt_text(wait_ms: int = 0, *, sleep: Callable[[float], None] = time.s
         sleep(wait_ms / 1000.0)
     p = legacy_log.local_path(paths.join(tools_dir(), RESULT_FILE))
     if not p.is_file():
-        if quirks.reproduce("B65"):                    # VBA: ReadCheck が False なら Exit Sub → 成功扱いで先へ
-            return ResultCheck(True, missing=True)
         return ResultCheck(False, missing=True,
                            messages=[Message(RESULT_FILE + " がありません。送信の結果を確かめられません。"
                                              + "\r\n" + "担当者に連絡して下さい。", WARN, source="Input:1427")])
@@ -1175,7 +1173,7 @@ def ngflag_sticks() -> bool:
 
     B82。既定は VBA どおり再現(開き直すと解ける)。直すと、送信を始めるたびに前の失敗の Ngflag を見ない。
     """
-    return quirks.reproduce("B82")
+    return False
 
 
 def _lock(form: AinputForm) -> None:
@@ -1303,8 +1301,7 @@ def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], ans
             res.daily_writes = daily_report(4, daily)
         res.messages.append(Message("", INFO, sound=DONE_SOUND, source="UFAinput:1086"))
         form.konno = ""                 # 旧 K_Height 欄は消すが、山高さ(動的ラベル)は消さない(VBA どおり)
-        if not quirks.reproduce("B64"):
-            clear_all_k_height(form)
+        clear_all_k_height(form)
         res.stage = "sent"
     else:
         if form.mount_count != "":

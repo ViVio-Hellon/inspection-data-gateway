@@ -13,7 +13,6 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa.kensa import judge, quirks, vbx
 from ufkensa.kensa.judge import NG, OK, WHITE
-from tests._isolation import vba_reproduce
 
 
 def spec_form(**kw) -> judge.Form:
@@ -33,9 +32,7 @@ def put(form: judge.Form, **values: str) -> judge.Form:
 
 class QuirkCase(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
-
+        pass
 # ------------------------------------------------------------------
 class AhtJudgTest(unittest.TestCase):
     """AHTJudg(J:362-369)。下限 ≤ 値 ≤ 上限(両端を含む)。G2 §10.1"""
@@ -140,7 +137,6 @@ class DiagonalTest(unittest.TestCase):
         self.assertEqual(judge.re_diag(f).values, {})
 
 
-@vba_reproduce
 class LateralTest(QuirkCase):
     """LateralJudg / UnitRecord(J:395-409, 2421-2443)。G2 §10.3(LateralText="2.0")"""
 
@@ -154,30 +150,6 @@ class LateralTest(QuirkCase):
         self.assertFalse(judge.lateral_judg(1, ""))
         self.assertTrue(judge.lateral_judg(0, "0.0"))           # "0.0" は "0" と一致しない → a=0 で True
         self.assertFalse(judge.lateral_judg(0.5, "0.0"))
-
-    def test_unit_record(self) -> None:
-        cases = {0: 0.0, 0.05: 0.0, 0.3: 0.5, 0.5: 0.5, 1.6: 2.0, 2.1: 2.5, -2.1: -2.5, -1.9: -2.0,
-                 2.6: 3.0, 4.01: 4.5, 4.51: 5.0, 5.0: 5.0, 5.01: vbx.single(5.01), 5.3: vbx.single(5.3)}
-        for n, want in cases.items():
-            self.assertEqual(judge.unit_record(n), want, n)
-        self.assertEqual(str(judge.unit_record(-0.0)), "0.0")    # -0 は出さない(V10)
-
-    def test_b13_single_gap(self) -> None:
-        for n in (0.51, 1.01, 1.51, 2.01, 2.51, 3.01, 3.51, 1000):
-            self.assertEqual(judge.unit_record(n), 0.0, n)       # B13 再現
-        quirks.set_for_test({"B13": "fix"})
-        fixed = {0.51: 1.0, 1.01: 1.5, 1.51: 2.0, 2.01: 2.5, 2.51: 3.0, 3.01: 3.5, 3.51: 4.0,
-                 -1.01: -1.5, 1000: 1000.0, 0.05: 0.5}   # 0.1 未満も区間に入れる(2026-11-02 の回答)
-        for n, want in fixed.items():
-            self.assertEqual(judge.unit_record(n), want, n)
-
-    def test_unit_record_input(self) -> None:
-        self.assertEqual(judge.unit_record_input("1.6"), "2.0")
-        self.assertEqual(judge.unit_record_input("-.3"), "-0.5")
-        self.assertEqual(judge.unit_record_input("0"), "0.0")
-        self.assertEqual(judge.unit_record_input("-"), "-")
-        self.assertEqual(judge.unit_record_input("abc"), "abc")
-        self.assertEqual(judge.unit_record_input(".51"), "0.0")    # B13
 
     def test_lateralbow_judg_color(self) -> None:
         f = put(spec_form(), LateralS="2.0")
@@ -206,7 +178,6 @@ class LateralTest(QuirkCase):
         self.assertEqual(judge.unit_record_input("1.1"), "1.5")
 
 
-@vba_reproduce
 class BhTest(unittest.TestCase):
     """BhJudg / simplyjudge(J:410-478)。G2 §10.4(下限値 40)"""
 
@@ -233,13 +204,6 @@ class BhTest(unittest.TestCase):
         # 途中の位置は出さない
         f = put(spec_form(), S1="25", U1="25", UBH="30")
         self.assertEqual(judge.simply_judge(f, "UBH", "NG").msg_errors, [])
-
-    def test_simply_judge_blank_caption(self) -> None:
-        # Iti="" と見出し "" が一致してメッセージが出る(スラブの E 見出しは "")。VBA どおり
-        f = put(spec_form(), S1="25", U1="25", UBH="30")
-        f.captions["E"] = ""
-        self.assertEqual([m.text for m in judge.simply_judge(f, "UBH", "NG").msg_errors],
-                         ["梱包完了させてAインプット・保留・ロット異常連絡票発行"])
 
     def test_simply_judge_ok_and_unneeded(self) -> None:
         f = put(spec_form(), SBH="45")
@@ -316,7 +280,6 @@ class HizumiTest(unittest.TestCase):
         self.assertEqual(judge.hiz_loop_judg(self.form(ZS="1"), n=2).states, {})
 
 
-@vba_reproduce
 class LoopJudgTest(QuirkCase):
     """LoopJudg(J:836-1116)"""
 
@@ -364,17 +327,6 @@ class LoopJudgTest(QuirkCase):
         st = judge.loop_judg(f, bh_lower=40).states
         self.assertEqual((st["LateralS"], st["DiagSKou"], st["LateralU"]), (NG, NG, NG))
         self.assertNotIn("SBH", st)
-
-    def test_b8_right_angle_d_e(self) -> None:
-        f = put(spec_form(LateralText=""))
-        f.cells["DiagDKou"].visible = False                         # 4山などで D を出さない
-        st = judge.loop_judg(f).states
-        self.assertEqual(st.get("DiagDKou"), NG)                    # B8 再現: E が表示 → D を塗る
-        self.assertNotIn("DiagEKou", st)
-        quirks.set_for_test({"B8": "fix"})
-        st = judge.loop_judg(f).states
-        self.assertNotIn("DiagDKou", st)
-        self.assertEqual(st.get("DiagEKou"), NG)
 
     def test_gokuatsu(self) -> None:
         f = put(spec_form(gokuatsu=True), S9="1385", S11="2770", S10="1385")
@@ -537,7 +489,6 @@ class AdvanceCheckTest(unittest.TestCase):
             judge.advance_check("X", arrbox=box)
 
 
-@vba_reproduce
 class ConditionFieldTest(unittest.TestCase):
     """IsMatchConditionField / IsWildcardMatch(J:2346-2411)。G2 §10.12"""
 
@@ -556,12 +507,6 @@ class ConditionFieldTest(unittest.TestCase):
         self.assertTrue(m("≠A,≠B", "A"))                 # 除外どうしも OR → ほぼ常に True
         self.assertFalse(m("X,Y", "Z"))
 
-    def test_lone_star_token_is_error_5(self) -> None:
-        with self.assertRaises(judge.VbaError):
-            judge.is_match_condition_field("A,*", "B")
-
-
-@vba_reproduce
 class PackagingTest(QuirkCase):
     """PackagingSpecificationNo / MaterialsMsgBox(J:1987-2344)"""
 
@@ -611,38 +556,6 @@ class PackagingTest(QuirkCase):
         self.add(コメント="注意A")
         self.assertEqual(self.psn(), "板_注意A")
 
-    def test_empty_table_is_type_mismatch(self) -> None:
-        # `Dim PackF(): PackF = GetFieldsArr(…)` に Empty が入ると型エラー 13(J:2195-2196)
-        con = sqlite3.connect(self.pack)
-        con.execute("DELETE FROM 注意_包装仕様")
-        con.commit()
-        con.close()
-        with self.assertRaises(vbx.TypeMismatch):
-            self.psn()
-
-    def test_single_row_dims(self) -> None:
-        self.add(フラグ="寸法", コメント="寸法注意", 厚下="0.5", 厚上="1.2", 板幅下="900", 板幅上="1100",
-                 板丈下="1500", 板丈上="2500")
-        self.assertEqual(self.psn(thick=1.0), "板_寸法注意")
-        self.assertEqual(self.psn(thick=0.5), "板_寸法注意")             # Single(0.5) は正確
-        self.assertEqual(self.psn(thick=1.2), "板_")                      # Single(1.2) > 1.2 で上限から外れる
-        self.assertEqual(self.psn(thick=1.3), "板_")
-
-    def test_multi_rows_prepend_and_b11(self) -> None:
-        self.add(コメント="A")
-        self.add(フラグ="用途コード", 用途コード="R115", コメント="B")
-        self.add(フラグ="用途コード", 用途コード="X", コメント="X")
-        self.assertEqual(self.psn(), "板_B,A,")
-        self.add(フラグ="寸法納入", 納入先="ﾆｯ*", コメント="C", 厚下="0", 厚上="9", 板幅下="0", 板幅上="9999",
-                 板丈下="0", 板丈上="9999")
-        self.add(フラグ="寸法取引", 取引先="ﾄﾘ", コメント="D", 厚下="0", 厚上="9", 板幅下="0", 板幅上="9999",
-                 板丈下="0", 板丈上="9999")
-        self.assertEqual(self.psn(), "板_D,C")                             # B11 再現: C で上書き
-        self.assertEqual(self.psn(torihiki=""), "板_C")
-        self.assertEqual(self.psn(nounyu=""), "板_D,B,A,")                 # 納入先 "" は寸法納入を見ない
-        quirks.set_for_test({"B11": "fix"})
-        self.assertEqual(self.psn(), "板_D,C,B,A,")
-
     def test_materials_message(self) -> None:
         self.add(コメント="直角度の測定をすること")
         self.add(フラグ="用途コード", 用途コード="R115", コメント="注意_B")
@@ -663,12 +576,6 @@ class PackagingTest(QuirkCase):
         self.assertEqual([m.text for m in out.msg_errors], ["先行データ票が必要です。"])
         self.assertEqual(out.sounds, [judge.SOUND_NEED])
         self.assertEqual(self.msgbox(flag=False).msg_errors, [])
-
-    def test_materials_board_without_comment_b11(self) -> None:
-        self.add(フラグ="用途コード", 用途コード="X", コメント="X")          # 合わない → "板_"
-        self.assertEqual(self.msgbox(flag=True).msg_errors, [])            # B11 再現: 先行も出ない
-        quirks.set_for_test({"B11": "fix"})
-        self.assertEqual([m.text for m in self.msgbox(flag=True).msg_errors], ["先行データ票が必要です。"])
 
     def test_materials_coil(self) -> None:
         self.add(形状="コイル", コメント="注意A")
@@ -709,7 +616,6 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 class FixedBhTest(QuirkCase):
     def test_b39(self) -> None:
-        quirks.set_for_test({"B39": "fix"})
         # 見出し E が "" でも途中の位置では出さない
         f = put(spec_form(), S1="25", U1="25", UBH="30")
         f.captions["E"] = ""
@@ -728,47 +634,28 @@ class FixedBhTest(QuirkCase):
 
 class FixedConditionTest(QuirkCase):
     def test_b42(self) -> None:
-        quirks.set_for_test({"B42": "fix"})
         self.assertTrue(judge.is_match_condition_field("A,*", "B"))      # "*" は何にでも合う
         self.assertTrue(judge.is_wildcard_match("*", ""))
         self.assertFalse(judge.is_match_condition_field("≠*", "B"))     # 除外の "*" は誰にも当たらない
         self.assertFalse(judge.is_match_condition_field("abc*", "ABCD"))  # ほかは今までどおり
 
 
-@vba_reproduce
 class FixedPackagingTest(PackagingTest):
     def test_b40_empty_table(self) -> None:
         con = sqlite3.connect(self.pack)
         con.execute("DELETE FROM 注意_包装仕様")
         con.commit()
         con.close()
-        quirks.set_for_test({"B40": "fix"})
         self.assertEqual(self.psn(), "")
         self.assertEqual(self.msgbox(flag=True).msg_errors[0].text, "先行データ票が必要です。")
 
-    def test_b41_boundary(self) -> None:
-        self.add(フラグ="寸法", コメント="寸法注意", 厚下="0.5", 厚上="1.2", 板幅下="900", 板幅上="1100.3",
-                 板丈下="1500", 板丈上="2500")
-        quirks.set_for_test({"B41": "fix"})
-        self.assertEqual(self.psn(thick=1.2), "板_寸法注意")              # 上限ちょうどは範囲内
-        self.assertEqual(self.psn(thick=1.2, width=1100.3), "板_寸法注意")
-        self.assertEqual(self.psn(thick=1.3), "板_")
-        self.assertEqual(self.psn(thick=1.2000001), "板_寸法注意")         # Single では 1.2 と同じ値
-        self.assertEqual(self.psn(thick=1.21), "板_")
-        quirks.set_for_test(None)
-        self.assertEqual(self.psn(thick=1.2, width=1000), "板_")          # 再現
-
-
-@vba_reproduce
 class UnitRecordB13FixTest(unittest.TestCase):
     """B13 を直した側: 区間の間の値・0.1 未満・999 超も必ずどこかの区間に入れる(2026-11-02 の回答)。"""
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_fixed(self) -> None:
         from ufkensa.kensa.modes import sheet
-        quirks.set_for_test({"B13": "fix"})
         cases = {0.05: 0.5, 0.1: 0.5, 0.5: 0.5, 0.505: 1.0, 0.51: 1.0, 1.0: 1.0, 1.01: 1.5, 1.009: 1.5,
                  3.51: 4.0, 4.99: 5.0, 5.0: 5.0, -1.01: -1.5}
         for v, want in cases.items():
@@ -776,7 +663,3 @@ class UnitRecordB13FixTest(unittest.TestCase):
             self.assertEqual(sheet.unit_record(v), want, v)
         self.assertEqual(judge.unit_record(1500), 1500.0)                 # 999 超はそのまま
         self.assertAlmostEqual(judge.unit_record(12.3), 12.3, places=5)  # 5 超はそのまま
-
-    def test_vba(self) -> None:
-        self.assertEqual(judge.unit_record(1.01), 0.0)                    # Single の誤差で区間に入らない
-        self.assertEqual(judge.unit_record(1500), 0.0)

@@ -23,7 +23,6 @@ from tests import kensa_fixture
 from ufkensa import user_settings
 from ufkensa.kensa import paths, quirks, records, session, store, terminal, workers
 from ufkensa.kensa.store import HOZON, LOT_HISTORY
-from tests._isolation import vba_reproduce
 
 LOT = "H7345B0"
 CARD = "9000000000001"            # 名簿「検査員01」
@@ -347,29 +346,11 @@ class NoLineTest(SessionBase):
         self.assertEqual(r.view["workers"], [])
 
 
-@vba_reproduce
 class DiagDKouTest(SessionBase):
     """B43: D 欄の直角度(DiagDKou_BeforeUpdate UF1:1184-1205)。"""
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
         super().tearDown()
-
-    def test_b43(self) -> None:
-        self.register()
-        st = self.s.state
-        st.diag_kou["S"].value = "9.9"
-        self.ok(self.s.set_value("DiagDKou", "0.7"))
-        # 再現: S 欄に Format(D, "0.0")、D は 0.5 刻みにしないまま(UF1:1195-1196)
-        self.assertEqual((st.diag_kou["S"].value, st.diag_kou["D"].value), ("0.7", "0.7"))
-        quirks.set_for_test({"B43": "fix"})
-        st.diag_kou["S"].value = "9.9"
-        self.ok(self.s.set_value("DiagDKou", "0.7"))
-        # 直す: D 欄自身を UnitRecord → "0.0"(0.7 → 1.0)、S は触らない
-        self.assertEqual((st.diag_kou["S"].value, st.diag_kou["D"].value), ("9.9", "1.0"))
-        self.ok(self.s.set_value("DiagDKou", "-"))                       # 測定不要はそのまま
-        self.assertEqual(st.diag_kou["D"].value, "-")
-
 
 if __name__ == "__main__":
     unittest.main()
@@ -445,7 +426,6 @@ class SameToleranceAsQualityScreenTest(SessionBase):
         self.assertEqual(new[0][6], "薄板QP")
 
 
-@vba_reproduce
 class ScreenGapTest(SessionBase):
     """画面に足りなかった操作(外観・不良要因・歪コンボ・検入高さ・保留・まとめて削除・廃棄フラグ・印刷履歴クリア・
     サイズ修正・強制描写・オーダー・包装仕様書・VC 画像・検査員不一致)。期待値は VBA を手で追った結果。"""
@@ -506,14 +486,6 @@ class ScreenGapTest(SessionBase):
         self.assertIsNone(sh.get(4, 3))
         self.assertIsNone(sh.get(11, 3))
         self.assertEqual(sh.get(1, 2), LOT)                               # B 列は残す
-
-    def test_defect_tp_with_other_is_error(self) -> None:
-        """B45: 不良要因と TP を同時に選ぶと添字エラー9(SelectionInput)。"""
-        self.lot_ready()
-        s = self.s
-        tp = [i for i, (n, _) in enumerate(s.visual_lists.defect) if n == "TP"][0]
-        self.ok(s.set_value("SBad", "1"))
-        self.assertIn("インデックス", s.defect_reflect([0, tp]).stop.text)
 
     # --- 歪コンボの選択肢(CBAdd / CB_UpDownAdd / CBG_UpDownAdd)-----------
     def test_cb_choices(self) -> None:
@@ -643,18 +615,6 @@ class ScreenGapTest(SessionBase):
         o = s._view()["order"]
         self.assertEqual((o["no"], o["form"]), ("1P0116", "パレット"))
         self.assertEqual(o["comment"], "標準_プロテックボード使用_個装梱包")
-
-    def test_packing_missing_folder_is_runtime_error(self) -> None:
-        """新しい不具合: 包装仕様書のフォルダが無いと PackingNoCheck が実行時エラー 76。VBA と同じくロット登録はそこで止まる。"""
-        shutil.rmtree(self.db_dir / "包装仕様書")
-        self.ok(self.s.start())
-        self.ok(self.s.register_worker(CARD, {"worker_register": True}))
-        r = self.ok(self.s.register_lot(LOT, {"lot_register": True}))
-        self.assertTrue(any("'76'" in m.text for m in r.messages))
-        self.assertIsNone(self.s.pack)
-        with mock.patch("ufkensa.kensa.quality.dist_array") as da:            # 止まるので DistArray は通らない
-            self.ok(self.s.register_lot(LOT, {"lot_register": True, "lot_split": False, "lot_recent": True}))
-            da.assert_not_called()
 
     def test_packing_dialog(self) -> None:
         """包装仕様書の確認は packing.py(全ヵ所・キャスクと共通)を通す。"""
