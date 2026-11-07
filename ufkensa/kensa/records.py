@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
-from .model import NORMAL, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format
+from .model import Face, NORMAL, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -111,7 +111,7 @@ class KensaSnapshot:
     visual_under: dict = field(default_factory=_faces)  # X_UnderVisual.Caption
     bh: dict = field(default_factory=_faces)            # XBH(S〜E)
     positions: dict = field(default_factory=_faces)     # 位置名 UF1.S.Caption など
-    aorb: str = "Now_A"                     # AorB.Caption
+    aorb: str = Face.A                     # AorB.Caption
     kind: str = ""                          # 厚板 / 薄板 / 少枚数 / 極厚 / スラブ(どれも選ばれていなければ "")
     atsuita_caption: str = ""               # 厚板.Caption(H / T)
     usuita_caption: str = ""                # 薄板.Caption
@@ -310,9 +310,9 @@ def strain_ab(snap: KensaSnapshot) -> list[list[str]]:
     """MainDataSave の歪 "A:<z>,B:<z>" (SaveLoad:4300-4345)。6 面 × [定盤, ゲージ]。"__" は空。"""
     shown = [[uf_array(snap, 15, f), uf_array(snap, 16, f)] for f in FACES]
     tags = uf_tag_array(snap)
-    if snap.aorb == "Now_A":
+    if snap.aorb == Face.A:
         a, b = shown, tags
-    elif snap.aorb == "Now_B":
+    elif snap.aorb == Face.B:
         a, b = tags, shown
     else:
         raise _err13("SaveLoad:4321")            # hizumA が Empty のまま LBound → 型エラー
@@ -968,7 +968,7 @@ def _ab_strain(cell: Value, state: dict[str, str]) -> tuple[str, str]:
 
 def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi: bool = False,
                  current: Optional[Mapping[str, str]] = None, lname: str = "",
-                 kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = "Now_A",
+                 kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = Face.A,
                  row_no: Optional[int] = None) -> FormRestore:
     """SaveLoad.HistoryLoad (SaveLoad:3409-4049)。保存用(耳用)の行を UF1 に戻す。
 
@@ -1379,7 +1379,7 @@ def kanri_view(store: LocalStore, list_index: int, cb1_list: Sequence[str], cb1_
 
 def kanri_load(store: LocalStore, cb1_text: str, new_cb_text: str, *, uf1_visible: bool, uf1_lot: str,
                mimi: bool = False, current: Optional[Mapping[str, str]] = None, lname: str = "",
-               kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = "Now_A",
+               kanri_positions: Optional[Mapping[str, str]] = None, aorb: str = Face.A,
                row_no: Optional[int] = None) -> FormRestore:
     """UF管理.CommandButton1_Click (UF管理:620-635)。別の LOT を表示中なら止める。"""
     if uf1_visible and uf1_lot != "":

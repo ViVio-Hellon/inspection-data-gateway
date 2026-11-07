@@ -33,7 +33,7 @@ from . import vbx
 # ------------------------------------------------------------------
 #: 検査位置(列)。F は 4 山(6 回検査)のときだけ使う
 #: 位置と行数は model.py で決める(F11〜F14 は存在しない)
-from .model import POSITIONS, ROW_COUNT, Measures  # noqa: E402
+from .model import POSITIONS, ROW_COUNT, Face, FormTag, Measures, Switch  # noqa: E402
 
 #: 作業選択(OptionButton の名前)
 WORKS: tuple[str, ...] = ("厚板", "薄板", "少枚数", "極厚", "スラブ")
@@ -210,7 +210,7 @@ class KensaState:
     #: 歪コンボ CBS1..CBF4(名前 "CBS1" をキー。CB?1 = 形状("耳"/"中" 等)、CB?2 = 上下、CB?3/CB?4 = ゲージ側)
     strain_cb: dict[str, Ctl] = field(default_factory=lambda: {f"CB{p}{i}": Ctl() for p in POSITIONS for i in range(1, 5)})
     #: A/B 面の切替 AorB.Caption("Now_A" / "Now_B")
-    strain_face: str = "Now_A"
+    strain_face: str = Face.A
     #: 作業保存シートの歪の控え(O2:P7 = A 面、O8:P13 = B 面。ReflectStrain/LosdStrain)。キーは "ZS"/"GS" など
     strain_a: dict[str, str] = field(default_factory=dict)
     strain_b: dict[str, str] = field(default_factory=dict)
@@ -377,16 +377,16 @@ class KensaState:
     @contextlib.contextmanager
     def paused(self):
         """`Load = "off"` の間(イベントを止める)。抜けたら必ず "on"(VBA も最後は "on" に戻す)。"""
-        self.load = "off"
+        self.load = Switch.OFF
         try:
             yield self
         finally:
-            self.load = "on"
+            self.load = Switch.ON
 
     @contextlib.contextmanager
     def stopped(self):
         """`FormTag = "STOP"` の間(描画・音を止める)。抜けたら必ず ""。"""
-        self.form_tag = "STOP"
+        self.form_tag = FormTag.STOP
         try:
             yield self
         finally:

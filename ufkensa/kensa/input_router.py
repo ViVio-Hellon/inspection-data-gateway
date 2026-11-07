@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
-from .model import NORMAL, diag_name, is_thick
+from .model import NORMAL, Switch, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -164,7 +164,7 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
 
     if not all_check(state, a, n, ken_no, temp, hooks):
         msgs.append(Message(pucket + "検査済", WARN, source="FormRelat:792"))
-        state.auto = "off"
+        state.auto = Switch.OFF
         state.inp = ""
         state.inp_tag = ""
         state.flag_label = 1
@@ -311,7 +311,7 @@ def _skip34_rows(a: int, n: int) -> Iterator[Optional[int]]:
 
 def look_s_blank(state: KensaState, a: int, n: int, ken_no: str) -> None:
     """FormRelat.Look_S_Blank (FormRelat:1018-1271)。薄板の次の空き欄。Auto が "on" のときだけ。"""
-    if state.auto != "on":
+    if state.auto != Switch.ON:
         return
     f = ken_flags(state, ken_no, blank_in_flag1=True)
     thin = state.is_work("薄板")
@@ -371,7 +371,7 @@ def look_s_blank(state: KensaState, a: int, n: int, ken_no: str) -> None:
 
 def smallnumber_blank(state: KensaState, a: int, n: int, xa: int) -> None:
     """FormRelat.Smallnumber_Blank (FormRelat:1283-1340)。少枚数(枚数 xa が 1〜5 のとき)の次の空き欄。"""
-    if state.auto != "on":
+    if state.auto != Switch.ON:
         return
     if xa not in (5, 4, 3, 2, 1):
         return
@@ -388,7 +388,7 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
 
     表示(Visible)は見ない。厚板の行5〜10 は C1〜C10・E1〜E10 から探す(PucketMove は 5〜10)。
     """
-    if state.auto != "on":
+    if state.auto != Switch.ON:
         return
 
     def pick(name: str) -> bool:
@@ -499,7 +499,7 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
 
     ken_no = ken_no_for_input(state)
     youc = state.youto if state.youto != "" else ""
-    if state.auto == "on":
+    if state.auto == Switch.ON:
         pucket_move(state, state.paked, ken_no, youc, hooks, msgs)
         # B61: 「ﾊﾟｹｯﾄ無し」でも VBA は前回の INP.Tag の欄で LoopText・Posting まで進む。直す: そこで抜ける
         if state.paked not in PACKETS:
@@ -541,8 +541,8 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
     hooks.posting(state)
     hooks.out_tolerance(state)
 
-    state.auto = "on"
-    state.load = "on"
+    state.auto = Switch.ON
+    state.load = Switch.ON
     next_blank(state, ken_no)
     fm_clear(state, "Click")
     state.inp = ""
@@ -598,7 +598,7 @@ def text_tag(state: KensaState, name: str, hooks: Hooks) -> str:
     自動の入力先探しを止め(Auto="off")、再判定してから、そのラベルを赤枠・黄色にして入力先にする。
     黄色は判定色を上書きする(VBA どおり)。
     """
-    state.auto = "off"
+    state.auto = Switch.OFF
     with state.stopped():
         hooks.loop_judg(state)
         hooks.hiz_loop_judg(state)

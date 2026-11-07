@@ -46,6 +46,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
+from .model import Face, FormTag, Switch
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
@@ -198,13 +199,13 @@ class Session:
             # 処理の途中だけ立てる旗(VBA の Load = "off"・FormTag = "STOP")。途中で止まったら元に戻す。
             # 戻さないと、次からの入力・描画が全部止まったままになる(2026-11-06 の構造の見直し)
             st0 = self.state
-            if self.started and (st0.flag_label != 1 or st0.load != "on" or st0.form_tag == "STOP"):
+            if self.started and (st0.flag_label != 1 or st0.load != Switch.ON or st0.form_tag == FormTag.STOP):
                 # 操作は 1 つずつ順に来る(ロック)ので、操作の始めに「処理中」の旗が立っているのは、前の操作が途中で
                 # 止まって戻し忘れたもの。VBA なら End で全部初めに戻る。残すと測定値・カードを黙って受け付けなくなる
                 log.warning("前の操作の旗が残っていたので戻します(FlagLabel=%r Load=%r FormTag=%r)",
                             st0.flag_label, st0.load, st0.form_tag)
                 st0.flag_label, st0.load = 1, "on"
-                if st0.form_tag == "STOP":
+                if st0.form_tag == FormTag.STOP:
                     st0.form_tag = ""
             flags = (self.state.load, self.state.form_tag)
             try:
@@ -323,9 +324,9 @@ class Session:
             else:
                 hooks.cb_add(st, 6.0)
             st.form_tag = ""
-            st.load = "on"
+            st.load = Switch.ON
             self.started = True
-            if st.lot != "" and st.work != "" and st.inp_tag == "" and st.auto == "on":
+            if st.lot != "" and st.work != "" and st.inp_tag == "" and st.auto == Switch.ON:
                 # 開き直した直後も「次に測る」を出す(VBA は InpTag を保存しないので空だった。値は続きの欄に入っていた)
                 try:
                     input_router.next_blank(st, vbx.left(st.ken_no_caption, 1))
@@ -384,7 +385,7 @@ class Session:
         st.flag_label = 1
         # T?_Change(T1/T2/T3 のうち変わった欄)
         changed = {"日勤": "1", "1直": "1", "2直": "2", "3直": "3"}.get(res2.shift, "")
-        if changed and st.load != "off":
+        if changed and st.load != Switch.OFF:
             wiring.write_cells(self.store, line_sheet("検査員", st.lname), workers.worker_save_rows(res2.registry))
             day = {"1": res2.registry.day1, "2": res2.registry.day2, "3": res2.registry.day3}[changed]
             now = env.now()
@@ -439,7 +440,7 @@ class Session:
             env.messages.append(Message(f"LotNo は英数字 7 桁で入れてください(入れた値: {lot or '(空)'})。"
                                         "いまのロットはそのままです", WARN, source="Lot_Change"))
             return None
-        if st.load != "off" and judge.check_for_lot(wiring.sheet_rows(self.store, HOZON) or [], text, 2):
+        if st.load != Switch.OFF and judge.check_for_lot(wiring.sheet_rows(self.store, HOZON) or [], text, 2):
             a3 = answers.get("lot_recent")
             if a3 is None:
                 return Question("lot_recent", "直近5Lot内に同じLotNoがあります" + "\r\n" + "このまま作業しますか？",
@@ -461,7 +462,7 @@ class Session:
         if st.lot_source != "" and st.lot_source_lot != text:            # D28: 別のロットは いつもの読み方に戻す
             self._set_lot_source("", "", f"別のロット({text})を登録したので")
         # Lot_Change
-        if st.form_tag != "STOP":
+        if st.form_tag != FormTag.STOP:
             if self.write_logs:
                 legacy_log.write_log("Lot登録|" + text + "|" + st.lname, "")
             self._log("Lot登録:" + text + ":" + st.lname)
@@ -474,7 +475,7 @@ class Session:
         st, env, hooks = self.state, self._env(), self.hooks
         assert hooks is not None
         text = st.lot
-        if st.load == "off":
+        if st.load == Switch.OFF:
             return None
         rows = wiring.sheet_rows(self.store, HOZON) or []
         if judge.check_for_lot(rows, text, 2):
@@ -767,11 +768,11 @@ class Session:
             minmax.select_range(st, "S" if name[:3] == "OPS" else "E", int(name[3:]))   # OPS?_Change / OPE?_Change
             return
         if name == "AorB":                                               # AorB_Click(A/B 面の切替)
-            if st.strain_face == "Now_A":
-                st.strain_face = "Now_B"
+            if st.strain_face == Face.A:
+                st.strain_face = Face.B
                 env.messages.append(Message("B面歪 入力画面です", INFO, source="UF1:487"))
-            elif st.strain_face == "Now_B":
-                st.strain_face = "Now_A"
+            elif st.strain_face == Face.B:
+                st.strain_face = Face.A
             r = records.reflect_strain(self.store, wiring.to_snapshot(st, self.store), vbx.right(st.strain_face, 1))
             if r is not None:
                 wiring.apply_restore(st, r, hooks)
@@ -1038,7 +1039,7 @@ class Session:
         out = []
         if ab != "":
             out.append("ゲージ不要 * 両面定盤歪測定必要" if 35 >= w else "ゲージによる測定必要")
-        if st.strain_face == "Now_B" and w > 35:
+        if st.strain_face == Face.B and w > 35:
             out.append("B面歪 入力画面です")
         return " / ".join(out)
 
@@ -1460,7 +1461,7 @@ class Session:
         assert hooks is not None
         self.print_ready = False
         self.report = {}
-        if st.load == "off":
+        if st.load == Switch.OFF:
             return None
         lname = st.lname
         if report_model.is_printed(self.store, st.lot):                 # PrintOnly
@@ -1836,8 +1837,8 @@ class Session:
         for p in grid.POSITIONS:                                        # Split_Z_Tag_0
             for n in (f"CB{p}1", f"CB{p}2", f"CB{p}3", f"CB{p}4", "G" + p, "Z" + p):
                 st.ctl(n).tag = ""
-        if st.strain_face == "Now_B":
-            st.strain_face = "Now_A"
+        if st.strain_face == Face.B:
+            st.strain_face = Face.A
         ws = self.store.sheet(line_sheet(records.WORK_SAVE, lname))
         wiring.apply_restore(st, records.losd_strain("A", ws.read_range(2, 15, 7, 16), ws.read_range(8, 15, 13, 16)),
                              hooks)
@@ -1848,7 +1849,7 @@ class Session:
         layout.right_angle_display(st, "新規")
         layout.lselect_lateral(st, "新規")
         hooks.vc_clear(st)                                              # UF1:3494 VC_Clear(前ロットの VC 画像を消す)
-        st.load = "on"
+        st.load = Switch.ON
         self.confi, self.checks, self.print_ready, self.report = None, [], False, {}
         return None
 

@@ -35,6 +35,7 @@ from typing import Any, Callable, Optional
 
 from .. import trace
 from . import ainput, datasource, instruments, lines, paths, records, vbx, wiring, workers
+from .model import Switch
 from .ainput import MAX_MOUNT, AinputForm
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .store import LOT_HISTORY, line_sheet
@@ -195,7 +196,7 @@ class AinputSession:
         if ken_m not in KEN_METHODS:
             raise Stop("検査法を選択してください", level=ERROR, source="UF1:457")
         self.ken_m = ken_m
-        if st.load == "off":                                            # VBA は何もせず抜ける(UF1:461)
+        if st.load == Switch.OFF:                                            # VBA は何もせず抜ける(UF1:461)
             raise Stop("検査画面の処理中です。終わってからもう一度開いてください。", level=INFO, source="UF1:461")
         ln = lines.find(st.line_name)
         test = st.line_option == "Test" or (ln is not None and ln.official == "Test")

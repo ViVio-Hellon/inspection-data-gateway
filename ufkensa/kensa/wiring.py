@@ -48,7 +48,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
-from .model import EXTREME, NORMAL, diag_name, kou_name
+from .model import EXTREME, FormTag, NORMAL, Switch, diag_name, kou_name
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -363,7 +363,7 @@ def apply_judge(state: KensaState, out: judge.Outcome, env: Env) -> None:
         state.move_flag = out.move_flag
     if out.mpex_tag is not None:
         state.mpex_tag = out.mpex_tag
-    if state.form_tag != "STOP":                      # UF1.Tag="STOP" の間は音を出さない
+    if state.form_tag != FormTag.STOP:                      # UF1.Tag="STOP" の間は音を出さない
         for s in out.sounds:
             env.sound(s, "Judg")
     env.messages.extend(out.messages)
@@ -735,7 +735,7 @@ class RealHooks(Hooks):
             ws = line_sheet(records.WORK_SAVE, state.lname)
             row1 = self.store.sheet(ws).read_range(1, 2, 1, 10)[0] if self.store.exists(ws) else [""] * 9
             form = checks.abnormal_form_text(row1)
-            if state.form_tag != "STOP":                                # UF異常値発見.Activate → 音楽異常値(:29。STOP 中は鳴らさない)
+            if state.form_tag != FormTag.STOP:                                # UF異常値発見.Activate → 音楽異常値(:29。STOP 中は鳴らさない)
                 env.sound(snd.KENSA_ABNORMAL, "UF異常値発見:29")
             env.messages.append(Message(hit.value + "\r\n" + "\r\n".join(form.values()), WARN, title="異常",
                                         source="OutTolerance:796"))
@@ -891,7 +891,7 @@ class RealHooks(Hooks):
         state.move_flag = ""
         state.picfm_tag = vbx.cstr(vbx.val(state.picfm_tag) + 1)
         fl = judge.advance_check(state.lot, state.dbflag, arrbox=self._arrbox_fn(state))
-        if state.load == "off":
+        if state.load == Switch.OFF:
             return
         if fl and vbx.val(state.picfm_tag) == 1:
             _msg_error(env, state, judge.ADVANCE_MSG, 4)
@@ -901,7 +901,7 @@ class RealHooks(Hooks):
         for p in grid.POSITIONS:
             self.check_labels_by_category(state, p)
         grid.fm_clear(state, "Click")
-        state.auto = "on"
+        state.auto = Switch.ON
         ken_no = vbx.left(state.ken_no_caption, 1)
         apply_judge(state, judge.looking_yellow(to_judge_form(state)), env)
         if state.is_work("薄板"):
