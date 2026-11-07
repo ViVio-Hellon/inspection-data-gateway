@@ -62,10 +62,10 @@ class WriteTest(unittest.TestCase):
         self.assertTrue((self.tmp / "バランサー" / "バランサー_Log" / "Access.log").is_file())
 
     def test_log_out_writes_measured_and_app_access(self) -> None:
-        # 補助:1173-1178: [A] 付きは Measured.log とアプリのフォルダの Access.log の 2 か所
+        # 補助:1173-1178: [A] 付きは Measured.log と「Access.log などの置き場所」(VBA はアプリのフォルダ)の Access.log の 2 か所
         app = Path(tempfile.mkdtemp(prefix="ufk_app_"))
         try:
-            with mock.patch.object(paths, "app_dir", return_value=str(app) + "/"):
+            with mock.patch.object(paths, "write_dir", return_value=str(app) + "/"):
                 legacy_log.log_out("S1", "24.868", "Test", "阿部", aorb="A", aorb_caption="歪 A",
                                    now=NOW, computer="PC")
             m = (self.tmp / "Test" / "Test_Log" / "Measured.log").read_bytes().decode("cp932")
@@ -98,3 +98,18 @@ class WriteTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WriteDirTest(unittest.TestCase):
+    """共有に置いた本体のフォルダには書かない(2026-11-07)。"""
+
+    def test_default_is_local_and_setting_wins(self) -> None:
+        from ufkensa import app_config
+        from ufkensa.kensa import paths as p
+        self.assertEqual(Path(p.write_dir()), app_config.local_dir("logs"))
+        self.assertNotEqual(Path(p.write_dir()), Path(p.app_dir()))
+        p.set_path("app_log", r"\\server\share\logs" + "\\")
+        try:
+            self.assertEqual(p.write_dir(), r"\\server\share\logs" + "\\")
+        finally:
+            p.reset_path("app_log")

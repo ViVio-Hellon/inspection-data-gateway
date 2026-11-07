@@ -85,6 +85,9 @@ ITEMS: tuple[PathItem, ...] = (
     PathItem("history", "検査履歴", "HistoryPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
+    PathItem("remote_stop", "管理者以外停止の置き場所", "(新規。all-tools と同じ管理者以外停止モード)", "",
+             "管理者が「ほかの PC を止める」お願い(お願い.json)と、各 PC の稼働中の知らせを置くフォルダ。"
+             "この下に 管理者以外停止\\ を作る。空なら 検査履歴(その下の 管理者以外停止\\)", need="write"),
     PathItem("factory", "工場共有 検査データ", "FactoryyPath", r"\\nlmsrvngy03\工場内共有\検査データ" "\\",
              "梱包検査ﾃﾞｰﾀ(測定DB)・PDF・キャスク/5N", need="write"),
     PathItem("nis", "測定データ電子化", "NisPath", r"C:\Tools\測定データ電子化",
@@ -96,6 +99,10 @@ ITEMS: tuple[PathItem, ...] = (
              "空ならこのツールの手元DB と同じフォルダ", need="write"),
     PathItem("lot_history_share", "Lot情報履歴の共有先", "(新規)", "",
              "印刷のたびに Lot情報履歴 を CSV で写す共有フォルダ。空なら 検査履歴\\<ライン>\\<ライン>_履歴",
+             need="write"),
+    PathItem("app_log", "Access.log などの置き場所", "ThisWorkbook.Path(VBA は xlsm と同じフォルダ)", "",
+             "Access.log・ライン別ログの既定の置き場所(書き先を指定しないもの)と、hostsend.txt の予備の場所。"
+             "空ならこの PC の手元(ローカル領域の logs)。共有フォルダにすると全 PC のログが 1 か所に集まる",
              need="write"),
     PathItem("wav", "音声", "C:\\VBAWAV(直書き)", r"C:\VBAWAV" "\\",
              "判定音・案内の音声のフォルダ(何を鳴らすかは 設定 → 音。D29)"),
@@ -242,7 +249,23 @@ def _saved() -> dict[str, Any]:
 
 
 def app_dir() -> str:
+    """本体のフォルダ(共有に置くと全 PC が同じ所を見る。**書き込みには使わない**。2026-11-07)。"""
     return str(config.BASE_DIR) + os.sep
+
+
+def write_dir() -> str:
+    """VBA で ThisWorkbook.Path(本体のフォルダ)に書いていたものの置き場所。
+
+    使用パス「Access.log などの置き場所」、空ならこの PC の手元(ローカル領域の logs)。
+    共有に置いた本体のフォルダへは書かない(全 PC が同じファイルを取り合う・読み取り専用だと書けないため)。
+    """
+    v = get("app_log")
+    if v:
+        return v
+    from .. import app_config
+    d = app_config.local_dir("logs")
+    d.mkdir(parents=True, exist_ok=True)
+    return str(d) + os.sep
 
 
 def _key(key: str) -> str:
