@@ -46,7 +46,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
-from . import shadow
+from . import lot_watch, shadow
 from .model import Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
@@ -491,6 +491,8 @@ class Session:
             if not a3:
                 return None
         self._acc_reflec()
+        self._lot_sig = lot_watch.signature(st.lot, st.dbflag)            # 見張りの基準(読み直し・watch で比べる)
+        self._lot_sig_told = None
         # CheckAndUpdateButtonColor は view が印刷履歴から毎回決める(印刷 / 再印刷・印刷履歴クリア)
         self._ord_no_open()                                              # UF1:4518
         if not self._packing_open():                                     # UF1:4519-4520
@@ -516,6 +518,62 @@ class Session:
             for k, v in r.values.items():
                 wiring.put(st, k, v)
         return None
+
+    # ------------------------------------------------------------------
+    # ロット情報の読み直し・見張り(2026-11-07。VBA には無い)
+    # ------------------------------------------------------------------
+    def reload_lot(self) -> Result:
+        return self._run(self._reload_lot)
+
+    def _reload_lot(self) -> None:
+        """いまのロットの情報(仕掛・引当・オーダー・品質基準)を読み直す。測定値・検査員はそのまま。
+
+        読み直した後に判定をやり直し、変わったもの(種類と公差の前後)を知らせる。
+        """
+        self._require_line()
+        st, env, hooks = self.state, self._env(), self.hooks
+        assert hooks is not None
+        if st.lot == "":
+            raise Stop("ロットが登録されていません(読み直すロットがありません)", level=WARN, source="読み直し")
+        old_sig = getattr(self, "_lot_sig", None)
+        before = lot_watch.tolerance_view(st)
+        keep = {n: (c.value, c.tag) for n, c in st.iter_cells()}
+        with trace.timed("kensa.reload", "ロット情報の読み直し", lot=st.lot):
+            self._cb_change({"lot_recent": True})
+        # 読み直しで測定値は変えない(AccReflec は公差・規格の欄だけを書く。念のため戻す)
+        for n, (v, t) in keep.items():
+            c = st.ctl(n)
+            if c.value != v:
+                c.value, c.tag = v, t
+        hooks.loop_judg(st)                                              # 新しい公差で判定し直す
+        hooks.hiz_loop_judg(st)
+        new_sig = getattr(self, "_lot_sig", None)
+        kinds = new_sig.changed(old_sig) if new_sig is not None and old_sig is not None else []
+        diff = lot_watch.tolerance_diff(before, lot_watch.tolerance_view(st))
+        if kinds or diff:
+            text = "ロット情報を読み直しました。変わったもの: " + ("・".join(kinds) if kinds else "公差・規格")
+            if diff:
+                text += "\r\n" + "\r\n".join(diff[:20])
+            env.messages.append(Message(text, WARN, source="読み直し"))
+        else:
+            env.messages.append(Message("ロット情報を読み直しました(変わったところはありません)", INFO, source="読み直し"))
+        self._log("読み直し:" + st.lot + ":" + ("・".join(kinds) or "-") + ":" + st.lname)
+
+    def lot_watch(self) -> dict[str, Any]:
+        """画面から定期に呼ぶ見張り。いまのロットの情報が登録(読み直し)の後に変わっていれば、その種類を返す。"""
+        with self._lock:
+            st = self.state
+            base = getattr(self, "_lot_sig", None)
+            if not self.started or st.lot == "" or base is None or base.lot != st.lot:
+                return {"lot": st.lot if self.started else "", "changed": [], "new": False}
+            now = lot_watch.signature(st.lot, st.dbflag)
+            kinds = now.changed(base)
+            new = bool(kinds) and kinds != getattr(self, "_lot_sig_told", None)
+            if new:
+                self._lot_sig_told = kinds
+                trace.event("kensa.lot_watch", f"ロット {st.lot} の情報が更新されています: {'・'.join(kinds)}",
+                            data={"lot": st.lot, "changed": kinds})
+            return {"lot": st.lot, "changed": kinds, "new": new}
 
     def _acc_reflec(self) -> None:
         """SaveLoad.AccReflec (SaveLoad:56-562)。"""
