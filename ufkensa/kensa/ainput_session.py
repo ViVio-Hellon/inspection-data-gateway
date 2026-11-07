@@ -36,7 +36,7 @@ from typing import Any, Callable, Optional
 from .. import trace
 from . import ainput, datasource, instruments, lines, paths, records, vbx, wiring, workers
 from .ainput import MAX_MOUNT, AinputForm
-from .flow import ERROR, INFO, WARN, Message, Question, Stop
+from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .store import LOT_HISTORY, line_sheet
 
 #: UF1 の検査法 OptionButton(Inspection1〜4 の Caption。UF1:448-459)
@@ -129,6 +129,10 @@ class AinputSession:
                 except IndexError as e:                                  # VBA の実行時エラー 9(B69 など)
                     raise Stop("実行時エラー 9: インデックスが有効範囲にありません。" + str(e),
                                messages=list(self.messages)) from e
+                except (Stop, NotImplementedError):
+                    raise
+                except Exception as e:                                   # noqa: BLE001 - 想定外でも画面は止めない
+                    raise unexpected_stop(e, "ainput." + getattr(fn, "__name__", ""), self.messages) from e
             except Stop as e:
                 msgs = list(self.messages)
                 for m in e.messages:

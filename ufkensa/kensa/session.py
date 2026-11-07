@@ -47,7 +47,7 @@ from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, quirks, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from . import sound as snd
-from .flow import ERROR, INFO, WARN, Message, Question, Stop
+from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
 from .store import HOZON, LOT_HISTORY, MIMI, LocalStore, line_sheet
 from .wiring import Env, RealHooks
@@ -215,10 +215,7 @@ class Session:
                 except (Stop, NotImplementedError):
                     raise
                 except Exception as e:                                   # noqa: BLE001 - 想定外でも画面は止めない
-                    log.exception("検査の操作 %s で想定外のエラー", getattr(fn, "__name__", fn))
-                    raise Stop(f"処理の途中でエラーになりました({type(e).__name__}: {e})。"
-                               "この操作はやり直してください。続くときはログを管理者に渡してください",
-                               messages=list(env.messages), source=getattr(fn, "__name__", "")) from e
+                    raise unexpected_stop(e, "kensa." + getattr(fn, "__name__", ""), env.messages) from e
             except Stop as e:
                 self.state.load, self.state.form_tag = flags
                 msgs = list(env.messages)

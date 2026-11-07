@@ -31,7 +31,7 @@ from typing import Any, Callable, Optional
 from .. import trace
 from . import calibration, datasource, legacy_log, lines, quality, quirks, terminal, vbx, workers, wiring
 from .calibration import GREEN, WHITE, CalibrationState, RankResult, StepResult
-from .flow import ERROR, Message, Stop
+from .flow import ERROR, Message, Stop, unexpected_stop
 from .store import GridSheet, LocalStore
 
 KIROKU = "校正記録"
@@ -246,6 +246,10 @@ class CalibrationSession:
                     msgs = fn(*args)
                 except datasource.DbMissing as e:              # VBA は End(D10: 止めるが状態は保つ)
                     raise Stop(str(e), source="datasource") from e
+                except (Stop, NotImplementedError):
+                    raise
+                except Exception as e:                         # noqa: BLE001 - 想定外でも画面は止めない
+                    raise unexpected_stop(e, "calibration." + getattr(fn, "__name__", "")) from e
                 st = self.view().get("status") or {}
                 if st.get("error"):                              # 直の時刻が読めない(時間用が無い)
                     raise Stop(st["error"], source="Worker.Set_Shift")
