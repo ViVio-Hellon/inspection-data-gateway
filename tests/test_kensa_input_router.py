@@ -297,7 +297,7 @@ class EraseTest(unittest.TestCase):
         s = ready()
         h = FakeHooks()
         s.cells["S1"].value = "21.712"
-        s.cells["S1"].color = grid.COLOR_NG
+        s.set_color("S1", grid.COLOR_NG)
         s.cells["S1"].tag = "pass"
         s.ng["S"].value = "NG"
         ir.text_tag(s, "S1", h)
@@ -341,10 +341,10 @@ class EraseTest(unittest.TestCase):
         s = ready()
         s.ng["E"].value = "NG"
         s.cells["E2"].value = "3.1"
-        s.cells["E2"].color = grid.COLOR_NG
+        s.set_color("E2", grid.COLOR_NG)
         ir.ng_erase(s, "E1")
         self.assertEqual(s.ng["E"].value, "NG")
-        s.cells["E2"].color = grid.COLOR_OK
+        s.set_color("E2", grid.COLOR_OK)
         ir.ng_erase(s, "E1")
         self.assertEqual(s.ng["E"].value, "")
 

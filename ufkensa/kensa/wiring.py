@@ -49,7 +49,7 @@ from typing import Any, Callable, Optional, Sequence
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
 from . import shadow
-from .model import EXTREME, FormTag, NORMAL, Switch, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
+from .model import EXTREME, FormTag, NORMAL, Switch, Verdict, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -250,7 +250,7 @@ def to_uf1(state: KensaState, worker_day_max_: str = "") -> checks.Uf1:
     for name, c in all_controls(state).items():
         text[name] = c.value
         visible[name] = c.visible
-        if c.is_ng:
+        if state.is_ng(name):
             ng.add(name)
     for name, attr in SCALAR.items():
         text[name] = getattr(state, attr)
@@ -270,7 +270,6 @@ def to_uf1(state: KensaState, worker_day_max_: str = "") -> checks.Uf1:
 # ------------------------------------------------------------------
 # judge.Form
 # ------------------------------------------------------------------
-_TO_JUDGE_STATE = {grid.COLOR_OK: judge.OK, grid.COLOR_NG: judge.NG, grid.COLOR_YELLOW: judge.YELLOW}
 _FROM_JUDGE_STATE = {judge.OK: grid.COLOR_OK, judge.NG: grid.COLOR_NG, judge.YELLOW: grid.COLOR_YELLOW,
                      judge.WHITE: grid.COLOR_WHITE}
 
@@ -281,7 +280,9 @@ def to_judge_form(state: KensaState) -> judge.Form:
     for name, cell in f.cells.items():
         c = state.ctl(name)
         cell.value, cell.visible, cell.tag = c.value, c.visible, c.tag
-        cell.state = _TO_JUDGE_STATE.get(c.color, judge.WHITE)
+        v = state.verdict(name)                       # 第3段7: OK / NG は判定から、入力中(黄)だけ色から
+        cell.state = (judge.OK if v is Verdict.OK else judge.NG if v is Verdict.NG
+                      else judge.YELLOW if c.color == grid.COLOR_YELLOW else judge.WHITE)
         cell.border = judge.RED if c.border == grid.BORDER_RED else ""
     for p in grid.POSITIONS:
         f.captions[p] = state.v(p).value
@@ -354,8 +355,7 @@ def _msg_error(env: Env, state: KensaState, text: str, n: int, temp: str = "") -
 def apply_judge(state: KensaState, out: judge.Outcome, env: Env) -> None:
     """judge.Outcome を KensaState に反映する(色・値・Tag・枠、音、ログ、MsgError、NGErase)。"""
     for k, s in out.states.items():
-        state.ctl(k).color = _FROM_JUDGE_STATE.get(s, grid.COLOR_WHITE)
-        set_verdict(state.verdicts, k, state.ctl(k).color)
+        state.set_color(k, _FROM_JUDGE_STATE.get(s, grid.COLOR_WHITE))
     for k, v in out.values.items():
         put(state, k, v)
     for k, v in out.tags.items():
@@ -511,34 +511,11 @@ def restore_lot_source(state: KensaState, lot: str) -> None:
         state.lot_source, state.lot_source_lot = "", ""
 
 
-def restore_typed(r: records.FormRestore) -> KensaState:
-    """第3段9: 読み戻しを「型への読み込み」で。新しい KensaState に保存の値を入れるだけ(画面操作は再生しない)。"""
-    st = KensaState()
-    for k, val in r.values.items():
-        try:
-            put(st, k, val)
-        except KeyError:
-            pass
-    return st
+def load_saved(state: KensaState, r: records.FormRestore) -> None:
+    """第3段9: 保存の値(値・Tag・色と判定・山の選択)を型どおりに入れる。画面操作(作業選択など)はしない。
 
-
-def _restore_names(r: records.FormRestore) -> list[str]:
-    return [SCALAR.get(k, k) for k in r.values]
-
-
-def apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
-    """records.FormRestore(Load_Text・LosdStrain の結果)を画面へ戻し、続けて呼ぶ手続きを呼ぶ。
-
-    第3段9: 終わったら、型への読み込み(restore_typed)の結果と業務の値を比べ、食い違えば [第3段9] でログへ。
+    読み戻し(apply_restore)も、比べるための restore_typed も、この 1 つを使う。
     """
-    try:
-        _apply_restore(state, r, hooks)
-    finally:
-        if shadow.enabled():
-            shadow.check_restore(state, restore_typed(r), _restore_names(r), "apply_restore")
-
-
-def _apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
     for k, val in r.values.items():
         put(state, k, val)
     for k, val in r.tags.items():
@@ -547,6 +524,39 @@ def _apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks"
         put(state, k + ".BackColor", col)
     if "YamaLB" in r.list_index:
         state.v("YamaLB").tag = str(r.list_index["YamaLB"])
+
+
+def restore_typed(r: records.FormRestore) -> KensaState:
+    """第3段9: 新しい KensaState に保存の値を入れただけのもの(画面操作は再生しない)。比べるのに使う。"""
+    st = KensaState()
+    try:
+        load_saved(st, r)
+    except KeyError:
+        pass
+    return st
+
+
+def _restore_names(r: records.FormRestore) -> list[str]:
+    return [SCALAR.get(k, k) for k in r.values]
+
+
+def apply_restore(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
+    """records.FormRestore(Load_Text・LosdStrain の結果)を画面へ戻す。
+
+    1. 保存の値を型どおりに入れる(load_saved)
+    2. VBA で続けて呼んでいた手続き(InitialSetting など)と、作業選択(LSelect)だけを呼ぶ
+    第3段9: 終わったら、値だけを入れたもの(restore_typed)と業務の値を比べ、食い違えば [第3段9] でログへ
+    (2 の手続きが保存の値を書き換えていないかの確かめ)。
+    """
+    try:
+        load_saved(state, r)
+        _restore_calls(state, r, hooks)
+    finally:
+        if shadow.enabled():
+            shadow.check_restore(state, restore_typed(r), _restore_names(r), "apply_restore")
+
+
+def _restore_calls(state: KensaState, r: records.FormRestore, hooks: "RealHooks") -> None:
     hooks.env.messages.extend(r.messages)
     # 作業選択は Atu_OPselect(全部 False にする)の後で `UF1.厚板 = True` など(SaveLoad:2839-2867)。
     # OptionButton を True にすると Click イベント(厚板_Click → LSelect …)が走る。シートに記録が無ければ選ばない
@@ -638,8 +648,7 @@ def time_record(state: KensaState, env: Env, st: str) -> None:
             state.flag_label = 0
             state.ctl(st).value = ""
             state.flag_label = 1
-            state.ctl(st).color = grid.COLOR_DEFAULT
-            set_verdict(state.verdicts, st, grid.COLOR_DEFAULT)
+            state.set_color(st, grid.COLOR_DEFAULT)
             state.each_time, state.each_value = now_t, value
             env.messages.append(Message("2度押し", WARN, source="FormRelat:319"))
             time_posting(state, env, st, now, "")
@@ -791,8 +800,7 @@ class RealHooks(Hooks):
         for name in act.clear:
             state.ctl(name).value = ""
         for name, col in act.back_color:
-            state.ctl(name).color = color_name(col)
-            set_verdict(state.verdicts, name, color_name(col))
+            state.set_color(name, color_name(col))
         if act.clear_inp:
             state.inp = ""
         for name in act.erase_count:

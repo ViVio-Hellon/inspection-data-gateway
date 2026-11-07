@@ -7,7 +7,7 @@ VBA では UF1 のコントロール(Label の Caption・BackColor・Visible・T
 - 測定グリッド = `KensaState.cells`(位置 S/U/C/D/E × 行 1〜14、F は 1〜10。名前は VBA と同じ "S1"〜"E14"・"F1"〜"F10")
 - 位置ごとの付随欄(対角・直角度・ラテラルボー・NG 表示・歪・BH・不良枚数)は位置文字 "S".."F" をキーにした dict
 - 判定は `Ctl.color` に持つ(VBA と同じく **1 つの背景色の枠**。OK/NG の後に入力先の黄色を塗ると NG は消える。
-  これは VBA と同じ結果にするため。判定状態だけを見たいときは `Ctl.judge`)
+  これは VBA と同じ結果にするため。判定は KensaState.verdict(name)。第3段7 で色と別に持つようにした)
 - 名前で引くとき(VBA の `UF1(st)`、`INP.Tag` に入っている名前)は `KensaState.ctl(name)`
 
 色の値(`Ctl.color`):
@@ -33,7 +33,7 @@ from . import vbx
 # ------------------------------------------------------------------
 #: 検査位置(列)。F は 4 山(6 回検査)のときだけ使う
 #: 位置と行数は model.py で決める(F11〜F14 は存在しない)
-from .model import POSITIONS, ROW_COUNT, Face, FormTag, Measures, Switch, Verdict  # noqa: E402
+from .model import POSITIONS, ROW_COUNT, Face, FormTag, Measures, Switch, Verdict, JUDGED_NAMES, set_verdict, verdict_of_color  # noqa: E402
 
 #: 作業選択(OptionButton の名前)
 WORKS: tuple[str, ...] = ("厚板", "薄板", "少枚数", "極厚", "スラブ")
@@ -99,22 +99,9 @@ class Ctl:
     tag: str = ""
 
     @property
-    def judge(self) -> str:
-        """判定状態("OK" / "NG" / "")。色から読む(VBA は BackColor で判定している)。"""
-        return self.color if self.color in (COLOR_OK, COLOR_NG) else ""
-
-    @property
     def verdict(self) -> Verdict:
-        """判定(model.Verdict)。業務の判断は色を直接見ずにこれ・is_ng・is_ok を使う。"""
-        return Verdict.of(self.color)
-
-    @property
-    def is_ng(self) -> bool:
-        return self.color == COLOR_NG
-
-    @property
-    def is_ok(self) -> bool:
-        return self.color == COLOR_OK
+        """色から読める判定(表示の確かめ用)。業務の判定は KensaState.verdict(name) を使う(第3段7)。"""
+        return verdict_of_color(self.color)
 
 
 Cell = Ctl
@@ -330,6 +317,20 @@ class KensaState:
     sika_atu_all: Optional[list[Any]] = None   # SaveLoad の Public SikaAtuAll
 
     # ------------------------------------------------------------------
+    def verdict(self, name: str) -> Verdict:
+        """欄の判定(第3段7)。判定する欄は verdicts から、ほかの欄は色から読む。"""
+        if name in JUDGED_NAMES:
+            return self.verdicts.get(name, Verdict.NONE)
+        return verdict_of_color(self.ctl(name).color) if self.has_ctl(name) else Verdict.NONE
+
+    def is_ng(self, name: str) -> bool:
+        return self.verdict(name) is Verdict.NG
+
+    def set_color(self, name: str, color: str) -> None:
+        """欄の色を変え、判定する欄なら判定も同じ意味で書く(第3段7。色と判定を 1 回で)。"""
+        self.ctl(name).color = color
+        set_verdict(self.verdicts, name, color)
+
     @property
     def measures(self) -> Measures:
         """測定グリッドを 位置 × 行 の型で扱う窓口(model.Measures)。"""
