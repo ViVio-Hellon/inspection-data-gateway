@@ -47,7 +47,7 @@ from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from . import shadow
-from .model import Face, FormTag, Switch, set_verdict, bad_name, ken_h_name
+from .model import Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
@@ -780,10 +780,8 @@ class Session:
             if r is not None:
                 wiring.apply_restore(st, r, hooks)
             with st.stopped():
-                for k, c in [(f"Z{p}", c) for p, c in st.strain_z.items()] + \
-                        [(f"G{p}", c) for p, c in st.strain_g.items()]:      # SetSpecificTextBoxesBackColorToWhite
-                    c.color = grid.COLOR_WHITE
-                    set_verdict(st.verdicts, k, c.color)
+                for k in [f"Z{p}" for p in st.strain_z] + [f"G{p}" for p in st.strain_g]:  # SetSpecific…ToWhite
+                    st.set_color(k, grid.COLOR_WHITE)
                 hooks.hiz_loop_judg(st, 0)
             return
         if name == "DBflag":
@@ -838,8 +836,7 @@ class Session:
             wiring.apply_judge(st, out, env)
             hooks.posting(st)
         if st.ctl(name).value == "":
-            st.ctl(name).color = grid.COLOR_WHITE
-            set_verdict(st.verdicts, name, grid.COLOR_WHITE)
+            st.set_color(name, grid.COLOR_WHITE)
         hooks.out_tolerance(st)
         if not lateral:
             hooks.check_labels_by_category(st, p)

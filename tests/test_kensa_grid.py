@@ -141,11 +141,15 @@ class StateTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             s.ctl("FBH")                             # FBH は存在しない
 
-    def test_judge_is_color(self) -> None:
-        c = grid.Ctl(value="1.0", color=grid.COLOR_NG)
-        self.assertEqual(c.judge, "NG")
-        c.color = grid.COLOR_YELLOW                  # 黄色で塗ると判定は消える(VBA と同じ 1 つの色)
-        self.assertEqual(c.judge, "")
+    def test_verdict_is_kept_apart_from_color(self) -> None:
+        # 第3段7: 判定は KensaState.verdicts。色を変える所は set_color で判定も同じ意味で書く
+        s = grid.KensaState()
+        s.set_color("S1", grid.COLOR_NG)
+        self.assertTrue(s.is_ng("S1"))
+        s.set_color("S1", grid.COLOR_YELLOW)          # 黄色(入力中)で塗ると判定は外れる(VBA と同じ)
+        self.assertFalse(s.is_ng("S1"))
+        s.ctl("S1").color = grid.COLOR_NG             # 色だけ変えても判定は変わらない
+        self.assertFalse(s.is_ng("S1"))
         self.assertEqual(grid.VBA_COLOR[grid.COLOR_OK], 13434828)
         self.assertEqual(grid.VBA_COLOR[grid.COLOR_NG], 8421631)
 

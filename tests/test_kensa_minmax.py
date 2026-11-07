@@ -42,7 +42,7 @@ class MinMaxTest(QuirkCase):
 
     def test_ng_blocks(self) -> None:
         s = atuita()
-        s.cells["S2"].color = grid.COLOR_NG
+        s.set_color("S2", grid.COLOR_NG)
         with self.assertRaises(Stop) as cm:
             minmax.min_max(s, FakeHooks())
         self.assertEqual(cm.exception.text, "許容でない公差外が存在します")
@@ -56,28 +56,28 @@ class MinMaxTest(QuirkCase):
 
     def test_ng_outside_range_or_rows(self) -> None:
         s = atuita(ops=2, ope=5)
-        s.cells["S2"].color = grid.COLOR_NG             # 範囲外の位置
+        s.set_color("S2", grid.COLOR_NG)             # 範囲外の位置
         s.cells["E9"].value = "1"
-        s.cells["E9"].color = grid.COLOR_NG             # 対角(行9)は見ない
+        s.set_color("E9", grid.COLOR_NG)             # 対角(行9)は見ない
         minmax.min_max(s, FakeHooks())
         self.assertEqual(s.amin, "3.000")
 
     def test_strain_lateral_rightangle_ng(self) -> None:
         s = atuita()
         s.strain_g["C"].value = "2"
-        s.strain_g["C"].color = grid.COLOR_NG
+        s.set_color("GC", grid.COLOR_NG)
         with self.assertRaises(Stop):
             minmax.min_max(s, FakeHooks())
         s = atuita()
         s.lateral["S"].value = "1.0"
-        s.lateral["S"].color = grid.COLOR_NG
+        s.set_color("LateralS", grid.COLOR_NG)
         minmax.min_max(s, FakeHooks())                  # Sumisei が空ならラテラルボーは見ない
         s.sumisei = "住精"
         with self.assertRaises(Stop):
             minmax.min_max(s, FakeHooks())
         s = atuita(sumisei="住精")
         s.diag_kou["E"].value = "1.0"
-        s.diag_kou["E"].color = grid.COLOR_NG
+        s.set_color("DiagEKou", grid.COLOR_NG)
         minmax.min_max(s, FakeHooks())                  # R115 でなければ直角度は見ない
         s.youto = "R115"
         with self.assertRaises(Stop):
@@ -120,7 +120,7 @@ class MinMaxTest(QuirkCase):
 
     def test_run_min_max_restores_load(self) -> None:
         s = atuita()
-        s.cells["S1"].color = grid.COLOR_NG
+        s.set_color("S1", grid.COLOR_NG)
         with self.assertRaises(Stop):
             minmax.run_min_max(s, FakeHooks())
         self.assertEqual(s.load, "on")
@@ -149,8 +149,8 @@ class RangeTest(unittest.TestCase):
     def test_backcolor_check_tb_names(self) -> None:
         s = KensaState()
         for name, pos in (("ZS", "S"), ("GF", "F"), ("LateralC", "C"), ("DiagDKou", "D")):
-            c = s.ctl(name)
-            c.value, c.color = "1", grid.COLOR_NG
+            s.ctl(name).value = "1"
+            s.set_color(name, grid.COLOR_NG)
             self.assertTrue(minmax.backcolor_check_tb(s, name), name)
             s.ng[pos].value = "許容"
             self.assertFalse(minmax.backcolor_check_tb(s, name), name)

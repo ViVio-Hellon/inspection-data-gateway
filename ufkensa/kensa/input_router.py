@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
-from .model import NORMAL, Switch, set_verdict, bad_name, diag_name, is_thick
+from .model import NORMAL, Switch, bad_name, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -280,10 +280,11 @@ def lookblank_color(state: KensaState, a: str) -> None:
     state.tagtext = a
     c = state.ctl(a)
     if state.mpex_tag == "":
-        c.border, c.color = BORDER_RED, COLOR_YELLOW
+        c.border = BORDER_RED
+        state.set_color(a, COLOR_YELLOW)
     else:
-        c.border, c.color = BORDER_BLACK, COLOR_WHITE
-    set_verdict(state.verdicts, a, c.color)
+        c.border = BORDER_BLACK
+        state.set_color(a, COLOR_WHITE)
 
 
 def _skip34_rows(a: int, n: int) -> Iterator[Optional[int]]:
@@ -394,9 +395,8 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
 
     def pick(name: str) -> bool:
         _set_target(state, name)
-        c = state.ctl(name)
-        c.border, c.color = BORDER_RED, COLOR_YELLOW
-        set_verdict(state.verdicts, name, c.color)
+        state.ctl(name).border = BORDER_RED
+        state.set_color(name, COLOR_YELLOW)
         return True
 
     rows = range(a, n + 1)
@@ -604,9 +604,8 @@ def text_tag(state: KensaState, name: str, hooks: Hooks) -> str:
     with state.stopped():
         hooks.loop_judg(state)
         hooks.hiz_loop_judg(state)
-        c = state.ctl(name)
-        c.border, c.color = BORDER_RED, COLOR_YELLOW
-        set_verdict(state.verdicts, name, c.color)
+        state.ctl(name).border = BORDER_RED
+        state.set_color(name, COLOR_YELLOW)
         _set_target(state, name)
     return name
 
@@ -619,10 +618,8 @@ def diagonal_erase(state: KensaState, name: str) -> None:
     if last in ("9", "0"):
         p = vbx.left(name, 1)
         state.ctl(diag_name(p)).value = ""
-        state.ctl(p + "10").color = COLOR_DEFAULT
-        state.ctl(p + "9").color = COLOR_DEFAULT
-        set_verdict(state.verdicts, p + "10", COLOR_DEFAULT)
-        set_verdict(state.verdicts, p + "9", COLOR_DEFAULT)
+        state.set_color(p + "10", COLOR_DEFAULT)
+        state.set_color(p + "9", COLOR_DEFAULT)
 
 
 def ng_erase(state: KensaState, name: str) -> None:
@@ -637,14 +634,14 @@ def ng_erase(state: KensaState, name: str) -> None:
     fl = False
     for i in range(1, count + 1):
         c = state.ctl(f"{p}{i}")
-        if c.value != "" and c.is_ng:
+        if c.value != "" and state.is_ng(f"{p}{i}"):
             fl = True
             break
     if name.startswith(("Lateral", "Z", "G")) or (name.startswith("Diag") and name.endswith("Kou")):
         if name in ("LateralS", "LateralU", "LateralC", "LateralD", "LateralE", "LateralF",
                     "DiagSKou", "DiagUKou", "DiagCKou", "DiagDKou", "DiagEKou", "DiagFKou",
                     "ZS", "ZU", "ZC", "ZD", "ZE", "ZF", "GS", "GU", "GC", "GD", "GE", "GF"):
-            if state.ctl(name).is_ng:
+            if state.is_ng(name):
                 fl = True
     if not fl:
         state.ctl("NG" + p).value = ""
@@ -699,8 +696,7 @@ def cell_dbl_click(state: KensaState, name: str, hooks: Hooks) -> EraseResult:
     c.value = ""
     c.tag = ""
     erase_count(state, name, hooks)
-    c.color = COLOR_DEFAULT
-    set_verdict(state.verdicts, name, COLOR_DEFAULT)
+    state.set_color(name, COLOR_DEFAULT)
     ng_erase(state, name)
 
     pos = vbx.left(st, 1)
