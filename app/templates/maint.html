@@ -16,6 +16,7 @@
       <button class="tab" role="tab" type="button" data-tab="master">マスタ管理</button>
       <button class="tab" role="tab" type="button" data-tab="device">測定機器ID</button>
       <button class="tab" role="tab" type="button" data-tab="lookup">ソリ・設備仕様</button>
+      <button class="tab" role="tab" type="button" data-tab="hist">履歴出力</button>
       <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -222,6 +223,49 @@
           </div>
         </section>
       </div>
+    </section>
+
+    <!-- ================= 履歴出力 ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="hist" id="pHist" hidden>
+      <p class="maint__hint">検査を最後まで済ませなくても、印刷のときと同じ保存(帳票 PDF・履歴ブック xlsx・履歴 CSV・Lot情報履歴 CSV)を試せます。出し先は 設定 → 使用パス の「手元の検査履歴」「検査履歴」「工場共有」「Lot情報履歴の共有先」です。</p>
+      <div class="maint__two">
+        <section class="card">
+          <header><h3>テスト履歴</h3><span class="lv" id="hTestLv"></span></header>
+          <div class="pad">
+            <p class="muted maint__small">試験用のロット <code id="hTestLot">-</code> を 1 件、手元DB の保存用・Lot情報履歴 に入れます(合成データ。本物の DB には書きません)。入れたままだと CSV 出力に混ざるので、試したら消してください。</p>
+            <div class="btn-row">
+              <button class="btn btn--select" type="button" id="hTestAdd">テスト履歴を入れる</button>
+              <button class="btn btn--danger" type="button" id="hTestDel">テスト履歴を消す</button>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <header><h3>CSV 出力</h3></header>
+          <div class="pad">
+            <p class="muted maint__small">保存用の全行を 履歴 CSV に、Lot情報履歴 を CSV にして、手元と共有へ書きます(印刷のあとと同じ)。</p>
+            <div class="btn-row"><button class="btn btn--commit" type="button" id="hCsv">CSV 出力</button></div>
+          </div>
+        </section>
+      </div>
+      <section class="card">
+        <header><h3>履歴 PDF 出力</h3><span class="muted maint__small" id="hCount"></span></header>
+        <div class="pad">
+          <div class="btn-row">
+            <button class="btn" type="button" id="hReload">一覧を読み直す</button>
+            <button class="btn btn--commit" type="button" id="hPdf" disabled>選んだ履歴を PDF 出力</button>
+          </div>
+          <div class="tablewrap maint__ktable">
+            <table class="table table--dense">
+              <thead><tr><th></th><th>検査開始～終了</th><th>ロットNo</th><th>厚</th><th>巾</th><th>丈</th></tr></thead>
+              <tbody id="hRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>書いたファイル</h3></header>
+        <div class="pad"><ul class="maint__files" id="hOut"><li class="muted">まだ出していません</li></ul></div>
+      </section>
     </section>
 
     <!-- ================= 端末設定・パスワード ================= -->
