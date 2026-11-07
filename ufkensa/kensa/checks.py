@@ -28,7 +28,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
 from . import datasource, paths, vbx
-from .model import NORMAL
+from .model import NORMAL, diag_name, kou_name, lateral_name
 from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
@@ -365,7 +365,7 @@ def confi_open(uf: Uf1, posi: str, n: int, lname: str, moto: str, del_count: int
     """
     m = moto
     if uf.work in ("厚板", "薄板", "少枚数") and n in (9, 10):
-        m = "線差 " + uf.t("Diag" + posi)
+        m = "線差 " + uf.t(diag_name(posi))
     return ConfiRequest(posi, n, lname, m, m, del_count, 0, last_worker(uf))
 
 
@@ -435,11 +435,11 @@ def out_tolerance(uf: Uf1, temp: str = "") -> list[ConfiRequest]:
 
     if ng_posi != "許容":
         for p in POSITIONS:
-            name = "Lateral" + p
+            name = lateral_name(p)
             if st == name and uf.vis(name) and uf.is_ng(name):
                 out.append(confi_open(uf, p, 96, lname, uf.t(name), dc))
         for p in POSITIONS:
-            name = f"Diag{p}Kou"
+            name = kou_name(p)
             if st == name and uf.vis(name) and uf.is_ng(name):
                 out.append(confi_open(uf, p, 97, lname, uf.t(name), dc))
     if ng_posi != "許容":
@@ -508,7 +508,7 @@ def ng_back(uf: Uf1, posi: str, n: int) -> EraseAction:
                 clear.append(name)
                 counted.append(name)
     if posi in POSITIONS:
-        extra = {96: "Lateral" + posi, 97: f"Diag{posi}Kou", 98: "Z" + posi, 99: "G" + posi}.get(n)
+        extra = {96: lateral_name(posi), 97: kou_name(posi), 98: "Z" + posi, 99: "G" + posi}.get(n)
         if extra:
             clear.append(extra)
     return EraseAction(clear=tuple(clear), erase_count=tuple(counted), rejudge=True,
@@ -581,15 +581,15 @@ def ng_posting(uf: Uf1, posi: str, sheet: Optional[AbnormalSheet]) -> AbnormalSh
             ng[16] = "A:" + uf.t("Z" + posi)
         if uf.t("AorB") == "Now_B" and uf.t("Z" + posi) != "":
             ng[16] = "B:" + uf.t("Z" + posi)
-        ng[14] = uf.t(f"Diag{posi}Kou")
-        ng[15] = uf.t("Lateral" + posi)
+        ng[14] = uf.t(kou_name(posi))
+        ng[15] = uf.t(lateral_name(posi))
     colored: set[int] = set()
     if posi in POSITIONS[:5]:
         colored |= {i for i in range(1, 15) if uf.is_ng(f"{posi}{i}")}
     if posi == "F":
         colored |= {i for i in range(1, 11) if uf.is_ng(f"F{i}")}
     if posi in POSITIONS:
-        for col, name in ((18, "G" + posi), (17, "Z" + posi), (16, "Lateral" + posi), (15, f"Diag{posi}Kou")):
+        for col, name in ((18, "G" + posi), (17, "Z" + posi), (16, lateral_name(posi)), (15, kou_name(posi))):
             if uf.is_ng(name):
                 colored.add(col)
     idx = lr - 2
@@ -1030,7 +1030,7 @@ def check_labels_by_category(uf: Uf1, category: str, dist: Optional[WorkDist]) -
                 return RED
     else:
         return RED
-    for name in ("Lateral" + category, f"Diag{category}Kou", category + "_UpVisual", category + "_UnderVisual"):
+    for name in (lateral_name(category), kou_name(category), category + "_UpVisual", category + "_UnderVisual"):
         state = get_label_state(uf, name)
         if state == "可":
             color, flag = GREEN, True
@@ -1137,12 +1137,12 @@ def _first_row(uf: Uf1, cond: Callable[[str], bool]) -> str:
 
 def angle_check(uf: Uf1) -> str:
     """直角度の未入力(表示中の欄だけ)。`Angle_Check (O:2074-2088)`"""
-    return _first_row(uf, lambda p: uf.vis(f"Diag{p}Kou") and uf.t(f"Diag{p}Kou") == "")
+    return _first_row(uf, lambda p: uf.vis(kou_name(p)) and uf.t(kou_name(p)) == "")
 
 
 def lateralbow_check(uf: Uf1) -> str:
     """ラテラルボーの未入力(表示中の欄だけ)。`Lateralbow_Check (O:2090-2105)`"""
-    return _first_row(uf, lambda p: uf.vis("Lateral" + p) and uf.t("Lateral" + p) == "")
+    return _first_row(uf, lambda p: uf.vis(lateral_name(p)) and uf.t(lateral_name(p)) == "")
 
 
 def visual_check(uf: Uf1) -> str:
@@ -1569,7 +1569,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     ch.vis([p + "_UpVisual" for p in rows5] + [p + "_UnderVisual" for p in rows5], True)
     for i in range(1, 11):
         ch.vis([f"{p}{i}" for p in rows5], True, True)
-    ch.vis(["Diag" + p for p in rows5], True, True)
+    ch.vis([diag_name(p) for p in rows5], True, True)
     ch.vis([p + "BH" for p in rows5], True)
     ch.vis(["TS" + p for p in rows5] + ["TE" + p for p in rows5], True)
 
@@ -1593,11 +1593,11 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     show_late = late and ng_temp != "検査不要"
     ch.lateral = show_late
     if show_late:
-        ch.vis(["L11"] + ["Lateral" + p for p in rows5], True)
+        ch.vis(["L11"] + [lateral_name(p) for p in rows5], True)
     else:
-        ch.vis(["L11"] + ["Lateral" + p for p in rows5], False)     # 前ロットの表示を残さない
+        ch.vis(["L11"] + [lateral_name(p) for p in rows5], False)     # 前ロットの表示を残さない
     r115 = uf.t("Youto") == "R115"
-    kou = [f"Diag{p}Kou" for p in rows5]
+    kou = [kou_name(p) for p in rows5]
     if r115:
         ch.vis(["L10"] + kou, True)
 

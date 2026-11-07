@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
-from .model import NORMAL, is_thick
+from .model import NORMAL, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -615,7 +615,7 @@ def diagonal_erase(state: KensaState, name: str) -> None:
     last = vbx.right(name, 1)
     if last in ("9", "0"):
         p = vbx.left(name, 1)
-        state.ctl("Diag" + p).value = ""
+        state.ctl(diag_name(p)).value = ""
         state.ctl(p + "10").color = COLOR_DEFAULT
         state.ctl(p + "9").color = COLOR_DEFAULT
 

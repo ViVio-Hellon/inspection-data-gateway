@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
-from .model import NORMAL, is_thick, row_format
+from .model import NORMAL, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
                     cell_text, excel_value, line_sheet)
@@ -789,7 +789,7 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
         out.set(f"{f}_UpVisual", vi[i][0])
         out.set(f"{f}_UnderVisual", vi[i][1])
         if f != "F":
-            out.set(f"{f}BH", bh[i][0])
+            out.set(bh_name(f), bh[i][0])
     ken_h = sh.read_range(9, 3, 9, 9)[0]
     for a in range(6):
         out.set(f"KenHBox{a + 1}", _fmt(ken_h[a], "0.0"))
@@ -861,16 +861,16 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
                 if f != "F":
                     out.set(f"{f}{i}", _fmt_val(v, "0.0"))
             elif i == 17:
-                out.set(f"Diag{f}", _fmt_val(v, "0.0"))
+                out.set(diag_name(f), _fmt_val(v, "0.0"))
             elif i == 18:
                 if v is not None and cell_text(v) != "" and vbx.is_numeric(v):
-                    out.set(f"Diag{f}Kou", _fmt_val(v, "0.0"))
+                    out.set(kou_name(f), _fmt_val(v, "0.0"))
                 elif v is None or cell_text(v) == "":
-                    out.set(f"Diag{f}Kou", "")
+                    out.set(kou_name(f), "")
             elif i == 19:
                 out.set(f"NG{f}", v)
             elif i == 20:
-                out.set(f"Lateral{f}", _fmt(v, "0.0"))
+                out.set(lateral_name(f), _fmt(v, "0.0"))
     losd_strain("A", sh.read_range(2, 15, 7, 16), sh.read_range(8, 15, 13, 16), out)
     for i in range(1, 15):
         for f in "SUCDE":
@@ -882,8 +882,8 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
             out.values[f"F{i}"] = ""
             out.back_colors[f"F{i}"] = RGB_WHITE_DEFAULT
     for f in FACES:
-        if out.values[f"{f}10"] == "" and _is_zero_caption(out.values[f"Diag{f}"]):
-            out.values[f"Diag{f}"] = ""
+        if out.values[f"{f}10"] == "" and _is_zero_caption(out.values[diag_name(f)]):
+            out.values[diag_name(f)] = ""
     out.calls.append(("Atu_OPselect", vbx.val(cell_text(sh.get(1, 2)))))
 
     ken_item = [cell_text(v) for v in sh.read_range(1, 29, 1, 32)[0]]
@@ -1087,14 +1087,14 @@ def _history_load_normal(out: FormRestore, c, cur: Mapping[str, str], aorb: str)
     for k, f in enumerate(FACES):
         if v.get(f"{f}10", "") != "":
             # Tai は Single。Format は Single の 7 桁の値で丸める(U5 と同じく実機確認の対象)
-            v[f"Diag{f}"] = vbx.fmt(vbx.cstr(tai[k], is_single=True), "0.0")
+            v[diag_name(f)] = vbx.fmt(vbx.cstr(tai[k], is_single=True), "0.0")
     for k, f in enumerate("SUCDE"):
         if cell_text(c(95 + k)) != "":
-            v[f"Diag{f}Kou"] = vbx.fmt(vbx.val(cell_text(c(95 + k))), "0.0")
+            v[kou_name(f)] = vbx.fmt(vbx.val(cell_text(c(95 + k))), "0.0")
         if cell_text(c(72 + k)) != "":
-            v[f"Lateral{f}"] = vbx.fmt(vbx.val(cell_text(c(72 + k))), "0.0")
+            v[lateral_name(f)] = vbx.fmt(vbx.val(cell_text(c(72 + k))), "0.0")
         if cell_text(c(90 + k)) != "":
-            v[f"{f}BH"] = vbx.fmt(vbx.val(cell_text(c(90 + k))), "0")
+            v[bh_name(f)] = vbx.fmt(vbx.val(cell_text(c(90 + k))), "0")
 
     z = {"a": "", "b": ""}
     for k, f in enumerate("SUCDE"):
@@ -1121,9 +1121,9 @@ def _history_load_normal(out: FormRestore, c, cur: Mapping[str, str], aorb: str)
         out.calls.append(("LSelect", "薄板"))
     if ken_l != "H" and ken_r == "4":
         out.calls.append(("Six_Display", "on"))
-    if any(v.get(f"Lateral{f}", "") != "" for f in "SUCDE"):
+    if any(v.get(lateral_name(f), "") != "" for f in "SUCDE"):
         out.calls.append(("LSelectLateral", "強制"))
-    if any(v.get(f"Diag{f}Kou", "") != "" for f in "SUCDE"):
+    if any(v.get(kou_name(f), "") != "" for f in "SUCDE"):
         out.calls.append(("RightAngleDisplay", "強制"))
     if v.get("LateralF", "") != "":
         out.calls.append(("LSelectLateral", "強制", "LateralF"))
@@ -1182,7 +1182,7 @@ def _history_load_mimi(out: FormRestore, c) -> None:
         if len(ga) - 1 == 2:
             _split(out, f, "G", ga, None, "SaveLoad:3965")
         if cell_text(c(104 + k)) != "":
-            v[f"{f}BH"] = vbx.fmt(vbx.val(cell_text(c(104 + k))), "0")
+            v[bh_name(f)] = vbx.fmt(vbx.val(cell_text(c(104 + k))), "0")
     for i in range(1, 15):
         for f in "SUCDE":
             if _is_zero_caption(v[f"{f}{i}"]):

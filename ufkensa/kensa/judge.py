@@ -34,7 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import datasource, flow, paths, vbx
-from .model import NORMAL, THICK_ROWS, row_layout
+from .model import NORMAL, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, row_layout
 from . import sound as snd
 
 # ------------------------------------------------------------------
@@ -115,9 +115,9 @@ def _blank_cells() -> dict[str, Cell]:
     for p in POSITIONS:
         for pre in ("Diag", "Lateral", "Z", "G"):
             c[f"{pre}{p}"] = Cell()
-        c[f"Diag{p}Kou"] = Cell()
+        c[kou_name(p)] = Cell()
     for p in POS5:
-        c[f"{p}BH"] = Cell()
+        c[bh_name(p)] = Cell()
     return c
 
 
@@ -485,7 +485,7 @@ def judg_color(form: Form, name: str, n: str, worker_name: str = "") -> Outcome:
             tai = 0.0
             ok = None
         out.result = ok
-        out.values["Diag" + row] = vbx.cstr(tai, is_single=True)   # UF1("Diag" & 行) = Tai(J:710)
+        out.values[diag_name(row)] = vbx.cstr(tai, is_single=True)   # UF1("Diag" & 行) = Tai(J:710)
     return out
 
 
@@ -759,7 +759,7 @@ def re_diag(form: Form) -> Outcome:
         for p in POSITIONS:
             a, b = form.v(f"{p}9"), form.v(f"{p}10")
             if a != "" and b != "":
-                out.values["Diag" + p] = vbx.fmt(abs(vbx.val(a) - vbx.val(b)), "0.0")
+                out.values[diag_name(p)] = vbx.fmt(abs(vbx.val(a) - vbx.val(b)), "0.0")
     return out
 
 
@@ -825,14 +825,14 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
                         st[f"{p}{i}"] = WHITE
     # ラテラルボー・直角度は表示中なら NG(J:913-929)
     for p in POSITIONS:
-        if form.cells[f"Lateral{p}"].visible:
-            st[f"Lateral{p}"] = NG
+        if form.cells[lateral_name(p)].visible:
+            st[lateral_name(p)] = NG
     kou_targets = [("S", "S"), ("U", "U"), ("C", "C")]
     kou_targets += [("D", "D"), ("E", "E")]
     kou_targets.append(("F", "F"))
     for seen, painted in kou_targets:
-        if form.cells[f"Diag{seen}Kou"].visible:
-            st[f"Diag{painted}Kou"] = NG
+        if form.cells[kou_name(seen)].visible:
+            st[kou_name(painted)] = NG
 
     # 厚(J:931-946)
     def thick() -> None:
@@ -875,8 +875,8 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
         if vbx.is_numeric(form.TaikText):
             for a in range(j, k + 1):
                 p = _pos(a)
-                if p and v(f"Diag{p}") != "":
-                    if diagonal_judg(csng(v(f"Diag{p}")), csng(form.TaikText)):
+                if p and v(diag_name(p)) != "":
+                    if diagonal_judg(csng(v(diag_name(p))), csng(form.TaikText)):
                         st[f"{p}9"] = OK
                         st[f"{p}10"] = OK
     length_and_diag()
@@ -886,22 +886,22 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
         return
     for a in range(j, k + 1):
         p = _pos(a)
-        if p and vbx.is_numeric(v(f"Lateral{p}")):
-            if lateral_judg(csng(v(f"Lateral{p}")), form.LateralText):
-                st[f"Lateral{p}"] = OK
+        if p and vbx.is_numeric(v(lateral_name(p))):
+            if lateral_judg(csng(v(lateral_name(p))), form.LateralText):
+                st[lateral_name(p)] = OK
     # BH(J:1071-1088): OK は白、NG はコーラル
     for want, color in (("OK", WHITE), ("NG", NG)):
         for a in range(j, k + 1):
             p = _pos(a)
-            if p and p != "F" and vbx.is_numeric(v(f"{p}BH")):
-                if bh_judg(v(f"{p}BH"), bh_lower) == want:
-                    st[f"{p}BH"] = color
+            if p and p != "F" and vbx.is_numeric(v(bh_name(p))):
+                if bh_judg(v(bh_name(p)), bh_lower) == want:
+                    st[bh_name(p)] = color
     # 直角度(J:1090-1099)
     for a in range(j, k + 1):
         p = _pos(a)
-        if p and vbx.is_numeric(v(f"Diag{p}Kou")):
-            if lateral_judg(csng(v(f"Diag{p}Kou")), "1.0"):
-                st[f"Diag{p}Kou"] = OK
+        if p and vbx.is_numeric(v(kou_name(p))):
+            if lateral_judg(csng(v(kou_name(p))), "1.0"):
+                st[kou_name(p)] = OK
     for pre, post in (("Lateral", ""), ("Diag", "Kou")):
         for p in POSITIONS:
             nm = f"{pre}{p}{post}"
