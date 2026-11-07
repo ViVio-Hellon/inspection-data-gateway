@@ -36,6 +36,16 @@ class HistoryExportTest(SessionBase):
         self.assertIn("Lot情報履歴_HVC.csv", names)
         self.assertTrue(self.store.exists(LOT_HISTORY))
 
+        # 手元の出し先(使用パス「履歴 CSV の手元の出し先」)
+        from ufkensa.kensa import paths
+        out_dir = self.tmp / "csv_out"
+        paths.set_path("csv_local", str(out_dir))
+        self.addCleanup(paths.reset_path, "csv_local")
+        c = hx.export_csv(self.store, "HVC", "HVC")
+        self.assertIn(str(out_dir / "HVC_履歴CSV.csv"), c["files"])
+        self.assertIn(str(out_dir / "Lot情報履歴_HVC.csv"), c["files"])
+        self.assertIn("T999T99", (out_dir / "HVC_履歴CSV.csv").read_text(encoding="cp932"))
+
         self.assertTrue(hx.has_test_history(self.store))
         self.assertEqual(hx.remove_test_history(self.store)["removed"], ["保存用: 1 行", "Lot情報履歴: 1 行"])
         self.assertFalse(hx.has_test_history(self.store))

@@ -1541,7 +1541,7 @@ def export_history_csv(store: LocalStore, lname: str, line: str, extreme: bool, 
     """
     sh = store.sheet(MIMI if extreme else HOZON)
     official = lines.official(line)
-    out = [exp_csv(sh, lname + ("_耳用履歴CSV" if extreme else "_履歴CSV"),
+    out = [exp_csv(sh, lname + ("_耳用履歴CSV" if extreme else "_履歴CSV"), paths.get("csv_local"),
                    default_dir=local_dir or store.path.parent)]
     new_name = lname + ("_耳用File" if extreme else "_File")
     targets = [paths.join(paths.get("history"), _HISTORY_DIRS.get(official, "Test\\Test_履歴"))]
@@ -1619,7 +1619,7 @@ def export_lot_history(store: LocalStore, line: str, *, local_dir: Optional[Unio
     sh = store.sheet(LOT_HISTORY)
     official = lines.official(line) or line or "Test"
     name = f"Lot情報履歴_{official}"
-    out = [exp_csv(sh, name, default_dir=local_dir or store.path.parent)]
+    out = [exp_csv(sh, name, paths.get("csv_local"), default_dir=local_dir or store.path.parent)]
     share = paths.get("lot_history_share") or paths.join(paths.get("history"),
                                                           _HISTORY_DIRS.get(official, "Test\\Test_履歴"))
     try:
