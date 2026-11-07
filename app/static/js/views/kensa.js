@@ -376,6 +376,26 @@ function renderLeft(v) {
   $("cardIn").placeholder = ws.length ? "もう1人追加するとき(社員カード)" : "社員カード(13桁)";
 }
 
+/* ---------- ロット情報の読み直し・見張り(2026-11-07) ---------- */
+const WATCH_MS = 60000;            // 1 分ごとに、仕掛・引当・オーダー・品質基準が変わっていないか見る
+async function reloadLot() {
+  $("lotReloadBtn").disabled = true;
+  try {
+    const r = await op("lot-reload");
+    if (r && !r.stop) $("lotWatchBar").hidden = true;
+  } finally { $("lotReloadBtn").disabled = false; }
+}
+async function watchLot() {
+  if (document.hidden) return;
+  let w;
+  try { w = await api.get("/api/kensa/lot-watch"); } catch { return; }   // 見張りの失敗は黙って次へ
+  const bar = $("lotWatchBar");
+  if (!w.changed || !w.changed.length) { bar.hidden = true; return; }
+  $("lotWatchText").textContent = `ロット ${w.lot} の情報が更新されています(${w.changed.join("・")})`;
+  bar.hidden = false;
+  if (w.new) toast(`ロット ${w.lot} の情報が更新されています(${w.changed.join("・")})。「読み直す」で取り込めます`, "warn");
+}
+
 /* ---------- 検査員の追加・ロットの読み直し(上の帯の 1・3 を押す) ---------- */
 function openAdd(id) {
   if (phase === "measure") {
@@ -692,6 +712,9 @@ function init() {
   const closeAdd = () => { if ($("kAdd").open) $("kAdd").close(); };
   onEnter("cardIn", async (card) => { closeAdd(); await op("worker", { card }); refocus(); }, 13);
   onEnter("lotIn", async (lot) => { closeAdd(); await op("lot", { lot }); refocus(); }, 7);
+  $("lotReloadBtn").addEventListener("click", async () => { await reloadLot(); refocus(); });
+  $("lotWatchGo").addEventListener("click", async () => { await reloadLot(); refocus(); });
+  setInterval(watchLot, WATCH_MS);
   $("lotSrcBtn").addEventListener("click", () => {
     const on = !(V && V.lot_source && V.lot_source.on);
     op("lot-source", { on, lot: $("lotIn").value });

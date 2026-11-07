@@ -35,6 +35,7 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "print-commit": ("print_commit", ("answers",)),
     "new": ("new_inspection", ("answers",)),
     "lot-source": ("set_lot_source", ("on", "lot", "answers")),     # D28 控え(第2)から読む
+    "lot-reload": ("reload_lot", ()),                                  # ロット情報の読み直し(2026-11-07)
     # 外観・不良要因・検入高さ(MPEX の各ページ)
     "visual": ("visual", ("lc", "items")),
     "visual-clear": ("visual_clear", ("lc",)),
@@ -94,6 +95,12 @@ def pack_image():
     if f is None or not f.is_file():
         return jsonify({"error": {"code": "not_found", "message": "包装仕様書の画像がありません"}}), 404
     return send_file(f, mimetype="image/jpeg", max_age=0)
+
+
+@bp.get("/api/kensa/lot-watch")
+def lot_watch():
+    """ロット情報の見張り(画面が定期に呼ぶ)。登録・読み直しの後に変わった種類を返す。"""
+    return jsonify(session.get().lot_watch())
 
 
 @bp.get("/api/kensa/state")
