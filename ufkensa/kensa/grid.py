@@ -32,9 +32,8 @@ from . import vbx
 # 定数
 # ------------------------------------------------------------------
 #: 検査位置(列)。F は 4 山(6 回検査)のときだけ使う
-POSITIONS: tuple[str, ...] = ("S", "U", "C", "D", "E", "F")
-#: 位置ごとの行数(S..E は 1〜14、F は 1〜10。F11〜F14 は存在しない)
-ROW_COUNT: dict[str, int] = {"S": 14, "U": 14, "C": 14, "D": 14, "E": 14, "F": 10}
+#: 位置と行数は model.py で決める(F11〜F14 は存在しない)
+from .model import POSITIONS, ROW_COUNT, Measures  # noqa: E402
 
 #: 作業選択(OptionButton の名前)
 WORKS: tuple[str, ...] = ("厚板", "薄板", "少枚数", "極厚", "スラブ")
@@ -324,6 +323,11 @@ class KensaState:
     sika_atu_all: Optional[list[Any]] = None   # SaveLoad の Public SikaAtuAll
 
     # ------------------------------------------------------------------
+    @property
+    def measures(self) -> Measures:
+        """測定グリッドを 位置 × 行 の型で扱う窓口(model.Measures)。"""
+        return Measures(self)
+
     @property
     def lname(self) -> str:
         """VBA の `Lname = LineName.Caption & LineNo.Caption`。"""

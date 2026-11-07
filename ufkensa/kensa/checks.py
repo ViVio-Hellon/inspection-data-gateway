@@ -28,6 +28,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
 from . import datasource, paths, vbx
+from .model import NORMAL
 from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
@@ -1603,7 +1604,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     if tb == 5:
         if show_late:
             ch.visible.update(LateralS=True, LateralU=False, LateralC=True, LateralD=False, LateralE=True)
-        for i in range(5, 11):
+        for i in NORMAL.size_rows:
             ch.vis([f"U{i}", f"D{i}"], False, False)
         if r115:
             ch.vis(["L10"] + kou, True)
@@ -1614,7 +1615,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
         ch.set(E="", FE="", OPS5="", OPE5="")
         ch.vis(["FME", "LC5", "LC11", "E_UpVisual", "E_UnderVisual"], False)
         ch.vis([f"E{i}" for i in range(1, 11)], False, False)
-        ch.vis([f"U{i}" for i in range(5, 11)], False, False)
+        ch.vis([f"U{i}" for i in NORMAL.size_rows], False, False)
         ch.vis(["DiagU", "DiagE"], False, False)
         if r115:
             ch.vis(["DiagEKou"], False, False)

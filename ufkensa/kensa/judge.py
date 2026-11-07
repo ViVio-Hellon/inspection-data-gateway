@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import datasource, flow, paths, vbx
+from .model import NORMAL, THICK_ROWS, row_layout
 from . import sound as snd
 
 # ------------------------------------------------------------------
@@ -816,7 +817,7 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
         if v(f"F{i}") != "":
             st[f"F{i}"] = NG
     # マイナス公差が空の行は白(J:881-910、F 列は対象外)
-    for blank, rows in ((form.Am, range(1, 5)), (form.Hm, range(5, 7)), (form.Tm, range(7, 9))):
+    for blank, rows in ((form.Am, THICK_ROWS), (form.Hm, NORMAL.width), (form.Tm, NORMAL.length)):
         if blank == "":
             for i in rows:
                 for p in POS5:
@@ -835,7 +836,7 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
 
     # 厚(J:931-946)
     def thick() -> None:
-        for i in range(1, 5):
+        for i in THICK_ROWS:
             for a in range(j, k + 1):
                 if form.Am == "":
                     return                                   # GoTo SkipH
@@ -858,9 +859,8 @@ def _loop_judg_body(form: Form, j: int, k: int, bh_lower: int, out: Outcome) -> 
 
     # 丈と対角(J:969-1056)。丈 7-8 の上下限が空なら対角もとばす
     def length_and_diag() -> None:
-        x, y = (14, 11) if form.gokuatsu else (8, 7)
-        for i in range(y, x + 1):
-            if 7 <= i <= 8:
+        for i in row_layout(form.gokuatsu).length:
+            if i in NORMAL.length:                           # VBA のまま: 極厚の丈(11〜14)はここを通らない
                 for a in range(j, k + 1):
                     if form.TpK == "" or form.TmK == "":
                         return                               # GoTo SkipL

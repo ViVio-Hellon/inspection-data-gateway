@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Iterator, Optional
 
 from . import vbx
+from .model import NORMAL, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
@@ -125,7 +126,7 @@ def all_check(state: KensaState, a: int, n: int, ken_no: str, temp: str, hooks: 
         if state.is_work("少枚数") or state.is_work("極厚"):
             return scan(lambda i: five)
         if state.is_work("スラブ"):
-            return scan(lambda i: ("S", "C") if 1 <= i <= 4 else (("S", "U", "C", "D") if 5 <= i <= 10 else ()))
+            return scan(lambda i: ("S", "C") if is_thick(i) else (("S", "U", "C", "D") if 5 <= i <= 10 else ()))
     return False
 
 
@@ -177,16 +178,16 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
     # U
     if state.is_work("厚板"):
         for i in rows:
-            if 1 <= i <= 4:
+            if is_thick(i):
                 if _blank(state, f"U{i}"):
                     return _set_target(state, f"U{i}")
             elif 5 <= i <= 10:
-                for b in range(5, 11):
+                for b in NORMAL.size_rows:
                     if _blank(state, f"C{b}"):
                         return _set_target(state, f"C{b}")
     elif state.is_work("スラブ"):
         for i in rows:
-            if 1 <= i <= 4:
+            if is_thick(i):
                 for b in range(5, 9):
                     if _blank(state, f"U{b}"):
                         return _set_target(state, f"U{b}")
@@ -228,16 +229,16 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
     # D
     if state.is_work("厚板"):
         for i in rows:
-            if 1 <= i <= 4:
+            if is_thick(i):
                 if _blank(state, f"D{i}"):
                     return _set_target(state, f"D{i}")
             elif 5 <= i <= 10:
-                for b in range(5, 11):
+                for b in NORMAL.size_rows:
                     if _blank(state, f"E{b}"):
                         return _set_target(state, f"E{b}")
     elif state.is_work("スラブ"):
         for i in rows:
-            if 1 <= i <= 4:
+            if is_thick(i):
                 for b in range(5, 9):
                     if _blank(state, f"D{b}"):
                         return _set_target(state, f"D{b}")
@@ -401,7 +402,7 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
     def side(p: str, mid: str) -> bool:
         if state.is_work("厚板"):
             for i in rows:
-                if 1 <= i <= 4:
+                if is_thick(i):
                     if _blank(state, f"{p}{i}"):
                         return pick(f"{p}{i}")
                 elif 5 <= i <= 10:
@@ -410,7 +411,7 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
                             return pick(f"{mid}{b}")
         elif state.is_work("スラブ"):
             for i in rows:
-                if 1 <= i <= 4:
+                if is_thick(i):
                     for b in range(5, 9):
                         if _blank(state, f"{p}{b}"):
                             return pick(f"{p}{b}")
