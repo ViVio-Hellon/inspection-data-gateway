@@ -662,6 +662,11 @@ def _write_error_page(message: str, hint: str, log_dir: str) -> Path:
 # CLI
 # ------------------------------------------------------------------
 def main(argv: Optional[list[str]] = None) -> int:
+    # 共有に置いた本体なら、各 PC の手元へ写して手元から起動する(local_copy.py。2026-11-07)
+    import local_copy
+    code = local_copy.relaunch_from_local(APP_ROOT, list(sys.argv[1:] if argv is None else argv))
+    if code is not None:
+        return code
     parser = argparse.ArgumentParser(description="UF検査判定を起動する")
     # 既定は auto ── **この端末に許されたモード**で開く。
     # 旧名(warehouse)も受ける。現場に配ったショートカットがまだ
