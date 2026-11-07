@@ -1,12 +1,13 @@
-"""試験指示票フラグ(技術指示のラテラルボー: LateralText.Tag = "有")の通し試験。
+"""試験指示票(先行データ票)フラグの通し試験。VBA の Judg.AdvanceCheck(J:334-361)。
 
-VBA:
-- SaveLoad:70        ロット登録の初めに LateralText.Tag をリセット
-- SaveLoad:277-300   SIKALOTNOW「指示_ﾗﾃﾗﾙﾎﾞｰ」が空でなければ LateralText に半角で入れ、色付け、Tag="有"、LSelectLateral
-- FormRelat:6317     L11(ラテラルボー見出し)を Sumisei<>"" Or Tag="有" で表示
-- FormRelat:2328/2390 検入≧26/≦25 の切替でラテラル欄 U/C/D を出し分け
-- Print:1043         印刷用罫線でラテラルボー列を残す条件に Tag="有"
-- SaveLoad:2107/2592 作業保存 Cells(1,42) に Tag を書き、読み戻しで復元 → SaveLoad:2878 LSelectLateral
+必要になる条件(SIKALOTNOW「仕掛」のロットの 1 行目):
+  (製造板厚 ≤ 3.0 かつ 品質ｸﾞﾚｰﾄﾞ_表面処理 が S・T 以外)または(表面処理 が S・T 以外 かつ 用途ｺｰﾄﾞ の頭が T・D1・D2)
+
+使われる所(VBA):
+- ロット登録: 包装仕様の注意文と一緒に「先行データ票が必要です。」(Judg.MaterialsMsgBox J:2067)
+- 検査員登録: 「先行データ票が必要です。」(UF1:4850)
+- 検査員登録の後の最初のフォームのクリック: 「先行データ票が必要です。」(UserForm_Click、UF1:4312-4325 PicFM.Tag = 1)
+- 印刷: 「先行データ票はありますか？」いいえなら印刷しない(UF1:3643-3655)
 """
 from __future__ import annotations
 
@@ -14,72 +15,93 @@ import sqlite3
 import unittest
 
 from tests import kensa_fixture
-from tests.test_kensa_session import LOT, SessionBase
+from tests.test_kensa_session import CARD, LOT, SessionBase
+from ufkensa.kensa import judge
+
+NEED = "先行データ票が必要です。"
 
 
-class ShikenShijiFlagTest(SessionBase):
+class AdvanceCheckRuleTest(unittest.TestCase):
+    """条件の組み合わせ(J:351-359)。"""
+
+    def check(self, thick: str, surface: str, youto: str) -> bool:
+        fields = ["製造板厚", "品質ｸﾞﾚｰﾄﾞ_表面処理", "用途ｺｰﾄﾞ"]
+
+        def arrbox(file, lot, kind, db_flag):
+            return fields if kind == "Fields" else [[thick, surface, youto]]
+        return judge.advance_check("L1", arrbox=arrbox)
+
+    def test_rules(self) -> None:
+        self.assertTrue(self.check("3.0", "X", "H165"))        # 3mm 以下 かつ S・T 以外
+        self.assertTrue(self.check("2.0", "", "H165"))
+        self.assertFalse(self.check("3.1", "X", "H165"))       # 3mm を超え、用途も当たらない
+        self.assertFalse(self.check("2.0", "S", "H165"))       # 表面処理 S
+        self.assertFalse(self.check("2.0", "T", "T123"))       # 表面処理 T
+        self.assertTrue(self.check("15", "X", "T123"))         # 用途の頭 T
+        self.assertTrue(self.check("15", "X", "D1AB"))         # D1
+        self.assertTrue(self.check("15", "X", "D2AB"))         # D2
+        self.assertFalse(self.check("15", "X", "D3AB"))        # D3 は当たらない
+        self.assertFalse(self.check("15", "S", "D1AB"))
+
+
+class AdvanceSheetFlowTest(SessionBase):
+    need = True
+
     def setUp(self) -> None:
         super().setUp()
-        # 一時コピーの SIKALOTNOW に技術指示(全角)を入れる(元の fixture は空)
         f = self.db_dir / kensa_fixture.file_name("SIKALOTNOW")
         with sqlite3.connect(f) as c:
-            c.execute('UPDATE "仕掛" SET "指示_ﾗﾃﾗﾙﾎﾞｰ" = ? WHERE "ﾛｯﾄ番号" = ?', ("３.０/2M", LOT))
+            # 厚は 15 のまま(製造板厚は画面の厚にもなる)。表面処理 X と 用途の頭 T の組み合わせで「必要」にする
+            c.execute('UPDATE "仕掛" SET "品質ｸﾞﾚｰﾄﾞ_表面処理" = ?, "用途ｺｰﾄﾞ" = ? WHERE "ﾛｯﾄ番号" = ?',
+                      ("X" if self.need else "S", "T165" if self.need else "H165", LOT))
         c.close()
 
-    def test_flag_display_print_and_reload(self) -> None:
-        s = self.s
-        self.register()
-        st = s.state
-        # 登録: フラグ・表示(SaveLoad:295-300)
-        self.assertEqual(st.lateral_text_tag, "有")
-        self.assertEqual(st.lateral_text, "3.0")
-        self.assertTrue(st.lateral_text_colored)
-        self.assertEqual(st.additional, "対角ﾗﾃﾗﾙﾎﾞ-追記公差あり")
-        self.assertTrue(st.ctl("L11").visible)                          # FormRelat:6317
+    def texts(self, r) -> list[str]:
+        return [m.text for m in r.messages]
 
-        # 測定 → 印刷・保存
+    def test_flow(self) -> None:
+        s = self.s
+        self.ok(s.start())
+        r = s.register_worker(CARD)
+        r = self.ok(s.register_worker(CARD, {"worker_register": True}))
+        r = self.ok(s.register_lot(LOT, {"lot_register": True}))
+        self.assertEqual(NEED in self.texts(r), self.need, self.texts(r))      # ロット登録(MaterialsMsgBox)
+        self.ok(s.select_work("厚板"))
+        r = s.click("")                                                        # 最初のクリック(UserForm_Click)
+        self.assertEqual(NEED in self.texts(r), self.need, self.texts(r))
+        r = s.click("")                                                        # 2 回目からは出ない
+        self.assertNotIn(NEED, self.texts(r))
         self.fill("DT")
         self.fill("#L")
         self.strain_visual_height()
         self.ok(s.min_max())
-        r = self.ok(s.print_check())
+        r = s.print_check()
+        if not self.need:
+            self.assertIsNone(r.question)
+            self.assertTrue(r.view["print_ready"])
+            return
+        self.assertEqual((r.question.key, r.question.text), ("advance_sheet", "先行データ票はありますか？"))
+        r = s.print_check({"advance_sheet": False})                             # いいえ: 印刷しない
+        self.assertFalse(r.view["print_ready"])
+        r = s.print_check({"advance_sheet": True})                              # はい: 先へ
         self.assertTrue(r.view["print_ready"], r.view.get("checks"))
+        self.assertIn({"label": "先行データ票", "ok": True}, r.view["checks"])
         r = self.ok(s.print_commit({"print": True}))
         self.assertEqual(r.view["report"]["saved"]["mode"], "ADDNEW")
 
-        # 作業保存 Cells(1,42) = "有"(SaveLoad:2107)
-        self.assertEqual(self.store.sheet("作業保存_HVC").get(1, 42), "有")
-
-        # 開き直し: Tag が戻り、L11 も表示(SaveLoad:2592, 2878)
-        s2 = self.new_session()
-        self.ok(s2.start())
-        self.assertEqual(s2.state.lot, LOT)
-        self.assertEqual(s2.state.lateral_text_tag, "有")
-        self.assertTrue(s2.state.ctl("L11").visible)
-
-    def test_flag_reset_on_next_lot_without_instruction(self) -> None:
-        """フラグはロット登録ごとにリセット(SaveLoad:70)。指示を消して登録し直すと Tag は空。"""
-        self.register()
-        self.assertEqual(self.s.state.lateral_text_tag, "有")
-        f = self.db_dir / kensa_fixture.file_name("SIKALOTNOW")
-        with sqlite3.connect(f) as c:
-            c.execute('UPDATE "仕掛" SET "指示_ﾗﾃﾗﾙﾎﾞｰ" = \'\' WHERE "ﾛｯﾄ番号" = ?', (LOT,))
-        c.close()
+    def test_worker_register_after_lot(self) -> None:
+        """ロットを先に登録してから検査員を登録しても案内が出る(UF1:4845-4858)。"""
         s = self.s
-        self.ok(s.register_lot(LOT, {"lot_register": True, "lot_split": False, "lot_recent": True}))
-        self.assertEqual(s.state.lateral_text_tag, "")
-        self.assertFalse(s.state.ctl("L11").visible)
+        self.ok(s.start())
+        self.ok(s.register_lot(LOT, {"lot_register": True}))
+        s.register_worker(CARD)
+        r = self.ok(s.register_worker(CARD, {"worker_register": True}))
+        self.assertEqual(NEED in self.texts(r), self.need, self.texts(r))
 
 
-class ConvertToHalfTest(unittest.TestCase):
-    def test_fullwidth_decimal_point(self) -> None:
-        from ufkensa.kensa import lot
-        from ufkensa.kensa.modes import zenkasho
-        for f in (lot.convert_to_half, zenkasho.convert_to_half):
-            self.assertEqual(f("３．０/2M"), "3.0")        # 前は "30"(全角の「．」が落ちていた)
-            self.assertEqual(f("３.０"), "3.0")
+class NoAdvanceSheetFlowTest(AdvanceSheetFlowTest):
+    need = False
 
 
 if __name__ == "__main__":
-    import unittest
     unittest.main()
