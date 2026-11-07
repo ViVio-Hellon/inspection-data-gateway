@@ -48,7 +48,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, report_model, vbx, workers)
-from .model import EXTREME, FormTag, NORMAL, Switch, diag_name, kou_name
+from .model import EXTREME, FormTag, NORMAL, Switch, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Stop
@@ -162,9 +162,9 @@ def all_controls(state: KensaState) -> dict[str, Ctl]:
     for p, c in state.bh.items():
         out[p + "BH"] = c
     for p, c in state.bad.items():
-        out[p + "Bad"] = c
+        out[bad_name(p)] = c
     for i, c in state.ken_h.items():
-        out[f"KenHBox{i}"] = c
+        out[ken_h_name(i)] = c
     for i, c in state.visual.items():
         out[f"LC{i}"] = c
     for k, c in state.view.items():
@@ -248,7 +248,7 @@ def to_uf1(state: KensaState, worker_day_max_: str = "") -> checks.Uf1:
     for name, c in all_controls(state).items():
         text[name] = c.value
         visible[name] = c.visible
-        if c.color == grid.COLOR_NG:
+        if c.is_ng:
             ng.add(name)
     for name, attr in SCALAR.items():
         text[name] = getattr(state, attr)
@@ -462,8 +462,8 @@ def to_snapshot(state: KensaState, store: LocalStore) -> records.KensaSnapshot:
         s.diag_kou[f] = state.diag_kou[f].value
         s.ng[f] = state.ng[f].value
         s.lateral_face[f] = state.lateral[f].value
-        s.visual_up[f] = v(f + "_UpVisual")
-        s.visual_under[f] = v(f + "_UnderVisual")
+        s.visual_up[f] = v(visual_up_name(f))
+        s.visual_under[f] = v(visual_under_name(f))
         s.bh[f] = state.bh[f].value if f in state.bh else ""
         s.positions[f] = state.header(f)
     s.aorb = state.strain_face

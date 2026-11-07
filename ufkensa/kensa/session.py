@@ -46,7 +46,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
-from .model import Face, FormTag, Switch
+from .model import Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
@@ -1152,7 +1152,7 @@ class Session:
         if temps != checks.SPOT and any(v > 50 for v in n.values()):
             env.messages.append(Message("すみません、50枚以上は分けて入力してください", INFO, source="UF1:1572"))
             return
-        te = checks.tec_return([p + "Bad" for p in grid.POSITIONS if st.bad[p].color == wiring.COLOR_CYAN])
+        te = checks.tec_return([bad_name(p) for p in grid.POSITIONS if st.bad[p].color == wiring.COLOR_CYAN])
         if te == "":                                                      # UF1("") → 実行時エラー
             raise Stop("実行時エラー '-2147024809 (80070057)': 指定されたオブジェクトが見つかりません。",
                        source="UF1:1578")
@@ -1504,7 +1504,7 @@ class Session:
                                                 and vbx.instr(uf.t("Additional"), "ﾗﾃﾗﾙﾎﾞｰ検査不要") == 0)},
             {"label": "直角度", "ok": not (checks.angle_check(uf) != "" and uf.t("Youto") == "R115")},
             {"label": "外観", "ok": checks.visual_check(uf) == ""},
-            {"label": "検入高さ・枚数", "ok": checks.h_check([uf.t(f"KenHBox{i}") for i in range(1, 8)]) == ""},
+            {"label": "検入高さ・枚数", "ok": checks.h_check([uf.t(ken_h_name(i)) for i in range(1, 8)]) == ""},
             {"label": "山数", "ok": not (st.yama_visible and st.yama == "")},
         ]
         if pre.text != "":

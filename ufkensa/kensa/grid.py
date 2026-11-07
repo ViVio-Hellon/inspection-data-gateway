@@ -33,7 +33,7 @@ from . import vbx
 # ------------------------------------------------------------------
 #: 検査位置(列)。F は 4 山(6 回検査)のときだけ使う
 #: 位置と行数は model.py で決める(F11〜F14 は存在しない)
-from .model import POSITIONS, ROW_COUNT, Face, FormTag, Measures, Switch  # noqa: E402
+from .model import POSITIONS, ROW_COUNT, Face, FormTag, Measures, Switch, Verdict  # noqa: E402
 
 #: 作業選択(OptionButton の名前)
 WORKS: tuple[str, ...] = ("厚板", "薄板", "少枚数", "極厚", "スラブ")
@@ -102,6 +102,11 @@ class Ctl:
     def judge(self) -> str:
         """判定状態("OK" / "NG" / "")。色から読む(VBA は BackColor で判定している)。"""
         return self.color if self.color in (COLOR_OK, COLOR_NG) else ""
+
+    @property
+    def verdict(self) -> Verdict:
+        """判定(model.Verdict)。業務の判断は色を直接見ずにこれ・is_ng・is_ok を使う。"""
+        return Verdict.of(self.color)
 
     @property
     def is_ng(self) -> bool:

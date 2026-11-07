@@ -198,3 +198,26 @@ class FormTag:
     """UF1.Tag。STOP の間は音声・MsgBox を止める。"""
     NONE = ""
     STOP = "STOP"
+
+
+# ----------------------------------------------------------------------
+# 外観・不良枚数・検入高さの欄の名前(段6)
+# ----------------------------------------------------------------------
+def visual_up_name(pos: str) -> str:
+    """外観(上面)の欄(S_UpVisual…)。"""
+    return f"{pos}_UpVisual"
+
+
+def visual_under_name(pos: str) -> str:
+    """外観(下面)の欄(S_UnderVisual…)。"""
+    return f"{pos}_UnderVisual"
+
+
+def bad_name(pos: str) -> str:
+    """外観不良枚数の欄(SBad…)。"""
+    return f"{pos}Bad"
+
+
+def ken_h_name(i: int) -> str:
+    """検入高さの欄(KenHBox1〜7。7 は少枚数の枚数)。"""
+    return f"KenHBox{i}"

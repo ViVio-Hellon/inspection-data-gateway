@@ -28,7 +28,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
 from . import datasource, paths, vbx
-from .model import Face, NORMAL, diag_name, kou_name, lateral_name
+from .model import Face, NORMAL, diag_name, ken_h_name, kou_name, lateral_name, visual_under_name, visual_up_name
 from .flow import ERROR, INFO, WARN, Message, Stop
 
 # ------------------------------------------------------------------
@@ -795,7 +795,7 @@ def yama_layout(selected: str, mitsubishi: bool = False) -> Optional[YamaLayout]
     for i in range(1, 7):
         vis[f"HL{i}"] = False
     for i in range(1, 8):
-        vis[f"KenHBox{i}"] = False
+        vis[ken_h_name(i)] = False
     tem_a = 7 if mitsubishi else 10
     for i in range(1, tem_a + 1):
         vis[f"KenHL{i}"] = False
@@ -805,7 +805,7 @@ def yama_layout(selected: str, mitsubishi: bool = False) -> Optional[YamaLayout]
         k = int(selected)
         for i in range(1, k + 1):
             vis[f"HL{i}"] = True
-            vis[f"KenHBox{i}"] = True
+            vis[ken_h_name(i)] = True
             vis[f"KenHL{i}"] = True
             caps[f"HL{i}"] = "1" if k == 1 else f"{k}-{k + 1 - i}"
     elif selected == "枚数":
@@ -1030,7 +1030,7 @@ def check_labels_by_category(uf: Uf1, category: str, dist: Optional[WorkDist]) -
                 return RED
     else:
         return RED
-    for name in (lateral_name(category), kou_name(category), category + "_UpVisual", category + "_UnderVisual"):
+    for name in (lateral_name(category), kou_name(category), visual_up_name(category), visual_under_name(category)):
         state = get_label_state(uf, name)
         if state == "可":
             color, flag = GREEN, True
@@ -1147,7 +1147,7 @@ def lateralbow_check(uf: Uf1) -> str:
 
 def visual_check(uf: Uf1) -> str:
     """外観(上・下)の未入力。`Visual_Check (O:2106-2120)`"""
-    return _first_row(uf, lambda p: uf.t(p + "_UpVisual") == "" or uf.t(p + "_UnderVisual") == "")
+    return _first_row(uf, lambda p: uf.t(visual_up_name(p)) == "" or uf.t(visual_under_name(p)) == "")
 
 
 def bh_check(uf: Uf1) -> str:
@@ -1195,7 +1195,7 @@ def print_precheck(uf: Uf1, dist: Optional[WorkDist]) -> PrecheckResult:
     g = distortion_check(after_z, "G")
     rate = lateralbow_check(uf)
     gaikan = visual_check(uf)
-    ken_h = h_check([uf.t(f"KenHBox{i}") for i in range(1, 8)])
+    ken_h = h_check([uf.t(ken_h_name(i)) for i in range(1, 8)])
     ab = withor_without_gauge(uf, dist)
     chokkaku = angle_check(uf)
     cleared = tuple(dict.fromkeys(z.cleared + g.cleared))
@@ -1566,7 +1566,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
            OPE1="1", OPE2="2", OPE3="3", OPE4="4", OPE5="5")
     ch.vis(["FM" + p for p in rows5], True)
     ch.vis([f"LC{i}" for i in (1, 2, 3, 4, 5, 7, 8, 9, 10, 11)], True)
-    ch.vis([p + "_UpVisual" for p in rows5] + [p + "_UnderVisual" for p in rows5], True)
+    ch.vis([visual_up_name(p) for p in rows5] + [visual_under_name(p) for p in rows5], True)
     for i in range(1, 11):
         ch.vis([f"{p}{i}" for p in rows5], True, True)
     ch.vis([diag_name(p) for p in rows5], True, True)
@@ -1637,7 +1637,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
     elif tb == 2:
         ch.set(C="", D="", E="", FC="", FD="", FE="", OPS3="", OPS4="", OPS5="", OPE3="", OPE4="", OPE5="")
         ch.vis(["FMC", "FMD", "FME", "LC5", "LC11", "LC4", "LC10", "LC3", "LC9"]
-               + [p + "_UpVisual" for p in "CDE"] + [p + "_UnderVisual" for p in "CDE"], False)
+               + [visual_up_name(p) for p in "CDE"] + [visual_under_name(p) for p in "CDE"], False)
         ch.vis([f"{p}{i}" for i in range(1, 11) for p in "CDE"], False, False)
         ch.vis(["DiagC"], False, False)
         if r115:
@@ -1650,7 +1650,7 @@ def small_number_count(tb: int, uf: Uf1, lot_rows: Optional[Sequence[Sequence[ob
         ch.set(U="", C="", D="", E="", FU="", FC="", FD="", FE="",
                OPS2="", OPS3="", OPS4="", OPS5="", OPE2="", OPE3="", OPE4="", OPE5="")
         ch.vis(["FMU", "FMC", "FMD", "FME", "LC5", "LC11", "LC4", "LC10", "LC3", "LC9", "LC2", "LC8"]
-               + [p + "_UpVisual" for p in "UCDE"] + [p + "_UnderVisual" for p in "UCDE"], False)
+               + [visual_up_name(p) for p in "UCDE"] + [visual_under_name(p) for p in "UCDE"], False)
         ch.vis([f"{p}{i}" for i in range(1, 11) for p in "UCDE"], False, False)
         if r115:
             ch.vis(["DiagUKou", "DiagCKou", "DiagDKou", "DiagEKou"], False, False)

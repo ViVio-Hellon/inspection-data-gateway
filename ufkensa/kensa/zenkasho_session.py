@@ -61,6 +61,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .. import trace
+from .model import ken_h_name
 from . import checks, datasource, judge, legacy_log, packing, paths, quality, report_html, report_model, \
     terminal, vbx, workers
 from . import lot as lotmod
@@ -1160,7 +1161,7 @@ class ZenkashoSession(SubInspectionCommon):
         layout = checks.yama_layout(YAMA_LIST[f.yama_index] if isinstance(f.yama_index, int)
                                     and 0 <= f.yama_index < len(YAMA_LIST) else "", mitsubishi=True)
         kenh_boxes = [{"n": i, "value": f.kenh.get(i, ""),
-                       "visible": bool(layout and layout.visible.get(f"KenHBox{i}")),
+                       "visible": bool(layout and layout.visible.get(ken_h_name(i))),
                        "caption": (layout.hl_captions.get(f"HL{i}", "") if layout else "") if i < 7 else "枚"}
                       for i in range(1, 8)]
         prints = []

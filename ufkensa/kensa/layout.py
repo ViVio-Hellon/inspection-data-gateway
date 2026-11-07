@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from . import paths, vbx
-from .model import FormTag, NORMAL, Switch, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, thick_format
+from .model import FormTag, NORMAL, Switch, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, thick_format, visual_under_name, visual_up_name
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -218,8 +218,8 @@ def six_display(state: KensaState, n: str, hooks: Hooks) -> None:
         for i in list(range(1, 6)) + list(range(7, 12)):
             _show(state, f"LC{i}", True)
         for p in FIVE:
-            _show(state, f"{p}_UpVisual", True)
-            _show(state, f"{p}_UnderVisual", True)
+            _show(state, visual_up_name(p), True)
+            _show(state, visual_under_name(p), True)
         if state.youto != "R115":
             _show(state, "L10", False)
             for p in FIVE:
@@ -877,8 +877,8 @@ def _lselect_common_cells(state: KensaState) -> None:
     for i in list(range(1, 6)) + list(range(7, 12)):
         _show(state, f"LC{i}", True)
     for p in FIVE:
-        _show(state, f"{p}_UpVisual", True)
-        _show(state, f"{p}_UnderVisual", True)
+        _show(state, visual_up_name(p), True)
+        _show(state, visual_under_name(p), True)
         _show(state, bh_name(p), True)
     if state.youto != "R115":
         _show(state, "L10", False)
@@ -913,8 +913,8 @@ def _lselect_rows_by_work(state: KensaState, n: str, hooks: Hooks) -> None:
             for i in list(range(1, 6)) + list(range(7, 12)):
                 _show(state, f"LC{i}", True)
             for p in ("U", "C", "D"):
-                _show(state, f"{p}_UpVisual", True)
-                _show(state, f"{p}_UnderVisual", True)
+                _show(state, visual_up_name(p), True)
+                _show(state, visual_under_name(p), True)
         elif n == "薄板":
             _thin_body(state, hooks, set_diag=False)
         elif n == "少枚数":
@@ -935,8 +935,8 @@ def _lselect_sumisei(state: KensaState, n: str, hooks: Hooks, ken_no: str, with_
             _cells(state, NORMAL.size_rows, ("U", "D"), False, False)
             _cells(state, NORMAL.size_rows, ("C", "E"), True, True)
             for p in ("U", "C", "D"):
-                _show(state, f"{p}_UpVisual", True)
-                _show(state, f"{p}_UnderVisual", True)
+                _show(state, visual_up_name(p), True)
+                _show(state, visual_under_name(p), True)
             _show(state, "DiagS", True)
             _show(state, "DiagU", False, False)
             _show(state, "DiagC", True)
@@ -1053,8 +1053,8 @@ def _lc_and_visual(state: KensaState) -> None:
     for i in list(range(1, 6)) + list(range(7, 12)):
         _show(state, f"LC{i}", True)
     for p in ("U", "C", "D"):
-        _show(state, f"{p}_UpVisual", True)
-        _show(state, f"{p}_UnderVisual", True)
+        _show(state, visual_up_name(p), True)
+        _show(state, visual_under_name(p), True)
 
 
 def _thin_body(state: KensaState, hooks: Hooks, *, set_diag: bool) -> None:
@@ -1154,8 +1154,8 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
     for p in FIVE + ("F",):
         _show(state, p, True, False)                 # 列見出し(1 文字)
         _show(state, "F" + p, True, False)           # 歪見出し FS..FF
-        _show(state, f"{p}_UpVisual", True, True)
-        _show(state, f"{p}_UnderVisual", True, True)
+        _show(state, visual_up_name(p), True, True)
+        _show(state, visual_under_name(p), True, True)
         _show(state, diag_name(p), True, True)
         _show(state, "FM" + p, True)
     for i in THICK_ROWS:
