@@ -272,29 +272,82 @@ def set_registry(state: KensaState, reg: workers.WorkerRegistry) -> None:
 # ------------------------------------------------------------------
 # checks.Uf1
 # ------------------------------------------------------------------
-def to_uf1(state: KensaState, worker_day_max_: str = "") -> checks.Uf1:
-    """KensaState → checks.Uf1(読むだけの写し)。"""
-    text: dict[str, str] = {}
-    visible: dict[str, bool] = {}
-    ng: set[str] = set()
-    for name, c in all_controls(state).items():
-        text[name] = c.value
-        visible[name] = c.visible
-        if state.is_ng(name):
-            ng.add(name)
-    for name, attr in SCALAR.items():
-        text[name] = getattr(state, attr)
-    for name, attr in TAG_SCALAR.items():
-        text[name + ".Tag"] = getattr(state, attr)
-    for w in grid.WORKS:
-        text[w + ".Caption"] = state.work_caption.get(w, w)
-    visible["Yama"] = state.yama_visible
-    visible["AtButt"] = state.at_butt_visible
-    visible["InspeButt"] = state.inspe_butt_visible
-    text["AtButt"] = state.at_butt_caption
-    text["InspeButt"] = state.inspe_butt_caption
-    return checks.Uf1(text=text, visible=visible, ng=ng, work=state.work, line_name=state.line_name,
-                      line_no=state.line_no, worker_day_max=worker_day_max_)
+class StateUf1:
+    """第3段10: checks.Uf1 と同じ読み方で、KensaState を**写さずに**読む窓口。
+
+    前は to_uf1 が全コントロールの値・表示・NG を dict に写していた(操作のたびに数百件)。
+    いまは名前 → コントロールの表だけを作り、値は読むときに KensaState から取る。
+    `text` / `visible` / `ng` は、まとめて要る所(checks の 2 か所)のために、読んだときに作る。
+    """
+
+    def __init__(self, state: KensaState, worker_day_max_: str = "") -> None:
+        self._s = state
+        self._ctls = all_controls(state)
+        self.work, self.line_name, self.line_no = state.work, state.line_name, state.line_no
+        self.worker_day_max = worker_day_max_
+
+    @property
+    def lname(self) -> str:
+        return self.line_name + self.line_no
+
+    def t(self, name: str) -> str:
+        s = self._s
+        if name == "AtButt":
+            return s.at_butt_caption
+        if name == "InspeButt":
+            return s.inspe_butt_caption
+        if name.endswith(".Caption") and name[:-8] in grid.WORKS:
+            return s.work_caption.get(name[:-8], name[:-8])
+        if name.endswith(".Tag") and name[:-4] in TAG_SCALAR:
+            return getattr(s, TAG_SCALAR[name[:-4]])
+        if name in SCALAR:
+            return getattr(s, SCALAR[name])
+        c = self._ctls.get(name)
+        v = c.value if c is not None else ""
+        return "" if v is None else str(v)
+
+    def vis(self, name: str) -> bool:
+        s = self._s
+        if name == "Yama":
+            return bool(s.yama_visible)
+        if name == "AtButt":
+            return bool(s.at_butt_visible)
+        if name == "InspeButt":
+            return bool(s.inspe_butt_visible)
+        c = self._ctls.get(name)
+        return bool(c.visible) if c is not None else False
+
+    def is_ng(self, name: str) -> bool:
+        return name in self._ctls and self._s.is_ng(name)
+
+    # まとめて要る所のため(読んだ時点の写し)
+    @property
+    def text(self) -> dict[str, str]:
+        out = {n: c.value for n, c in self._ctls.items()}
+        for name, attr in SCALAR.items():
+            out[name] = getattr(self._s, attr)
+        for name, attr in TAG_SCALAR.items():
+            out[name + ".Tag"] = getattr(self._s, attr)
+        for w in grid.WORKS:
+            out[w + ".Caption"] = self._s.work_caption.get(w, w)
+        out["AtButt"], out["InspeButt"] = self._s.at_butt_caption, self._s.inspe_butt_caption
+        return out
+
+    @property
+    def visible(self) -> dict[str, bool]:
+        out = {n: c.visible for n, c in self._ctls.items()}
+        out["Yama"], out["AtButt"] = self._s.yama_visible, self._s.at_butt_visible
+        out["InspeButt"] = self._s.inspe_butt_visible
+        return out
+
+    @property
+    def ng(self) -> set[str]:
+        return {n for n in self._ctls if self._s.is_ng(n)}
+
+
+def to_uf1(state: KensaState, worker_day_max_: str = "") -> "StateUf1":
+    """KensaState → checks.Uf1 と同じ読み方の窓口(写さない。第3段10)。"""
+    return StateUf1(state, worker_day_max_)
 
 
 # ------------------------------------------------------------------
