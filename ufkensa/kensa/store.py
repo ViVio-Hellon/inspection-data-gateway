@@ -191,6 +191,14 @@ class LocalStore:
         self._depth = 0
         self.conn = sqlite3.connect(str(self.path), timeout=BUSY_TIMEOUT_MS / 1000, check_same_thread=False)
         self.conn.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}")
+        if not str(self.path).startswith(("\\\\", "//")):
+            # 手元のディスクだけ: 書くたびのディスク同期を減らす(HDD では 1 操作ごとの保存が数十 ms → ほぼ 0)。
+            # 電源断でも DB は壊れない(最後の 1 操作が戻ることはある)。共有フォルダでは WAL は使えないので従来どおり
+            try:
+                self.conn.execute("PRAGMA journal_mode = WAL")
+                self.conn.execute("PRAGMA synchronous = NORMAL")
+            except sqlite3.DatabaseError:
+                pass
         self._create()
 
     def close(self) -> None:
