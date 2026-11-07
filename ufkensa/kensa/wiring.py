@@ -42,6 +42,7 @@ VBA のコントロール名(`ATU`、`S1`、`DiagSKou`、`LateralText.Tag`、`�
 """
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Optional, Sequence
@@ -107,47 +108,76 @@ def color_name(v: Any) -> str:
     return _COLOR_BY_VBA.get(int(v), str(int(v)))
 
 
+@dataclass(frozen=True)
+class Accessor:
+    """第3段10: VBA の名前(`名前.Prop`)1 つ分の読み書き先。名前の解釈は accessor() の 1 か所だけで行う。
+
+    kind: "attr"(KensaState の属性)/ "caption"(作業選択ボタンの Caption)/ "ctl"(コントロール)
+    """
+    name: str
+    base: str
+    prop: str            # value / tag / color / visible / enabled / backstyle
+    kind: str
+    attr: str = ""
+
+    def get(self, state: KensaState) -> str:
+        if self.kind == "attr":
+            return getattr(state, self.attr)
+        if self.kind == "caption":
+            return state.work_caption.get(self.base, self.base)
+        c = _ctl(state, self.base)
+        return c.tag if self.prop == "tag" else c.value
+
+    def set(self, state: KensaState, value: Any) -> None:
+        if self.prop in ("value", "tag"):
+            text = value if isinstance(value, str) else cell_text(value)
+            if self.kind == "attr":
+                setattr(state, self.attr, text)
+            elif self.kind == "caption":
+                state.work_caption[self.base] = text
+            elif self.prop == "tag":
+                _ctl(state, self.base).tag = text
+            else:
+                _ctl(state, self.base).value = text
+        elif self.prop == "color":
+            col = color_name(value)
+            if self.base == "LateralText":
+                state.lateral_text_colored = col not in (grid.COLOR_DEFAULT, "-2147483642")
+            state.set_color(self.base, col) if state.has_ctl(self.base) else _view_color(state, self.base, col)
+        elif self.prop == "visible":
+            _ctl(state, self.base).visible = bool(value)
+        elif self.prop == "enabled":
+            _ctl(state, self.base).enabled = bool(value)
+        # BackStyle は表示だけ(移さない)
+
+
+def _view_color(state: KensaState, base: str, col: str) -> None:
+    state.v(base).color = col
+    set_verdict(state.verdicts, base, col)
+
+
+@functools.lru_cache(maxsize=None)
+def accessor(name: str) -> Accessor:
+    """VBA の名前 → 読み書き先。SCALAR / TAG_SCALAR / 作業選択の Caption / コントロール の順に決める。"""
+    base, prop = _split(name)
+    if prop == "value" and base in SCALAR:
+        return Accessor(name, base, prop, "attr", SCALAR[base])
+    if prop == "tag" and base in TAG_SCALAR:
+        return Accessor(name, base, prop, "attr", TAG_SCALAR[base])
+    if prop == "value" and base in grid.WORKS and name.endswith(".Caption"):
+        return Accessor(name, base, prop, "caption")
+    return Accessor(name, base, prop, "ctl")
+
+
 def put(state: KensaState, name: str, value: Any) -> None:
     """VBA の `UF1(name) = value`(`名前.Tag` などのプロパティつきも可)。"""
-    base, prop = _split(name)
-    if prop == "value":
-        text = value if isinstance(value, str) else cell_text(value)
-        if base in SCALAR:
-            setattr(state, SCALAR[base], text)
-        elif base in grid.WORKS and name.endswith(".Caption"):
-            state.work_caption[base] = text
-        else:
-            _ctl(state, base).value = text
-    elif prop == "tag":
-        text = value if isinstance(value, str) else cell_text(value)
-        if base in TAG_SCALAR:
-            setattr(state, TAG_SCALAR[base], text)
-        else:
-            _ctl(state, base).tag = text
-    elif prop == "color":
-        if base == "LateralText":
-            state.lateral_text_colored = color_name(value) not in (grid.COLOR_DEFAULT, "-2147483642")
-        _ctl(state, base).color = color_name(value)
-        set_verdict(state.verdicts, base, color_name(value))
-    elif prop == "visible":
-        _ctl(state, base).visible = bool(value)
-    elif prop == "enabled":
-        _ctl(state, base).enabled = bool(value)
-    # BackStyle は表示だけ(移さない)
+    accessor(name).set(state, value)
 
 
 def get(state: KensaState, name: str) -> str:
     """VBA の `UF1(name)`(Caption / Text)。`名前.Tag` も読める。"""
-    base, prop = _split(name)
-    if prop == "tag":
-        if base in TAG_SCALAR:
-            return getattr(state, TAG_SCALAR[base])
-        return _ctl(state, base).tag
-    if base in SCALAR:
-        return getattr(state, SCALAR[base])
-    if base in grid.WORKS and name.endswith(".Caption"):
-        return state.work_caption.get(base, base)
-    return _ctl(state, base).value
+    a = accessor(name)
+    return a.get(state) if a.prop in ("value", "tag") else accessor(a.base).get(state)
 
 
 def all_controls(state: KensaState) -> dict[str, Ctl]:
