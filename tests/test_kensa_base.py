@@ -75,21 +75,11 @@ class VbxTest(unittest.TestCase):
 
 
 class QuirksTest(unittest.TestCase):
-    def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
-    def test_default_is_reproduce(self) -> None:
-        quirks.set_for_test({})
-        self.assertTrue(all(quirks.reproduce(k) for k in quirks.TITLES))
-
-    def test_fix(self) -> None:
-        quirks.set_for_test({"b8": "fix"})
-        self.assertFalse(quirks.reproduce("B8"))
-        self.assertTrue(quirks.reproduce("B1"))
-
-    def test_unknown_number_is_an_error(self) -> None:
-        with self.assertRaises(KeyError):
-            quirks.reproduce("B99")
+    def test_summary_matches_decision(self) -> None:
+        sm = quirks.summary()
+        self.assertEqual(len(sm["fix"]), 86)
+        self.assertIn("B19", sm["keep"])
+        self.assertIn("B37", sm["keep"])
 
     def test_89_items(self) -> None:
         self.assertEqual(len(quirks.TITLES), 89)

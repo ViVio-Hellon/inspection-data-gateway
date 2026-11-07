@@ -45,7 +45,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Sequence
 
-from . import ado_filter, datasource, flow, paths, quirks, vbx
+from . import ado_filter, datasource, flow, paths, vbx
 from .flow import ERROR, INFO, Message
 
 TABLE = "仕掛"
@@ -260,9 +260,7 @@ def is_over_12_hours(end_time: Any, now: Optional[_dt.datetime] = None, *, sheet
         return False
     target = cdate(end_time)
     diff = _hour_diff(target, _now(now))
-    if quirks.reproduce("B19"):
-        return diff >= 1
-    return diff >= 12
+    return diff >= 1
 
 
 # ------------------------------------------------------------------
@@ -674,11 +672,11 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
     f["KenH"] = "前工程実績" + rs.control("BOX実績_枚本数") + "枚"
     if find_right_string(h_cours) != "":
         out.last_hot = "最終熱処理工程：" + find_right_string(h_cours)
-    elif not quirks.reproduce("B54"):
+    else:
         out.last_hot = ""                   # B54 を直す: 前ロットの表示を消す
     if vbx.instr(h_cours, "QF") > 0:
         out.qf = "QF有り"
-    elif not quirks.reproduce("B54"):
+    else:
         out.qf = ""                         # B54 を直す: 前ロットの表示を消す
     if not vbx.is_numeric(f["TAIK"]):
         f["TAIK"] = "4"
@@ -840,8 +838,6 @@ def history_delete_rows(sheet_rows: Sequence[Sequence[Any]], lot: Any) -> list[i
     hits = [i + 1 for i in range(1, len(sheet_rows)) if variant_eq(c(sheet_rows[i]), lot)]
     if not hits:
         return []
-    if quirks.reproduce("B16"):
-        return list(range(hits[0], hits[-1] + 1))
     return hits
 
 
@@ -895,16 +891,13 @@ def history_save(past_hiki: Sequence[Any], sheet_rows: Sequence[Sequence[Any]], 
     res = HistorySaveResult()
     lot = past_hiki[1]
     delete_rows = history_delete_rows(sheet_rows, lot)
-    if quirks.reproduce("B50"):
-        # VBA: DB を確かめる前に消す(途中で抜けても消えたまま)
-        res.delete_rows = delete_rows
     try:
         _history_save_db(past_hiki, env, res)
     except (vbx.TypeMismatch, SubscriptOutOfRange) as e:
         # 再現: 行の削除は済んでいる(VBA は削除の後で止まる)。直した場合は消さない。呼び手が `e.partial` を反映する
         e.partial = res  # type: ignore[attr-defined]
         raise
-    if not quirks.reproduce("B50") and res.completed:
+    if res.completed:
         # B50 を直す: DB の確認を通って新しい行を作れたときだけ古い行を消す
         res.delete_rows = delete_rows
     return res
@@ -926,7 +919,7 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
         if fpath == nxt:
             # 再現: 控え側を選んでいたら、控えのファイルがあっても抜ける(VBA どおり)
             # B49 を直す: 控えのファイルがあればそのまま控えを読む(無いときだけ抜ける)
-            if quirks.reproduce("B49") or not read_check(file_path, 1):
+            if not read_check(file_path, 1):
                 if not over12:
                     res.messages.append(missing)
                 res.file_path = file_path
@@ -987,8 +980,6 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
     odr_path = db_path(fpath, "SIKAODRNOW")
     vc = datasource.get_fields(odr_path, TABLE, "")
     if vc is None:
-        if quirks.reproduce("B51"):
-            raise vbx.TypeMismatch("SIKAODRNOW の列名が Empty (SaveLoad:1390)")
         fpath, odr_path, ok = _odr_fallback(fpath, odr_path, "VCFieldﾃﾞｰﾀがありません", res, over12)
         if not ok:
             return res
@@ -1000,8 +991,6 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
             return res
     vcr = datasource.get_records(odr_path, TABLE, "")
     if vcr is None:
-        if quirks.reproduce("B51"):
-            raise vbx.TypeMismatch("SIKAODRNOW の行が Empty (SaveLoad:1408)")
         fpath, odr_path, ok = _odr_fallback(fpath, odr_path, "VCRecordﾃﾞｰﾀがありません", res, over12)
         if not ok:
             return res
@@ -1044,8 +1033,7 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
             row[23] = hrow[_need(h["引当数量"], "引当数量")]      # X
             row[24] = hrow[_need(h["引当ﾌｧｲﾙ登録年月日時分秒"], "引当ﾌｧｲﾙ登録年月日時分秒")]  # Y
             row[25] = vrow[_need(r["包装仕様NO"], "包装仕様NO")]  # Z
-            if not quirks.reproduce("B15"):
-                row.append(lateral_grade)           # AA: ﾗﾃﾗﾙﾎﾞｰ等級(直した場合の置き場所)
+            row.append(lateral_grade)           # AA: ﾗﾃﾗﾙﾎﾞｰ等級(直した場合の置き場所)
             res.new_rows.append(row)
 
             ken = ""

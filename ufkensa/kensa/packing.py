@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
-from . import datasource, paths, quality, quirks, vbx
+from . import datasource, paths, quality, vbx
 from .flow import ERROR, INFO, WARN, Message
 from .lot import read_check
 
@@ -148,7 +148,7 @@ def packing_no_check(hist: Optional[Sequence[Sequence[Any]]], lot_no: str, *,
         return ""
     folder = paths.to_local(folder_path())
     # B84: PacN はデバッグ用の配列。直した場合は PacN を作らない(空のフォルダ・"." が 7 文字目でない名前で止まらない)
-    fix_b84 = not quirks.reproduce("B84")
+    fix_b84 = True
     try:
         names = (files or list_files)(folder)
     except PackingError as e:

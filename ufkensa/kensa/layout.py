@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from . import paths, quirks, vbx
+from . import paths, vbx
 from .flow import ERROR, INFO, Message
 from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, hab_lt_300, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
@@ -347,10 +347,7 @@ def at_count_select(state: KensaState, n: int, hooks: Hooks) -> None:
             _show(state, f"AL{i}", True)
             if f[6]:
                 _cells(state, [i], FIVE + ("F",), True)
-                if quirks.reproduce("B59"):
-                    _cells(state, [i], FIVE, enabled=True)          # F の Enabled を設定しない(F の Visible を2回)
-                else:
-                    _cells(state, [i], FIVE + ("F",), enabled=True)
+                _cells(state, [i], FIVE + ("F",), enabled=True)
             elif f[4]:
                 _cells(state, [i], ("S", "E"), True, True)
             elif f[3]:
@@ -361,7 +358,7 @@ def at_count_select(state: KensaState, n: int, hooks: Hooks) -> None:
 
 def _b5_2yama_ops5() -> str:
     """B5: InspectionSelect の 2 山の OPS5 は VBA では "2-2-E"(他の箇所は "2-1-E")。"""
-    return "2-2-E" if quirks.reproduce("B5") else "2-1-E"
+    return "2-1-E"
 
 
 def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
@@ -426,7 +423,7 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
             for i in (2, 3, 4, 8, 9, 10):
                 _show(state, f"LC{i}", True)
             # B58: VBA は C_UpVisual を 2 回表示にして C_UnderVisual を触らない(FormRelat:2375-2380)
-            c_under = "C_UpVisual" if quirks.reproduce("B58") else "C_UnderVisual"
+            c_under = "C_UnderVisual"
             for name in ("U_UpVisual", "C_UpVisual", "D_UpVisual", "U_UnderVisual", c_under, "D_UnderVisual",
                          "UBH", "CBH", "DBH"):
                 _show(state, name, True)
@@ -704,9 +701,9 @@ def lselect(state: KensaState, n: str, hooks: Hooks, skip_db_check: bool = False
         jumped = info.jumped
         with_ok = not jumped
         # B57: GoTo LineSkip が With UF1 の途中へ飛び、`.` の文がエラー91 で飛ばされる。直すと LineSkip 以降の `.` の文は効く
-        fix_jump = jumped and not quirks.reproduce("B57")
+        fix_jump = jumped
         # B56: 2HI 通過・6mm 超で消した AtButt を LineSkip でまた表示する(検番 T 以外)。直すと消したまま(DB を見たときだけ)
-        keep_at_hidden = (not jumped) and (hi or not atu_flag) and not quirks.reproduce("B56")
+        keep_at_hidden = (not jumped) and (hi or not atu_flag)
         _lselect_headers(state, n, hooks, ken_no, hi, atu_flag, with_ok, fix_jump, keep_at_hidden)
         _lselect_common_cells(state)
         _lselect_rows_by_work(state, n, hooks)
@@ -809,7 +806,7 @@ def _lselect_lot_facts(state: KensaState, n: str, hooks: Hooks, msgs: list[Messa
             except VBA_ERRORS as _vba_e:
                 vba_swallow(_vba_e, "layout.py lselect")
                 new_atu = 0.0                                     # 代入ごと飛ばされる
-                if use_cache and not quirks.reproduce("B7"):
+                if use_cache:
                     new_atu = c.ord_atu
             else:
                 try:
@@ -1257,7 +1254,7 @@ def byousya_after_update(state: KensaState, hooks: Hooks) -> None:
 
     B62: VBA はスラブを外さない(厚板・薄板・少枚数・極厚だけ False にする)。直すとスラブも外す。On Error Resume Next。
     """
-    works = ("厚板", "薄板", "少枚数", "極厚") if quirks.reproduce("B62") else ("厚板", "薄板", "少枚数", "極厚", "スラブ")
+    works = ("厚板", "薄板", "少枚数", "極厚", "スラブ")
     if state.work in works:
         state.work = ""
     for fn, args in ((six_display, ("on", hooks)), (lselect_lateral, ("強制", "6回目も表示")),
@@ -1367,17 +1364,11 @@ def line_auto_selection(state: KensaState, n: str, hooks: Hooks, maru_no: int = 
     state.v("ZEB").value = "検入4山以上" if vbx.mid(state.line_name, 1, 2) == "丸徳" else "全数.三菱.5N"
     state.form_tag = "STOP"
     state.load = "off"
-    stuck = False                                   # B6 を再現するときだけ、VBA どおり止まったまま抜ける
     try:
         hooks.load_text(state, n)
         if state.lot != "":
             rows = hooks.get_lot_info(state, state.lot)
-            if rows is None:
-                if quirks.reproduce("B6"):
-                    hooks.worker_load(state)
-                    stuck = True
-                    return
-            else:
+            if rows is not None:
                 alloc = judge_lot_allocations(state, rows, hooks)
                 if alloc.need_flat:
                     state.flatnes_text = "ﾌﾘｰｿﾘ要"
@@ -1387,6 +1378,5 @@ def line_auto_selection(state: KensaState, n: str, hooks: Hooks, maru_no: int = 
         for p in FIVE + ("F",):
             hooks.check_labels_by_category(state, p)
     finally:
-        if not stuck:                               # 途中で止まっても旗は戻す(2026-11-06)
-            state.load = "on"
-            state.form_tag = ""
+        state.load = "on"                           # 途中で止まっても旗は戻す(2026-11-06。B6 を直した)
+        state.form_tag = ""

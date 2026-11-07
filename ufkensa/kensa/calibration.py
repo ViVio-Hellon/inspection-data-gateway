@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Mapping, Optional
 
-from . import legacy_log, lines, quirks, vbx
+from . import legacy_log, lines, vbx
 from . import sound as snd
 from .flow import ERROR, INFO, Message, Stop
 from .workers import (CellWrite, ShiftTimes, WorkerRegistry, _seconds, hhmm, last_row, time_check,
@@ -363,11 +363,7 @@ def input_gauge(state: CalibrationState, raw: str, kiroku: Optional[Cells],
     if state.sokutei != "":
         measured = state.sokutei
         _measure_done(state, kiroku, straight_edge, res, now=now, facility=facility, shifts=shifts)
-        if quirks.reproduce("B66"):
-            # VBA: 不合格だと 測定完了 が SokuteiH を消した後にログを書くので、値が残らない
-            res.logs.append(_log(state.line_name, "ｹﾞｰｼﾞ測定:" + state.sokutei))
-        else:
-            res.logs.append(_log(state.line_name, "ｹﾞｰｼﾞ測定:" + measured))
+        res.logs.append(_log(state.line_name, "ｹﾞｰｼﾞ測定:" + measured))
     else:
         state.f1 = "1"
     return res
@@ -412,8 +408,7 @@ def _measure_done(state: CalibrationState, ws: Optional[Cells], straight_edge: O
             res.kiroku_writes.append(CellWrite(k, 2, "夜勤日付処理"))
         res.kiroku_writes += [CellWrite(k, 3, _hms(now)), CellWrite(k, 5, state.sokutei),
                               CellWrite(k, 6, state.kname), CellWrite(k, 7, facility), CellWrite(k, 8, "〆")]
-        if not quirks.reproduce("B14"):
-            res.kiroku_red += [(k, 1), (k, 3), (k, 5), (k, 6), (k, 7)]       # 旧コード P:243-247 と同じ赤字
+        res.kiroku_red += [(k, 1), (k, 3), (k, 5), (k, 6), (k, 7)]       # 旧コード P:243-247 と同じ赤字
         res.messages.append(Message("", INFO, sound=FAIL_SOUND, source="Proofreading:148"))
         state.inpg = ""
         state.sokutei = ""
@@ -447,21 +442,7 @@ def skip_1000_button(state: CalibrationState) -> bool:
 
     B14: 直すときは何もしない(False)。丸徳は Gauge の文を変えない。
     """
-    if not quirks.reproduce("B14"):
-        return False
-    state.saiken = False
-    state.ng_value = ""
-    state.inp1000 = ""
-    state.sokutei = ""
-    g = {"L-1": "[L-1]:直尺「S-2」の全長を測定してください", "LVC": "[LVC]:直尺「S-1」の全長を測定してください",
-         "HVC": "[HVC]:直尺「S-1」の全長を測定してください", "バランサー": "[大板]:直尺「S-1」の全長を測定してください",
-         "トット": "[大板]:直尺「S-1」の全長を測定してください",
-         "Test": "[TEST]:直尺「S-1」の全長を測定してください"}.get(_official(state.line_name))
-    if g is not None:
-        state.gauge = g
-    state.ranks = {}
-    state.mode = WHITE
-    return True
+    return False
 
 
 def hinsho_button1(state: CalibrationState, sh: Cells, *, now: datetime, facility: str,
@@ -577,10 +558,9 @@ def calibration_rank(cells: Cells, line_name: str, *, now: datetime,
             for col, src in zip(cols, (1, 5, 6)):
                 sheet[(r, col)] = sheet.get((c, src))
                 writes.append(CellWrite(r, col, sheet.get((c, src))))
-    if not quirks.reproduce("B67"):
-        # 直した側: I:O を消して書き写した後の J・N 列で最終行を数える(新しい記録がその回に出る)
-        k_old = last_row(sheet, 10)
-        l_old = last_row(sheet, 14)
+    # 直した側: I:O を消して書き写した後の J・N 列で最終行を数える(新しい記録がその回に出る)
+    k_old = last_row(sheet, 10)
+    l_old = last_row(sheet, 14)
     ran1 = [sheet.get((r, 10)) for r in range(min(2, k_old), max(2, k_old) + 1)]
     ran2 = [sheet.get((r, 14)) for r in range(min(2, l_old), max(2, l_old) + 1)]
     mx = _top3(ran1, largest=True)

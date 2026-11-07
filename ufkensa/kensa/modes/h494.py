@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Union
 
-from .. import flow, quirks, vbx
+from .. import flow, vbx
 from .. import sound as snd
 from . import sheet as sh
 from . import zenkasho as zk
@@ -71,8 +71,7 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
         book.events_enabled = False
         book.resume(lambda: sh.al_ter_range(book, TR, TC, befor), "AlTerRange")
         if not sh.is_numeric(target.get(TR, TC)):
-            if not quirks.reproduce("B79"):
-                book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
+            book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
             return                                # B79: EnableEvents は False のまま(VBA どおり)
         book.events_enabled = True
         if not sh.blank(target.get(TR, TC)):
@@ -110,9 +109,8 @@ def worksheet_selection_change(book: Book, r: int, c: int) -> None:
     # B81: ラテラルボー(Y 列)はセル自体を判定の色に塗るが、Ran(Y 列を含む)を白にするので直後に消える。
     # 直すと、判定の色(緑・赤)の Y 列のセルは白にも薄青にもしない
     keep = {}
-    if not quirks.reproduce("B81"):
-        keep = {(r, 25): ws.interior.get((r, 25)) for r in range(7, 17)
-                if ws.interior.get((r, 25)) in (sh.COLOR_INDEX[10], sh.NG_RED)}
+    keep = {(r, 25): ws.interior.get((r, 25)) for r in range(7, 17)
+            if ws.interior.get((r, 25)) in (sh.COLOR_INDEX[10], sh.NG_RED)}
     for rect in _RAN:
         ws.fill(*rect, sh.COLOR_INDEX[2])
     ws.interior.update(keep)
@@ -184,7 +182,7 @@ def print_and_save(book: Book, answers: Optional[dict] = None) -> Union[Effects,
         if job:
             fx.prints.append(job)
         zk.zen_save(book, H494)
-        kname = f.h494_kname if (quirks.reproduce("B30") or f.h494_kname != "") else f.kname
+        kname = f.h494_kname if (f.h494_kname != "") else f.kname
         zk._defect_print(book, kname, f.lot_box)
         for name in ("ｺﾋﾟ-用", "H494検査保存", "H494作業中保存"):
             book.delete_sheet(name)

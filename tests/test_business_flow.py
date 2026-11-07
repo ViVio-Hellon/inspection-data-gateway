@@ -29,8 +29,6 @@ class FlowBase(base.SessionBase):
     """SessionBase の DB・時計・校正に、本番の不具合の扱いと HTTP の入口を足す。"""
 
     def setUp(self) -> None:
-        quirks.set_for_test(production_quirks())
-        self.addCleanup(quirks.set_for_test, None)
         super().setUp()
         session.reset_for_test(self.s)
         self.addCleanup(session.reset_for_test, None)

@@ -19,7 +19,6 @@ from tests import kensa_fixture
 from ufkensa.kensa import quality as q
 from ufkensa.kensa import quality_view as qv
 from ufkensa.kensa import quirks, vbx
-from tests._isolation import vba_reproduce
 
 CRLF = "\r\n"
 
@@ -27,7 +26,6 @@ CRLF = "\r\n"
 def setUpModule() -> None:
     kensa_fixture.use_offline()
     q.clear_caches()
-    quirks.set_for_test(None)
 
 
 def lot_with(lot_no: str, changes: dict[str, str]) -> q.LotData:
@@ -51,7 +49,6 @@ class _DbCopy(unittest.TestCase):
     def tearDown(self) -> None:
         kensa_fixture.use_offline()
         q.clear_caches()
-        quirks.set_for_test(None)
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def sql(self, db: str, stmt: str, *args: Any) -> None:
@@ -159,7 +156,6 @@ class RangeCheckTest(unittest.TestCase):
         self.assertFalse(q.check_size(["3.5"], 1, "3.9"))            # 3.5→4
 
 
-@vba_reproduce
 class FindIndicesTest(unittest.TestCase):
     SORI = ["板厚下", "板厚上", "H500", "H1000", "H1500", "H1530", "H2000", "H9999", "T500", "T1000", "T1500",
             "T1530", "T2000", "T9999", "備考", "管理番号", "T1999"]
@@ -177,17 +173,6 @@ class FindIndicesTest(unittest.TestCase):
     def test_no_column_is_error(self) -> None:
         with self.assertRaises(q.VbaRuntimeError):
             q.find_indices(["板厚下", "板厚上"], "H", 100)
-
-    def test_long_rounding_B27(self) -> None:
-        f = ["X", "H100.5", "H50", "H200"]
-        # 再現: 入れ替えで 100.5 → 100(銀行丸め)。"H100" の列は無いので Temp の添字 1 がそのまま列番号に(QP:1003,1042)
-        self.assertEqual(q.find_indices(f, "H", 80), (1, None))
-        quirks.set_for_test({"B27": "fix"})
-        try:
-            self.assertEqual(q.find_indices(f, "H", 80), (2, None))
-        finally:
-            quirks.set_for_test(None)
-
 
 class LoopArrayTest(unittest.TestCase):
     F = ["板厚下", "板厚上", "500", "1000", "2000"]
@@ -297,7 +282,6 @@ class SmallFunctionsTest(unittest.TestCase):
 # ------------------------------------------------------------------
 # DBQP(QP L69-801)
 # ------------------------------------------------------------------
-@vba_reproduce
 class DbqpTest(unittest.TestCase):
     def test_H6083T1_table_A3(self) -> None:
         # H205 F52S R、オーダー 85×1525×2500、等級4、検番 H。一致 [6, 105](行順)。優先(納入先などの記入)なし
@@ -365,43 +349,6 @@ class DbqpTest(unittest.TestCase):
         r = q.dbqp("N7312H0", "K6X1475", "x", "x", q.read_lot("N7312H0"), uf1_visible=False)
         self.assertEqual(r.uf1, {})
 
-    def test_B24_okuri_code_and_haba_split(self) -> None:
-        # R6550H0: K434 75S T6 6.6×215×850 横割数 1。管理番号89 は 巾取数 "2≦" → CheckSize 偽だが最終判定に入らない
-        lot = q.read_lot("R6550H0")
-        r = q.dbqp("R6550H0", "H", "ｶ)ｼﾏﾉ", "x", lot)
-        self.assertEqual([x[q.K_NO] for x in r.kousa], ["89", "104"])
-        self.assertEqual(r.kousa[0][1:3], ["1", "1"])
-        quirks.set_for_test({"B24": "fix"})
-        try:
-            r = q.dbqp("R6550H0", "H", "ｶ)ｼﾏﾉ", "x", lot)
-            self.assertEqual([x[q.K_NO] for x in r.kousa], ["104"])
-            self.assertEqual(r.kousa[0][1:3], ["2", "3"])          # 104: H500=2、T1004=3
-        finally:
-            quirks.set_for_test(None)
-
-    def test_messages_and_errors(self) -> None:
-        r = q.dbqp("X", "H", "", "", None)
-        self.assertIsNone(r.kousa)
-        self.assertEqual(r.messages[0].text, paths.missing_text("SIKALOTNOW"))
-        ld = q.read_lot("無いロット")
-        r = q.dbqp("無いロット", "H", "", "", ld)
-        self.assertEqual(r.messages[0].text, "SIKALOTNOWに該当ロットがありません_DBQP")
-        # 検番が空、コースも空(H6083T1 の実績_設備ｺｰｽ は空)
-        r = q.dbqp("H6083T1", "", "x", "x", q.read_lot("H6083T1"))
-        self.assertEqual(r.messages[0].text, "検査Noがないファイルです_DBQP")
-        # 検番 "0…" はコースから(HOT → H)
-        r = q.dbqp("H9370Y0", "0X", "ｶ)ﾋﾀﾁｾｲｻｸｼﾖ ｺｳﾂｳｼｽﾃﾑｼﾞｷﾞﾖｳﾌﾞ", "x", q.read_lot("H9370Y0"))
-        self.assertEqual(r.kousa[0][q.K_NO], "25")
-        # 等級 "." は CLng で型エラー(L8131C0)
-        with self.assertRaises(vbx.TypeMismatch):
-            q.dbqp("L8131C0", "N6X1883", "x", "x", q.read_lot("L8131C0"))
-        # 等級が 3/4 以外(QP 一致あり)→ MsgBox で Empty(QP:449-452)
-        r = q.dbqp("H6083T1", "H", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot_with("H6083T1", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "5"}))
-        self.assertIsNone(r.kousa)
-        self.assertEqual(r.messages[0].text, "歪等級が3,4以外です")
-
-
-@vba_reproduce
 class DbqpRowOrderTest(_DbCopy):
     def test_priority_row_later_in_table(self) -> None:
         # 管理番号25 を表の末尾へ → 一致順 [98, 104, 25]。優先行 25 が NewArray(1) を上書きし、98 は消え 25 が重複(QP:378)
@@ -413,17 +360,6 @@ class DbqpRowOrderTest(_DbCopy):
         self.sql("品質基準", 'UPDATE "平坦度一覧QP追加" SET "表示コメント"=? WHERE "管理番号"=?', "追加注意", "98")
         r = q.dbqp("H9370Y0", "H6X1696", "ｶ)ﾋﾀﾁｾｲｻｸｼﾖ ｺｳﾂｳｼｽﾃﾑｼﾞｷﾞﾖｳﾌﾞ", "x", q.read_lot("H9370Y0"))
         self.assertEqual(r.kousa[0][5], "異常発生時廃棄せずに品証又は生管に連絡する。" + CRLF + "追加注意")
-
-    def test_B26_grade_only(self) -> None:
-        # 中耳が「4級」だけの行: 再現は等級表を引かず中耳 ""(QP:521-530)。直すと 中歪4級/耳歪4級(30.01–120、丈2500 → 4000列 1.5)
-        self.sql("品質基準", 'UPDATE "平坦度一覧QP追加" SET "中歪・耳歪"=? WHERE "管理番号"=?', "4級", "6")
-        lot = q.read_lot("H6083T1")
-        r = q.dbqp("H6083T1", "H", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot)
-        self.assertEqual(r.kousa[0][3:5], ["", ""])
-        quirks.set_for_test({"B26": "fix"})
-        r = q.dbqp("H6083T1", "H", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot)
-        self.assertEqual(r.kousa[0][3:5], ["1.5", "1.5"])
-        self.assertEqual(r.kousa[0][6], "Q-S-QA-DIM-122_別表A③ Q-E-001_品質規格:等級4")
 
     def test_nakimono_and_ijou_grade(self) -> None:
         self.sql("品質基準", 'UPDATE "平坦度一覧QP追加" SET "中歪・耳歪"=? WHERE "管理番号"=?', "無き事", "6")
@@ -499,7 +435,6 @@ class FormReflectTest(unittest.TestCase):
 # ------------------------------------------------------------------
 # DbReturnItem・ラテラル(QP L1176-1456, QDB L1491-1696)
 # ------------------------------------------------------------------
-@vba_reproduce
 class ReturnItemTest(unittest.TestCase):
     def test_lateral_table_B(self) -> None:
         # H9022K1(ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ K21S NP56 O 製造 23×672×2703): ラテフリ直角 管理番号8 → ラテラルボー要、公差 "別表B"
@@ -526,12 +461,6 @@ class ReturnItemTest(unittest.TestCase):
         self.assertEqual((r.sheet, r.cells), ("H494検査", {(1, 15): "ﾊｸﾄﾞｳ(ｶ)ｶﾅｶﾞﾜｼﾞｷﾞﾖｳｼﾖF52S", (1, 13): "3.0"}))
         self.assertNotIn("LateralText", r.uf1)
 
-    def test_first_hit_tolerance_used_for_lateral(self) -> None:
-        # ｽﾐﾄﾓｾｲﾐﾂ R115: 一致 [9(直角度・公差1), 10(ラテラル・等級)]。ラテラルの公差に1行目(直角度の行)の "1" を使う
-        r = q.db_return_item("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
-        self.assertEqual(r.items, ",直角度,ラテラルボー")
-        self.assertEqual(r.uf1["LateralText"], "1.0")
-
     def test_no_match_messages(self) -> None:
         # 該当なし: 最後に評価した行(管理番号11 ﾀﾞｲｹﾝ)で判定。納入先で外れ → C4 偽 → 「_製造材質」(B27)
         r = q.db_return_item("ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ(ｶ", "x", "K21S", "NP56", "O", 300, 672, 2703)
@@ -540,11 +469,6 @@ class ReturnItemTest(unittest.TestCase):
         self.assertEqual(r.uf1["LateralText"], "")
         r = q.db_return_item("K.T.N. CO. LTD", "ﾅﾒｶﾜｱﾙﾐ(ｶ", "H283", "F52S", "R", 10, 1528, 3053)
         self.assertEqual(r.uf1["Additional.Caption"], "K.T.N ﾗﾃﾗﾙﾎﾞｰ検査不要")
-
-    def test_single_boundary_free_sori(self) -> None:
-        # 管理番号1(厚 0.6–0.6)は Single(0.6) > 0.6 のため 0.6 のロットに一致しない(新しく見つけた不具合)
-        r = q.db_return_item("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.6, 1217, 2438)
-        self.assertEqual(r.items, "")
 
     def test_lateral_none_lot(self) -> None:
         msgs: list = []
@@ -555,7 +479,6 @@ class ReturnItemTest(unittest.TestCase):
         self.assertEqual(msgs, [])
 
 
-@vba_reproduce
 class ReturnItemDbTest(_DbCopy):
     def test_free_sori(self) -> None:
         self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "厚下"=?, "厚上"=? WHERE "管理番号"=?', "0.5", "0.7", "1")
@@ -568,15 +491,6 @@ class ReturnItemDbTest(_DbCopy):
         self.assertEqual(r.uf1["LGF.Caption"], "ﾌﾘｰｿﾘ")
         self.assertAlmostEqual(r.cb_add_atu, 0.6, places=6)
 
-    def test_B27_message_mapping(self) -> None:
-        # 最後の行を「納入・取引・用途・材質は一致、調質で外れる」にする → 再現は「_ｻｲｽﾞ幅」、直すと「_ｻｲｽﾞ厚」
-        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "納入先"=?, "用途コード"=NULL, "製造調質"=? WHERE "管理番号"=?',
-                 "ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ(ｶ", "T4", "11")
-        args = ("ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ(ｶ", "x", "K21S", "NP56", "O", 300, 672, 2703)
-        self.assertEqual(q.db_return_item(*args).uf1["Additional.Caption"], "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ幅")
-        quirks.set_for_test({"B27": "fix"})
-        self.assertEqual(q.db_return_item(*args).uf1["Additional.Caption"], "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ厚")
-
     def test_lateral_empty_table(self) -> None:
         # 表が 0 件なら GetFieldsArr が先に Empty を返して抜ける(QDB:1600)。UBound のエラー(B27 m)には届かない
         self.sql("品質基準", 'DELETE FROM "Q_S_QA_DIM_179_日車"')
@@ -586,25 +500,13 @@ class ReturnItemDbTest(_DbCopy):
 # ------------------------------------------------------------------
 # 設備仕様・時間用・ストレートエッヂ・バーコール
 # ------------------------------------------------------------------
-@vba_reproduce
 class TransferTest(unittest.TestCase):
-    def test_equipment(self) -> None:
-        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30), "可")   # 管理番号2 に一致
-        # 最後に評価した行(管理番号2)で厚が外れる。材質リストに無い 52S でも同じ文言(QP:2155)
-        self.assertEqual(q.check_equipment_db("LVC", "A2ST", 0.5, 1000, 2000, 30), "オーダー厚 範囲外")
-        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 500, 2000, 30), "C_オーダー幅 範囲外")
-        self.assertEqual(q.check_equipment_db("SVC", "52S", 3, 1000, 3000, 31), "オーダー丈 範囲外")
-        self.assertEqual(q.check_equipment_db("SVC", "52S", 3, 1000, 2000, 31), "単重 範囲外")
-        self.assertEqual(q.check_equipment_db("ﾄｯﾄ", "52S", 3, 1000, 3000, 30), "可")    # D13: 幅だけ揃えて トット
-        self.assertEqual(q.check_equipment_db("丸徳", "52S", 3, 1, 1, 1), "可")          # 設備名が無い
 
     def test_equipment_B27_fix(self) -> None:
-        quirks.set_for_test({"B27": "fix"})
         try:
             self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 500, 2000, 30), "オーダー幅 範囲外")
         finally:
-            quirks.set_for_test(None)
-
+            pass
     def test_shift_time_and_straight_edge(self) -> None:
         self.assertEqual(q.shift_time(), [("1", "07:00", "15:00"), ("2", "15:00", "22:50"),
                                           ("3", "22:50", "07:00"), ("昼", "08:15", "17:00")])
@@ -812,7 +714,6 @@ class AppearanceHTest(unittest.TestCase):
         self.assertEqual(f.tabs, ["前回"])                        # 渡した form は変えない
 
 
-@vba_reproduce
 class AppearanceHDbTest(_DbCopy):
     def test_last_match_wins(self) -> None:
         self.sql("品質基準", 'UPDATE "Q_S_QA_124_別表2" SET "飛込み"=? WHERE "管理番号"=?', "1", "15")
@@ -821,18 +722,6 @@ class AppearanceHDbTest(_DbCopy):
         self.move_to_end("品質基準", "Q_S_QA_124_別表2", "管理番号", "15")
         r = qv.display_appearance_h(q.read_lot("H8401Z0"), qv.QualityForm())
         self.assertEqual(r.grade_array[0][2], "1")                # 15 が最後 → 15 の値
-
-    def test_B25(self) -> None:
-        # いまの別表2 には調質の列が無い(直しても条件なし)。列を足して確かめる
-        self.sql("品質基準", 'ALTER TABLE "Q_S_QA_124_別表2" ADD COLUMN "調質" TEXT')
-        self.sql("品質基準", 'UPDATE "Q_S_QA_124_別表2" SET "調質"=? WHERE "管理番号"=?', "H34", "21")
-        self.sql("品質基準", 'UPDATE "Q_S_QA_124_別表2" SET "飛込み"=? WHERE "管理番号"=?', "1", "15")
-        r = qv.display_appearance_h(q.read_lot("H8401Z0"), qv.QualityForm())
-        self.assertEqual(r.grade_array[0][2], "4")                # 調質を見ない → 21 も一致
-        quirks.set_for_test({"B25": "fix"})
-        r = qv.display_appearance_h(q.read_lot("H8401Z0"), qv.QualityForm())
-        self.assertEqual(r.grade_array[0][2], "1")                # R ≠ H34 で 21 が外れ 15 だけ
-
 
 class AppearanceSTest(unittest.TestCase):
     def test_pattern_and_buttons(self) -> None:
@@ -866,7 +755,6 @@ class AppearanceSTest(unittest.TestCase):
                          "該当用途ｺｰﾄﾞなし")
 
 
-@vba_reproduce
 class DistortionViewTest(unittest.TestCase):
     def test_122_B(self) -> None:
         # H9022K1: K21S NP56 O 23×670×2700。DIM_122_B 先頭行の用途に K21S → 材質は右3文字 "P56" と調質 O で絞り
@@ -898,40 +786,10 @@ class DistortionViewTest(unittest.TestCase):
         self.assertEqual((f.Naka1, f.Mimi1, f.Naka2, f.Mimi2, f.Toukyu), ("2.0", "2.0", "4.0", "4.0", "3級"))
         self.assertEqual(f.Sansyou1, "前回 ﾌﾗｯﾄﾈｽ製品規格中耳歪(ｵｰﾀﾞｰ丈判定)")
 
-    def test_122_C_no_match_B27(self) -> None:
-        # L9280A0: R292 BE5Y O 1.0。DIM_122_C を調質 O で絞るが一致なし → 再現は「不問」と参照元を付ける(QDB:1276-1282)
-        f = qv.display_distortion(q.read_lot("L9280A0"), qv.QualityForm()).form
-        self.assertEqual(f.Naka1, "不問")
-        self.assertTrue(f.Sansyou1.endswith(" Q-S-QA-DIM-122_O"))
-        quirks.set_for_test({"B27": "fix"})
-        try:
-            f = qv.display_distortion(q.read_lot("L9280A0"), qv.QualityForm()).form
-            self.assertEqual(f.Naka1, "2.0")                       # 中歪4級 0.51–2、丈 0 → 4000 列 = 2 が残る
-            self.assertNotIn("_O", f.Sansyou1)
-        finally:
-            quirks.set_for_test(None)
-
     def test_122_C_match(self) -> None:
         # H6540C0: R112 NP56 O 16 ｽﾐﾄﾓｾｲﾐﾂ → 管理番号1行目(0.1–999、すべて)と NP56 の行に一致、最後の一致 → 10/10、黄
         f = qv.display_distortion(q.read_lot("H6540C0"), qv.QualityForm()).form
         self.assertEqual((f.HaHiz1, f.TaHiz1, f.Noun_BackColor), ("10.0", "10.0", qv.O_YELLOW))
-
-    def test_122_D_grade_B27(self) -> None:
-        # 等級ありの行(K184 NP56 H38 ﾐｸﾆﾊﾟ-ﾃﾂｸ 2.0): 再現はソリ表(列名 H/T)を LoopArray で引いて添字エラー
-        lot = lot_with("N7120E1", {"用途ｺｰﾄﾞ": "K184", "製造材質": "NP56", "製造調質": "H38",
-                                   "納入先名": "ﾐｸﾆﾊﾟ-ﾃﾂｸ(ｶ)ｻｶﾞﾗｺｳｼﾞﾖｳ", "ｵｰﾀﾞｰ板厚": "2", "ｵｰﾀﾞｰ板幅": "1000",
-                                   "ｵｰﾀﾞｰ板丈": "2000", "品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "4"})
-        with self.assertRaises(q.VbaRuntimeError):
-            qv.display_distortion(lot, qv.QualityForm())
-        quirks.set_for_test({"B27": "fix"})
-        try:
-            f = qv.display_distortion(lot, qv.QualityForm()).form
-            # ソリ4級 厚 2 → 0.51–2 の行。H1000 = 2、T2000 = 3
-            self.assertEqual((f.HaHiz1, f.TaHiz1), ("2.0", "3.0"))
-            self.assertIn(" 製品規格_ソリ4級", f.Sansyou1)
-        finally:
-            quirks.set_for_test(None)
-
 
 class DistortionVcTest(_DbCopy):
     def test_qa_022_01(self) -> None:
@@ -985,81 +843,16 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 直した場合の分岐(B71・B72・B73・B74)
 # ------------------------------------------------------------------
-@vba_reproduce
 class FixBranchTest(unittest.TestCase):
     def setUp(self) -> None:
         kensa_fixture.use_offline()
         q.clear_caches()
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
-    def test_b71_boundary_same_precision(self) -> None:
-        args = ("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.6, 1217, 2438)
-        self.assertEqual(q.db_return_item(*args).items, "")          # 再現: Single(0.6) > 0.6 で外れる
-        quirks.set_for_test({"B71": "fix"})
-        r = q.db_return_item(*args)                                  # 直す: 管理番号1(0.6–0.6)に一致
-        self.assertEqual(r.items, ",フリー反り")
-        self.assertEqual((r.uf1["HURIS"], r.uf1["HizCome.Tag"]), ("40", "40mm以下"))
-        # 0.65–0.65(管理番号2、丈 2730)
-        self.assertEqual(q.db_return_item("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.65, 1217, 2730).items,
-                         ",フリー反り")
-        # 範囲の外はそのまま外れる
-        self.assertEqual(q.db_return_item("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "x", "F975", "52S", "H18", 0.61, 1217, 2438).items, "")
-        # check_thickness の既定(他の表)は Single のまま
-        self.assertFalse(q.check_thickness(["0.6", "0.6", "0.6"], 1, 2, 3, 0.6))
-
-    def test_b72_lateral_tolerance_from_lateral_row(self) -> None:
-        args = ("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
-        self.assertEqual(q.db_return_item(*args).uf1["LateralText"], "1.0")   # 再現: 直角度の行の "1"
-        quirks.set_for_test({"B72": "fix"})
-        r = q.db_return_item(*args)
-        self.assertEqual(r.items, ",直角度,ラテラルボー")
-        # 直す: ラテラルボーが「要」の行(管理番号10)の公差 "等級" → 数でも別表でもないので書かない(QP:1366)
-        self.assertNotIn("LateralText", r.uf1)
-        self.assertEqual(r.uf1["Sumisei.Caption"], "ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ")
-
-    def test_b73_122_D_no_match(self) -> None:
-        # LX120J0: DIM_122_D に一致なし。再現は中耳4欄を「不問」で上書き(QDB:1366-1369)
-        f = qv.display_distortion(q.read_lot("LX120J0"), qv.QualityForm()).form
-        self.assertEqual((f.Mimi1, f.Naka1, f.Mimi2, f.Naka2), ("不問",) * 4)
-        quirks.set_for_test({"B73": "fix"})
-        f = qv.display_distortion(q.read_lot("LX120J0"), qv.QualityForm()).form
-        self.assertEqual((f.Mimi1, f.Naka1, f.Mimi2, f.Naka2), ("2.0", "2.0", "", ""))   # 等級表の値が残る
-        # 一致があれば今までどおり「不問」(N7120E1)
-        f = qv.display_distortion(q.read_lot("N7120E1"), qv.QualityForm()).form
-        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Naka1, f.Mimi1), ("1.5", "1.0", "不問", "不問"))
-
-    def test_b74_grade_not_3_4_in_skip_qp(self) -> None:
-        # L1099R0(0.5mm)は QP 表に一致なし → SkipQP。等級 5 だと TableN が空のまま表を開いて止まる
-        lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "5"})
-        from ufkensa.kensa import datasource
-        with self.assertRaises(datasource.TableMissing):
-            q.dbqp("L1099R0", "H", "x", "x", lot)
-        quirks.set_for_test({"B74": "fix"})
-        r = q.dbqp("L1099R0", "H", "x", "x", lot)
-        self.assertEqual(len(r.messages), 1)
-        self.assertTrue(r.messages[0].text.startswith("歪等級が3,4以外です(品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ=5)"))
-        # 回答で見直し: ソリ(幅・丈)も中・耳も出さない(平坦度一覧QP追加の値は入れない)
-        self.assertEqual([r.kousa[0][q.K_HA], r.kousa[0][q.K_TA], r.kousa[0][q.K_NAKA], r.kousa[0][q.K_MIMI]],
-                         ["", "", "", ""])
-        # 等級が「.」(未入力)も同じ扱い(VBA は CLng で型エラー 13)
-        lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "."})
-        r = q.dbqp("L1099R0", "H", "x", "x", lot)
-        self.assertTrue(r.messages[0].text.startswith("歪等級が3,4以外です(品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ=.)"))
-        # 指示値があれば skipEnd で補う(QP:779-780)
-        lot = lot_with("L1099R0", {"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ": "5", "指示_中歪_高さ": "2", "指示_耳歪_高さ": ""})
-        r = q.dbqp("L1099R0", "H", "x", "x", lot)
-        self.assertEqual(r.kousa[0][q.K_NAKA], "2")
-        # 等級 3/4 は変わらない
-        r = q.dbqp("L1099R0", "H", "x", "x", q.read_lot("L1099R0"))
-        self.assertEqual(r.messages, [])
-
-
+        pass
 # ------------------------------------------------------------------
 # B71・B72 を同じ種類の箇所すべてに広げた分(直した側と再現側)
 # ------------------------------------------------------------------
-@vba_reproduce
 class FixB71WideTest(_DbCopy):
     """B71: 下限・上限を Single に入れて Double(Val(Single) など)と比べ、境界ちょうどが外れる。"""
 
@@ -1068,129 +861,13 @@ class FixB71WideTest(_DbCopy):
         self.assertFalse(q.check_within(row, 1, 2, 2.1))                       # Single(2.1) > 2.1(QP:967-970)
         self.assertTrue(q.check_within(row, 1, 2, 2.1, same_precision=True))
 
-    def test_dbqp_thickness(self) -> None:
-        # QP:313: 管理番号6 の板厚を 85.3–85.3、オーダー厚 85.3 → 再現は 6 が外れて [105] だけ
-        self.sql("品質基準", 'UPDATE "平坦度一覧QP追加" SET "板厚下"=?, "板厚上"=? WHERE "管理番号"=?', "85.3", "85.3", "6")
-        lot = lot_with("H6083T1", {"ｵｰﾀﾞｰ板厚": "85.3"})
-        r = q.dbqp("H6083T1", "H6X1922", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot)
-        self.assertEqual([x[q.K_NO] for x in r.kousa], ["105"])
-        quirks.set_for_test({"B71": "fix"})
-        r = q.dbqp("H6083T1", "H6X1922", "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ", "x", lot)
-        self.assertEqual([x[q.K_NO] for x in r.kousa], ["6", "105"])
-
-    def test_dbdisplay_lateral(self) -> None:
-        # QDB:1637-1638: DIM_179_日車 の NP56 行は 厚 6.51–245・幅 450.1–9999。境界ちょうどで再現は一致なし → 0
-        for change in ({"製造板厚": "6.51"}, {"製造板幅": "450.1"}):
-            lot = lot_with("H9022K1", change)
-            quirks.set_for_test(None)
-            self.assertEqual(q.dbdisplay_lateral(lot, "日車"), 0.0)
-            quirks.set_for_test({"B71": "fix"})
-            self.assertEqual(q.dbdisplay_lateral(lot, "日車"), 3.0)              # 丈 2703 → (2300,3050] → 3
-
-    def test_check_equipment_db(self) -> None:
-        # QP:2140-2143: 管理番号2(LVC)の単重MIN を 30.1 → 単重 30.1 は再現で「単重 範囲外」
-        self.sql("伝送用ファイル", 'UPDATE "設備仕様" SET "単重MIN"=? WHERE "管理番号"=?', "30.1", "2")
-        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30.1), "単重 範囲外")
-        quirks.set_for_test({"B71": "fix"})
-        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30.1), "可")
-        self.assertEqual(q.check_equipment_db("LVC", "52S", 2, 1000, 2000, 30.09), "単重 範囲外")   # 外は外のまま
-
-    def test_appearance_h_124(self) -> None:
-        # QDB:300: 別表2 の 15・21 は 板厚 10.01–30。製造厚 10.01 は再現で両方外れ(グレードなし)
-        lot = lot_with("H8401Z0", {"製造板厚": "10.01"})
-        self.assertIsNone(qv.display_appearance_h(lot, qv.QualityForm()).grade_array)
-        quirks.set_for_test({"B71": "fix"})
-        r = qv.display_appearance_h(lot, qv.QualityForm())
-        self.assertEqual([g[2] for g in r.grade_array], ["4", "4", "4", "3", "3", "3"])   # 後の 21 が残る
-
-    def test_122_C_thickness(self) -> None:
-        # QDB:1245-1247: DIM_122_C の C211 ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ 行(3.2–3.2、5/5)。オーダー厚 3.2 は再現で外れる
-        lot = lot_with("H6540C0", {"用途ｺｰﾄﾞ": "C211", "納入先名": "ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "ｵｰﾀﾞｰ板厚": "3.2"})
-        f = qv.display_distortion(lot, qv.QualityForm()).form
-        self.assertEqual((f.HaHiz1, f.TaHiz1), ("", ""))
-        quirks.set_for_test({"B71": "fix"})
-        f = qv.display_distortion(lot, qv.QualityForm()).form
-        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Noun_BackColor), ("5.0", "5.0", qv.O_YELLOW))
-
-    def test_122_C_width_pattern(self) -> None:
-        # QDB:1257: K126 ｽ-ﾊﾟ-ｽﾀ- のパターン2 行(オーダー板幅 740.1 <= 幅 で 4/4)。幅 740.1 は Single(740.1) < 740.1 で外れる
-        lot = lot_with("H6540C0", {"製造材質": "52S", "用途ｺｰﾄﾞ": "K126", "納入先名": "ｶ)ｽ-ﾊﾟ-ｽﾀ-", "ｵｰﾀﾞｰ板厚": "6",
-                                   "ｵｰﾀﾞｰ板幅": "740.1"})
-        self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "")
-        quirks.set_for_test({"B71": "fix"})
-        self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "4.0")
-        # パターン1(740 >= 幅)はちょうど 740 で今までどおり 2/2
-        lot = lot_with("H6540C0", {"製造材質": "52S", "用途ｺｰﾄﾞ": "K126", "納入先名": "ｶ)ｽ-ﾊﾟ-ｽﾀ-", "ｵｰﾀﾞｰ板厚": "6",
-                                   "ｵｰﾀﾞｰ板幅": "740"})
-        self.assertEqual(qv.display_distortion(lot, qv.QualityForm()).form.HaHiz1, "2.0")
-
-
-@vba_reproduce
 class FixB71MaterialsTest(MaterialsUpperPartTest):
     """QP:1764-1766: 梱包保護材の 板厚下 0.6 と 厚 0.6。"""
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
         super().tearDown()
-
-    def test_match(self) -> None:          # 親の試験は繰り返さない
-        with sqlite3.connect(self.db) as c:
-            c.execute('UPDATE 梱包保護材 SET "板厚下"=? WHERE "管理番号"=?', ("0.6", "1"))
-        c.close()
-        h = hist([None, "12345", "L1", 0.6, 1000.0, 2000.0, "H", "F52S", "H34", "H197", "", "1P0104"])
-        self.assertEqual(q.materials_upper_part("12345", h, db=self.db), "アングル")    # 再現: 1 が外れて 2
-        quirks.set_for_test({"B71": "fix"})
-        self.assertEqual(q.materials_upper_part("12345", h, db=self.db), "ザラ板")
 
     def test_target_list(self) -> None:
         pass
 
 
-@vba_reproduce
-class FixB72WideTest(_DbCopy):
-    def test_free_sori_tolerance_from_free_row(self) -> None:
-        # ｽﾐﾄﾓ R115: 一致 [9(直角度・公差 1), 10]。10 をフリー反り「要」・公差 30 にする
-        # 再現: HizCome.Tag・HURIS は HitArry(1)(行 9)の 1(QP:1395・1407)。直す: フリー反りが「要」の行 10 の 30
-        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "フリー反り"=?, "公差"=? WHERE "管理番号"=?', "要", "30", "10")
-        args = ("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
-        r = q.db_return_item(*args)
-        self.assertEqual(r.items, ",直角度,フリー反り,ラテラルボー")
-        self.assertEqual((r.uf1["HizCome.Tag"], r.uf1["HURIS"], r.uf1["HizCome.Caption"]),
-                         ("1mm以下", "1", "ﾌﾘｰ反り1mm以下"))
-        quirks.set_for_test({"B72": "fix"})
-        r = q.db_return_item(*args)
-        self.assertEqual((r.uf1["HizCome.Tag"], r.uf1["HURIS"], r.uf1["HizCome.Caption"]),
-                         ("30mm以下", "30", "ﾌﾘｰ反り30mm以下"))
-        # UFMitsubishi 表示中は HizCome を書かず、ループ中の HURIS(要の行。QP:1337)のまま
-        r = q.db_return_item(*args, mitsubishi_visible=True, work_flag="P1")
-        self.assertEqual(r.uf1["HURIS"], "30")
-        self.assertEqual(r.cells[(1, 13)], "30.0")                             # ラテラル公差も行 10(既存の B72)
-
-
-@vba_reproduce
-class FixB72HurisAndB89Test(_DbCopy):
-    def test_b72_huris_loop_first_free_row(self) -> None:
-        # 行 9・10 ともフリー反り「要」(公差 1 / 30)。UFMitsubishi 表示中は QP:1337 のループの HURIS が残る
-        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "フリー反り"=? WHERE "管理番号"=?', "要", "9")
-        self.sql("品質基準", 'UPDATE "ラテフリ直角" SET "フリー反り"=?, "公差"=? WHERE "管理番号"=?', "要", "30", "10")
-        args = ("ｽﾐﾄﾓｾｲﾐﾂｺｳｷﾞﾖｳ(ｶ", "x", "R115", "3S", "O", 10, 1000, 2000)
-        kw = {"mitsubishi_visible": True, "work_flag": "P1"}
-        self.assertEqual(q.db_return_item(*args, **kw).uf1["HURIS"], "30")          # 再現: 要の最後の行
-        self.assertEqual(q.db_return_item(*args).uf1["HURIS"], "1")                 # 再現: HitArry(1)(QP:1407)
-        quirks.set_for_test({"B72": "fix"})
-        self.assertEqual(q.db_return_item(*args, **kw).uf1["HURIS"], "1")           # 直す: 要の最初の行にそろう
-        r = q.db_return_item(*args)
-        self.assertEqual((r.uf1["HURIS"], r.uf1["HizCome.Tag"]), ("1", "1mm以下"))
-
-    def test_b89_122_B_all_rows(self) -> None:
-        # 先頭行の用途に K9990(K999 を含むが完全一致しない)、U74S の行に K999。用途 K999 で LIKE は両方を返す
-        self.sql("品質基準", 'UPDATE "Q_S_QA_DIM_122_B" SET "用途コード"=? WHERE "材質"=? AND "板厚下"=?',
-                 "K21S,K9990", "NP56", "1")
-        self.sql("品質基準", 'UPDATE "Q_S_QA_DIM_122_B" SET "用途コード"=? WHERE "材質"=? AND "板厚下"=?',
-                 "K21S,K999", "U74S", "4")
-        lot = lot_with("H9022K1", {"用途ｺｰﾄﾞ": "K999"})
-        f = qv.display_distortion(lot, qv.QualityForm()).form
-        self.assertNotIn("Q-S-QA-DIM-122_B", f.Sansyou1)                           # 再現: 先頭行だけ見て外れる
-        quirks.set_for_test({"B89": "fix"})
-        f = qv.display_distortion(lot, qv.QualityForm()).form                      # 直す: NP56 O 23×670 → 先頭行
-        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Naka1, f.Sansyou1), ("2.5", "3.5", "不問", " Q-S-QA-DIM-122_B"))

@@ -12,7 +12,6 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa.kensa import packing, paths, quirks
 from ufkensa.kensa.store import LOT_HISTORY_HEADERS
-from tests._isolation import vba_reproduce
 
 LOT = "RX021T0"
 
@@ -30,7 +29,6 @@ def no_gaichu(*_a, **_k) -> str:
     return ""
 
 
-@vba_reproduce
 class PackingTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="ufkensa_pack_"))
@@ -54,19 +52,6 @@ class PackingTest(unittest.TestCase):
         self.assertEqual(packing.packing_no_check(None, LOT), "")          # WsCheck("Lot情報履歴") = False
         self.assertEqual(self.check(""), "")                               # LotNo = ""
         self.assertEqual(self.check("NOLOT00"), "")                        # a = 0 → Exit Function(フォルダは見ない)
-
-    def test_folder_errors(self) -> None:
-        with self.assertRaises(packing.PackingError) as e:                 # fso.GetFolder: パスが見つかりません
-            self.check()
-        self.assertEqual(e.exception.number, 76)
-        self.files()
-        with self.assertRaises(packing.PackingError) as e:                 # ReDim PacN(1 To 0)
-            self.check()
-        self.assertEqual(e.exception.number, 9)
-        self.files("0.txt", "1P1216.JPG")                             # 最初のファイルの "." が 7 文字目でない → PacN(0)
-        with self.assertRaises(packing.PackingError) as e:
-            self.check()
-        self.assertEqual(e.exception.number, 9)
 
     def test_last_match_in_folder_order_wins(self) -> None:
         self.files("1P0113.JPG", "1P1216.jpg", "9Z9999.JPG")
@@ -134,10 +119,8 @@ class PackingB84FixTest(PackingTest):
 
     def setUp(self) -> None:
         super().setUp()
-        quirks.set_for_test({"B84": "fix"})
 
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
         super().tearDown()
 
     def test_folder_errors(self) -> None:

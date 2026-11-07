@@ -45,7 +45,7 @@ from typing import Any, Callable, Optional
 from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
-               paths, quality, quirks, records, report_html, report_model, terminal, view, vbx, workers, wiring)
+               paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
@@ -825,12 +825,7 @@ class Session:
         env.log(legacy_log.LogEntry("*UFKen:" + name + "_BeforeUpdate:" + text + ":" + st.lname))
         if vbx.is_numeric(text) and text != "-":
             conv = judge.unit_record_input(text)
-            target = name
-            if not lateral and p == "D" and quirks_reproduce_diag_d():
-                target = "DiagSKou"                                       # UF1:1195-1196(書く先が S)
-                st.ctl(target).value = vbx.fmt(st.ctl(name).value, "0.0")
-            else:
-                st.ctl(target).value = conv
+            st.ctl(name).value = conv          # B43 を直した: D も自身の欄に変換して書く(VBA は S 欄へ)
             form = wiring.to_judge_form(st)
             out = (judge.lateralbow_judg_color(form, name, hooks.worker_name(st)) if lateral
                    else judge.right_angle_judg_color(form, name, hooks.worker_name(st)))
@@ -862,7 +857,7 @@ class Session:
 
     def _confi_send(self, tb1: str, reasons: Optional[list[str]] = None) -> None:
         """UFConfi.CommandButton1_Click(送信)。"""
-        st, env, hooks = self.state, self._env(), self.hooks
+        st, env = self.state, self._env()
         c = self.confi
         assert c is not None
         posi, knum, temp, k = c["posi"], c["n"], c["moto"], c["ken_name"]
@@ -1886,14 +1881,6 @@ def _picture_name(path: Optional[str]) -> str:
         return ""
     return path.replace("/", "\\").rsplit("\\", 1)[-1]
 
-
-def quirks_reproduce_diag_d() -> bool:
-    """B43: UF1:1195-1196 DiagDKou_BeforeUpdate が変換結果を DiagSKou に書く。
-
-    再現: S 欄は D の値の Format("0.0") で上書き、D は 0.5 刻みに変換されないまま判定。
-    直す: ほかの位置と同じく D 欄自身を 0.5 刻みに変換して判定する(S 欄は触らない)。
-    """
-    return quirks.reproduce("B43")
 
 
 _session: Optional[Session] = None

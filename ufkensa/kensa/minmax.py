@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import quirks, vbx
+from . import vbx
 from .flow import WARN, Message, Stop
 from .grid import COLOR_DEFAULT, COLOR_NG, POSITIONS, Hooks, KensaState, hab_lt_300, remove_underline, small_count_th
 from .grid import typed_cmp, variant_eq
@@ -160,10 +160,7 @@ def min_max(state: KensaState, hooks: Hooks) -> list[Message]:
     tran = _numbers(uf_array(state, *_ranges(state, trng, s, e, th)))
 
     atu = vbx.val(state.atu)
-    if quirks.reproduce("B1"):
-        first = (-1 if 0 < atu else 0) <= 74.0          # (0 < x) は True(-1)/False(0)。どちらも 74 以下
-    else:
-        first = 0 < atu <= 74.0
+    first = 0 < atu <= 74.0
     if first:
         state.amin = vbx.fmt(_ws_min(aran), "0.000")
         state.amax = vbx.fmt(_ws_max(aran), "0.000")

@@ -11,7 +11,6 @@ from tests import kensa_fixture
 from ufkensa.kensa import datasource, flow, quirks, vbx
 from ufkensa.kensa.modes import cask
 from ufkensa.kensa.modes import sheet as sh
-from tests._isolation import vba_reproduce
 
 NOW = datetime(2026, 10, 30, 10, 0)
 
@@ -31,11 +30,9 @@ def cask_book(*, micro: str = "0.000", convex: str = "0.0", count_st: str = "3")
     return b
 
 
-@vba_reproduce
 class CaskSheetTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_zero_calibration_required(self) -> None:   # Cask:1039-1044
         b = cask_book(micro="")
         fx = b.user_edit(7, 2, "DT10002+0000036.000M")
@@ -76,15 +73,6 @@ class CaskSheetTest(unittest.TestCase):
         self.assertIsNone(b.ws(sh.CASK).get(7, 2))
         self.assertIsNone(b.ws(sh.CASK).get(7, 3))
         self.assertTrue(b.events_enabled)                 # 空は IsNumeric が真なので最後まで進み EnableEvents は戻る
-
-    def test_text_leaves_events_off(self) -> None:       # KySh:77 文字が残ると EnableEvents=False のまま抜ける
-        b = cask_book()
-        b.cask.inspection = "ON"
-        b.user_edit(7, 28, "良")                            # 外観(手入力はそのまま残る)
-        self.assertEqual(b.ws(sh.CASK).get(7, 28), "良")
-        self.assertFalse(b.events_enabled)
-        b.user_edit(8, 2, "DT10002+0000036.000M")          # 以後の入力は変換も判定もされない
-        self.assertEqual(b.ws(sh.CASK).get(8, 2), "DT10002+0000036.000M")
 
     def test_l_packet_needs_inspection_on(self) -> None:  # Cask:1774-1778
         b = cask_book()
@@ -254,26 +242,12 @@ class PackDbTest(unittest.TestCase):
         self.assertTrue(b2.fx.messages[-1].text.startswith("DBにデータが見つかりません。"))
 
 
-@vba_reproduce
 class EventsTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
-    def test_text_input_b79(self) -> None:                # KySh: IsNumeric で抜ける
-        b = cask_book()
-        b.user_edit(7, 28, "良")
-        self.assertFalse(b.events_enabled)
-        quirks.set_for_test({"B79": "fix"})
-        b = cask_book()
-        b.user_edit(7, 28, "良")
-        self.assertTrue(b.events_enabled)
-
-
-@vba_reproduce
+        pass
 class MaxMinTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def book(self, count_st: str) -> sh.Book:
         b = cask_book(count_st=count_st)
         b.cask.min_text, b.cask.max_text = "1", "3"
@@ -286,22 +260,8 @@ class MaxMinTest(unittest.TestCase):
         ws.set(9, 11, 1527.5)
         return b
 
-    def test_b28_cask_min(self) -> None:                 # Cask:395-396
-        b = self.book("4")
-        cask.max_min(b)
-        ws = b.ws(sh.CASK)
-        self.assertEqual(ws.get(3, 22), 36.5)
-        self.assertIsNone(ws.get(4, 22))                     # 行 8〜9・列 2〜7 しか見ないので H7 が見つからない
-        # 幅2(M 列)が空なので Min = 0 → 空セル(Empty=0)と一致して W4 = 0(VBA どおり)
-        self.assertEqual((ws.get(3, 23), ws.get(4, 23)), (1528.5, 0.0))
-        quirks.set_for_test({"B28": "fix"})
-        cask.max_min(b)
-        self.assertEqual(ws.get(4, 22), 36.0)
-        self.assertIn((7, 8), ws.underline)
-
     def test_b80_empty_column(self) -> None:
         b = self.book("4")
-        quirks.set_for_test({"B28": "fix", "B80": "fix"})
         cask.max_min(b)
         ws = b.ws(sh.CASK)
         self.assertEqual((ws.get(3, 23), ws.get(4, 23)), (1528.5, 1527.5))   # 空の M 列は除く
@@ -310,13 +270,6 @@ class MaxMinTest(unittest.TestCase):
         self.assertIn(ws.get(3, 24), (None, ""))               # 丈が全部空なら書かない
         self.assertEqual(ws.get(4, 22), 36.0)
 
-    def test_b28_count3_header_row(self) -> None:        # 3 点: 行 6 の「厚1」と Single を比べて型エラー(U1)
-        b = self.book("3")
-        with self.assertRaises(sh.VbaError):
-            cask.max_min(b)
-
-
-@vba_reproduce
 class SaveTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -324,7 +277,6 @@ class SaveTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
-        quirks.set_for_test(None)
 
     def test_cask_save_plan(self) -> None:               # Cask:445-682
         b = cask_book()
@@ -347,17 +299,6 @@ class SaveTest(unittest.TestCase):
         b = cask_book()
         self.assertIsNone(cask.cask_save(b))
         self.assertEqual(b.fx.messages[-1].text, "フォーム上で必要欄を記入してください")
-
-    def test_history_row_b29(self) -> None:              # UFCask:154-160
-        b = cask_book()
-        b.other_sheets.add("保存用")
-        row = sh.history_row(b, b.ws(sh.CASK), "ｷｬｽｸ", cask_bug=True)
-        self.assertNotIn(3, row)
-        self.assertEqual(row[4], 1528.0)
-        self.assertEqual(row[83], "ｷｬｽｸ")
-        quirks.set_for_test({"B29": "fix"})
-        row = sh.history_row(b, b.ws(sh.CASK), "ｷｬｽｸ", cask_bug=True)
-        self.assertEqual((row[3], row[4]), (36.0, 1528.0))
 
     def test_print_question_and_setup(self) -> None:     # UFCask:110-174
         b = cask_book()

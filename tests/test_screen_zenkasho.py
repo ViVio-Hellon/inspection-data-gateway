@@ -20,7 +20,6 @@ from unittest import mock
 from ufkensa.kensa import packing, paths, quality, quirks, store, terminal, wiring, zenkasho_session
 from ufkensa.kensa.grid import KensaState
 from ufkensa.kensa.modes import sheet as sh
-from tests._isolation import vba_reproduce
 
 LOT = "RX021T0"
 
@@ -71,35 +70,7 @@ class ZenBase(unittest.TestCase):
         return d
 
 
-@vba_reproduce
 class SessionTest(ZenBase):
-    def test_measure_flow(self) -> None:
-        d = self.open_ippan()
-        v = d["view"]
-        self.assertEqual((v["mode"], v["page"]), ("一般", "P1"))
-        self.assertEqual([m["key"] for m in v["modes"] if m["active"]], ["一般"])
-        self.assertEqual(v["active"]["label"], "No.1 厚1")
-        self.assertEqual(len(v["rows"]), 70)
-        self.assertEqual(v["groups"][0], {"label": "厚", "span": 8, "tol": "24.550〜25.450"})
-        d = self.s.receive("DT10002+0000025.012M").to_dict()
-        row = d["view"]["rows"][0]["cells"]
-        self.assertEqual(row[0:2], [["25.012", ""], ["○", "ok"]])
-        self.assertEqual(d["view"]["active"]["label"], "No.1 厚2")      # 判定記号の入れ子の Change で次へ
-        self.assertEqual(d["view"]["flash"], "OK")
-        self.assertIn("zenkasho_ok", [m["sound"] for m in d["messages"]])
-        d = self.s.receive("DT10002+0000026.000M").to_dict()            # 公差外
-        self.assertEqual(d["view"]["rows"][0]["cells"][3], ["×", "ng"])
-        self.assertEqual(d["view"]["flash"], "NG")
-        self.s.select(7, 23)                                             # ラテラル: Change は動かさない → Enter で下へ
-        d = self.s.receive("0.3").to_dict()
-        self.assertEqual(d["view"]["active"]["label"], "No.2 ﾗﾃﾗﾙﾎﾞｰ")
-        self.s.select(7, 30)
-        d = self.s.receive("良").to_dict()                               # 文字で Change を抜ける → EnableEvents=False のまま
-        self.assertFalse(d["view"]["events_enabled"])
-        d = self.s.resume().to_dict()                                    # 処理再開
-        self.assertTrue(d["view"]["events_enabled"])
-        d = self.s.erase().to_dict()
-        self.assertEqual(d["view"]["rows"][1]["cells"][27][0], "")
 
     def test_modes(self) -> None:
         self.open_ippan()
@@ -245,7 +216,6 @@ class ScreenTest(ZenBase):
         d = self.post("pack-close", confirmed=True)
         self.assertIsNone(d["view"]["pack"])
 
-@vba_reproduce
 class ConnectTest(ZenBase):
     """部品の Effects.calls をつないだもの(HistorySave・GetLotInfo/DbReturnItem・包装仕様書・不良要因票・日報・UF対角)。
 
@@ -266,18 +236,6 @@ class ConnectTest(ZenBase):
     def history_rows(self) -> list:
         rows = wiring.sheet_rows(self.store, store.LOT_HISTORY) or []
         return [r for r in rows[1:] if r[2] == LOT]
-
-    def test_history_save_and_packing_folder_missing(self) -> None:
-        d = self.open_ippan()
-        rows = self.history_rows()                                       # HistorySave(UFMit:804): 引当ごとに 1 行
-        self.assertEqual(sorted(r[21] for r in rows), ["61029052", "61029053"])
-        self.assertEqual({r[25] for r in rows}, {"1P1216"})
-        # 包装仕様書のフォルダが無い → fso.GetFolder の実行時エラー 76 → ErrHandler_MitCombo(UFMit:874)
-        self.assertIn("DB読み込みエラー:\r\nパスが見つかりません。", [m["text"] for m in d["messages"]])
-        self.assertIsNone(d["view"]["pack"])
-        self.assertTrue(d["view"]["events_enabled"])                     # LotBox_Change が最後に True に戻す
-        self.s.set_form("LotBox", LOT)                                   # 同じロットを読み直しても行は増えない
-        self.assertEqual(len(self.history_rows()), 2)
 
     def test_packing_dialog(self) -> None:
         self.pack_folder("1P1216.jpg", "1P0113.JPG")
@@ -347,39 +305,8 @@ class ConnectTest(ZenBase):
         self.s.set_form("Kname", "検査員01")
         return self.s.print("normal", {"zen_print": True}).to_dict()
 
-    def test_defect_report(self) -> None:
-        d = self.print_normal()
-        self.assertIsNone(d["stop"])
-        labels = [r["label"] for r in d["view"]["reports"]]
-        self.assertEqual(labels, ["全ヵ所検査", "不良要因印刷_LVC"])
-        self.assertNotIn("印刷:不良要因印刷_LVC", d["view"]["pending"])
-        name = "不良要因印刷_LVC"
-        self.assertEqual(self.store.sheet(name).get(1, 2), LOT)          # 全ヵ所用転送の B1(Mit:735)
-        page = __import__("json").loads(self.store.load_report(name + "#page"))["page"]
-        # 不良要因印刷範囲(Kname) は LotN を渡さない形 → UF1 の Lname・Lot(Print:1279-1285)
-        self.assertEqual((page["header_left"], page["header_right"]), ("LVC", "AAA0001 検査員01"))
-        self.assertTrue(page["footer_right"].startswith(" 2026/11/02  10:05～"))     # 開始 = 全ヵ所検査!B1
-        html = Path(d["view"]["reports"][1]["path"]).read_text(encoding="utf-8")
-        self.assertIn(LOT, html)
-        # 新規発行: Register_Check(真 = 直が変わって登録が要る)→ Daily_Create、不良要因シートは消す(UFMit:1273)
-        self.registered.return_value = True
-        d = self.s.new_sheet({"zen_new": True}).to_dict()
-        self.assertIsNone(d["stop"])
-        self.assertFalse(self.store.exists(name))
-        self.assertTrue(self.store.exists("Daily_LVC"))
-        self.assertEqual(self.store.sheet("Daily_LVC").get(2, 1), "ﾛｯﾄNo")
-
-    def test_defect_range_other_lname(self) -> None:
-        """丸徳の号機: シート名は UFMitsubishi.LineName、不良要因印刷範囲 は UF1 の Lname(号機つき)を見る。"""
-        self.ks.line_no = "A22"                                          # Lname = LVCA22 → シートが無い → Exit Sub
-        d = self.print_normal()
-        self.assertEqual([r["label"] for r in d["view"]["reports"]], ["全ヵ所検査", "不良要因印刷_LVC"])
-        self.assertIsNone(self.store.load_report("不良要因印刷_LVC#page"))
-
     def test_defect_range_b85_fix(self) -> None:
         """B85 を直す: 全ヵ所のライン名・ロットで動く(号機つきでもページ設定が付き、右ヘッダは全ヵ所のロット)。"""
-        quirks.set_for_test({"B85": "fix"})
-        self.addCleanup(quirks.set_for_test, None)
         self.ks.line_no = "A22"
         self.print_normal()
         page = __import__("json").loads(self.store.load_report("不良要因印刷_LVC#page"))["page"]

@@ -27,7 +27,7 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import datasource, lines, paths, quirks, vbx
+from . import datasource, lines, paths, vbx
 from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
@@ -294,8 +294,7 @@ def check_thickness(row: Sequence[Any], c1: int, c2: int, c3: int, order: float,
     """QP.CheckThickness (QP:928-945)。下・上・値列の3つとも "" なら真。それ以外は 下 <= x <= 上。
 
     下・上は Single(`Val` を Single に入れる)、x は `Val(Single の引数)`(有効 7 桁)。
-    same_precision: 下・上も `Val` のまま(Double)で比べる(B71 を直した場合。呼び出し側で
-    `not quirks.reproduce("B71")` を渡す)。
+    same_precision: 下・上も `Val` のまま(Double)で比べる(B71 を直した側。呼び出し側は真を渡す)。
     """
     # VBA の And は短絡しないので3列とも必ず読む(値列が無い表でも添字エラー 9。QP:930-932)
     v1, v2, v3 = cell(row, c1), cell(row, c2), cell(row, c3)
@@ -359,7 +358,7 @@ def find_indices(fields: Sequence[str], width_length: str, return_size: float) -
             temp.append(vbx.cdbl(vbx.mid(name, 2, len(name) - 1)))
     if not temp:
         raise VbaRuntimeError(9, f"{width_length} の列がありません")
-    reproduce = quirks.reproduce("B27")
+    reproduce = False
     for i in range(len(temp) - 1):
         for j in range(i + 1, len(temp)):
             if temp[i] > temp[j]:
@@ -660,7 +659,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     m_haba = csng(lv("製造板幅"))
     m_take = csng(lv("製造板丈"))
     flat_raw = lv("品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ")
-    if not quirks.reproduce("B74") and not vbx.is_numeric(flat_raw):
+    if not vbx.is_numeric(flat_raw):
         flat = 0                          # B74 を直す: 等級が「.」などの数でない値も「3,4 以外」として扱う
     else:
         flat = clng(flat_raw)
@@ -710,8 +709,8 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     search_s = ""
 
     matching: list[int] = []
-    same = not quirks.reproduce("B71")
-    last = 13 if quirks.reproduce("B24") else 15
+    same = True
+    last = 15
     cond_names = ["", "用途コード", "製造材質", "オーダー材質", "製造調質", "オーダー調質", "板厚(下〜上)",
                   "板幅(下〜上)", "板丈(下〜上)", "納入先", "納入先コード", "取引先", "取引先コード", "送り先",
                   "送り先コード", "巾取数"]
@@ -836,10 +835,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
         what_up = extract_nums(tmp, "以上")
         what_dow = extract_nums(tmp, "以下")
         up_flag = what_up != "" and what_up != " "
-        if quirks.reproduce("B26"):
-            dow_flag = what_dow != "" and what_up != " "     # B26: 以下の判定に WhatUp を見ている
-        else:
-            dow_flag = what_dow != "" and what_dow != " "
+        dow_flag = what_dow != "" and what_dow != " "
         result = 0.0
         if up_flag:
             result = vbx.single(vbx.val(extract_nums(tmp, "以上")))
@@ -861,7 +857,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
         if not tabl_flag:
             k0[K_NAKA] = ""
         direct = not up_flag and not dow_flag
-        if direct and not quirks.reproduce("B26") and tabl_flag:
+        if direct and tabl_flag:
             direct = False          # B26 を直す: 「3級」「4級」だけの行は等級表を引く
         if direct:
             naka_s: Any = extract_nums(tmp, "中")
@@ -973,7 +969,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
             k0[K_SOURCE] = vstr(k0[K_SOURCE]) + " " + search_s
         return True
 
-    if not quirks.reproduce("B74") and flat != 3 and flat != 4:
+    if flat != 3 and flat != 4:
         # B74 を直す(2026-11-02 の回答で見直し): 等級が 3/4 以外なら、どの表の公差も当てはまらないので
         # ソリ(幅・丈)・中・耳は空にして知らせる。平坦度一覧QP追加の値は入れない
         _t(res, "歪等級", f"品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ = {flat_text or flat}(3・4 以外)なので公差は出しません", False)
@@ -1120,9 +1116,8 @@ def dist_array(lot_no: str, ken_no: str, hiki: Optional[Sequence[tuple[str, str]
                 if min_l == 0:
                     min_l = second_smallest(ln)
             except NotAvailable:
-                if quirks.reproduce("B27"):
-                    raise vbx.TypeMismatch("SecondSmallest の #N/A を Double に代入")
                 # 直す: 全部同じ(0)なら 0 のまま
+                pass
             if top is None:
                 raise vbx.TypeMismatch("1件目の DBQP が Empty(TopFormerArr を参照できない)")
             top[0][K_HA] = min_w
@@ -1254,11 +1249,9 @@ def dbdisplay_lateral(lot: Optional[LotData], target_text: str, *, quiet: bool =
     c_wlo, c_whi, c_w, c_no = col_of(fq, "板幅下"), col_of(fq, "板幅上"), col_of(fq, "幅"), col_of(fq, "管理番号")
     aq = datasource.get_records(db, table)
     if aq is None:
-        if quirks.reproduce("B27"):
-            raise VbaRuntimeError(13, "UBound(Empty)")
         return 0.0
     matching: list[int] = []
-    same = not quirks.reproduce("B71")          # B71(QDB:1637-1638): 直すと下・上も Double で比べる
+    same = True          # B71(QDB:1637-1638): 直すと下・上も Double で比べる
     for r in aq:
         c1 = check_condition(r, c_zai, zai)
         c2 = c1 & check_thickness(r, c_lo, c_hi, c_atu, m_atu, same_precision=same)
@@ -1341,7 +1334,7 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     c = [False] * 9
     # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
     # 直した場合は同じ精度(Double)で比べる(QP:1263-1265)
-    same = not quirks.reproduce("B71")
+    same = True
     for r in ta:
         c = [False] * 9
         c[1] = check_condition(r, C["納入先"], nou)
@@ -1361,27 +1354,16 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         if vbx.like(nou, "*ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ*"):
             u["Sumisei.Caption"] = nou
             if not vbx.like(additional, "*ﾗﾃﾗﾙﾎﾞ-追記公差あり*"):
-                if quirks.reproduce("B27"):
-                    # B27: 条件番号と文言が合っていない(C5=調質、C6=厚)。4つ目の分岐は到達しない
-                    if c[4] is False:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_製造材質"
-                    elif c[4] and c[5] is False:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ幅"
-                    elif c[4] and c[6] is False:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ丈"
-                    else:
-                        text = ""
+                if not c[4]:
+                    text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_製造材質"
+                elif not c[6]:
+                    text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ厚"
+                elif not c[7]:
+                    text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ幅"
+                elif not c[8]:
+                    text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ丈"
                 else:
-                    if not c[4]:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_製造材質"
-                    elif not c[6]:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ厚"
-                    elif not c[7]:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ幅"
-                    elif not c[8]:
-                        text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ丈"
-                    else:
-                        text = ""
+                    text = ""
                 if text:
                     u["Additional.Caption"] = text
                     u["LateralText"] = ""
@@ -1403,7 +1385,7 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         if veq(cell(h, C["フリー反り"]), "要", VAR, STR):
             items += ",フリー反り"
             # B72(QP:1337): 再現は「要」の最後の行の公差が残る。直すと「要」の最初の行(下の kousa_f と同じ)
-            if quirks.reproduce("B72") or not huris_set:
+            if not huris_set:
                 u["HURIS"] = cell(h, C["公差"])
                 huris_set = True
         if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
@@ -1415,20 +1397,18 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     # B72: ラテラルボーの公差も HitArry(1)(最初に一致した行)から取る(UF1.LateralText QP:1355-1362、
     # UFMitsubishi のシート QP:1425-1430)。直した場合はラテラルボーが「要」の最初の行
     kousa_l = kousa1
-    if not quirks.reproduce("B72"):
-        for h in hit:
-            if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
-                kousa_l = cell(h, C["公差"])
-                break
+    for h in hit:
+        if veq(cell(h, C["ラテラルボー"]), "要", VAR, STR):
+            kousa_l = cell(h, C["公差"])
+            break
 
     # B72: フリー反りの公差(HizCome.Tag・HURIS。QP:1394-1395・1407)も HitArry(1) から取る。直した場合は
     # フリー反りが「要」の最初の行(ループ中の UF1.HURIS(QP:1337)も同じ行にそろえる)
     kousa_f = kousa1
-    if not quirks.reproduce("B72"):
-        for h in hit:
-            if veq(cell(h, C["フリー反り"]), "要", VAR, STR):
-                kousa_f = cell(h, C["公差"])
-                break
+    for h in hit:
+        if veq(cell(h, C["フリー反り"]), "要", VAR, STR):
+            kousa_f = cell(h, C["公差"])
+            break
 
     def lateral(text: str) -> str:
         return vbx.fmt(dbdisplay_lateral(lateral_lot, text, quiet=lateral_quiet, messages=out.messages), "0.0")
@@ -1807,7 +1787,7 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
             # `m_PackQuality() As Variant`(動的配列)に Empty を入れると型エラー
             raise vbx.TypeMismatch("梱包保護材が 0 件(動的配列に Empty を代入)")
         _pack_cache.store(path, (C, rows))
-    same = not quirks.reproduce("B71")          # B71(QP:1764-1766): 直すと下・上も Double で比べる
+    same = True          # B71(QP:1764-1766): 直すと下・上も Double で比べる
     for r in rows:
         is_bikou = vstr(cell(r, C["備考"])) == "当板用"
         if is_bikou != check_bikou:
@@ -1893,7 +1873,7 @@ def check_equipment_db(line: str, zai: str, atu: float, haba: float, take: float
         return "可"
     matching: list[int] = []
     c = [False] * 6
-    same = not quirks.reproduce("B71")          # B71(QP:2140-2143): 直すと MIN・MAX も Double で比べる
+    same = True          # B71(QP:2140-2143): 直すと MIN・MAX も Double で比べる
     for r in rows:
         c = [False] * 6
         c[1] = check_condition(r, C["製造材質"], zai)
@@ -1904,18 +1884,12 @@ def check_equipment_db(line: str, zai: str, atu: float, haba: float, take: float
         if all(c[1:6]):
             matching.append(clng(cell(r, C["管理番号"])))
     if not matching:
-        if quirks.reproduce("B27"):
-            if not c[2]:
-                return "オーダー厚 範囲外"
-            if not c[3]:
-                return "C_オーダー幅 範囲外"
-        else:
-            if not c[1]:
-                return "製造材質 範囲外"
-            if not c[2]:
-                return "オーダー厚 範囲外"
-            if not c[3]:
-                return "オーダー幅 範囲外"
+        if not c[1]:
+            return "製造材質 範囲外"
+        if not c[2]:
+            return "オーダー厚 範囲外"
+        if not c[3]:
+            return "オーダー幅 範囲外"
         if not c[4]:
             return "オーダー丈 範囲外"
         if not c[5]:

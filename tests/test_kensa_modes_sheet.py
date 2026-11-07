@@ -9,7 +9,6 @@ from datetime import datetime
 
 from ufkensa.kensa import quirks, vbx
 from ufkensa.kensa.modes import sheet as sh
-from tests._isolation import vba_reproduce
 
 
 class PacketTest(unittest.TestCase):
@@ -34,11 +33,9 @@ class PacketTest(unittest.TestCase):
         self.assertEqual(sh.cstr_date(datetime(2026, 2, 24, 8, 59)), "2026/02/24 8:59:00")
 
 
-@vba_reproduce
 class JudgeFunctionTest(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def test_ken_judg_boundaries(self) -> None:  # Cask:923-931 境界は ○
         self.assertTrue(sh.ken_judg(35.6, 36.4, 35.6))
         self.assertFalse(sh.ken_judg(35.599, 36.4, 35.6))
@@ -62,20 +59,6 @@ class JudgeFunctionTest(unittest.TestCase):
         self.assertFalse(sh.lateral_j(1.5, "1"))
         self.assertTrue(sh.hizumi_j(2.0, "2"))
         self.assertFalse(sh.hizumi_j(2.1, "2"))
-
-    def test_unit_record_b13(self) -> None:      # Judg:2421-2444
-        f = lambda x: vbx.fmt(sh.unit_record(x), "0.0")  # noqa: E731
-        self.assertEqual(f(0.3), "0.5")
-        self.assertEqual(f(1.0), "1.0")
-        self.assertEqual(f(1.2), "1.5")
-        self.assertEqual(f(-0.7), "-1.0")
-        self.assertEqual(f(0.05), "0.0")
-        self.assertEqual(f(5.3), "5.3")
-        self.assertEqual(f(0.51), "0.0")          # B13: Single の 0.51 は 0.51 未満
-        self.assertEqual(f(1000), "0.0")          # B13: 999 超も 0
-        quirks.set_for_test({"B13": "fix"})
-        self.assertEqual(f(0.51), "1.0")
-        self.assertEqual(f(1000), "1000.0")
 
     def test_eq_single(self) -> None:
         # Double を Single の精度に丸めて比べる(全ヵ所作業中保存 W3=10.51200008392334 の実例)

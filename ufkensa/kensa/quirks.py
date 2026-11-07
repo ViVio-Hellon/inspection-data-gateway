@@ -1,23 +1,13 @@
-"""VBA の既存不具合のスイッチ(判断事項 D3)
+"""VBA の既存不具合の一覧と扱い(判断事項 D3)。
 
-B1〜B89 は docs/04_不明点・判断事項.md の「B. 既存の不具合」の番号(B39〜 は移植中に見つかったもの)。
-B1〜B38 はコードに分岐がある。B39〜 は VBA どおり再現してあり、直すと決まったら分岐を足す。
-**既定はすべて「再現」**(VBA と同じ結果)。直すと決まったものだけ `config/quirks.json` に
-`{"B8": "fix"}` のように書く。選んでいただく画面はアーティファクト「UF検査 不具合の扱い」。
-
-コードでは次のように使う:
-
-    if quirks.reproduce("B8"):
-        d, e = e, d          # VBA と同じく D と E を入れ替えたまま判定する
-
-`reproduce()` が真なら VBA の挙動、偽なら直した挙動。どこで分岐しているかは
-`grep -n 'quirks.reproduce("B8")'` で全部見つかるようにする(番号を変数に入れない)。
+B1〜B89 は docs/04_不明点・判断事項.md の「B. 既存の不具合」の番号。2026-11-02 に選んでいただいた扱い
+(`config/quirks.json`。fix = 直す)を、再構築 第4段(2026-11-07)でコードに固定した。
+VBA どおりに戻す切り替えはもう無い(分岐は消した)。この一覧は設定画面の表示と記録のため。
 """
 from __future__ import annotations
 
 import json
 import threading
-from pathlib import Path
 from typing import Optional
 
 from .. import config
@@ -120,13 +110,10 @@ TITLES: dict[str, str] = {
 
 _lock = threading.Lock()
 _cache: Optional[tuple[float, dict[str, str]]] = None
-_override: Optional[dict[str, str]] = None      # 試験から差し替える
 
 
 def _load() -> dict[str, str]:
     global _cache
-    if _override is not None:
-        return _override
     try:
         mtime = QUIRKS_FILE.stat().st_mtime
     except OSError:
@@ -141,24 +128,6 @@ def _load() -> dict[str, str]:
         choices = {str(k).upper(): str(v).lower() for k, v in data.items() if not str(k).startswith("_")}
         _cache = (mtime, choices)
         return choices
-
-
-def reproduce(bug: str) -> bool:
-    """`bug`(例 "B8")を VBA どおり再現するなら真。"""
-    key = bug.upper()
-    if key not in TITLES:
-        raise KeyError(f"不具合番号 {bug} は quirks.TITLES にありません")
-    return _load().get(key, "keep") != "fix"
-
-
-#: 試験用: set_for_test(None) で戻る先(None = quirks.json。VBA どおりを確かめる試験クラスは {} = すべて再現)
-_test_default: Optional[dict[str, str]] = None
-
-
-def set_for_test(choices: Optional[dict[str, str]]) -> None:
-    """試験用: `{"B8": "fix"}` を当てる。None で元に戻す。"""
-    global _override
-    _override = _test_default if choices is None else {k.upper(): v for k, v in choices.items()}
 
 
 def summary() -> dict[str, list[str]]:

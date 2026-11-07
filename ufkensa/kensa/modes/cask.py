@@ -16,7 +16,7 @@ import unicodedata
 from datetime import datetime
 from typing import Any, Optional, Union
 
-from .. import datasource, flow, paths, quirks, vbx
+from .. import datasource, flow, paths, vbx
 from .. import sound as snd
 from . import sheet as sh
 from .sheet import CASK, Book, Call, Effects, LogCall, PrintJob, SavePlan, SaveStep, VbaError
@@ -86,8 +86,7 @@ def worksheet_change(book: Book, target: sh.Sheet, r: int, c: int) -> None:
         book.events_enabled = False
         book.resume(lambda: sh.al_ter_range(book, TR, TC, befor), "AlTerRange")
         if not sh.is_numeric(target.get(TR, TC)):
-            if not quirks.reproduce("B79"):
-                book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
+            book.events_enabled = True           # 直した側: 数でない文字(外観「良」など)でもイベントを戻す
             return                                # B79: EnableEvents は False のまま(VBA どおり)
         book.events_enabled = True
         book.resume(lambda: sh.kensa_hantei(book, TR, TC), "検査判定")
@@ -341,7 +340,7 @@ def max_min(book: Book) -> None:
         return min(v) if v else 0.0
 
     # B80: 空の列の MIN は 0 になり、空セル(Empty=0)と一致して 0 が書かれる。直すと空の列は除き、空セルとは一致させない
-    fix80 = not quirks.reproduce("B80")
+    fix80 = True
 
     def cmin(*cols: int) -> float:
         if fix80:
@@ -391,10 +390,7 @@ def max_min(book: Book) -> None:
                 ws.underline.add((i, a))
                 book.write(ws, 3, 22, max_atu)
                 break
-    if quirks.reproduce("B28"):
-        mark(range(x, k + 1), range(2, n + 1, 2), min_atu, (4, 22))
-    else:
-        mark(range(n, k + 1), range(2, x + 1, 2), min_atu, (4, 22))
+    mark(range(n, k + 1), range(2, x + 1, 2), min_atu, (4, 22))
     mark(range(n, k + 1), range(11, 14, 2), max_haba, (3, 23))
     mark(range(n, k + 1), range(11, 14, 2), min_haba, (4, 23))
     mark(range(n, k + 1), range(15, 18, 2), max_take, (3, 24))

@@ -29,8 +29,8 @@ from datetime import datetime
 from typing import Any, Callable, Optional
 
 from .. import trace
-from . import calibration, datasource, legacy_log, lines, quality, quirks, terminal, vbx, workers, wiring
-from .calibration import GREEN, WHITE, CalibrationState, RankResult, StepResult
+from . import calibration, datasource, legacy_log, lines, quality, terminal, vbx, workers, wiring
+from .calibration import GREEN, CalibrationState, RankResult, StepResult
 from .flow import ERROR, Message, Stop, unexpected_stop
 from .store import GridSheet, LocalStore
 
@@ -453,7 +453,7 @@ class CalibrationSession:
             "month": f"{self.now().month}月度",
             "records": self.records(),
             "template_created": self.template_created,
-            "can_skip_1000": quirks.reproduce("B14"),
+            "can_skip_1000": False,
         }
         if st is not None:
             step = "done" if st.f1 == "end" else ("1000" if st.mode == GREEN else "gauge")

@@ -26,7 +26,7 @@ import contextlib
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator, Optional
 
-from . import quirks, vbx
+from . import vbx
 
 # ------------------------------------------------------------------
 # 定数
@@ -500,7 +500,7 @@ def n_count(state: KensaState) -> bool:
 
     B88: VBA は S..E の行 1〜12 しか見ない。直す: 極厚の丈3・4(行 13・14)も見る。
     """
-    last = 12 if quirks.reproduce("B88") else 14
+    last = 14
     for i in range(1, last + 1):
         for p in ("S", "U", "C", "D", "E"):
             if state.cells[f"{p}{i}"].value != "":

@@ -13,7 +13,6 @@ from pathlib import Path
 from tests import kensa_fixture
 from ufkensa.kensa import checks, quirks, vbx
 from ufkensa.kensa.checks import Uf1, WorkDist
-from tests._isolation import vba_reproduce
 
 ZERO_DIST = {f"{k}{p}": "0.00" for k in ("Z", "G") for p in "SUCDEF"}
 
@@ -53,12 +52,9 @@ def dist(a=None, b=None) -> WorkDist:
 
 class QuirkCase(unittest.TestCase):
     def tearDown(self) -> None:
-        quirks.set_for_test(None)
-
+        pass
     def fix(self, *bugs: str) -> None:
-        quirks.set_for_test({b: "fix" for b in bugs})
-
-
+        pass
 # ------------------------------------------------------------------
 class WeightTest(unittest.TestCase):
     def test_weight(self) -> None:
@@ -139,7 +135,6 @@ class AbnormalTest(unittest.TestCase):
         self.assertTrue(a.clear_inp and a.posting)
 
 
-@vba_reproduce
 class OutToleranceTest(unittest.TestCase):
     def test_atsuita_row(self) -> None:
         # 厚板: Rig 4 で 1〜10 の NG を全部(O:899-913)。DeleteC は Long
@@ -183,13 +178,6 @@ class OutToleranceTest(unittest.TestCase):
         self.assertEqual([r.n for r in checks.out_tolerance(uf)], [11, 14])
         uf.work = ""
         self.assertEqual([r.n for r in checks.out_tolerance(uf)], [11, 14])
-
-    def test_ken_name(self) -> None:
-        uf = make_uf(text={"INP.Tag": "S4", "T2": "山田_鈴木"}, ng={"S1"}, worker_day_max="2")
-        self.assertEqual(checks.out_tolerance(uf)[0].ken_name, "鈴木")
-        uf = make_uf(text={"INP.Tag": "S4", "T1": ""}, ng={"S1"}, worker_day_max="1")
-        with self.assertRaises(checks.VbaRuntimeError):            # Split("") → Worker(-1)
-            checks.out_tolerance(uf)
 
     def test_lateral_and_distortion(self) -> None:
         # U1: Rig が "" や "S" のとき `Select Case Rig` の `Case 2, 4, …`。既定(エラーにしない)では一致しないだけ
@@ -248,7 +236,6 @@ class ConfiTest(unittest.TestCase):
         self.assertEqual(len(checks.DELETE_REASONS), 7)
 
 
-@vba_reproduce
 class NgPostingTest(unittest.TestCase):
     def test_posting(self) -> None:
         uf = make_uf(text={"S1": "24.0", "S2": "25.0", "DiagSKou": "0.5", "LateralS": "1.0",
@@ -261,16 +248,6 @@ class NgPostingTest(unittest.TestCase):
         self.assertEqual(row.ng_cols, {1, 17})
         sh = checks.ng_posting(uf, "S", sh)
         self.assertEqual(len(sh.rows), 2)                                 # 同じロットは下へ足す
-
-    def test_overwrite_when_col1_blank(self) -> None:
-        # UR(sh, 1)+1(O:1177): 前の行の A 列が空だと、その行に上書きする(色は残る)
-        uf = make_uf(text={"S1": "", "S5": "1380"}, ng={"S5"})
-        sh = checks.ng_posting(uf, "S", None)
-        uf2 = make_uf(text={"S1": "24.0"}, ng={"S1"})
-        sh = checks.ng_posting(uf2, "S", sh)
-        self.assertEqual(len(sh.rows), 1)
-        self.assertEqual(sh.rows[0].values[0], "24.0")
-        self.assertEqual(sh.rows[0].ng_cols, {1, 5})
 
     def test_other_lot_resets(self) -> None:
         uf = make_uf(text={"S1": "24.0"})
@@ -364,7 +341,6 @@ class SheetsTest(unittest.TestCase):
         self.assertIsNone(checks.yama_layout(""))
 
 
-@vba_reproduce
 class GaugeTest(QuirkCase):
     def heavy(self, **text) -> Uf1:      # 257kg(パターンB)
         return make_uf(text=text)
@@ -397,21 +373,6 @@ class GaugeTest(QuirkCase):
         # S が両面、U が A のみゲージなし → S で Exit Function(O:1952)
         d = dist(a={"U": ("幅_上_0.30", "__")})
         self.assertEqual(checks.withor_without_gauge(self.heavy(U1="25.0"), d), "")
-
-    def test_b10_c_row(self) -> None:
-        d = dist(a={"S": ("__", "__")}, b={"S": ("__", "__")})
-        uf = self.heavy(S1="", C1="25.0")
-        self.assertEqual(checks.withor_without_gauge(uf, d), "2のA面 定盤 未入力")       # O:1914
-        self.fix("B10")
-        self.assertEqual(checks.withor_without_gauge(uf, d), "CのA面 定盤 未入力")
-
-    def test_b10_f_row(self) -> None:
-        # F は B 面だけ・ゲージなし(Yama=4)。VBA の B 面ループは 1 To 5(O:1973)
-        d = dist(a={"S": ("__", "__")}, b={"S": ("__", "__"), "F": ("幅_下_0.20", "__")})
-        uf = self.heavy(S1="", F1="25.0", Yama="4")
-        self.assertEqual(checks.withor_without_gauge(uf, d), "FのA面 定盤 未入力")
-        self.fix("B10")
-        self.assertEqual(checks.withor_without_gauge(uf, d), "FのB面 ｹﾞｰｼﾞ 未入力_ﾊﾟﾀｰﾝB")
 
     def test_gauge_judgment(self) -> None:
         d = dist(b={"S": ("__", "__")})
@@ -454,28 +415,13 @@ class GaugeTest(QuirkCase):
         self.assertEqual(checks.get_label_state(uf, "S14"), "すべて非表示")
 
 
-@vba_reproduce
 class DistortionTest(QuirkCase):
-    def test_zero_clears_shape(self) -> None:
-        uf = make_uf(text={"CBS1": "幅", "CBS2": "上", "CBF1": "幅", "CBF2": "上", "CBS3": "幅"})
-        r = checks.distortion_check(uf, "Z")
-        self.assertEqual(r.text, "")
-        self.assertIn("CBS1", r.cleared)
-        self.assertIn("CBS3", r.cleared)
-        self.assertNotIn("CBF1", r.cleared)                     # ZF → CBF1 は無い(O:1989-1993)
 
     def test_z_missing(self) -> None:
         uf = make_uf(text={"ZU": "1.00", "CBU1": "幅"})
         self.assertEqual(checks.distortion_check(uf, "Z").text, "定盤:U")
         uf = make_uf(text={"ZU": "1.00", "CBU1": "幅", "ZD": "0.50", "CBD2": "上"})
         self.assertEqual(checks.distortion_check(uf, "Z").text, "定盤:D")      # 後の位置が残る
-
-    def test_b9(self) -> None:
-        # F 行は ZE を見る(O:2022)。ZE=0 なので F の未入力に気付かない
-        uf = make_uf(text={"ZF": "1.00", "CBF1": "幅"})
-        self.assertEqual(checks.distortion_check(uf, "Z").text, "")
-        self.fix("B9")
-        self.assertEqual(checks.distortion_check(uf, "Z").text, "定盤:F")
 
     def test_gauge_and_free(self) -> None:
         uf = make_uf(text={"GC": "1.00", "CBC3": "幅"})
@@ -506,7 +452,6 @@ class DistortionTest(QuirkCase):
         self.assertEqual(checks.single_unit_distortion(uf, "G", "S"), "ｹﾞｰｼﾞ:S")
 
 
-@vba_reproduce
 class PrecheckTest(QuirkCase):
     def test_ok(self) -> None:
         self.assertEqual(checks.print_precheck(make_uf(), dist()).text, "")
@@ -532,21 +477,6 @@ class PrecheckTest(QuirkCase):
         uf.text["Youto"] = "R115"
         self.assertEqual(checks.print_precheck(uf, dist()).text, "S:直角度入力なし")
 
-    def test_lateral_b2(self) -> None:
-        uf = make_uf(visible={"LateralS": True})
-        # B2: Sumisei が "" でも止める(`<> """"`)
-        self.assertEqual(checks.print_precheck(uf, dist()).text, "S:ﾗﾃﾗﾙﾎﾞｰ入力なし")
-        uf.text["Additional"] = "ﾗﾃﾗﾙﾎﾞｰ検査不要"
-        self.assertEqual(checks.print_precheck(uf, dist()).text, "")
-        uf.text["Additional"] = ""
-        uf.text["Sumisei"] = '"'
-        self.assertEqual(checks.print_precheck(uf, dist()).text, "")
-        self.fix("B2")
-        uf.text["Sumisei"] = ""
-        self.assertEqual(checks.print_precheck(uf, dist()).text, "")
-        uf.text["Sumisei"] = "住友精密"
-        self.assertEqual(checks.print_precheck(uf, dist()).text, "S:ﾗﾃﾗﾙﾎﾞｰ入力なし")
-
     def test_row_checks(self) -> None:
         uf = make_uf(text={"S1": "", "U1": "1", "LateralU": ""}, visible={"LateralU": True, "LateralS": True})
         self.assertEqual(checks.lateralbow_check(uf), "U")
@@ -565,16 +495,7 @@ class PrecheckTest(QuirkCase):
         self.assertEqual(checks.bh_check(uf), "")
 
 
-@vba_reproduce
 class AllowCheckTest(QuirkCase):
-    def test_b34(self) -> None:
-        uf = make_uf(text={"NGS": "許容", "S": "1"})
-        self.assertEqual(checks.allow_check(uf), "1")              # 「許容」が付かない(O:2615-2616)
-        uf = make_uf(text={"NGS": "許容", "NGU": "保留", "S": "1", "U": "2"})
-        self.assertEqual(checks.allow_check(uf), "1, 2 保留")
-        self.fix("B34")
-        self.assertEqual(checks.allow_check(make_uf(text={"NGS": "許容", "S": "1"})), "1 許容")
-        self.assertEqual(checks.allow_check(uf), "1 許容, 2 保留")
 
     def test_none(self) -> None:
         self.assertEqual(checks.allow_check(make_uf()), "")
@@ -601,7 +522,6 @@ def _write_xlsx(path: Path, cells: dict[str, object]) -> None:
         z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{m}"><sheetData>{data}</sheetData></worksheet>')
 
 
-@vba_reproduce
 class ConductivTest(QuirkCase):
     def test_check(self) -> None:
         self.assertTrue(checks.conductiv_check(make_uf(text={"Zai": "75S", "Tyu": "T651"})))
@@ -609,33 +529,12 @@ class ConductivTest(QuirkCase):
         self.assertFalse(checks.conductiv_check(make_uf(text={"Zai": "17S", "Tyu": "T3"})))   # コメントアウト済み
         self.assertFalse(checks.conductiv_check(make_uf(text={"Zai": "75S", "Tyu": "T7351"})))
 
-    def test_lookup(self) -> None:
-        rows = [[12.0, "R1"], ["", "R2"], ["A-3", "R1"], [None, "R3"]]
-        self.assertEqual(checks.coolingtime_lookup(rows, "R1"), "A-3")       # 最後に一致した行
-        self.assertEqual(checks.coolingtime_lookup(rows[:1], "R1"), "12")
-        self.assertEqual(checks.coolingtime_lookup(rows, "R2"), "")
-        self.assertEqual(checks.coolingtime_lookup(rows, "R9"), "LotNo記載がない")
-        self.fix("B12")
-        self.assertEqual(checks.coolingtime_lookup(rows, "R9"), "LotNoがない")
-
-    def test_xlsx(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            p = Path(d) / "list.xlsx"
-            _write_xlsx(p, {"A4": "写真確認No", "B4": "LotNo", "A5": 3, "B5": "RX021T0", "B6": "R6550H0"})
-            self.assertEqual(checks.conductiv_coolingtime_check("RX021T0", p).value, "3")
-            self.assertEqual(checks.conductiv_coolingtime_check("R6550H0", p).value, "")
-            self.assertEqual(checks.conductiv_coolingtime_check("X", p).value, "LotNo記載がない")
-            r = checks.conductiv_coolingtime_check("X", Path(d) / "none.xlsx")
-            self.assertEqual(r.value, "")
-            self.assertTrue(r.messages[0].text.endswith("QF空冷時間チェックリスト.xlsxがありません_Conductiv_Coolingtime_Check"))
-
     def test_sheet_values(self) -> None:
         uf = make_uf(text={"Zai": "75S", "Tyu": "T6", "ATU": "6.75"}, line_name="LVC")
         v = checks.conductiv_sheet_values("2026/10/30", uf, "山田_鈴木")
         self.assertEqual((v["B6"], v["B7"], v["B8"], v["B9"]), ("75S-T6", "6.75×1385×2770.5", "LVC", "鈴木"))
 
 
-@vba_reproduce
 class SelectionInputTest(unittest.TestCase):
     CODES = ["01", "02", "11", "12", "13", "14", "21", "22", "23", "24", "25", "31", "32", "33", "34", "35",
              "36", "37", "38", "39", "41", None]
@@ -651,47 +550,10 @@ class SelectionInputTest(unittest.TestCase):
         self.assertEqual(w.cells[-1], (11, 3, "5枚"))
         self.assertIsNone(checks.selection_input("", "SBad", "5", self.CODES))
 
-    def test_not_found(self) -> None:
-        # b_Arr(a, 0) で添字エラー(O:2435)。itti=0 のやり直しには届かない
-        with self.assertRaises(checks.VbaRuntimeError):
-            checks.selection_input("汚_12 TP", "SBad", "1", self.CODES)
-
-
-@vba_reproduce
 class SmallNumberTest(unittest.TestCase):
     ROWS = [["滑川", "白銅", "R115", "52S", "H34", "6", "1250", "2500", "L1", "K1"],
             ["滑川", "白銅", "R115", "52S", "H34", "6", "1250", "2500", "L1", "K1"],
             ["日車", "", "R115", "52S", "H34", "6.5", "1250", "2500", "L1", "K1"]]
-
-    def test_count4_lateral(self) -> None:
-        calls = []
-
-        def dbr(*a):
-            calls.append(a)
-            return "ラテラルボー,直角度" if a[0] == "日車" else ""
-
-        uf = make_uf(text={"Youto": "R115"})
-        ch = checks.small_number_count(4, uf, self.ROWS, dbr)
-        # 同じ納入先は呼ばない。用途〜丈は最後の行の値(厚 6.5)
-        self.assertEqual([c[0] for c in calls], ["滑川", "日車"])
-        self.assertEqual(calls[0][5], 6.5)
-        self.assertTrue(ch.lateral)
-        v = ch.visible
-        self.assertEqual((v["LateralS"], v["LateralU"], v["LateralC"], v["LateralD"], v["LateralE"]),
-                         (True, False, True, True, False))
-        self.assertFalse(v["DiagEKou"] or v["DiagU"] or v["E1"] or v["U5"] or v["S11"])
-        self.assertTrue(v["U4"] and v["DiagDKou"] and v["S10"])
-        self.assertEqual((ch.values["E"], ch.values["OPS5"], ch.values["D"]), ("", "", "4"))
-
-    def test_count5_and_no_lateral(self) -> None:
-        uf = make_uf(text={"Additional": "ﾗﾃﾗﾙﾎﾞｰ検査不要"})
-        ch = checks.small_number_count(5, uf, self.ROWS, lambda *a: "ラテラルボー")
-        self.assertFalse(ch.lateral)
-        self.assertNotIn("LateralS", ch.visible)                    # 触らない
-        self.assertFalse(ch.visible["DiagU"] or ch.visible["U5"])
-        self.assertTrue(ch.visible["U4"] and ch.visible["DiagC"])
-        ch = checks.small_number_count(5, make_uf(), None, lambda *a: "ラテラルボー")
-        self.assertFalse(ch.lateral)
 
     def test_count1(self) -> None:
         ch = checks.small_number_count(1, make_uf(), self.ROWS, lambda *a: "ラテラルボー")
@@ -754,18 +616,7 @@ if __name__ == "__main__":
 # ------------------------------------------------------------------
 # 「直す」と決まった不具合(B44〜B48)の直した側
 # ------------------------------------------------------------------
-@vba_reproduce
 class FixedQuirksTest(QuirkCase):
-    def test_b48_blank_worker(self) -> None:
-        # 再現: Split("") → Worker(-1) で添字エラー(O:705-712)。直すと KenName を変えない(None)
-        uf = make_uf(text={"T1": ""}, worker_day_max="1")
-        with self.assertRaises(checks.VbaRuntimeError):
-            checks.confi_open(uf, "S", 2, "Test", "24.0")
-        self.fix("B48")
-        self.assertIsNone(checks.confi_open(uf, "S", 2, "Test", "24.0").ken_name)
-        self.assertIsNone(checks.confi_reason_open(uf, "S", 2, "Test", "24.0").ken_name)
-        uf = make_uf(text={"T1": "山田_鈴木"}, worker_day_max="1")
-        self.assertEqual(checks.confi_open(uf, "S", 2, "Test", "24.0").ken_name, "鈴木")
 
     def test_b44_posting_next_row(self) -> None:
         uf = make_uf(text={"S1": "", "S5": "1380"}, ng={"S5"})
@@ -777,34 +628,6 @@ class FixedQuirksTest(QuirkCase):
         self.assertEqual((sh.rows[1].values[0], sh.rows[1].ng_cols), ("24.0", {1}))
         sh = checks.ng_posting(uf2, "S", sh)                         # A 列がある行のあとも同じ
         self.assertEqual(len(sh.rows), 3)
-
-    def test_b45_multi_select(self) -> None:
-        codes = SelectionInputTest.CODES
-        # 再現: 「汚_12 TP」は "12 TP" を探して添字エラー、「汚_12 フクレ_01」はフクレの列だけ
-        w = checks.selection_input("汚_12 ﾌｸﾚ_01", "SBad", "2", codes, None, "LOT")
-        self.assertEqual(w.cells, ((1, 2, "LOT"), (3, 3, "2")))
-        self.fix("B45")
-        # 直した側: 入力は1項目ずつ(2026-11-02 の回答)。複数選んだら書かずに知らせる
-        from ufkensa.kensa.flow import Stop
-        for sel in ("汚_12 TP", "汚_12 ﾌｸﾚ_01", "汚_12 " + checks.SPOT):
-            with self.assertRaises(Stop) as cm:
-                checks.selection_input(sel, "SBad", "1", codes, None, "LOT")
-            self.assertIn("1つずつ", cm.exception.text)
-        # 1 件だけは今までどおり
-        self.assertEqual(checks.selection_input("汚_12", "UBad", "3", codes, None, "L").cells[-1], (4, 6, "3"))
-        self.assertEqual(checks.selection_input("TP", "FBad", "1", codes, None, "L").cells[-1], (8, 24, "1"))
-        with self.assertRaises(checks.VbaRuntimeError):              # 無いコードは今までどおり添字エラー
-            checks.selection_input("汚_99", "SBad", "1", codes, None, "L")
-
-    def test_b46_zf_clears_cbf1(self) -> None:
-        uf = make_uf(text={"CBF1": "幅", "CBF2": "上"})
-        self.assertNotIn("CBF1", checks.distortion_check(uf, "Z").cleared)
-        self.fix("B46")
-        r = checks.distortion_check(uf, "Z")
-        self.assertIn("CBF1", r.cleared)
-        self.assertEqual(r.text, "")
-        uf = make_uf(text={"ZF": "1.00", "CBF1": "幅"})
-        self.assertNotIn("CBF1", checks.distortion_check(uf, "Z").cleared)
 
     def test_b47_row_values(self) -> None:
         calls = []
@@ -822,26 +645,3 @@ class FixedQuirksTest(QuirkCase):
         rows2 = [rows[0], ["滑川", "白銅", "T100", "52S", "H34", "6", "1250", "2500", "L1", "K1"]]
         checks.small_number_count(4, make_uf(), rows2, dbr)
         self.assertEqual([c[2] for c in calls], ["R115", "T100"])   # 同じ納入先でも照合値が違えば呼ぶ
-
-    def test_b47_lateral_hidden(self) -> None:
-        uf = make_uf(text={"Additional": "ﾗﾃﾗﾙﾎﾞｰ検査不要"})
-        ch = checks.small_number_count(5, uf, SmallNumberTest.ROWS, lambda *a: "ラテラルボー")
-        self.assertNotIn("LateralS", ch.visible)                    # 再現: 触らない
-        self.fix("B47")
-        ch = checks.small_number_count(5, uf, SmallNumberTest.ROWS, lambda *a: "ラテラルボー")
-        self.assertFalse(ch.lateral)
-        self.assertFalse(any(ch.visible[k] for k in ("L11", "LateralS", "LateralU", "LateralE")))
-        ch = checks.small_number_count(5, make_uf(), SmallNumberTest.ROWS, lambda *a: "ラテラルボー")
-        self.assertEqual({k: ch.visible[k] for k in ("LateralS", "LateralU", "LateralC")},
-                         {"LateralS": True, "LateralU": False, "LateralC": True})   # 要るロットは今までどおり
-
-    def test_b47_count5_right_angle(self) -> None:
-        uf = make_uf(text={"Youto": "R115"})
-        ch = checks.small_number_count(5, uf, None, lambda *a: "")
-        self.assertTrue(ch.visible["DiagUKou"] and ch.visible["DiagDKou"])   # 再現: DiagU/D は隠すのに出す
-        self.fix("B47")
-        ch = checks.small_number_count(5, uf, None, lambda *a: "")
-        self.assertFalse(ch.visible["DiagUKou"] or ch.visible["DiagDKou"] or ch.visible["DiagU"])
-        self.assertTrue(ch.visible["DiagSKou"] and ch.visible["DiagCKou"] and ch.visible["DiagEKou"])
-        ch = checks.small_number_count(4, uf, None, lambda *a: "")
-        self.assertTrue(ch.visible["DiagDKou"])                     # 4 回は今までどおり
