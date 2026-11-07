@@ -91,6 +91,9 @@ ITEMS: tuple[PathItem, ...] = (
              "hostsend.txt・SokuteiDataTrans.exe・result.txt(空なら使わない。VBA はオフライン時に空)", need="write"),
     PathItem("local_history", "手元の検査履歴", "C:\\検査履歴(直書き)", r"C:\検査履歴",
              "帳票 PDF・履歴ブック(xlsx)の手元保存", need="write"),
+    PathItem("csv_local", "履歴 CSV の手元の出し先", "ThisWorkbook.Path(VBA は xlsm と同じフォルダ)", "",
+             "印刷・保守の CSV 出力で、手元に書く 履歴 CSV(<L>_履歴CSV.csv)と Lot情報履歴 CSV のフォルダ。"
+             "空ならこのツールの手元DB と同じフォルダ", need="write"),
     PathItem("lot_history_share", "Lot情報履歴の共有先", "(新規)", "",
              "印刷のたびに Lot情報履歴 を CSV で写す共有フォルダ。空なら 検査履歴\\<ライン>\\<ライン>_履歴",
              need="write"),

@@ -88,10 +88,21 @@ def export_pdf(store: LocalStore, row: int, *, mimi: bool = False,
                 "pdf": [f for d in pdf for f in d.values() if isinstance(f, str)],
                 "xlsx": [str(p) for p in xlsx],
                 # 読み戻しの案内(「Load完了…」など)は出さず、注意と誤りだけ
-                "messages": [m.to_dict() for m in msgs if m.level in ("warn", "error")]}
+                "messages": _notices(msgs)}
     finally:
         copy.close()
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _notices(msgs: list[Message]) -> list[dict[str, Any]]:
+    """画面に出す知らせ: 注意と誤りだけ、同じ文は 1 回。写しの上の作業中保存の失敗は出さない(本物は触らないので)。"""
+    out, seen = [], set()
+    for m in msgs:
+        if m.level not in ("warn", "error") or m.text.startswith("作業中の保存ができませんでした") or m.text in seen:
+            continue
+        seen.add(m.text)
+        out.append(m.to_dict())
+    return out
 
 
 def export_csv(store: LocalStore, lname: str, line: str, *, mimi: bool = False) -> dict[str, Any]:
