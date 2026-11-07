@@ -46,7 +46,8 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
-from .model import Face, FormTag, Switch, bad_name, ken_h_name
+from . import shadow
+from .model import Face, FormTag, Switch, set_verdict, bad_name, ken_h_name
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
@@ -219,6 +220,7 @@ class Session:
                     raise unexpected_stop(e, "kensa." + getattr(fn, "__name__", ""), env.messages) from e
             except Stop as e:
                 self.state.load, self.state.form_tag = flags
+                shadow.check_verdicts(self.state, "kensa." + getattr(fn, "__name__", ""))
                 msgs = list(env.messages)
                 for m in e.messages:
                     if not any(m is x for x in msgs):
@@ -242,6 +244,7 @@ class Session:
                     env.messages.append(Message(f"作業中の保存ができませんでした({type(e).__name__}: {e})。"
                                                 "このまま続けられますが、再起動すると直前の操作が戻りません", WARN,
                                                 source="Posting"))
+            shadow.check_verdicts(self.state, "kensa." + getattr(fn, "__name__", ""))
             return Result(self._view(), list(env.messages), question=q if isinstance(q, Question) else None)
 
     def _open_confi(self, req: checks.ConfiRequest) -> None:
@@ -777,8 +780,10 @@ class Session:
             if r is not None:
                 wiring.apply_restore(st, r, hooks)
             with st.stopped():
-                for c in list(st.strain_z.values()) + list(st.strain_g.values()):   # SetSpecificTextBoxesBackColorToWhite
+                for k, c in [(f"Z{p}", c) for p, c in st.strain_z.items()] + \
+                        [(f"G{p}", c) for p, c in st.strain_g.items()]:      # SetSpecificTextBoxesBackColorToWhite
                     c.color = grid.COLOR_WHITE
+                    set_verdict(st.verdicts, k, c.color)
                 hooks.hiz_loop_judg(st, 0)
             return
         if name == "DBflag":
@@ -834,6 +839,7 @@ class Session:
             hooks.posting(st)
         if st.ctl(name).value == "":
             st.ctl(name).color = grid.COLOR_WHITE
+            set_verdict(st.verdicts, name, grid.COLOR_WHITE)
         hooks.out_tolerance(st)
         if not lateral:
             hooks.check_labels_by_category(st, p)

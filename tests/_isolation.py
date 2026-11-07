@@ -92,6 +92,9 @@ def ensure_isolated() -> list[str]:
     from ufkensa import trace as _trace
     from ufkensa.kensa import lot_copy as _lot_copy
     _trace.SYNC = True
+    # 第3段7・9 の影の確かめ: 試験では食い違いがあれば失敗させる
+    from ufkensa.kensa import shadow as _shadow
+    _shadow.STRICT = True
     _lot_copy.RECHECK_SEC = 0.0
     from ufkensa.kensa import quirks
     if _under(quirks.QUIRKS_FILE, repo):
