@@ -14,7 +14,7 @@ from typing import Iterator, Optional
 from . import vbx
 from .model import NORMAL, Switch, bad_name, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
-from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
+from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
                    fm_clear, ken_flags, small_count_th, yama_is)
 
 PACKETS = ("DT", "#L", "#〆")
@@ -632,14 +632,14 @@ def ng_erase(state: KensaState, name: str) -> None:
     fl = False
     for i in range(1, count + 1):
         c = state.ctl(f"{p}{i}")
-        if c.value != "" and c.color == COLOR_NG:
+        if c.value != "" and c.is_ng:
             fl = True
             break
     if name.startswith(("Lateral", "Z", "G")) or (name.startswith("Diag") and name.endswith("Kou")):
         if name in ("LateralS", "LateralU", "LateralC", "LateralD", "LateralE", "LateralF",
                     "DiagSKou", "DiagUKou", "DiagCKou", "DiagDKou", "DiagEKou", "DiagFKou",
                     "ZS", "ZU", "ZC", "ZD", "ZE", "ZF", "GS", "GU", "GC", "GD", "GE", "GF"):
-            if state.ctl(name).color == COLOR_NG:
+            if state.ctl(name).is_ng:
                 fl = True
     if not fl:
         state.ctl("NG" + p).value = ""

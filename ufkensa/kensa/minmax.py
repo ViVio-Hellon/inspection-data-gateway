@@ -10,7 +10,7 @@ from typing import Any
 from . import vbx
 from .model import kou_name, lateral_name
 from .flow import WARN, Message, Stop
-from .grid import COLOR_DEFAULT, COLOR_NG, POSITIONS, Hooks, KensaState, remove_underline, small_count_th
+from .grid import COLOR_DEFAULT, POSITIONS, Hooks, KensaState, remove_underline, small_count_th
 from .grid import typed_cmp, variant_eq
 
 #: TB_BackColor の色(FormRelat:5911-5912)
@@ -24,7 +24,7 @@ COLOR_RANGE_END = "13421619"
 def backcolor_check(state: KensaState, name: str) -> bool:
     """FormRelat.BackColor_Check (FormRelat:5495-5503)。値があり NG 色で、NG? が "許容" でなければ真。"""
     c = state.ctl(name)
-    if c.value != "" and c.color == COLOR_NG:
+    if c.value != "" and c.is_ng:
         if state.ctl("NG" + vbx.left(name, 1)).value != "許容":
             return True
     return False
@@ -46,7 +46,7 @@ def backcolor_check_tb(state: KensaState, name: str) -> bool:
     if vbx.instr(name, "Diag") > 0:
         temp = vbx.mid(name, 5, 1)
     c = state.ctl(name)
-    if c.value != "" and c.color == COLOR_NG:
+    if c.value != "" and c.is_ng:
         if state.ctl("NG" + temp).value != "許容":
             return True
     return False

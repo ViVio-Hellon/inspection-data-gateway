@@ -248,7 +248,7 @@ def to_uf1(state: KensaState, worker_day_max_: str = "") -> checks.Uf1:
     for name, c in all_controls(state).items():
         text[name] = c.value
         visible[name] = c.visible
-        if c.color == grid.COLOR_NG:
+        if c.is_ng:
             ng.add(name)
     for name, attr in SCALAR.items():
         text[name] = getattr(state, attr)
