@@ -625,7 +625,7 @@ class AinputValues:
 class DailyContext:
     """Daily_Report が読むもの。
 
-    mode: "UF1" / "全ヵ所" / "キャスク" / "H494"(表示中のシート)。UF1 以外は Lname="" で
+    mode: "UF1" / "全ヵ所" / "キャスク"(表示中のシート)。UF1 以外は Lname="" で
     `Daily_` シートを探す(実際は無いので何もしない)。
     uf1_line: UF1 で選んでいるライン(L1Work/LVC/HVC/Bala/Tott のどれか。号機なし)。
     sub_line / sub_kname: UFMitsubishi・UFCask の LineName と Kname。
@@ -662,7 +662,7 @@ def _two(n: int) -> str:
 
 
 def _daily_line_b1(ctx: DailyContext) -> Optional[str]:
-    if ctx.mode in ("全ヵ所", "H494"):
+    if ctx.mode == "全ヵ所":
         return {"L-1": "L-1", "LVC": "LVC", "HVC": "HVC", "ﾊﾞﾗﾝｻｰ": "ﾊﾞﾗﾝｻｰ", "ﾄｯﾄ": "ﾄｯﾄ"}.get(ctx.sub_line, "Test")
     if ctx.mode == "キャスク":
         return {"L-1": "L-1", "ﾊﾞﾗﾝｻｰ": "ﾊﾞﾗﾝｻｰ", "ﾄｯﾄ": "ﾄｯﾄ"}.get(ctx.sub_line)
@@ -703,7 +703,7 @@ def daily_report(n: int, ctx: DailyContext) -> list[CellWrite]:
         b1 = _daily_line_b1(ctx)
         if b1 is not None:
             put(1, 2, b1)
-        if ctx.mode in ("全ヵ所", "H494", "キャスク"):
+        if ctx.mode in ("全ヵ所", "キャスク"):
             put(1, 3, ctx.sub_kname)
         else:
             sh = time_check(hhmm(now), facility=ctx.facility, shifts=ctx.shifts)

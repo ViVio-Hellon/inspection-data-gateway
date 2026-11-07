@@ -94,7 +94,7 @@ class AinputSession:
         self.sleep = sleep
         self.form: Optional[AinputForm] = None
         self.ken_m = ""
-        self.source = ""                     # 呼び元(""=通常検査 / Cask / Mitsubishi / H494)
+        self.source = ""                     # 呼び元(""=通常検査 / Cask / Mitsubishi)
         self.hiki_rows: list[list[Any]] = []        # Hiki_Lot シート(No_Search の結果)
         self.hiki_list: list[str] = []              # HikiNo の選択肢(UserForm_Activate のソート後)
         self.adjust_label = "調整No"
@@ -162,9 +162,9 @@ class AinputSession:
         return self._run(self._open, ken_m, source)
 
     def _source_sheet(self, source: str) -> tuple[str, dict[tuple[int, int], Any], str, str]:
-        """キャスク・全ヵ所・H494 から開いたとき(Input:247-252, 361-364): そのシートのロット(D2)・Min/Max のセル・
+        """キャスク・全ヵ所から開いたとき(Input:247-252, 361-364): そのシートのロット(D2)・Min/Max のセル・
         検査員の文字・ライン名。前は呼び元にかかわらず通常検査(UF1)のロット・Min/Max で開いていた(2026-11-06)。"""
-        from .modes.sheet import CASK, H494, ZEN
+        from .modes.sheet import CASK, ZEN
         if source == "Cask":
             from . import cask_session
             book = cask_session.get().book
@@ -174,12 +174,12 @@ class AinputSession:
         else:
             from . import zenkasho_session
             book = zenkasho_session.get().book
-            name = ZEN if source == "Mitsubishi" else H494
+            name = ZEN
             if book is None or not book.has(name):
-                raise Stop("全ヵ所・H494 の画面でロットを開いてから、Aインプットを開いてください", level=WARN,
+                raise Stop("全ヵ所の画面でロットを開いてから、Aインプットを開いてください", level=WARN,
                            source="Input:250")
             ws, line = book.ws(name), book.mit.line_name
-            workers_txt = "UF三菱:" + (book.mit.kname if source == "Mitsubishi" else book.mit.h494_kname)
+            workers_txt = "UF三菱:" + book.mit.kname
         cells = {(r, c): ws.get(r, c) for r in (2, 3, 4) for c in range(1, 28)}
         lot = "" if cells.get((2, 4)) is None else str(cells[(2, 4)])
         return lot, cells, workers_txt, line
@@ -200,7 +200,7 @@ class AinputSession:
         ln = lines.find(st.line_name)
         test = st.line_option == "Test" or (ln is not None and ln.official == "Test")
         store = k.store
-        source = source if source in ("Cask", "Mitsubishi", "H494") else ""
+        source = source if source in ("Cask", "Mitsubishi") else ""
         self.source = source
         with trace.timed("db.read", "Lot情報履歴 を読む(Aインプット)", path=str(store.path)):
             history = self._history()

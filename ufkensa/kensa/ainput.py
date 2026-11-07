@@ -1058,8 +1058,8 @@ def startup(temp: str, ken_m: str, history: Optional[list[list[Any]]], *, workin
             sheet_cells: Optional[dict[tuple[int, int], Any]] = None, workers: str = "") -> StartupResult:
     """Input.Ainput_Startup (Input:225-400)。UFAinput を開くときの値。
 
-    temp: "UF1" / "Cask" / "Mitsubishi" / "H494"。history は Lot情報履歴(1 行目=見出し)。
-    uf1_minmax は UF1 の AMin..TMax、sheet_cells は キャスク検査/全ヵ所検査/H494検査 のセル(行, 列)。
+    temp: "UF1" / "Cask" / "Mitsubishi"。history は Lot情報履歴(1 行目=見出し)。
+    uf1_minmax は UF1 の AMin..TMax、sheet_cells は キャスク検査/全ヵ所検査 のセル(行, 列)。
     workers は UF1 なら ` T1:<T1>`(workers.workers_text)、キャスク・三菱は "UFｷｬｽｸ:<Kname>" などを呼び手が作る。
     """
     res = StartupResult(None)
@@ -1123,7 +1123,7 @@ def startup(temp: str, ken_m: str, history: Optional[list[list[Any]]], *, workin
         mm = uf1_minmax or {}
         for k in ("amin", "hmin", "tmin", "amax", "hmax", "tmax"):
             setattr(form, k, mm.get(k, ""))
-    elif temp in ("Mitsubishi", "Cask", "H494"):
+    elif temp in ("Mitsubishi", "Cask"):
         cols = (23, 25, 27) if temp == "Mitsubishi" else (22, 23, 24)     # 三菱は 2024.1.11 に座標変更
         for row, names in ((4, ("amin", "hmin", "tmin")), (3, ("amax", "hmax", "tmax"))):
             for name, c, pattern in zip(names, cols, ("0.000", "0.0", "0.0")):

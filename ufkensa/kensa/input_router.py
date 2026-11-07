@@ -14,7 +14,7 @@ from typing import Iterator, Optional
 from . import vbx
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_NG, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
-                   fm_clear, hab_lt_300, ken_flags, small_count_th, yama_is)
+                   fm_clear, ken_flags, small_count_th, yama_is)
 
 PACKETS = ("DT", "#L", "#〆")
 
@@ -149,16 +149,8 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
             a, n = 1, 4
         elif state.at_butt_caption == "厚4ヵ所":
             a, n = 1, 2
-        h494 = youto == "H494"
-        hab = hab_lt_300(state)                     # And は両辺を評価する
-        if h494 and hab:
-            a, n = 1, 6
     elif pucket == "#L":
         a, n = (5, 14) if state.is_work("極厚") else (5, 10)
-        h494 = youto == "H494"
-        hab = hab_lt_300(state)
-        if h494 and hab:
-            a, n = 7, 10
     elif pucket == "#〆":
         a, n = (1, 14) if state.is_work("極厚") else (1, 10)
     else:

@@ -1,4 +1,4 @@
-/* 包装仕様書の窓(UF_PackNo)。全ヵ所/H494・キャスクの画面で使う。左=画像、右=引当の一覧・仕様・確認 */
+/* 包装仕様書の窓(UF_PackNo)。全ヵ所・キャスクの画面で使う。左=画像、右=引当の一覧・仕様・確認 */
 .pk { border: 1px solid var(--rule); border-radius: var(--radius); padding: 0; width: min(1280px, 96vw);
       max-height: 94vh; background: var(--surface); color: var(--ink); }
 .pk__head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--rule); }

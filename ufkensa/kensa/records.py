@@ -847,19 +847,13 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
     out.tags["ReSize"] = "無" if n == "ReLoad" else cell_text(k[21])
     out.set("ResizText", out.tags["ReSize"])
 
-    h494 = cell_text(k[18]) == "H494"
-    hab_lt = vbx.compare_typed(k[2], 300.0, vbx.VAR, vbx.NUM) < 0
-    hab_v = vbx.val(cell_text(k[2]))
     for i in range(1, 21):
         for fi, f in enumerate(FACES):
             v = data[fi][i - 1]
             if 1 <= i <= 4:
                 out.set(f"{f}{i}", _fmt_val(v, "0.000"))
             elif i in (5, 6):
-                pat = "0.0"
-                if h494 and hab_lt and 1.0 <= hab_v <= 299.0:
-                    pat = "0.00"
-                out.set(f"{f}{i}", _fmt_val(v, pat))
+                out.set(f"{f}{i}", _fmt_val(v, "0.0"))
             elif 7 <= i <= 10:
                 out.set(f"{f}{i}", _fmt_val(v, "0.0"))
             elif 11 <= i <= 14:

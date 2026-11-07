@@ -88,9 +88,6 @@ class TemplateTest(unittest.TestCase):
         self.assertEqual(z.get(76, 1), 70.0)
         self.assertEqual(z.get(8, 34), "ﾌﾞﾛｯｸ下")
         self.assertEqual(z.get(6, 31), "元板NO")
-        h = sh.template(sh.H494_TEMPLATE)
-        self.assertEqual(h.get(6, 15), "幅3")
-        self.assertEqual(h.get(3, 22), 0.0)
         m = sh.template(sh.MITSU_TEMPLATE)
         self.assertEqual(m.get(4, 4), "MR664-H112")
 

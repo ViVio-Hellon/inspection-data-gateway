@@ -9,7 +9,7 @@ from typing import Any
 
 from . import vbx
 from .flow import WARN, Message, Stop
-from .grid import COLOR_DEFAULT, COLOR_NG, POSITIONS, Hooks, KensaState, hab_lt_300, remove_underline, small_count_th
+from .grid import COLOR_DEFAULT, COLOR_NG, POSITIONS, Hooks, KensaState, remove_underline, small_count_th
 from .grid import typed_cmp, variant_eq
 
 #: TB_BackColor の色(FormRelat:5911-5912)
@@ -171,13 +171,6 @@ def min_max(state: KensaState, hooks: Hooks) -> list[Message]:
     state.hmax = vbx.fmt(_ws_max(hran), "0.0")
     state.tmin = vbx.fmt(_ws_min(tran), "0.0")
     state.tmax = vbx.fmt(_ws_max(tran), "0.0")
-
-    h494 = state.youto == "H494"
-    hab = hab_lt_300(state)                               # And は両辺を評価する
-    if h494 and hab:
-        pat = "0.00" if 1.0 <= vbx.val(state.hab) <= 299.0 else "0.0"
-        state.hmin = vbx.fmt(_ws_min(hran), pat)
-        state.hmax = vbx.fmt(_ws_max(hran), pat)
 
     # `If UF1.AMin = 0 Then UF1.AMin = ""`(Label.Caption は String。空なら型エラー)
     for attr in ("amin", "amax", "hmin", "hmax", "tmin", "tmax"):

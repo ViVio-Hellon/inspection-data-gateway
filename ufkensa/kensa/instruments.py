@@ -221,36 +221,18 @@ def micro_juge(m: MicroInput, *, db: Callable[..., str] = db_return_micro) -> Mi
 
     - UF1.Machin が空なら何もしない
     - 厚・幅は Single へ代入(空・数にならなければ型エラー 13 ── VBA と同じく最初に起きる)
-    - L-1 で用途 H494 かつ 幅 < 300: 幅が 1〜299 で座標番号 5〜6(幅)のときだけ N5(ノギス)と比べ、
-      それ以外の座標・幅は確かめずに終わる
     - それ以外: 用途と厚から引いた出力テキストと違えば NG
     """
     if m.machin == "":
         return MicroJudge()
     pran = m.machin
     atu = _csng(m.atu)
-    haba = _csng(m.hab)
+    _csng(m.hab)                    # 幅も Single へ代入する(数にならなければ型エラー 13。VBA どおり)
     use = m.youto
     lname = m.lname
     positive = db(lname, atu, use)
     mdevice = db(lname, atu, use, "機器名")
-    count_st = vbx.right(m.st, 2) if len(m.st) == 3 else vbx.right(m.st, 1)
 
-    l1 = m.l1work
-    if l1 is None:
-        ln = lines.find(lname)
-        l1 = ln is not None and ln.official == "L-1"
-    if l1:
-        # `Use = "H494" And UF1.Hab < 300#`(And は短絡しない。Hab が数にならなければ型エラー 13)
-        h494 = use == "H494"
-        narrow = vbx.vcompare(m.hab, 300.0) < 0
-        if h494 and narrow:
-            if 1.0 <= haba <= 299.0:
-                if vbx.vcompare(count_st, 5) >= 0 and vbx.vcompare(count_st, 6) <= 0:
-                    if not (pran == db(lname, atu, use, "", "N5")):
-                        text = ("用途コード_" + use + "の幅測定はノギスで行ってください") + " *Not:" + lname + "N5"
-                        return MicroJudge(False, m.st, flow.Stop(text, source="MachineTransfer:196", level=WARN))
-            return MicroJudge()
     if not (pran == positive):
         text = TRM + " " + mdevice + "を使用の事"
         return MicroJudge(False, m.st, flow.Stop(text, source="MachineTransfer:211", level=WARN))
@@ -274,7 +256,7 @@ class TransferInput:
     yout: str = ""                  # 引数 Yout(用途)
     line: str = ""                  # 選ばれているライン(UF1.L1Work/HVC/LVC/Bala/Tott。どれでもなければ "")
     tak: str = ""                   # UF1.Tak.Text
-    hab: str = ""                   # UF1.Hab(H494 の判定に使う)
+    hab: str = ""                   # UF1.Hab
     cells: Callable[[int, int], Any] = lambda r, c: None   # 帳票シートのセル値(14〜18 行 × B/D/F/H 列を見る)
 
 
@@ -285,7 +267,6 @@ def machine_transfer(t: TransferInput, *, db: Callable[..., str] = db_return_mic
     - L-1 のコンベックス: 丈 > 5500 → " C11"、それ以外 " C12"。HVC " C11"、LVC " C10"、
       バランサー " C12"・トット " C11"(ライン名は "大板")。それ以外のライン(丸徳・Test)は "" と ""
     - 厚がちょうど 300: シートの 14〜18 行 B/D/F/H 列の数に < 300 があれば N5、>= 300 があれば N6
-    - 用途 H494 かつ UF1.Hab < 300 かつ 幅 1〜299: (x-1, y+2) = "幅:ﾉｷﾞｽ , 丈:ｺﾝﾍﾞｯｸｽ"、(x, y+2) = ライン & "N5," & コンベックス
     """
     ln = lines.find(t.line)
     official = ln.official if ln else ""
@@ -326,13 +307,6 @@ def machine_transfer(t: TransferInput, *, db: Callable[..., str] = db_return_mic
         elif koflag and not flag:
             out.append((t.x, t.y, line + " N6"))
 
-    # `Yout = "H494" And UF1.Hab < 300#`(And は短絡しない。Hab が数にならなければ型エラー 13)
-    h494 = t.yout == "H494"
-    narrow = vbx.vcompare(t.hab, 300.0) < 0
-    if h494 and narrow:
-        if 1.0 <= vbx.val(t.haba) <= 299.0:
-            out.append((t.x - 1, t.y + 2, "幅:ﾉｷﾞｽ , 丈:ｺﾝﾍﾞｯｸｽ"))
-            out.append((t.x, t.y + 2, line + "N5," + conb))
     return out
 
 

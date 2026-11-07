@@ -1,5 +1,5 @@
 /*
-  全ヵ所検査(一般。5N・三菱受託は使っていないので切り替えに出さない D21)・H494 検査の画面。
+  全ヵ所検査(一般。5N・三菱受託は使っていないので切り替えに出さない D21)の画面。
   判断はすべてサーバ(ufkensa/kensa/zenkasho_session.py)。ここは受け取った view を描き、操作を送るだけ。
 
   操作の返り値(Result): { view, messages, question, stop }
@@ -97,7 +97,6 @@ function renderForm(v) {
   setInput("fMin", f.min); setInput("fMax", f.max);
   for (const [id, key] of [["fLot", "lot"], ["fKenNo", "ken_no"], ["fYouto", "youto"], ["fKname", "kname"],
                            ["fMin", "min"], ["fMax", "max"]]) $(id).dataset.name = f.names[key];
-  $("h494Badge").hidden = !(f.h494 && v.page === "P1");
   $("methods").replaceChildren(...f.methods.map((m) => {
     const b = el("button", "zk-seg__b", m);
     b.type = "button"; b.setAttribute("role", "radio"); b.setAttribute("aria-checked", String(f.method === m));
@@ -185,7 +184,7 @@ function renderTable(v) {
 function renderFlash(v) {
   if (!v.flash && !v.diag) return;
   const f = $("flash");
-  // UF対角(H494 の対角): VBA は絵を 2 秒出す(UFOK/UFNG は閉じる)
+  // UF対角: VBA は絵を 2 秒出す(UFOK/UFNG は閉じる)
   f.textContent = v.diag ? "対角" : (v.flash === "OK" ? "○" : "×");
   f.dataset.kind = v.diag ? "diag" : v.flash;
   f.hidden = false;

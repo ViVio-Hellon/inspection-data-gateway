@@ -1,7 +1,7 @@
-"""全ヵ所・H494 画面 /zenkasho と /api/zenkasho/*(app/routes/zenkasho.py → zenkasho_session.py)
+"""全ヵ所画面 /zenkasho と /api/zenkasho/*(app/routes/zenkasho.py → zenkasho_session.py)
 
 基準データ(tests/kensa_fixture.py)のロット RX021T0(厚 25 × 巾 1385 × 丈 2770.5、LVC)で、
-開く(作業名の InputBox)→ ロット → 伝送文字列で測定 → 作業の切替(5N・三菱・H494)→ 検入高さ → 印刷・保存、
+開く(作業名の InputBox)→ ロット → 伝送文字列で測定 → 作業の切替(5N・三菱)→ 検入高さ → 印刷・保存、
 作業中保存からの読み戻しを確かめる。業務の結果そのものは test_kensa_modes_* で確かめている。
 """
 from __future__ import annotations
@@ -86,12 +86,8 @@ class SessionTest(ZenBase):
         self.assertEqual(v["notice"], "三菱受託は確認待ちの項目があります(docs/04 W2)")
         self.assertEqual([p["which"] for p in v["prints"]], ["mitsubishi"])
         self.assertIn("元板NO", [c["label"] for c in v["columns"]])
-        d = self.s.choose("H494").to_dict()
-        v = d["view"]
-        self.assertEqual((v["mode"], v["page"]), ("H494", "P_H494"))
-        self.assertEqual(len(v["rows"]), 10)
-        self.assertIn("幅3", [c["label"] for c in v["columns"]])
-        self.assertFalse(self.s.book.sheets[sh.ZEN].visible)            # QueryClose で隠す
+        d = self.s.choose("H494").to_dict()                              # H494 は 2026-11-07 に削除
+        self.assertIn("正しい作業選択名", d["stop"]["text"])
         d = self.s.choose("一般").to_dict()
         self.assertEqual(d["view"]["page"], "P1")
         self.assertEqual(d["view"]["mode"], "一般")
@@ -186,9 +182,7 @@ class ScreenTest(ZenBase):
         self.assertEqual(d["view"]["active"]["label"], "No.3 幅1")
         d = self.post("select", r=999, c=1)
         self.assertIn("セルの位置", d["stop"]["text"])
-        d = self.post("choose", mode="H494")
-        self.assertEqual(d["view"]["page"], "P_H494")
-        d = self.post("print", which="normal")                           # H494 では一般の印刷は無い
+        d = self.post("print", which="h494")                             # H494 の印刷は削除した
         self.assertIsNotNone(d["stop"])
 
     def test_unknown_op_and_report(self) -> None:
@@ -313,36 +307,20 @@ class ConnectTest(ZenBase):
         self.assertEqual((page["header_left"], page["header_right"]), ("LVC", LOT + " 検査員01"))
         self.assertTrue(page["footer_right"].startswith(" 2026/11/02  10:05～"))     # フッターは今までどおり
 
-    def test_uf_taikaku_h494(self) -> None:
-        self.open_ippan()
-        self.s.choose("H494")
-        self.s.set_form("H494_Lot", LOT)
-        self.s.resume()
-        self.s.select(7, 21)
-        d = self.s.receive("1960.5").to_dict()                           # 対角1 を入れた → UF対角(Cask:1899-1918)
-        self.assertTrue(d["view"]["diag"])
-        self.assertEqual(d["view"]["flash"], "")
-        self.assertNotIn("UF対角", d["view"]["pending"])
 
 
 
 class RegisterCheckTest(ZenBase):
-    """UF1.ZEB_Click / H494B_Click: Register_Check が真なら「検査員登録をして下さい」で開かない(UF1:4870-4875 / 604-609)。"""
+    """UF1.ZEB_Click: Register_Check が真なら「検査員登録をして下さい」で開かない(UF1:4870-4875)。"""
 
     def test_start_needs_worker(self) -> None:
         self.registered.return_value = True
         d = self.s.start("一般").to_dict()
         self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])
         self.assertFalse(d["view"]["open"])
-        d = self.s.choose("H494").to_dict()                              # 閉じているときの H494 も同じ
-        self.assertIn(zenkasho_session.NEED_WORKER, [m["text"] for m in d["messages"]])
-        self.assertFalse(d["view"]["open"])
         self.registered.return_value = False
         d = self.s.start("一般").to_dict()
         self.assertTrue(d["view"]["open"])
-        self.registered.return_value = True                              # 開いた後の切替では見ない(フォーム内のページ)
-        d = self.s.choose("H494").to_dict()
-        self.assertEqual((d["view"]["open"], d["view"]["page"]), (True, "P_H494"))
 
     def test_real_register_check(self) -> None:
         self._reg_patch.stop()                                           # 本物: 検査員_LVC が無い → 真(Worker:456-)
@@ -385,6 +363,6 @@ class ShownModesTest(unittest.TestCase):
     def test_d21_unused_modes_hidden(self) -> None:
         """決定 D21: 三菱受託・5N は使っていないので切り替えに出さない(その作業中なら出す)。"""
         from ufkensa.kensa import zenkasho_session as zs
-        self.assertEqual(zs.SHOWN_MODES, ("一般", "H494"))
+        self.assertEqual(zs.SHOWN_MODES, ("一般",))
         keys = [k for k, _ in zs.MODES if k in zs.SHOWN_MODES or k == "三菱"]
-        self.assertEqual(keys, ["一般", "三菱", "H494"])
+        self.assertEqual(keys, ["一般", "三菱"])

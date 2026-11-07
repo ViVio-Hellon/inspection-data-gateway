@@ -53,13 +53,6 @@ class NumDigTest(unittest.TestCase):
         layout.num_dig(s)
         self.assertEqual(s.cells["S1"].value, "1")
 
-    def test_width_h494(self) -> None:
-        for youto, hab, expect in (("H494", "250", "250.13"), ("H494", "299", "299.00"), ("H494", "0.5", "250.1"),
-                                   ("H494", "300", "250.1"), ("R115", "250", "250.1")):
-            s = KensaState(atu="3", youto=youto, hab=hab)
-            s.cells["S5"].value = "250.125" if expect != "299.00" else "299"
-            layout.num_dig(s)
-            self.assertEqual(s.cells["S5"].value, expect, (youto, hab))
 
     def test_length_diag(self) -> None:
         s = KensaState(atu="3")

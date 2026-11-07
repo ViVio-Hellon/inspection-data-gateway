@@ -23,7 +23,7 @@ bp = Blueprint("ainput", __name__)
 
 #: 画面の操作 → (セッションのメソッド, 受け取る引数, ログの説明)
 OPS: dict[str, tuple[str, tuple[str, ...], str]] = {
-    "open": ("open", ("ken_m", "source"), "開く(Ainput_Startup。source = 呼び元 Cask / Mitsubishi / H494)"),
+    "open": ("open", ("ken_m", "source"), "開く(Ainput_Startup。source = 呼び元 Cask / Mitsubishi)"),
     "value": ("set_value", ("name", "value"), "入力欄"),
     "spin": ("spin", ("name", "dir"), "段・風袋の欄を増減"),
     "mount": ("set_mount", ("value",), "山数"),

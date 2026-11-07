@@ -118,8 +118,6 @@ class DeviceTest(unittest.TestCase):
         ws.set(15, 4, 300.2)
         zk.kiki_tensou(b, ws, 3, 29, "300", "1528", "")
         self.assertEqual(ws.get(3, 29), "ﾉｷﾞｽ：LVCN5,N6" + sp + "ｺﾝﾍﾞｯｸｽ:LVCC11")
-        zk.kiki_tensou(b, ws, 3, 29, "10", "150", "H494")
-        self.assertEqual(ws.get(3, 29), "ﾏｲｸﾛ:LVCM1" + sp + "幅:ﾉｷﾞｽ:N5_丈:ｺﾝﾍﾞｯｸｽ:LVC C10")
         b.mit.line_name = "Test"
         zk.kiki_tensou(b, ws, 3, 29, "10", "1528", "")
         self.assertEqual(ws.get(3, 29), "ﾏｲｸﾛ:M1" + sp + "ｺﾝﾍﾞｯｸｽ:")

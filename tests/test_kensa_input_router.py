@@ -73,21 +73,6 @@ class PucketMoveTest(unittest.TestCase):
         ir.pucket_move(s, "DT", "", "", FakeHooks(), msgs)
         self.assertEqual(msgs[0].text, "DT検査済")
 
-    def test_h494_nogisu(self) -> None:
-        s = ready(youto="H494")
-        s.hab = "250"
-        fill(s, cells("S", range(1, 5)))
-        ir.pucket_move(s, "DT", "", "H494", FakeHooks())
-        self.assertEqual(s.inp_tag, "S5")               # 行1〜6
-        s = ready(youto="H494")
-        s.hab = "300"                                   # 300 は < 300 でない
-        fill(s, cells("S", range(1, 5)))
-        ir.pucket_move(s, "DT", "", "H494", FakeHooks())
-        self.assertEqual(s.inp_tag, "U1")
-        s = ready(youto="H494")
-        s.hab = "250"
-        ir.pucket_move(s, "#L", "", "H494", FakeHooks())
-        self.assertEqual(s.inp_tag, "S7")               # 行7〜10
 
     def test_hab_blank_is_not_error(self) -> None:
         s = ready()

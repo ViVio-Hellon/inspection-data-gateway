@@ -1440,10 +1440,8 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
             return out
         if work_flag == "P1":
             out.sheet = "全ヵ所検査"
-        elif work_flag == "P_H494":
-            out.sheet = "H494検査"
         else:
-            raise VbaRuntimeError(91, "ZenSh が Nothing(WorkFlag が P1/P_H494 以外)")
+            raise VbaRuntimeError(91, "ZenSh が Nothing(WorkFlag が P1 以外)")
         if vbx.instr(items, "ラテラルボー") > 0:
             out.cells[(1, 15)] = nou + zai
             if isnum(kousa_l):

@@ -1,4 +1,4 @@
-/* 全ヵ所・H494 画面。上=作業の切替、左=フォーム、中央=シートの上部と測定の表、右=次に入力する欄・入力・操作 */
+/* 全ヵ所画面。上=作業の切替、左=フォーム、中央=シートの上部と測定の表、右=次に入力する欄・入力・操作 */
 .zk { display: flex; flex-direction: column; gap: 8px; }
 .zk__top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .zk-modes { display: inline-flex; border: 2px solid var(--accent); border-radius: var(--radius); overflow: hidden; }
