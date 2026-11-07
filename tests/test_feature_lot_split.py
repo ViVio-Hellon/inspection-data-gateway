@@ -102,7 +102,6 @@ class LotSplitTest(SessionBase):
                          (LOT2, "15.012", "1252.3"))
         self.assertEqual(s2.state.v("SplitFlag").value, "")
 
-    @unittest.expectedFailure
     def test_split_across_shift_keeps_previous_worker(self) -> None:
         """不具合: 直をまたいで分割登録すると、前の直の検査員(T1)が登録から消える。
         VBA の CommandButton10_Click は検査員を触らない(UF1:2937-3002)。Python だけの _prune_workers

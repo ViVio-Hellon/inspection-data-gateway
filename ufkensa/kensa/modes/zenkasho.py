@@ -89,7 +89,8 @@ def extract_nth_text(s: str, a: int) -> str:
 def convert_to_half(temp: Any) -> str:
     """補助.ConvertToHalf + numExtract (補助:1105-1130)。全角数字を半角にし、"/" の前の数字と "." だけ残す。"""
     s = "" if temp is None else str(temp)
-    s = "".join(chr(ord(ch) - 0xFEE0) if "０" <= ch <= "９" else ch for ch in s)
+    # 全角の数字と小数点「．」を半角に(VBA は「．」を落として "３．０" → "30" になっていた。2026-11-07 に直した)
+    s = "".join(chr(ord(ch) - 0xFEE0) if "０" <= ch <= "９" else ("." if ch == "．" else ch) for ch in s)
     if "/" in s:
         s = s.split("/")[0]
     return "".join(ch for ch in s if ch in "0123456789.")

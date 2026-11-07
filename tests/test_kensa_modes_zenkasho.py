@@ -96,7 +96,7 @@ class StringToolsTest(unittest.TestCase):
         self.assertEqual(zk.extract_nth_text("(10.0÷2)(20.5÷3)", 2), "20.5")
         self.assertEqual(zk.extract_nth_text("(10.0)", 1), "")
         self.assertEqual(zk.extract_nth_text("(10.0÷2)", 0), "")
-        self.assertEqual(zk.convert_to_half("２．０mm/3"), "20")    # 全角の "．" は半角にせず捨てる
+        self.assertEqual(zk.convert_to_half("２．０mm/3"), "2.0")   # 全角の "．" も半角に(2026-11-07 に直した。VBA は "20")
         self.assertEqual(zk.convert_to_half("1.0/2M"), "1.0")
 
 

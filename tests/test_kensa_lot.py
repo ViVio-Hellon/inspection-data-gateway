@@ -258,7 +258,7 @@ class AccReflecTest(_Base):
         self.assertEqual(no, "35000001")                           # 引当なし → PastHiki(0) から ' を除く
 
     def test_small_helpers(self) -> None:
-        self.assertEqual(lot.convert_to_half("２．５ＭＭ"), "25")     # 全角の . は残らない
+        self.assertEqual(lot.convert_to_half("２．５ＭＭ"), "2.5")    # 全角の . も半角に(2026-11-07 に直した。VBA は "25")
         self.assertEqual(lot.convert_to_half("1.0/1M"), "1.0")
         self.assertEqual(lot.find_right_string("HOT ANF CAI PSW"), "CAI")
         self.assertEqual(lot.find_right_string(""), "")
