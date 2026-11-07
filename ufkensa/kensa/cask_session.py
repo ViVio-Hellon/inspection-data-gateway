@@ -36,7 +36,6 @@ ComboBox1_Change の続き: HistorySave(Lot情報履歴)→ PackingNoCheck / UFP
 """
 from __future__ import annotations
 
-import csv
 import glob
 import json
 import re
@@ -56,6 +55,7 @@ from .modes import cask
 from .modes import sheet as sh
 from .report_model import ReportModel, format_cell
 from .session import Result
+from .special_common import SubInspectionCommon
 from .store import HOZON, HOZON_HEADERS, LOT_HISTORY, LocalStore
 
 log = get_logger("kensa.cask_session")
@@ -259,7 +259,7 @@ def render_html(model: ReportModel, title: str) -> str:
 # ------------------------------------------------------------------
 # セッション
 # ------------------------------------------------------------------
-class CaskSession:
+class CaskSession(SubInspectionCommon):
     """プロセスに 1 つのキャスク検査。操作は `_lock` で 1 つずつ通す。
 
     試験では `store`(手元DB)・`now`(時計)・`uf1`(通常検査の状態を返す関数)・`write_logs` を差し替える。
@@ -311,6 +311,12 @@ class CaskSession:
             return True
         stem = p.name[:-5] if p.name.lower().endswith(".xlsx") else p.name
         return bool(glob.glob(str(p.parent / (glob.escape(stem) + "_*.csv"))))
+
+    def _sink(self) -> list[Message]:
+        return self.book.fx.messages
+
+    def _facility(self) -> str:
+        return self.facility() or workers.DEFAULT_FACILITY
 
     def _ensure_book(self) -> sh.Book:
         if self.book is None:
@@ -509,14 +515,6 @@ class CaskSession:
             self.pack = form
         return msgs
 
-    def _registered(self, uf1: Any) -> bool:
-        """Worker.Register_Check(UF1 の検査員)。True = 登録が要る。"""
-        env = self.env()
-        now = self.now()
-        return workers.register_check(workers.hhmmss(now), wiring.registry(uf1),
-                                      wiring.worker_sheet_a(self.store, uf1.lname), now=now,
-                                      facility=self.facility() or workers.DEFAULT_FACILITY, shifts=env.shift_times())
-
     def _daily_report(self, n: int) -> list[Message]:
         """Worker.Daily_Report(n)。キャスク検査が表示中なので Lname="" → `Daily_` シート(普通は無い → 何もしない)。"""
         name = workers.daily_sheet_name("キャスク", "")
@@ -550,17 +548,7 @@ class CaskSession:
             return []
         book = self.book
         assert book is not None
-        env = self.env()
-        now = self.now()
-        fac = self.facility() or workers.DEFAULT_FACILITY
-        name = "Daily_" + book.cask.line_name
-        day_return = workers.yea_dayr_check(workers.hhmm(now), now=now, facility=fac, shifts=env.shift_times())
-        set_time = workers.time_check(workers.hhmmss(now), facility=fac, shifts=env.shift_times())
-        cells = wiring.sheet_cells(self.store, name)
-        recreate = cells is None or sh.cell_str(cells.get((1, 1))) != day_return + "_" + set_time
-        with trace.timed("db.save", "日報の作成(Daily_Create)", path=str(self.store.path), table=name):
-            wiring.write_cells(self.store, name, [workers.CellWrite(2, c, v) for c, v in
-                                                  enumerate(workers.DAILY_FIELDS, start=1)], recreate=recreate)
+        self._daily_header(book.cask.line_name)
         self._daily_report(1)
         self._daily_report(3)
         return []
@@ -599,14 +587,6 @@ class CaskSession:
             self._lot_error = True
             msgs.append(Message("DB読み込みエラー:" + "\r\n" + str(e), ERROR, source="UFCask:554"))
         return msgs
-
-    def _apply_history(self, h: lotmod.HistorySaveResult) -> int:
-        lh = self.store.sheet(LOT_HISTORY)
-        for r in sorted(h.delete_rows, reverse=True):
-            lh.delete_row(r)
-        for row in h.new_rows:
-            lh.append(row[:26])
-        return len(h.new_rows)
 
     # -- 印刷・保存 ---------------------------------------------------
     def _print_folder(self) -> Path:
@@ -874,37 +854,6 @@ class CaskSession:
         cask.proofreading_search(self.book, workers.yea_dayr_check(workers.hhmm(now), now=now, facility=fac,
                                                                    shifts=env.shift_times()),
                                  workers.time_check(workers.hhmmss(now), facility=fac, shifts=env.shift_times()))
-
-    def pack_select(self, i: Any) -> Result:
-        return self._run(self._pack_select, i)
-
-    def _pack_select(self, i: Any) -> None:
-        """UF_PackNo の引当の行をクリック(LabelCls → Loop_Label → JPGLoad)。"""
-        if self.pack is None:
-            raise Stop("包装仕様書の画面は開いていません", level=WARN, source="cask_session")
-        try:
-            n = int(i)
-        except (TypeError, ValueError):
-            raise Stop("行の番号が正しくありません", level=WARN, source="cask_session") from None
-        msgs: list[Message] = []
-        packing.pack_select(self.pack, n, wiring.sheet_rows(self.store, LOT_HISTORY), messages=msgs)
-        self.book.fx.messages.extend(msgs)
-
-    def pack_close(self, confirmed: Any = False) -> Result:
-        return self._run(self._pack_close, bool(confirmed))
-
-    def _pack_close(self, confirmed: bool) -> None:
-        """UF_PackNo.CommandButton2_Click(「確認」が無いと「確認後に押してください。」で閉じない)。"""
-        m = packing.pack_close(confirmed)
-        if m is not None:
-            self.book.fx.messages.append(m)
-            return
-        self.pack = None
-
-    def pack_image(self) -> Optional[Path]:
-        """いま出している包装仕様書の画像(使用パスの QualityPath\\包装仕様書)。"""
-        with self._lock:
-            return packing.picture_file(self.pack.picture) if self.pack is not None else None
 
     def close(self) -> Result:
         return self._run(self._close)
