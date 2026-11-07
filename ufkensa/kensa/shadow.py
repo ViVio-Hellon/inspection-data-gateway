@@ -22,7 +22,8 @@ log = get_logger("stage3")          # ロガー名 ufkensa.stage3
 STRICT = False
 #: 1 回のログに出す食い違いの数
 _LIMIT = 20
-TAG = {"7": "[第3段7] 判定(色と別に持つ)", "9": "[第3段9] 読み戻し(型に読み込む)"}
+TAG = {"7": "[第3段7] 判定(色と別に持つ)", "9": "[第3段9] 読み戻し(型に読み込む)",
+       "10": "[第3段10] 名前で読み書き(宣言の無い欄)"}
 
 
 class ShadowMismatch(AssertionError):
