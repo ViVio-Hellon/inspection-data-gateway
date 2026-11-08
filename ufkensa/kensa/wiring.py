@@ -49,7 +49,7 @@ from datetime import datetime
 from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
-               lot as lotmod, paths, quality, records, report_model, vbx, workers)
+               lot as lotmod, paths, quality, records, vbx, workers)
 from . import model, shadow
 from .model import CellKey, EXTREME, FormTag, NORMAL, Switch, Verdict, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace

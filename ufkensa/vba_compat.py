@@ -6,7 +6,6 @@ VBA の癖をそのまま写している**(直したくなっても直さない)
 from __future__ import annotations
 
 import re
-import unicodedata
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Optional
