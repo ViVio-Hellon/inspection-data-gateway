@@ -510,3 +510,54 @@ class FixBranchTest(_Base):
         self.d.remove(self.d.next, "SIKAODRNOW")
         res = lot.history_save(ph, _sheet(), lot.HistoryEnv(now=T_NORMAL))
         self.assertEqual([m.text for m in res.messages], [paths.missing_text("SIKAODRNOW")])
+
+
+class HikiMergeTest(_Base):
+    """2026-11-08: 第1の SIKAHIKI に引当が足りないとき、第2にだけある引当番号を足す。"""
+
+    def _extra_in_second(self) -> tuple[str, str]:
+        f = self.d.next / kensa_fixture.file_name("SIKAHIKINOW")
+        with sqlite3.connect(f) as c:
+            cols = [r[1] for r in c.execute('PRAGMA table_info("仕掛")')]
+            row = list(c.execute('SELECT * FROM "仕掛" LIMIT 1').fetchone())
+            lot_no = row[cols.index("ﾛｯﾄ番号")]
+            row[cols.index("引当番号")] = "99999999"
+            c.execute(f'INSERT INTO "仕掛" VALUES ({",".join("?" * len(row))})', row)
+        return lot_no, "99999999"
+
+    def _nos(self, rows: list) -> set:
+        cols = datasource.get_fields(lot.db_path(paths.get("main"), "SIKAHIKINOW"), lot.TABLE, "")
+        i = datasource.column_index(cols, "引当番号")
+        return {vbx.cstr(r[i]) for r in rows}
+
+    def test_arrbox_adds_missing_hiki(self) -> None:
+        lot_no, extra = self._extra_in_second()
+        r = lot.arrbox("SIKAHIKINOW", lot_no, "Record", "", now=T_NORMAL)
+        self.assertIn(extra, self._nos(r.value))
+        self.assertTrue(any("第2パスから足しました" in m.text for m in r.messages))
+
+    def test_nothing_added_when_same(self) -> None:
+        f = self.d.next / kensa_fixture.file_name("SIKAHIKINOW")
+        with sqlite3.connect(f) as c:
+            lot_no = c.execute('SELECT "ﾛｯﾄ番号" FROM "仕掛" LIMIT 1').fetchone()[0]
+        r = lot.arrbox("SIKAHIKINOW", lot_no, "Record", "", now=T_NORMAL)
+        self.assertEqual(r.messages, [])
+
+    def test_offline_reads_second_only(self) -> None:
+        lot_no, extra = self._extra_in_second()
+        paths.set_mode(paths.OFFLINE)
+        try:
+            r = lot.arrbox("SIKAHIKINOW", lot_no, "Record", "", now=T_NORMAL)
+            self.assertIn(extra, self._nos(r.value))       # 第2だけを読む(足す処理はしない)
+            self.assertEqual(r.messages, [])
+        finally:
+            paths.set_mode(paths.ONLINE)
+
+    def test_watch_sees_added_hiki(self) -> None:
+        from ufkensa.kensa import lot_watch
+        f = self.d.next / kensa_fixture.file_name("SIKAHIKINOW")
+        with sqlite3.connect(f) as c:
+            lot_no = c.execute('SELECT "ﾛｯﾄ番号" FROM "仕掛" LIMIT 1').fetchone()[0]
+        before = lot_watch.signature(lot_no)
+        self._extra_in_second()
+        self.assertIn("引当", before.changed(lot_watch.signature(lot_no)))
