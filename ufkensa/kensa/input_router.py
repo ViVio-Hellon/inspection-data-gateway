@@ -101,7 +101,9 @@ def all_check(state: KensaState, a: int, n: int, ken_no: str, temp: str, hooks: 
         return scan(lambda i: ("S", "C", "E") if 5 <= i <= 10 else five)
     if temp == "少枚数":
         if th == 5:
-            return scan(lambda i: five)
+            # 2026-11-08 に直した: 少枚数 5 回は行 5〜10 の U・D を隠す(SmallNumberCount)ので、そこは S・C・E だけを見る。
+            # VBA(FormRelat:476-494)は全列を見るため、隠れた空の U・D で #L が終わらなかった
+            return scan(lambda i: ("S", "C", "E") if 5 <= i <= 10 else five)
         if th == 4:
             return scan(lambda i: ("S", "C", "D") if 5 <= i <= 10 else ("S", "U", "C", "D"))
         if th == 3:
