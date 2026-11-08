@@ -1414,7 +1414,9 @@ def kanri_view(store: LocalStore, list_index: int, cb1_list: Sequence[str], cb1_
                 v[f"A{f.lower()}_Vis"] = cell_text(av[k2]).replace("A_", "")
                 v[f"B{f.lower()}_Vis"] = cell_text(bv[k2]).replace("B_", "")
                 v[f"{f}_BH"] = t(104 + k2)
-        if t(98) in ("極厚", ""):
+        # 2026-11-08 に直した(B92): 保存値は「耳付き」なので、それでも位置名を 1〜5 に切り替える(「極厚」も残す)。
+        # VBA(UF管理.frm:600)は「極厚」か空だけを見るため、耳付きの履歴で位置名が変わらなかった
+        if t(98) in ("極厚", "耳付き", ""):
             for f, p1, p2 in zip("SUCDE", ("1", "2", "3", "4", "5"), ("S", "U", "2", "D", "E")):
                 v[f] = p1
                 v[f + "L"] = p2

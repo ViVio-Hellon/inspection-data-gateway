@@ -132,11 +132,15 @@ class PucketMoveTest(unittest.TestCase):
         self.assertEqual(s.inp_tag, "S2")
 
     def test_slab(self) -> None:
-        # スラブ: 行1〜4 は S の次に U5〜U8(FormRelat:881-891)
+        # 2026-11-08: スラブの厚は S1〜S4 の次に C1(B90。VBA FormRelat:831-847 は U5 へ入れていた)
         s = ready("スラブ")
         fill(s, cells("S", range(1, 5)))
         ir.pucket_move(s, "DT", "", "", FakeHooks())
-        self.assertEqual(s.inp_tag, "U5")
+        self.assertEqual(s.inp_tag, "C1")
+        # #L は S5〜S10 → U5〜U8 → C5〜C10 → D5〜D8(隠れた U9・U10 は飛ばす)
+        fill(s, cells("S", range(5, 11)) + cells("U", range(5, 9)))
+        ir.pucket_move(s, "#L", "", "", FakeHooks())
+        self.assertEqual(s.inp_tag, "C5")
 
 
 class LookBlankTest(unittest.TestCase):
