@@ -7,6 +7,7 @@ import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import * as tabs from "../tabs.js";
 import { previewFile } from "../sound.js";
+import { canSpeak, readOn, setReadOn, speak, voiceName } from "../speak.js";
 import { confirmBox } from "../askbox.js";
 
 const $ = (id) => document.getElementById(id);
@@ -658,3 +659,43 @@ function init() {
 }
 
 init();
+
+
+/* ---------- キャスクの枚数読み上げを試す(2026-11-08) ---------- */
+function readKv(pairs) {
+  $("readKv").replaceChildren(...pairs.flatMap(([k, v]) => {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    return [dt, dd];
+  }));
+}
+function renderReadCard() {
+  const on = readOn();
+  $("readOnOff").setAttribute("aria-pressed", String(on));
+  $("readOnOff").textContent = on ? "読み上げ ON" : "読み上げ OFF";
+  const ok = canSpeak();
+  $("readTry").disabled = !ok;
+  $("readLv").className = "lv " + (ok ? (voiceName() ? "lv--ok" : "lv--warn") : "lv--ng");
+  $("readLv").textContent = !ok ? "このブラウザは読み上げに対応していません" : (voiceName() ? "使えます" : "日本語の声がありません");
+  readKv([["声", voiceName() || "(日本語の声が見つかりません。Windows の設定 → 時刻と言語 → 音声 で日本語の声を入れてください)"]]);
+}
+$("readOnOff")?.addEventListener("click", () => { setReadOn(!readOn()); renderReadCard(); });
+$("readTry")?.addEventListener("click", () => {
+  const words = [$("readNo").value.trim(), $("readPos").value.trim()].filter(Boolean).join("、");
+  const t0 = performance.now();
+  let started = 0;
+  const ok = speak(words, {
+    onstart: () => { started = performance.now(); },
+    onend: () => {
+      const end = performance.now();
+      readKv([["声", voiceName() || "(ブラウザの既定)"], ["読んだ文", words],
+              ["読み始めまで", started ? `${Math.round(started - t0)} ミリ秒` : "(声が出ませんでした)"],
+              ["読み終わりまで", `${Math.round(end - t0)} ミリ秒`]]);
+    },
+  });
+  if (!ok) toast("読み上げられません(このブラウザが対応していないか、文が空です)", "warn");
+});
+if ($("readCard")) {
+  renderReadCard();
+  if (canSpeak()) window.speechSynthesis.addEventListener?.("voiceschanged", renderReadCard);
+}

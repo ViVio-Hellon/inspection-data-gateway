@@ -23,7 +23,7 @@ if ("speechSynthesis" in window) {
 
 export function canSpeak() { return "speechSynthesis" in window; }
 
-export function speak(text) {
+export function speak(text, { onstart, onend } = {}) {
   if (!canSpeak() || !text) return false;
   const s = window.speechSynthesis;
   s.cancel();
@@ -31,8 +31,16 @@ export function speak(text) {
   u.lang = "ja-JP";
   if (voice) u.voice = voice;
   u.rate = 1.2;
+  if (onstart) u.onstart = onstart;
+  if (onend) { u.onend = onend; u.onerror = (e) => onend(e); }
   s.speak(u);
   return true;
+}
+
+/** 使う声の名前(設定の「試す」で見せる)。日本語の声が無ければ "" */
+export function voiceName() {
+  if (!voice) pickVoice();
+  return voice ? `${voice.name}(${voice.lang})` : "";
 }
 
 export function readOn() {

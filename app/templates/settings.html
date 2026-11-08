@@ -81,9 +81,10 @@
     <section class="tabpanel tabpanel--scroll" id="panel-sound" role="tabpanel" aria-labelledby="tab-sound" hidden>
       <style>
         #panel-sound > .card { flex-shrink: 0; }
-        #soundDirKv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
-        #soundDirKv dt { color: var(--muted); }
-        #soundDirKv dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+        #soundDirKv, #readKv { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; }
+        #soundDirKv dt, #readKv dt { color: var(--muted); }
+        #soundDirKv dd, #readKv dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+        #readCard .btn-row { align-items: center; gap: 8px; flex-wrap: wrap; }
         #soundTable th, #soundTable td { text-align: left; }
         #soundTable td { white-space: normal; vertical-align: middle; }
         #soundTable td:last-child { white-space: nowrap; text-align: right; }
@@ -100,6 +101,20 @@
             <button class="btn" type="button" id="soundReload">読み直す</button>
             <span class="path-status" id="soundCheckResult"></span>
           </div>
+        </div>
+      </section>
+      <section class="card" id="readCard">
+        <header><h3>キャスクの枚数読み上げ</h3><span class="lv" id="readLv"></span></header>
+        <div class="pad">
+          <p class="muted">キャスク画面で、測定のたびに 板No と位置 を読み上げます(VBA の 読上げ)。この PC の Windows に入っている日本語の声を使います。
+            ここで読み上げの速さと声を試せます。ON/OFF はキャスク画面のボタンと同じものです(この PC のブラウザに覚えます)。</p>
+          <div class="btn-row">
+            <label for="readNo">板No</label><input class="input" id="readNo" value="12" size="5" inputmode="numeric">
+            <label for="readPos">位置</label><input class="input" id="readPos" value="S" size="5">
+            <button class="btn btn--commit" type="button" id="readTry">読み上げを試す</button>
+            <button class="btn" type="button" id="readOnOff" aria-pressed="true">読み上げ ON</button>
+          </div>
+          <dl class="kv" id="readKv"></dl>
         </div>
       </section>
       <section class="card">
