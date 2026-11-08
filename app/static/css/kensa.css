@@ -190,3 +190,4 @@ li.is-stale { opacity: .6; }
 .kpop .pad { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .kpop .inbox .input { min-height: 40px; font-size: var(--fs-md, 1rem); }
 .kpop__hint { margin: 0; padding: 0 14px 14px; font-size: var(--fs-sm); }
+#confiBox .btn[aria-pressed="true"] { background: var(--state-warn, #b26b00); color: #fff; border-color: transparent; font-weight: 700; }

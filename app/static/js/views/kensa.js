@@ -534,21 +534,41 @@ function renderConfi(v) {
   const head = el("p", { textContent: c.page === 0 ? `検査ﾃﾞｰﾀに公差外有り！ 対象データ ${c.moto}(${c.posi}${c.n})`
                                                    : `再測定及びその他の理由 対象データ ${c.moto}(${c.posi}${c.n})` });
   const row = el("div", { class: "btn-row" });
-  const name = c.page === 0 ? (c.list2 ? "UFConfi.List2" : "UFConfi.TB1") : "UFConfi.List1";
+  // 公差外のページ(TB1)は 1 つ押せば送る(理由の文字は要らない。VBA の page0)。
+  // 理由のページ(List1)と再測定の理由(List2)は、VBA と同じく複数選んでから「決定」(2026-11-08 に直した)
+  if (c.page === 0 && !c.list2) {
+    row.append(...c.choices.map((ch) => {
+      const b = el("button", { type: "button", class: "btn", textContent: ch });
+      b.addEventListener("click", async () => { await op("value", { name: "UFConfi.TB1", value: ch }); refocus(); });
+      return b;
+    }));
+    box.replaceChildren(head, row);
+    return;
+  }
+  const name = c.list2 ? "UFConfi.List2" : "UFConfi.List1";
+  const picked = new Set();
   row.append(...c.choices.map((ch) => {
     const b = el("button", { type: "button", class: "btn", textContent: ch });
-    b.addEventListener("click", async () => {
-      if (ch === "その他" || ch === "再測定") {
-        const other = await promptBox("理由を入力してください", { value: "" });
-        if (other === null) return;
-        await op("value", { name: "UFConfi.その他", value: other });
-      }
-      await op("value", { name, value: ch });
-      refocus();
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => {
+      if (picked.has(ch)) picked.delete(ch); else picked.add(ch);
+      b.setAttribute("aria-pressed", String(picked.has(ch)));
     });
     return b;
   }));
-  box.replaceChildren(head, row);
+  const ok = el("button", { type: "button", class: "btn btn--commit", textContent: "決定" });
+  ok.addEventListener("click", async () => {
+    const list = c.choices.filter((ch) => picked.has(ch));
+    // 「その他」(理由のページは「再測定」も)を選んだら、理由の文字を聞く(VBA: 理由を入力してください)
+    if (picked.has("その他") || (c.page === 1 && picked.has("再測定"))) {
+      const other = await promptBox("理由を入力してください", { value: "" });
+      if (other === null) return;
+      await op("value", { name: "UFConfi.その他", value: other });
+    }
+    await op("value", { name, value: list.join(",") });   // 何も選ばなければサーバが「選択してください」
+    refocus();
+  });
+  box.replaceChildren(head, row, el("div", { class: "btn-row" }, ok));
 }
 
 // 足した値が無い view(セッションの外で作ったもの)でも描けるように

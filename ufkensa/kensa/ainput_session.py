@@ -408,9 +408,15 @@ class AinputSession:
         env = self._env()
         daily = wiring.daily_context(st, env)
         now = k.now()
-        r = ainput.ain_button(f, history_rows=history[1:] if history is not None else None, answers=answers,
-                              registry=wiring.registry(st), day_max=wiring.worker_day_max(store, st.lname), now=now,
-                              daily=daily, launcher=self.launcher, sleep=self.sleep)
+        try:
+            r = ainput.ain_button(f, history_rows=history[1:] if history is not None else None, answers=answers,
+                                  registry=wiring.registry(st), day_max=wiring.worker_day_max(store, st.lname),
+                                  now=now, daily=daily, launcher=self.launcher, sleep=self.sleep)
+        except Exception:
+            # 2026-11-08 に直した: 途中で止まっても「処理中」(Tag="Load")を戻す。戻さないと以後のボタンが黙って効かない
+            # (VBA は実行時エラーで End → フォームを開き直すしかなかった)
+            f.tag = ""
+            raise
         self.messages += r.messages
         if r.height is not None:
             self.check = self._check_view(r.height, snapshot, history is not None, r.stage)
@@ -609,7 +615,8 @@ class AinputSession:
             "hiki_list": self.hiki_list,
             "show": {"mai2": f.mai_flag == "2", "material": f.ken_law in ("M2", "M6"),
                      "material2": self.material_flag in ("2", "3"), "material3": self.material_flag == "3",
-                     "ex": f.ex_visible, "ex_material2": self.ex_material_flag in ("2", "3"),
+                     "ex": f.ex_visible, "ex_case_no": not (f.ex_visible and f.remain == "1"),   # UFAinput:551
+                     "ex_material2": self.ex_material_flag in ("2", "3"),
                      "ex_material3": self.ex_material_flag == "3", "gaityuu": not f.locked},
             "mai_label": "個装高さ" if f.ken_law == "M2" else "梱包枚数",
             "mount": {"count": f.mount_count, "visible": f.l1_visible, "device": f.l1_caption if f.l1_visible else "",

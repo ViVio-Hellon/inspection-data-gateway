@@ -1239,15 +1239,17 @@ def ain_button(form: AinputForm, *, history_rows: Optional[list[list[Any]]], ans
         if form.ex_visible:
             if vbx.vcompare(form.remain, 1) != 0 and form.ex_case_no == "":
                 return stop_input("ｹｰｽNoの入力がありません。", WARN, "UFAinput:994")
+            # 2026-11-08 に直した: 空欄は先に「EX外寸の入力がありません」へ(VBA は "" と 1〜9 の比較で実行時エラー 13
+            # になり、この案内に届かなかった)。空でない値だけ 1〜9 かを見る
+            fl2 = form.outside_atu == "" or form.outside_haba == "" or form.outside_take == ""
             fl1 = False
             for v in (form.outside_atu, form.outside_haba, form.outside_take):
-                if _in_1_to_9(v):
+                if v != "" and _in_1_to_9(v):
                     fl1 = True
-            fl2 = form.outside_atu == "" or form.outside_haba == "" or form.outside_take == ""
-            if fl1:
-                return stop_input("EX外寸に在り得ない数値の入力があります。", WARN, "UFAinput:1014")
             if fl2:
                 return stop_input("EX外寸の入力がありません｡", WARN, "UFAinput:1019")
+            if fl1:
+                return stop_input("EX外寸に在り得ない数値の入力があります。", WARN, "UFAinput:1014")
         if form.remain == "1" and form.pile_match == "":
             return stop_input("ｽﾄｱｶｰﾄﾞNo入力がありません。", WARN, "UFAinput:1027")
         hc = height_check(vbx.val(form.amin), vbx.val(form.amax), vbx.val_single(mount_height),
