@@ -51,6 +51,7 @@ class PucketMoveTest(unittest.TestCase):
         msgs = []
         ir.pucket_move(s, "DT", "", "", h, msgs)
         self.assertEqual(msgs[0].text, "DT検査済")        # FormRelat:792
+        self.assertEqual(msgs[0].level, "info")          # 知らせ(警告の色にしない)
         self.assertEqual((s.auto, s.inp, s.inp_tag, s.flag_label), ("off", "", "", 1))
 
     def test_atuita_width_goes_to_c(self) -> None:

@@ -168,7 +168,7 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
         temp = "少枚数"
 
     if not all_check(state, a, n, ken_no, temp, hooks):
-        msgs.append(Message(pucket + "検査済", WARN, source="FormRelat:792"))
+        msgs.append(Message(pucket + "検査済", INFO, source="FormRelat:792"))   # 知らせ(警告ではない)
         state.auto = Switch.OFF
         state.inp = ""
         state.inp_tag = ""

@@ -384,6 +384,7 @@ class HistoryRestoreTest(SessionBase):
         r = self.s.history_restore(2)
         self.assertIsNotNone(r.stop)
         self.assertIn("別Lotデータがあります", r.stop.text)
+        self.assertFalse([m for m in r.messages if "別Lot" in m.text])       # 止めた理由と知らせで 2 回出さない
 
     def test_bad_row(self) -> None:
         self.ok(self.s.start())

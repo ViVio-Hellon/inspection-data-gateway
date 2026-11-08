@@ -96,6 +96,19 @@ class KensaScreenTest(SessionBase):
                      "izyouBtn", "resizeBtn", "printResetBtn", "byousyaChk"):
             self.assertIn(part, html)
 
+    def test_report_route(self) -> None:
+        """印刷した帳票はキャスクと同じく名前で開く(画面にサーバのパスは出さない)。"""
+        folder = session.get().store.path.parent / "print"
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "印刷用_T.html").write_text("<p>帳票</p>", encoding="utf-8")
+        r = self.c.get("/api/kensa/report/印刷用_T.html", headers=self.h)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("帳票", r.get_data(as_text=True))
+        self.assertEqual(self.c.get("/api/kensa/report/none.html", headers=self.h).status_code, 404)
+        self.assertEqual(self.c.get("/api/kensa/report/x.txt", headers=self.h).status_code, 400)
+        html = self.c.get("/kensa", headers=self.h).get_data(as_text=True)
+        self.assertIn('id="chooserOps"', html)                       # 印刷のあと(選ぶまで)の新規検査の置き場所
+
     def test_picture_route(self) -> None:
         (self.db_dir / "VC種類画像").mkdir()
         (self.db_dir / "VC種類画像" / "208WRYG.JPG").write_bytes(b"\xff\xd8\xff")
