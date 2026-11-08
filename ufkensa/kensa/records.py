@@ -433,6 +433,7 @@ def main_data_save(store: LocalStore, snap: KensaSnapshot, *, db_path: Optional[
         if snap.data_loading == "Load":
             sh.write(n, 82, "〆")
 
+    save_allowed(store, sh.name, period, snap.lot, snap.ng)
     end_r = sh.last_row(1)                                           # SaveLoad:4535-4561
     end_c = sh.last_col(1)
     values: list[Value] = [snap.line_name] + [sh.get(end_r, c) for c in range(1, end_c + 1)]
@@ -1063,6 +1064,8 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
         out.calls.append(("InitialSetting",))
     out.messages.append(Message("Load完了,印刷する場合はフォームを閉じないでください。", level=flow.INFO,
                                 source="SaveLoad:3839"))
+    for name, cap in load_allowed(store, sh.name, c(1), c(2)).items():
+        v[name] = cap                                                # 2026-11-08: 許容・保留も戻す
     out.calls.append(("ReDiag",))
     v["dataLoding"] = "Load"
     wt = line_sheet(WORKER_TIME, lname)
@@ -1070,6 +1073,37 @@ def history_load(store: LocalStore, hist_lot: str, temp_date: str = "", *, mimi:
         store.add_sheet(wt)
     store.sheet(wt).write(1, 1, "履歴呼び出し")
     return out
+
+
+#: 位置ごとの「許容」「保留」(NGS〜NGF)の控え(2026-11-08)。保存用・耳用の行には許容の欄が無く、VBA も
+#: 履歴から戻すと許容が消えて Min/Max が先へ進めなかった。保存用の列は変えず、別のシートに控えて戻す
+ALLOWED = "許容控え"
+ALLOWED_HEADERS = ("保存シート", "検査開始終了", "LOTNO") + tuple(f"NG{f}" for f in FACES)
+
+
+def save_allowed(store: LocalStore, sheet: str, period: str, lot: str, ng: Mapping[str, str]) -> None:
+    """許容・保留のある位置だけ控える(NG だけのものは控えない。NG は値から判定し直す)。"""
+    caps = [cell_text(ng.get(f, "")) for f in FACES]
+    if not any(c in ("許容", "保留") for c in caps):
+        return
+    sh = store.ensure_sheet(ALLOWED)
+    if sh.last_row(1) < 1:
+        sh.write_row(1, 1, list(ALLOWED_HEADERS))
+    sh.write_row(sh.last_row(1) + 1, 1, [sheet, period, lot] + [c if c in ("許容", "保留") else "" for c in caps])
+
+
+def load_allowed(store: LocalStore, sheet: str, period: Value, lot: Value) -> dict[str, str]:
+    """控えた許容・保留(同じ保存シート・検査開始終了・LOT の最後の控え)。無ければ空。"""
+    if not store.exists(ALLOWED):
+        return {}
+    sh = store.sheet(ALLOWED)
+    found: dict[str, str] = {}
+    for r in range(2, sh.last_row(1) + 1):
+        if (cell_text(sh.get(r, 1)) == sheet and cell_text(sh.get(r, 2)) == cell_text(period)
+                and cell_text(sh.get(r, 3)) == cell_text(lot)):
+            found = {f"NG{f}": cell_text(sh.get(r, 4 + k)) for k, f in enumerate(FACES)
+                     if cell_text(sh.get(r, 4 + k)) != ""}
+    return found
 
 
 def _history_load_normal(out: FormRestore, c, cur: Mapping[str, str], aorb: str) -> None:
