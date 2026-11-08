@@ -46,7 +46,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
-from . import lot_watch, shadow, worker_archive
+from . import lot_watch, nippou_export, shadow, worker_archive
 from . import reasons as reason_master
 from .model import Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
@@ -1709,7 +1709,13 @@ class Session:
                 trace.note_used(p, "save")
             info["files"] = len(books)
         self.report["xlsx"] = [str(p) for p in books]
-        report_model.set_printed(self.store, st.lot, lname, env.now())
+        printed_at = env.now()
+        report_model.set_printed(self.store, st.lot, lname, printed_at)
+        try:                                            # 日報を all-tools の日報モードへ(2026-11-08)
+            p = nippou_export.export_now(self.store, st, env, now=printed_at)
+            self.report["nippou"] = str(p) if p else ""
+        except (OSError, ValueError) as e:
+            env.messages.append(Message(f"日報の CSV を書き出せませんでした: {e}", WARN, source="日報"))
         env.sound(snd.KENSA_DONE, "UF1:3832")
         self.print_ready = False
         return None
