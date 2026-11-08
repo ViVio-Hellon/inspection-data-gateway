@@ -46,7 +46,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
-from . import lot_watch, shadow
+from . import lot_watch, shadow, worker_archive
 from . import reasons as reason_master
 from .model import Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
@@ -1037,25 +1037,11 @@ class Session:
     # 印刷履歴クリア・サイズ修正・強制描写・検査員不一致)
     # ------------------------------------------------------------------
     def _worker_time(self) -> dict[str, dict[str, str]]:
-        """測定値ごとの検査員・時刻・パケット(WorkerTime_<L>。VBA の Time_Posting と同じシート。2026-11-08 に画面へ)。
-
-        行 3〜8 = 検査員、9〜14 = 時刻、15〜20 = パケット(S, U, C, D, E, F の順)、列 = 欄の行番号。
-        いまのロットのシート(A1 = ロット)のときだけ返す。欄の名前("S1" など) → {"who", "when", "pake"}。
-        """
+        """測定値ごとの検査員・時刻・パケット(WorkerTime_<L>。VBA の Time_Posting と同じシート。2026-11-08 に画面へ)。"""
         st = self.state
-        if st.lot == "" or st.lname == "":
+        if st.lname == "":
             return {}
-        cells = wiring.sheet_cells(self.store, line_sheet(records.WORKER_TIME, st.lname))
-        if not cells or records.cell_text(cells.get((1, 1))) != st.lot:
-            return {}
-        out: dict[str, dict[str, str]] = {}
-        for i, p in enumerate(grid.POSITIONS, start=1):
-            for x in range(1, grid.ROW_COUNT[p] + 1):
-                who = records.cell_text(cells.get((i + 2, x)))
-                when = records.cell_text(cells.get((i + 8, x)))
-                if who or when:
-                    out[f"{p}{x}"] = {"who": who, "when": when, "pake": records.cell_text(cells.get((i + 14, x)))}
-        return out
+        return worker_archive.read_sheet(self.store, st.lname, st.lot)
 
     def _extra_more(self) -> dict[str, Any]:
         """view に足す値(選択肢・オーダー・包装仕様・VC・印刷ボタン)。判断はここで済ませる。"""
@@ -1684,6 +1670,8 @@ class Session:
             records.ensure_measure_db(db)
             with self.store.transaction():                  # 保存用・耳用の 1 行は全部書けたときだけ
                 saved = records.main_data_save(self.store, snap, db_path=db)
+                # 測定値ごとの検査員と時刻を、履歴画面のために控える(2026-11-08。鍵 = 保存用の A 列)
+                worker_archive.archive(self.store, lname, st.lot, records.cell_text(saved.values[1]))
             info["rows"] = saved.db.rowcount if saved.db else 0
             info["mode"] = saved.db.mode if saved.db else ""
         if saved.db is not None:
