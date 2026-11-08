@@ -12,7 +12,7 @@ from __future__ import annotations
 import sqlite3
 
 from tests.test_kensa_session import SessionBase, LOT
-from ufkensa.kensa import report_model
+from ufkensa.kensa import records, report_model
 from ufkensa.kensa.store import HOZON, MIMI
 
 DT = "DT10001+0000015.012M"
@@ -161,6 +161,11 @@ class MimiTest(MimiSlabBase):
         st2 = s2.state
         # HistoryLoad は作業選択を戻さない(SaveLoad:4034-4037 がコメントアウト。VBA どおり)
         self.assertEqual((st2.lot, st2.work), (LOT, ""))
+        # 2026-11-08: 保存値「耳付き」でも位置名が 1〜5 に切り替わる(B92。VBA は「極厚」か空だけ)
+        self.assertEqual(self.store.sheet(MIMI).get(2, 98), "耳付き")
+        lots = records.kanri_lots(self.store, mimi=True)
+        kv = records.kanri_view(self.store, 0, lots, lots[0], mimi=True)
+        self.assertEqual([kv.values[p] for p in "SUCDE"], ["1", "2", "3", "4", "5"])
         for p in five:
             for i in range(1, 15):
                 self.assertEqual(st2.cells[f"{p}{i}"].value, st.cells[f"{p}{i}"].value, f"{p}{i}")
@@ -179,14 +184,15 @@ class SlabTest(MimiSlabBase):
                 self.assertEqual(st.ctl(f"{p}{i}").visible, i in rows, f"{p}{i}")
         self.assertFalse(any(st.ctl(f"E{i}").visible for i in range(1, 11)))
         val = {5: WIDTH, 6: WIDTH, 7: LENGTH, 8: LENGTH, 9: DIAG, 10: DIAG}
-        # 厚は S → 巾丈(#L)→ 厚 C の順で測る(厚 1〜4 の S のあと PucketMove は U5〜U8 を見る。FormRelat:831-847)
-        self.send_seq([(f"S{i}", DT) for i in range(1, 5)])
+        # 2026-11-08: 厚は S1〜S4 → C1〜C4 の順で DT が入る(B90。VBA は S のあと U5〜U8 へ入れていた)
+        self.send_seq([(f"S{i}", DT) for i in range(1, 5)] + [(f"C{i}", DT) for i in range(1, 5)])
+        self.assertIn("DT検査済", self.send(DT))
         self.send_seq([(f"S{i}", "#L" + val[i]) for i in range(5, 11)]
                       + [(f"U{i}", "#L" + val[i]) for i in range(5, 9)]
                       + [(f"C{i}", "#L" + val[i]) for i in range(5, 11)]
                       + [(f"D{i}", "#L" + val[i]) for i in range(5, 9)])
-        self.send_seq([(f"C{i}", DT) for i in range(1, 5)])
-        self.assertIn("DT検査済", self.send(DT))
+        # 2026-11-08: 隠れた U9・U10・D9・D10 を見ないので #L検査済 が出る(B91)
+        self.assertIn("#L検査済", self.send("#L" + WIDTH))
         self.ok(s.click(""))
         for p in "SC":
             self.assertEqual(st.diag[p].value, "0.0")

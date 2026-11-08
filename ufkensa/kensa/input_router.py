@@ -128,7 +128,10 @@ def all_check(state: KensaState, a: int, n: int, ken_no: str, temp: str, hooks: 
         if state.is_work("少枚数") or state.is_work("極厚"):
             return scan(lambda i: five)
         if state.is_work("スラブ"):
-            return scan(lambda i: ("S", "C") if is_thick(i) else (("S", "U", "C", "D") if 5 <= i <= 10 else ()))
+            # 2026-11-08 に直した(B91): スラブの画面は U・D が 5〜8 行だけ(9・10 は隠れている)なので、そこは S・C だけを見る。
+            # VBA(FormRelat:697-708)は U9・U10・D9・D10 まで見るため、隠れた空欄で「#L検査済」が出なかった
+            return scan(lambda i: ("S", "C") if is_thick(i) or i in (9, 10)
+                        else (("S", "U", "C", "D") if 5 <= i <= 8 else ()))
     return False
 
 
@@ -188,12 +191,10 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
                     if _blank(state, f"C{b}"):
                         return _set_target(state, f"C{b}")
     elif state.is_work("スラブ"):
+        # 2026-11-08 に直した(B90): 厚 1〜4 行(DT)は U を飛ばし、次の厚欄(S のあと C1〜C4)へ進む。
+        # VBA(FormRelat:831-847 ほか `Case 1 To 4: For b = 5 To 8`)は厚の読みを巾丈の U5〜U8 へ入れていた
         for i in rows:
-            if is_thick(i):
-                for b in range(5, 9):
-                    if _blank(state, f"U{b}"):
-                        return _set_target(state, f"U{b}")
-            elif 5 <= i <= 8:
+            if 5 <= i <= 8:
                 if _blank(state, f"U{i}"):
                     return _set_target(state, f"U{i}")
     elif state.is_work("薄板"):
@@ -239,12 +240,10 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
                     if _blank(state, f"E{b}"):
                         return _set_target(state, f"E{b}")
     elif state.is_work("スラブ"):
+        # 2026-11-08 に直した(B90): 厚 1〜4 行(DT)は D を飛ばし、次の厚欄(S のあと C1〜C4)へ進む。
+        # VBA(FormRelat:831-847 ほか `Case 1 To 4: For b = 5 To 8`)は厚の読みを巾丈の D5〜D8 へ入れていた
         for i in rows:
-            if is_thick(i):
-                for b in range(5, 9):
-                    if _blank(state, f"D{b}"):
-                        return _set_target(state, f"D{b}")
-            elif 5 <= i <= 8:
+            if 5 <= i <= 8:
                 if _blank(state, f"D{i}"):
                     return _set_target(state, f"D{i}")
     elif state.is_work("薄板"):
