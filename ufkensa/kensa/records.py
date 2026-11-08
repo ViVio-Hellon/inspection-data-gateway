@@ -487,12 +487,14 @@ class _SqlError(Exception):
 
 
 def register_measurement(path: Union[str, Path], table: str, values: Sequence[Value], key_filter: str, *,
+                         match_line: bool = True,
                          max_retry: int = MEASURE_MAX_RETRY,
                          retry_wait_sec: float = MEASURE_RETRY_WAIT_SEC) -> RegisterResult:
     """SQL_追加.adoSQL(MODE="ADDNEW", skipmsgflag=True, keySQLfilter) (SQL_追加:525-704)。
 
     - 表の列を位置で対応させる(列 j ← CStr(values[j]))。表の列が values より多いと添字エラーで取り消し
-    - `key_filter`(ADO Filter の書き方)に合う行があれば UPDATE(1 列目のライン名は書かない)、無ければ追加
+    - `key_filter`(ADO Filter の書き方)に合い、1 列目(ライン名)も同じ行があれば UPDATE(ライン名は書かない)、
+      無ければ追加(`match_line=False` で VBA と同じく key_filter だけで照合)
     - 1 回の登録 = 1 トランザクション(BEGIN IMMEDIATE)。ロック中は待って(busy_timeout)、それでもだめなら再試行
     - 失敗したら取り消して、VBA の msg.Box と同じ「エラー番号 / エラーの内容」を返す(例外にはしない)
     """
@@ -512,6 +514,14 @@ def register_measurement(path: Union[str, Path], table: str, values: Sequence[Va
             conn.execute("BEGIN IMMEDIATE")
             try:
                 matched = _matching_rowids(conn, table, cols, key_filter)
+                if match_line and matched:
+                    # 2026-11-08 のご判断: 照合キーにラインも足す(「開始～終了」が分まで同じだと、別ラインの行を
+                    # 上書きしていた。VBA は検査開始終了だけで照合)。1 列目(ライン名)が同じ行だけを同じ検査とみなす
+                    marks = ", ".join("?" for _ in matched)
+                    same = {r[0] for r in conn.execute(
+                        f"SELECT rowid FROM {_qi(table)} WHERE rowid IN ({marks}) AND {_qi(cols[0])} = ?",
+                        list(matched) + [texts[0]])}
+                    matched = [m for m in matched if m in same]
                 if not matched:
                     if len(texts) < jcnt:
                         raise _SqlError(9, "インデックスが有効範囲にありません。")
@@ -1492,8 +1502,12 @@ def end_time_register(store: LocalStore, lname: str, now: datetime) -> str:
 # ------------------------------------------------------------------
 # CSV(ExpCSV)
 # ------------------------------------------------------------------
+def _csv_quote(text: str) -> str:
+    return '"' + text.replace('"', '""') + '"'
+
+
 def exp_csv(sheet, file_name: str = "", file_path: Union[str, Path] = "", sep: str = ",", maxi: int = 0,
-            maxj: int = 0, *, default_dir: Optional[Union[str, Path]] = None) -> Path:
+            maxj: int = 0, *, default_dir: Optional[Union[str, Path]] = None, quote: bool = False) -> Path:
     """Input.ExpCSV (Input:838-874)。シートを区切り文字の文字列に(各行の末尾にも区切り。値は囲まない)。
 
     文字コードは ANSI(cp932。表せない文字は "?")、改行は CRLF。拡張子は "," なら .csv、それ以外は .txt。
@@ -1518,7 +1532,12 @@ def exp_csv(sheet, file_name: str = "", file_path: Union[str, Path] = "", sep: s
             raise _err13("Input:860")                 # 配列を String に入れる → 型エラー
         lines_out = [cell_text(data[0][0])]
     else:
-        lines_out = ["".join(cell_text(v) + sep for v in row) for row in data]
+        if quote and sep == ",":
+            # 2026-11-08 のご判断: 履歴 CSV は値を "…" で囲む(中の " は "" にする)。VBA は囲まなかったので、外観などに
+            # カンマがあると列がずれていた。各行の末尾の区切りは VBA のまま残す
+            lines_out = ["".join(_csv_quote(cell_text(v)) + sep for v in row) for row in data]
+        else:
+            lines_out = ["".join(cell_text(v) + sep for v in row) for row in data]
     with open(target, "w", encoding="cp932", errors="replace", newline="") as fh:
         for line in lines_out:
             fh.write(line + "\r\n")
@@ -1543,14 +1562,14 @@ def export_history_csv(store: LocalStore, lname: str, line: str, extreme: bool, 
     sh = store.sheet(MIMI if extreme else HOZON)
     official = lines.official(line)
     out = [exp_csv(sh, lname + ("_耳用履歴CSV" if extreme else "_履歴CSV"), paths.get("csv_local"),
-                   default_dir=local_dir or store.path.parent)]
+                   default_dir=local_dir or store.path.parent, quote=True)]
     new_name = lname + ("_耳用File" if extreme else "_File")
     targets = [paths.join(paths.get("history"), _HISTORY_DIRS.get(official, "Test\\Test_履歴"))]
     if official in _FACTORY_DIRS:
         targets.append(paths.join(paths.get("factory"), _FACTORY_DIRS[official]))
     for folder in targets:
         try:
-            out.append(exp_csv(sh, new_name, folder))
+            out.append(exp_csv(sh, new_name, folder, quote=True))
         except OSError:
             continue
     return out
@@ -1620,11 +1639,11 @@ def export_lot_history(store: LocalStore, line: str, *, local_dir: Optional[Unio
     sh = store.sheet(LOT_HISTORY)
     official = lines.official(line) or line or "Test"
     name = f"Lot情報履歴_{official}"
-    out = [exp_csv(sh, name, paths.get("csv_local"), default_dir=local_dir or store.path.parent)]
+    out = [exp_csv(sh, name, paths.get("csv_local"), default_dir=local_dir or store.path.parent, quote=True)]
     share = paths.get("lot_history_share") or paths.join(paths.get("history"),
                                                           _HISTORY_DIRS.get(official, "Test\\Test_履歴"))
     try:
-        out.append(exp_csv(sh, name, share))
+        out.append(exp_csv(sh, name, share, quote=True))
     except OSError:
         pass
     return out

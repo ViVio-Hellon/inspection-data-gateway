@@ -85,13 +85,21 @@ class MainDataSaveTest(Base):
     def test_b20_fix_updates(self) -> None:
         s = make_snap()
         rc.main_data_save(self.store, s, db_path=self.db)
-        s2 = make_snap(line_name="LVC", zai="52S")
-        r2 = rc.main_data_save(self.store, s2, db_path=self.db)
+        r2 = rc.main_data_save(self.store, make_snap(zai="52S"), db_path=self.db)    # 同じライン・同じ開始～終了
         self.assertEqual(r2.db.mode, "UPDATE")
         rows = self.rows("検査ﾃﾞｰﾀ")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0][0], "Test")                   # 1 列目(ライン名)は UPDATE しない
         self.assertEqual(rows[0][79], "52S")                   # 材質(CA = 79 列目 → 位置 79)
+
+    def test_key_includes_line(self) -> None:
+        """2026-11-08: 照合キーにライン名も足した。開始～終了が同じでも、別ラインの行は上書きしない。"""
+        rc.main_data_save(self.store, make_snap(), db_path=self.db)
+        r2 = rc.main_data_save(self.store, make_snap(line_name="LVC", zai="52S"), db_path=self.db)
+        self.assertEqual(r2.db.mode, "ADDNEW")
+        rows = self.rows("検査ﾃﾞｰﾀ")
+        self.assertEqual([r[0] for r in rows], ["Test", "LVC"])
+        self.assertNotEqual(rows[0][79], "52S")                # 前の行(Test)は変わらない
 
     def test_mimi(self) -> None:
         s = make_snap(kind="極厚", data_loading="Load")
@@ -312,6 +320,10 @@ class CsvTest(Base):
         self.assertEqual(p.read_bytes(), "a,b,1.5,\r\n①?,,\r\n".encode("cp932"))
         p2 = rc.exp_csv(sh, "y", self.dir, sep="\t")
         self.assertEqual(p2.suffix, ".txt")
+        # 履歴 CSV(quote=True): 値を "…" で囲み、中の " は "" に(2026-11-08)
+        sh.write(2, 2, 'a"b', "S")
+        p3 = rc.exp_csv(sh, "z", self.dir, quote=True)
+        self.assertEqual(p3.read_bytes(), '"a,b","1.5",\r\n"①?","a""b",\r\n'.encode("cp932"))
 
     def test_hostsend(self) -> None:
         sh = self.store.add_sheet("A_Icas_Test")

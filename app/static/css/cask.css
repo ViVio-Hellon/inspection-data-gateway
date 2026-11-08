@@ -75,3 +75,4 @@
 .cask__side .input { min-height: 0; height: 32px; padding: 3px 8px; }
 .cask__top .btn { min-height: 32px; padding: 4px 10px; }
 .cask__top .req label { font-size: var(--fs-2xs); }
+.read-row { gap: 6px; margin-top: 4px; }
