@@ -543,6 +543,14 @@ def _register_routes(app: Flask) -> None:
     from .routes import log as log_routes
 
     app.register_blueprint(health.bp)
+
+    # 2026-11-08: 設定ファイルを読めないときは保存しない。その旨を画面に出す
+    from ufkensa import user_settings as _us
+
+    @app.errorhandler(_us.NotSaved)
+    def _not_saved(e):
+        from flask import jsonify
+        return jsonify({"error": {"code": "settings_unreadable", "message": str(e)}}), 409
     app.register_blueprint(settings.bp)
     app.register_blueprint(sound.bp)               # 音(D29。どの画面も /api/sound/<出来事> で鳴らす)
     app.register_blueprint(auth_routes.bp)

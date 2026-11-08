@@ -102,13 +102,15 @@ def local_copy(path_text: str) -> Optional[Path]:
             return known[1]
         try:
             dst = copy_dir() / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:16] + "_" + src.name)
-            for extra in _SIDECARS:
-                Path(str(dst) + extra).unlink(missing_ok=True)
             tmp = dst.with_name(dst.name + ".part")
             if not _snapshot(src, tmp):
                 _raw_copy(src, tmp)
-                if Path(str(tmp) + "-wal").exists():
-                    Path(str(tmp) + "-wal").replace(Path(str(dst) + "-wal"))
+            # 2026-11-08: 元を写し終えてから、前の写しの付属ファイルを消す(元を読めずに失敗したとき、
+            # 前の写しを壊さない)
+            for extra in _SIDECARS:
+                Path(str(dst) + extra).unlink(missing_ok=True)
+            if Path(str(tmp) + "-wal").exists():
+                Path(str(tmp) + "-wal").replace(Path(str(dst) + "-wal"))
             tmp.replace(dst)
             after = _stamp(src)
         except OSError as e:

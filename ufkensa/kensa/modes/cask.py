@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Any, Optional, Union
 
 from .. import datasource, flow, paths, vbx
+from ... import safe_io
 from .. import sound as snd
 from . import sheet as sh
 from .sheet import CASK, Book, Call, Effects, LogCall, PrintJob, SavePlan, SaveStep, VbaError
@@ -408,7 +409,11 @@ def _open_rw(name: str) -> sqlite3.Connection:
     p = _db_path(name)
     if not p.is_file():
         raise VbaError(-2147467259, f"ファイル '{p}' が見つかりません。", "db.Open")
-    conn = sqlite3.connect(str(p), timeout=datasource.BUSY_TIMEOUT_MS / 1000, isolation_level=None)
+    # 2026-11-08: is_file() のあとで一瞬見えなくなっても空の DB を作らない(あるファイルだけを開く)
+    try:
+        conn = safe_io.connect_existing(p, timeout=datasource.BUSY_TIMEOUT_MS / 1000, isolation_level=None)
+    except sqlite3.OperationalError as e:
+        raise VbaError(-2147467259, f"ファイル '{p}' を開けません: {e}", "db.Open") from e
     conn.execute(f"PRAGMA busy_timeout = {datasource.BUSY_TIMEOUT_MS}")
     return conn
 

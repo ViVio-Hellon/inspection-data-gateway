@@ -153,7 +153,7 @@ def mode() -> str:
 def set_mode(m: str) -> None:
     if m not in (ONLINE, OFFLINE):
         raise ValueError(m)
-    user_settings.save(KEY_MODE, m)
+    user_settings.save_or_raise(KEY_MODE, m)   # 2026-11-08
 
 
 # ------------------------------------------------------------------
@@ -356,7 +356,7 @@ def set_path(key: str, value: str, slot: Optional[str] = None) -> None:
         d[KEY_LOT][_lot_slot(key, slot)] = str(value).strip()
     else:
         d[KEY_ITEMS][k] = str(value).strip()
-    user_settings.save(KEY_PATHS, d)
+    user_settings.save_or_raise(KEY_PATHS, d)   # 2026-11-08: 読めなければ保存しない(画面に出す)
 
 
 def reset_path(key: str, slot: Optional[str] = None) -> None:
@@ -365,7 +365,7 @@ def reset_path(key: str, slot: Optional[str] = None) -> None:
     bucket, name = (d[KEY_LOT], _lot_slot(key, slot)) if k == LOT else (d[KEY_ITEMS], k)
     if name in bucket:
         del bucket[name]
-        user_settings.save(KEY_PATHS, d)
+        user_settings.save_or_raise(KEY_PATHS, d)   # 2026-11-08: 読めなければ保存しない(画面に出す)
 
 
 def snapshot(key: str) -> dict[str, str]:
@@ -399,13 +399,13 @@ def reset_item(key: str) -> None:
         d[KEY_SECOND_NAMES].clear(); d[KEY_FIRST_NAMES].clear()
     else:
         d[KEY_ITEMS].pop(k, None)
-    user_settings.save(KEY_PATHS, d)
+    user_settings.save_or_raise(KEY_PATHS, d)   # 2026-11-08: 読めなければ保存しない(画面に出す)
 
 
 def reset_all() -> list[str]:
     """すべての項目を既定(VBA のオンラインの値)に戻す。戻した項目の key を返す。モードは変えない。"""
     done = [i.key for i in ITEMS if item_changed(i.key)]
-    user_settings.save(KEY_PATHS, {KEY_ITEMS: {}, KEY_LOT: {}, KEY_SECOND_NAMES: {}, KEY_FIRST_NAMES: {}})
+    user_settings.save_or_raise(KEY_PATHS, {KEY_ITEMS: {}, KEY_LOT: {}, KEY_SECOND_NAMES: {}, KEY_FIRST_NAMES: {}})
     return done
 
 
@@ -452,7 +452,7 @@ def set_name(db: str, slot: str, name: str) -> None:
         d[KEY_FIRST_NAMES][db] = name
     else:
         d[KEY_FIRST_NAMES].pop(db, None)
-    user_settings.save(KEY_PATHS, d)
+    user_settings.save_or_raise(KEY_PATHS, d)   # 2026-11-08: 読めなければ保存しない(画面に出す)
 
 
 def second_name_setting(db: str) -> str:
@@ -482,7 +482,7 @@ def set_second_name(db: str, name: str) -> None:
         d[KEY_SECOND_NAMES][db] = name
     else:
         d[KEY_SECOND_NAMES].pop(db, None)
-    user_settings.save(KEY_PATHS, d)
+    user_settings.save_or_raise(KEY_PATHS, d)   # 2026-11-08: 読めなければ保存しない(画面に出す)
 
 
 def lot_file_name(db: str, base: str, m: Optional[str] = None) -> str:

@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from . import config
+from . import config, safe_io
 from .logging_utils import get_logger
 
 log = get_logger("user_settings")
@@ -23,17 +23,38 @@ log = get_logger("user_settings")
 UNSET_LABEL = "未設定"
 
 
-def load_all() -> dict[str, Any]:
-    """設定ファイル全体を読む。壊れていても例外にせず空扱いにする。"""
+def _load() -> tuple[str, dict[str, Any]]:
+    """(状態, 中身)。2026-11-08: 「無い」と「読めない」を分ける(読めないのに空として保存すると、ほかの設定が消える)。"""
     path = config.USER_CONFIG_PATH
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        log.warning("設定ファイルを読めませんでした(既定値で続行): %s", exc)
-        return {}
-    return data if isinstance(data, dict) else {}
+    state, data = safe_io.read_json_or_absent(path, local=True)
+    if state == safe_io.ABSENT:
+        return state, {}
+    if state == safe_io.UNREADABLE:
+        log.warning("設定ファイルを読めませんでした(既定値で続行・保存はしません): %s (%s)", path, data)
+        return state, {}
+    if not isinstance(data, dict):
+        log.warning("設定ファイルの中身が想定と違います(保存はしません): %s", path)
+        return safe_io.UNREADABLE, {}
+    return state, data
+
+
+def load_all() -> dict[str, Any]:
+    """設定ファイル全体を読む。読めなければ例外にせず空(既定値)で返す。**保存には使わない**(`save` は読めないとき書かない)。"""
+    return _load()[1]
+
+
+#: 最後に「設定ファイルを読めないので保存しなかった」ときの文言(画面に出す用。2026-11-08)
+last_error = ""
+
+
+class NotSaved(RuntimeError):
+    """設定ファイルを読めないので保存しなかった(2026-11-08)。文言はそのまま画面に出す。"""
+
+
+def save_or_raise(key: str, value: Any) -> None:
+    """`save` と同じ。ただし設定ファイルを読めずに保存しなかったときは `NotSaved`(画面の操作から呼ぶ。2026-11-08)。"""
+    if not save(key, value) and last_error:
+        raise NotSaved(last_error)
 
 
 def get(key: str, default: Any = None) -> Any:
@@ -47,7 +68,14 @@ HIDDEN_IN_LOG = ("admin_password", "password")
 
 def save(key: str, value: Any) -> bool:
     """VBA `SaveSetting` 相当。書き込めなければ False を返す。"""
-    data = load_all()
+    global last_error
+    state, data = _load()
+    last_error = ""
+    if state == safe_io.UNREADABLE:
+        # 2026-11-08: 読めないのに空として書くと、ほかの設定がすべて消える。書かない
+        last_error = f"設定ファイルを読めないので保存しませんでした: {config.USER_CONFIG_PATH}"
+        log.warning("%s(%s)", last_error, key)
+        return False
     data[key] = value
     try:
         config.USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -65,7 +93,13 @@ def save(key: str, value: Any) -> bool:
 
 def delete(key: str) -> bool:
     """VBA `DeleteSetting` 相当。無ければ何もしない(True)。"""
-    data = load_all()
+    global last_error
+    state, data = _load()
+    if state == safe_io.UNREADABLE:
+        # 2026-11-08: 読めないときは消さない(書き戻すとほかの設定が消える)
+        last_error = f"設定ファイルを読めないので保存しませんでした: {config.USER_CONFIG_PATH}"
+        log.warning("%s(%s を消す)", last_error, key)
+        return False
     if key not in data:
         return True
     del data[key]
