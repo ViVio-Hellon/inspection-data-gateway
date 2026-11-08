@@ -48,6 +48,7 @@ class NippouExportTest(SessionBase):
         self.assertEqual(row["製品寸法 厚×幅×丈"], "15.000×1252.0×2502.0")
         self.assertEqual(row["検入枚数"], "17")
         self.assertEqual(row["作業者"], "検査員01")
+        self.assertEqual(row["包装仕様書No"], "")                         # 梱包No(何個目の梱包か)は入れない
 
     @unittest.skipUnless((ALL_TOOLS_NIPPOU / "nippou").is_dir(), "all-tools の日報モードがこの環境に無い")
     def test_all_tools_nippou_reads_it(self) -> None:
