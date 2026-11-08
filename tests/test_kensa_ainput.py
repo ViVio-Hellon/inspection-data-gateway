@@ -378,6 +378,14 @@ class FilesTest(unittest.TestCase):
         self.assertTrue(p.endswith("hostsend.txt"))
         self.assertEqual(ainput.host_data_confi(), "現添付Data【引当No_60524074 梱包No_01】")
 
+    def test_a_output_stops_before_writing_when_host_folder_missing(self) -> None:
+        # 2026-11-08: 送信アプリのフォルダが無ければ、CSV も書かずに分かる言葉で止める
+        shutil.rmtree(self.tmp / "nis")
+        with self.assertRaises(flow.Stop) as cm:
+            ainput.a_output(self.form, "N456J52", "K650969", now=NOW)
+        self.assertIn("送信アプリ(測定データ電子化)のフォルダがありません", cm.exception.text)
+        self.assertFalse((self.tmp / "hist").exists() and any((self.tmp / "hist").rglob("*.csv")))
+
     def test_launch(self) -> None:
         r = ainput.app_activation(lambda p: True)
         self.assertFalse(r.ok)
