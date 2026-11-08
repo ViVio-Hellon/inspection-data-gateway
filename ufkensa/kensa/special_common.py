@@ -12,7 +12,7 @@ from glob import escape as glob_escape
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from .. import trace
+from .. import safe_io, trace
 from . import lot as lotmod
 from . import datasource, legacy_log, packing, report_html, quality, terminal, vbx, wiring, workers
 from .flow import WARN, Message, Stop
@@ -177,11 +177,11 @@ class SubInspectionCommon:
             target = legacy_log.local_path(step.path)
             try:
                 if step.kind == "mkdir":
-                    target.mkdir(parents=True, exist_ok=True)
+                    safe_io.mkdir_reachable(target)   # 2026-11-08: 届かない共有にフォルダの形を作らない
                 elif step.kind == "save":
                     stem = _stem(target.name)
                     with trace.timed("db.save", f"保存({plan.name})", path=str(target.parent), table=stem) as info:
-                        target.parent.mkdir(parents=True, exist_ok=True)
+                        safe_io.mkdir_reachable(target.parent)   # 2026-11-08: 届かない共有にフォルダの形を作らない
                         made[step.path] = write(target.parent, stem)
                         info["files"] = len(made[step.path])
                     files.extend(str(p) for p in made[step.path])
@@ -189,7 +189,7 @@ class SubInspectionCommon:
                     src_stem = _stem(Path(step.src.replace("\\", "/")).name)
                     dst_stem = _stem(target.name)
                     with trace.timed("db.save", f"写し({plan.name})", path=str(target.parent)) as info:
-                        target.parent.mkdir(parents=True, exist_ok=True)
+                        safe_io.mkdir_reachable(target.parent)   # 2026-11-08: 届かない共有にフォルダの形を作らない
                         for p in made.get(step.src, []):
                             dst = target.parent / (dst_stem + p.name[len(src_stem):])
                             shutil.copyfile(p, dst)

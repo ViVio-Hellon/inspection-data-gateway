@@ -108,7 +108,8 @@ def export(store: LocalStore, lname: str, line: str, business_date: str, shift: 
     target = paths.to_local(paths.join(base, file_name(line, business_date, shift)))
     if os.sep == "/" and "\\" in str(target):
         target = Path(str(target).replace("\\", "/"))
-    target.parent.mkdir(parents=True, exist_ok=True)
+    # 2026-11-08: 受け渡し先(共有)に届かないときに、フォルダの形を作らない。決めたフォルダ 1 段だけは作ってよい
+    target.parent.mkdir(exist_ok=True)
     tmp = target.with_name(target.name + ".part")
     tmp.write_bytes(text.encode("utf-8-sig"))
     tmp.replace(target)

@@ -63,7 +63,13 @@ def local_base() -> Path:
 
 def _files(root: Path) -> list[Path]:
     out = []
-    for dirpath, dirnames, filenames in os.walk(root):
+
+    def _fail(exc: OSError) -> None:
+        raise exc
+
+    # 2026-11-08: os.walk は読めないフォルダを黙って飛ばす。共有が一瞬切れると「中身の欠けた版」を
+    # 完成として写し、古い版を消していた。読めなければ OSError(写さない・消さない)
+    for dirpath, dirnames, filenames in os.walk(root, onerror=_fail):
         dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS and not d.startswith("."))
         for f in sorted(filenames):
             if f in SKIP_FILES or f.endswith(SKIP_SUFFIXES):
@@ -84,6 +90,9 @@ def ensure_copy(src: Path, dst_base: Optional[Path] = None) -> Path:
     """手元の写し(v-<印>)を用意して、その場所を返す。写せなければ OSError。"""
     dst_base = dst_base or local_base()
     files = _files(src)
+    if not any(f.name == "start_app.py" for f in files):
+        # 2026-11-08: 本体が見えない = 読めていない。空の版を作らない
+        raise OSError(f"共有の本体を読めません(start_app.py が見えない): {src}")
     mark = version_mark(src, files)
     dst = dst_base / f"v-{mark}"
     if (dst / ".complete").is_file():

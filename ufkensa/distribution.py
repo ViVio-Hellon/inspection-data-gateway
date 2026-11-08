@@ -52,7 +52,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from . import admin_password, app_config, config, settings_file, user_settings
+from . import admin_password, app_config, config, safe_io, settings_file, user_settings
 from .logging_utils import get_logger
 
 log = get_logger("distribution")
@@ -461,7 +461,12 @@ def _blank(value: Any) -> bool:
 
 def _apply(bundle: Bundle, *, overwrite: bool) -> Result:
     result = Result()
-    current = user_settings.load_all()
+    # 2026-11-08: この PC の設定ファイルを読めないときは、空とみなして配布の値で上書きしない(何も書かない)
+    state, current = user_settings._load()                          # noqa: SLF001
+    if state == safe_io.UNREADABLE:
+        msg = f"設定ファイルを読めないので保存しませんでした: {config.USER_CONFIG_PATH}"
+        log.warning("配布設定を読み込みません: %s", msg)
+        return Result(False, msg, REFUSE_FAILED)
     record = _applied_record()
     renewed = bool(record.get("fingerprint")) and record["fingerprint"] != bundle.fingerprint()
     given: dict[str, Any] = {}
@@ -489,9 +494,14 @@ def _apply(bundle: Bundle, *, overwrite: bool) -> Result:
             have_digest = _digest(dump_contents(target)) if target.is_file() else ""
         except sqlite3.Error:
             have_digest = "?"
-        if have_digest == want:
+        # 2026-11-08: is_file() が False でも、共有フォルダに届かないだけかもしれない。親が読めて本当に無いときだけ作る
+        absent = have_digest == "" and safe_io.confirm_absent(target)
+        if have_digest == "" and not absent:
+            log.warning("設定ファイルの場所に届かないので配布設定の中身を書きません: %s", target)
+            result.kept.append(CONTENTS_LABEL + "(場所に届かないので書いていません)")
+        elif have_digest == want:
             contents_digest = want                                 # もう同じ中身
-        elif not target.is_file() or (is_here(target) and (
+        elif absent or (is_here(target) and (
                 overwrite or (renewed and have_digest and have_digest == record.get("contents")))):
             try:
                 write_contents(target, bundle.contents)

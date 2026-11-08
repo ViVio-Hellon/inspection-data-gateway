@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from . import ado_filter, datasource, flow, lines, paths, vbx
+from .. import safe_io
 from .model import Face, NORMAL, UiValues, bh_name, diag_name, is_thick, kou_name, lateral_name, row_format, visual_under_name, visual_up_name
 from .flow import Message, Stop
 from .store import (HOZON, HOZON_HEADERS, LOT_HISTORY, MIMI, MIMI_HEADERS, GridSheet, LocalStore, Value,
@@ -468,8 +469,15 @@ def _qi(name: str) -> str:
 def ensure_measure_db(path: Union[str, Path]) -> Path:
     """測定DB の表を作る(無いときだけ)。列はすべて TEXT(VBA は全列 CStr の文字列で書く)。"""
     p = Path(path)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(p), timeout=MEASURE_BUSY_TIMEOUT_MS / 1000)
+    # 2026-11-08: 「無い」と確かめられたときだけ作る。共有フォルダに届かない・一瞬見えないだけなら、
+    # フォルダも空の DB も作らずに止める(あるファイルは mode=rw で開くので作らない)
+    if p.exists():
+        conn = safe_io.connect_existing(p, timeout=MEASURE_BUSY_TIMEOUT_MS / 1000)
+    elif safe_io.confirm_absent(p, local=not str(p).startswith(("\\\\", "//"))):
+        p.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(p), timeout=MEASURE_BUSY_TIMEOUT_MS / 1000)
+    else:
+        raise Stop(f"測定DB の場所に届かないので保存できません: {p}", source="SQL_追加")
     try:
         with conn:
             for table, cols in MEASURE_TABLES.items():
@@ -505,7 +513,11 @@ def register_measurement(path: Union[str, Path], table: str, values: Sequence[Va
     texts = [cell_text(v) for v in values]
     retry = 0
     while True:
-        conn = sqlite3.connect(str(p), timeout=MEASURE_BUSY_TIMEOUT_MS / 1000, isolation_level=None)
+        # 2026-11-08: is_file() のあとで一瞬見えなくなっても空の DB を作らない(あるファイルだけを開く)
+        try:
+            conn = safe_io.connect_existing(p, timeout=MEASURE_BUSY_TIMEOUT_MS / 1000, isolation_level=None)
+        except sqlite3.OperationalError as e:
+            raise Stop(f"DB ファイルを開けません: {p}({e})", source="SQL_追加:297") from e
         try:
             conn.execute(f"PRAGMA busy_timeout = {MEASURE_BUSY_TIMEOUT_MS}")
             cols = [r[1] for r in conn.execute(f"PRAGMA table_info({_qi(table)})")]
@@ -1562,7 +1574,8 @@ def exp_csv(sheet, file_name: str = "", file_path: Union[str, Path] = "", sep: s
             target = Path(str(target).replace("\\", "/"))
     else:
         target = Path(folder) / (name + ext)
-    target.parent.mkdir(parents=True, exist_ok=True)
+    # 2026-11-08: 届かない共有にフォルダの形を作らない(Unreadable は OSError。呼び手は「書き出せませんでした」を出す)
+    safe_io.mkdir_reachable(target.parent)
     if name == "hostsend":
         if len(data) != 1 or len(data[0]) != 1:
             raise _err13("Input:860")                 # 配列を String に入れる → 型エラー
@@ -1658,7 +1671,8 @@ def export_lot_book(store: LocalStore, lname: str, line: str, lot: str, now: dat
     share = _local_dir(paths.join(paths.get("history"),
                                   _HISTORY_DIRS.get(lines.official(line), "Test\\Test_履歴"), month))
     try:
-        share.mkdir(parents=True, exist_ok=True)
+        # 2026-11-08: 設定の「検査履歴」に届くときだけ、その下(ライン・月)のフォルダを作る
+        safe_io.mkdir_under(_local_dir(paths.get("history")), share)
         out.append(Path(shutil.copy2(local, share / local.name)))
     except OSError:
         pass                                   # 共有に届かなくても手元は残す(VBA は FileCopy の失敗で止まる)

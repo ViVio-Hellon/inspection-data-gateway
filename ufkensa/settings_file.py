@@ -25,7 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from . import config, logging_utils, user_settings
+from . import config, logging_utils, safe_io, user_settings
 from .logging_utils import get_logger
 
 log = get_logger("settings_file")
@@ -121,8 +121,17 @@ def ensure(p: Optional[Path] = None) -> Path:
     with _lock:
         fresh = not p.exists()
         if fresh:
+            # 2026-11-08: exists() が False でも、共有フォルダに届かないだけかもしれない。本当に無いと確かめられたときだけ作る
+            # (この PC の既定の場所は、親のフォルダが無ければ作ってよい)
+            local = p == default_path()
+            if not safe_io.confirm_absent(p, local=local):
+                raise safe_io.Unreadable(f"設定ファイルの場所に届かないので作りません: {p}")
             p.parent.mkdir(parents=True, exist_ok=True)
-        with closing(sqlite3.connect(str(p), timeout=TIMEOUT_SEC)) as conn:
+            conn_cm = closing(sqlite3.connect(str(p), timeout=TIMEOUT_SEC))
+        else:
+            # 2026-11-08: あるはずのファイルが一瞬見えなくても、空のファイルを作らない
+            conn_cm = closing(safe_io.connect_existing(p, timeout=TIMEOUT_SEC))
+        with conn_cm as conn:
             for sql in _DDL:
                 conn.execute(sql)
             conn.commit()
@@ -197,7 +206,7 @@ def _seed_rights(conn: sqlite3.Connection) -> None:
 
 def connect(p: Optional[Path] = None) -> sqlite3.Connection:
     p = ensure(p)
-    conn = sqlite3.connect(str(p), timeout=TIMEOUT_SEC)
+    conn = safe_io.connect_existing(p, timeout=TIMEOUT_SEC)      # 2026-11-08: 無ければ作らない(ensure で作ったあと)
     conn.row_factory = sqlite3.Row
     conn.execute(f"PRAGMA busy_timeout={TIMEOUT_SEC * 1000}")
     return conn

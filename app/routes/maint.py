@@ -388,7 +388,7 @@ def com_start():
     except (ValueError, comport.ComError) as e:
         trace.event("maint.com", f"COM受信テストを始められません: {e}")
         return _err("com", str(e))
-    user_settings.save(KEY_COM, conf)
+    user_settings.save_or_raise(KEY_COM, conf)
     trace.event("maint.com", f"COM受信テスト開始 {conf}")
     return jsonify({**out, "ports": comport.list_ports(), "saved": conf, "kensa": com_kensa_list()})
 
@@ -425,7 +425,7 @@ def com_kensa():
         conf = {"port": port}
         conf.update({k: b[k] for k in ("baud", "bytesize", "parity", "stopbits", "flow") if k in b})
         items.append(conf)
-    user_settings.save(KEY_COM_KENSA, items)
+    user_settings.save_or_raise(KEY_COM_KENSA, items)
     trace.event("maint.com", f"検査画面で受け取る受信機: {[x['port'] for x in items]}")
     return jsonify({"kensa": items})
 
@@ -445,7 +445,7 @@ def _cards_saved() -> dict:
 
 def _save_cards(cards: dict) -> None:
     from ufkensa import user_settings
-    user_settings.save(KEY_COM_CARDS, cards)
+    user_settings.save_or_raise(KEY_COM_CARDS, cards)
 
 
 def _conf_of(b: dict, base: Optional[dict] = None) -> dict:
@@ -548,7 +548,7 @@ def rx_conf():
     # 検査画面で受け取る設定にも同じ値を入れる
     from ufkensa import user_settings
     items = [dict(x, **cards[port]) if x["port"] == port else x for x in com_kensa_list()]
-    user_settings.save(KEY_COM_KENSA, items)
+    user_settings.save_or_raise(KEY_COM_KENSA, items)
     return jsonify({"cards": _rx_cards()})
 
 
@@ -561,7 +561,7 @@ def rx_remove():
     cards = _cards_saved()
     cards.pop(port, None)
     _save_cards(cards)
-    user_settings.save(KEY_COM_KENSA, [x for x in com_kensa_list() if x["port"] != port])
+    user_settings.save_or_raise(KEY_COM_KENSA, [x for x in com_kensa_list() if x["port"] != port])
     return jsonify({"cards": _rx_cards()})
 
 

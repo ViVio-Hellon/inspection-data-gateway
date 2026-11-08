@@ -17,6 +17,7 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+from .. import safe_io
 from ..logging_utils import get_logger
 from . import datasource
 
@@ -32,6 +33,10 @@ DEFAULTS: dict[str, tuple[str, ...]] = {
 }
 COLUMNS = ("区分", "順番", "理由", "有効")
 
+#: 2026-11-08: 最後に読めた選択肢((ファイル, 区分) → 選択肢)。読めないときは空や既定にせず、これを出す
+#: (保守で足した理由が、共有フォルダが一瞬切れただけで画面から消えないように)。読めたときだけ覚える
+_last_known: dict[tuple[str, str], list[str]] = {}
+
 
 def _db_path() -> Path:
     return datasource.resolve(DB)
@@ -43,11 +48,13 @@ def ensure_table(path: Optional[Path] = None) -> bool:
     if not p.is_file():
         return False
     try:
-        con = sqlite3.connect(str(p), timeout=5)
+        # 2026-11-08: マスタが一瞬見えないとき sqlite3.connect は空の DB を作る。あるファイルだけを開く
+        con = safe_io.connect_existing(p, timeout=5)
         try:
             have = con.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (TABLE,)).fetchone()
             if have:
                 return True
+            # ここに来るのは sqlite_master を読めて、表が本当に無いと確かめられたときだけ(読めなければ sqlite3.Error)
             with con:
                 con.execute(f'CREATE TABLE "{TABLE}" ("区分" TEXT NOT NULL, "順番" INTEGER NOT NULL, '
                             f'"理由" TEXT NOT NULL, "有効" INTEGER NOT NULL DEFAULT 1)')
@@ -66,12 +73,15 @@ def ensure_table(path: Optional[Path] = None) -> bool:
 def choices(kind: str, path: Optional[Path] = None) -> list[str]:
     """出す選択肢(有効なものを順番どおり)。読めなければ VBA と同じ既定。"""
     p = path or _db_path()
-    default = list(DEFAULTS.get(kind, ()))
+    # 2026-11-08: 読めないときは、最後に読めた選択肢(無ければ VBA の既定)。表は作り直さない・書かない
+    default = list(_last_known.get((str(p), kind)) or DEFAULTS.get(kind, ()))
     if not ensure_table(p):
+        log.warning("理由選択のマスタを読めないので、最後に読めた選択肢(または既定)を出します: %s", p)
         return default
     try:
         cols, rows = datasource.get_table(str(p), TABLE)
     except (datasource.DbMissing, datasource.TableMissing, OSError, sqlite3.Error):
+        log.warning("理由選択のマスタを読めないので、最後に読めた選択肢(または既定)を出します: %s", p)
         return default
     idx = {c: i for i, c in enumerate(cols)}
     if not all(c in idx for c in COLUMNS):
@@ -87,4 +97,6 @@ def choices(kind: str, path: Optional[Path] = None) -> list[str]:
             except (TypeError, ValueError):
                 order = 9999.0
             out.append((order, text))
-    return [t for _, t in sorted(out, key=lambda x: x[0])] or default
+    got = [t for _, t in sorted(out, key=lambda x: x[0])] or list(DEFAULTS.get(kind, ()))
+    _last_known[(str(p), kind)] = got
+    return got
