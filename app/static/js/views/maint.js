@@ -108,6 +108,7 @@ $("hReload").addEventListener("click", histRows);
 $("hPdf").addEventListener("click", () => histRun($("hPdf"), "/api/maint/history/pdf", { row: H.row },
   "履歴 PDF 出力", (r) => [...(r.pdf || []), ...(r.xlsx || [])]));
 $("hCsv").addEventListener("click", () => histRun($("hCsv"), "/api/maint/history/csv", {}, "CSV 出力", (r) => r.files));
+$("hNippou").addEventListener("click", () => histRun($("hNippou"), "/api/maint/history/nippou", {}, "日報 CSV 出力", (r) => r.files));
 $("hTestAdd").addEventListener("click", async () => {
   try {
     const r = await api.post("/api/maint/history/test", { add: true });

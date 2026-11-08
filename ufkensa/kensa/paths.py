@@ -104,6 +104,10 @@ ITEMS: tuple[PathItem, ...] = (
              "Access.log・ライン別ログの既定の置き場所(書き先を指定しないもの)と、hostsend.txt の予備の場所。"
              "空ならこの PC の手元(ローカル領域の logs)。共有フォルダにすると全 PC のログが 1 か所に集まる",
              need="write"),
+    PathItem("nippou_out", "日報の受け渡し先", "(新規。all-tools の日報モードへ)", "",
+             "印刷のたびに、その直の日報を all-tools の日報モードが読める CSV(集計明細_<日付>_<ライン>_<直>.csv)で"
+             "書くフォルダ。日報モードの「CSV から日報を戻す」で取り込む。空なら Access.log などの置き場所",
+             need="write"),
     PathItem("wav", "音声", "C:\\VBAWAV(直書き)", r"C:\VBAWAV" "\\",
              "判定音・案内の音声のフォルダ(何を鳴らすかは 設定 → 音。D29)"),
     PathItem("nps_mitsubishi", "三菱受託検査 履歴(NPS)", "直書き(Mitsubishi)",

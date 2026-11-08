@@ -646,3 +646,21 @@ def history_csv():
         return _stop_json(e)
     finally:
         s.close()
+
+
+@bp.post("/api/maint/history/nippou")
+def history_nippou():
+    """いまの直の日報を all-tools の日報モードが読める CSV で書き出す(2026-11-08)。"""
+    from ufkensa.kensa import nippou_export, session
+    s = session.get()
+    r = s.start()
+    if r.stop is not None:
+        return _stop_json(r.stop)
+    with s._lock:                                                     # noqa: SLF001
+        try:
+            p = nippou_export.export_now(s.store, s.state, s._env())     # noqa: SLF001
+        except (OSError, ValueError) as e:
+            return _err("write", f"日報の CSV を書き出せませんでした: {e}", 500)
+    if p is None:
+        return jsonify({"files": [], "messages": [{"text": "いまの直の日報に行がありません", "level": "warn"}]})
+    return jsonify({"files": [str(p)], "messages": []})
