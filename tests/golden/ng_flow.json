@@ -91,7 +91,7 @@
 },
 "WorkerTime_HVC": {
 "1,1": "H7345B0",
-"1,2": "2026/11/02 10:11:27",
+"1,2": "2026/11/02 10:11:41",
 "15,1": "DT",
 "15,2": "DT",
 "15,3": "DT",
@@ -110,10 +110,10 @@
 "3,2": "検査員01",
 "3,3": "検査員01",
 "3,4": "検査員01",
-"9,1": "2026/11/02 10:11:27",
-"9,2": "2026/11/02 10:12:58",
-"9,3": "2026/11/02 10:14:29",
-"9,4": "2026/11/02 10:16:00"
+"9,1": "2026/11/02 10:11:41",
+"9,2": "2026/11/02 10:13:12",
+"9,3": "2026/11/02 10:14:43",
+"9,4": "2026/11/02 10:16:14"
 },
 "作業保存_HVC": {
 "1,1": "H7345B0",
@@ -624,7 +624,7 @@
 },
 "qf": "",
 "resize_tag": "",
-"start_time": "2026/11/02 10:11:27",
+"start_time": "2026/11/02 10:11:41",
 "strain": {
 "C": {
 "cb1": "",
@@ -897,7 +897,7 @@
 "EBad": "",
 "E_UnderVisual": "",
 "E_UpVisual": "",
-"EachTime": "2026/11/02 10:16:00",
+"EachTime": "2026/11/02 10:16:14",
 "EachValue": "15.012",
 "EndTime": "",
 "F": "",
@@ -1049,7 +1049,7 @@
 "OPS5": "E",
 "OPS6": "F",
 "PakeD": "DT",
-"PicFM.Tag": "0",
+"PicFM.Tag": "1",
 "ProofreadFlag": "ok",
 "QF": "",
 "ReSize.Tag": "",
@@ -1075,7 +1075,7 @@
 "S_UnderVisual": "",
 "S_UpVisual": "",
 "SplitFlag": "",
-"StartTime": "2026/11/02 10:11:27",
+"StartTime": "2026/11/02 10:11:41",
 "Sumisei": "",
 "T1": "検査員01",
 "T2": "",
@@ -1741,7 +1741,7 @@
 "diag_kou": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -1750,7 +1750,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -1759,7 +1759,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -1768,7 +1768,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -1777,7 +1777,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -1786,7 +1786,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -1799,7 +1799,7 @@
 "lateral": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -1808,7 +1808,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -1817,7 +1817,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -1826,7 +1826,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -1835,7 +1835,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -1844,7 +1844,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -1945,7 +1945,7 @@
 {
 "cells": [
 {
-"border": "",
+"border": "RED",
 "color": "NG",
 "enabled": true,
 "name": "S1",
@@ -1954,8 +1954,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U1",
 "underline": false,
@@ -1963,8 +1963,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C1",
 "underline": false,
@@ -1972,8 +1972,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D1",
 "underline": false,
@@ -1981,8 +1981,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E1",
 "underline": false,
@@ -1990,8 +1990,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F1",
 "underline": false,
@@ -2015,8 +2015,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U2",
 "underline": false,
@@ -2024,8 +2024,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C2",
 "underline": false,
@@ -2033,8 +2033,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D2",
 "underline": false,
@@ -2042,8 +2042,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E2",
 "underline": false,
@@ -2051,8 +2051,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F2",
 "underline": false,
@@ -2076,8 +2076,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U3",
 "underline": false,
@@ -2085,8 +2085,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C3",
 "underline": false,
@@ -2094,8 +2094,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D3",
 "underline": false,
@@ -2103,8 +2103,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E3",
 "underline": false,
@@ -2112,8 +2112,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F3",
 "underline": false,
@@ -2137,8 +2137,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U4",
 "underline": false,
@@ -2146,8 +2146,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C4",
 "underline": false,
@@ -2155,8 +2155,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D4",
 "underline": false,
@@ -2164,8 +2164,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E4",
 "underline": false,
@@ -2173,8 +2173,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F4",
 "underline": false,
@@ -2198,8 +2198,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U5",
 "underline": false,
@@ -2207,8 +2207,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C5",
 "underline": false,
@@ -2216,8 +2216,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D5",
 "underline": false,
@@ -2225,8 +2225,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E5",
 "underline": false,
@@ -2234,8 +2234,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F5",
 "underline": false,
@@ -2250,8 +2250,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S6",
 "underline": false,
@@ -2259,8 +2259,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U6",
 "underline": false,
@@ -2268,8 +2268,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C6",
 "underline": false,
@@ -2277,8 +2277,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D6",
 "underline": false,
@@ -2286,8 +2286,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E6",
 "underline": false,
@@ -2295,8 +2295,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F6",
 "underline": false,
@@ -2311,8 +2311,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S7",
 "underline": false,
@@ -2320,8 +2320,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U7",
 "underline": false,
@@ -2329,8 +2329,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C7",
 "underline": false,
@@ -2338,8 +2338,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D7",
 "underline": false,
@@ -2347,8 +2347,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E7",
 "underline": false,
@@ -2356,8 +2356,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F7",
 "underline": false,
@@ -2372,8 +2372,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S8",
 "underline": false,
@@ -2381,8 +2381,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U8",
 "underline": false,
@@ -2390,8 +2390,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C8",
 "underline": false,
@@ -2399,8 +2399,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D8",
 "underline": false,
@@ -2408,8 +2408,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E8",
 "underline": false,
@@ -2417,8 +2417,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F8",
 "underline": false,
@@ -2433,8 +2433,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S9",
 "underline": false,
@@ -2442,8 +2442,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U9",
 "underline": false,
@@ -2451,8 +2451,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C9",
 "underline": false,
@@ -2460,8 +2460,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D9",
 "underline": false,
@@ -2469,8 +2469,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E9",
 "underline": false,
@@ -2478,8 +2478,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F9",
 "underline": false,
@@ -2494,8 +2494,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S10",
 "underline": false,
@@ -2503,8 +2503,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U10",
 "underline": false,
@@ -2512,8 +2512,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C10",
 "underline": false,
@@ -2521,8 +2521,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D10",
 "underline": false,
@@ -2530,8 +2530,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E10",
 "underline": false,
@@ -2539,8 +2539,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F10",
 "underline": false,
@@ -2555,8 +2555,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S11",
 "underline": false,
@@ -2564,8 +2564,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U11",
 "underline": false,
@@ -2573,8 +2573,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C11",
 "underline": false,
@@ -2582,8 +2582,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D11",
 "underline": false,
@@ -2591,8 +2591,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E11",
 "underline": false,
@@ -2613,8 +2613,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S12",
 "underline": false,
@@ -2622,8 +2622,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U12",
 "underline": false,
@@ -2631,8 +2631,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C12",
 "underline": false,
@@ -2640,8 +2640,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D12",
 "underline": false,
@@ -2649,8 +2649,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E12",
 "underline": false,
@@ -2671,8 +2671,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S13",
 "underline": false,
@@ -2680,8 +2680,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U13",
 "underline": false,
@@ -2689,8 +2689,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C13",
 "underline": false,
@@ -2698,8 +2698,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D13",
 "underline": false,
@@ -2707,8 +2707,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E13",
 "underline": false,
@@ -2729,8 +2729,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S14",
 "underline": false,
@@ -2738,8 +2738,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U14",
 "underline": false,
@@ -2747,8 +2747,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C14",
 "underline": false,
@@ -2756,8 +2756,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D14",
 "underline": false,
@@ -2765,8 +2765,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E14",
 "underline": false,
@@ -3402,7 +3402,7 @@
 "g": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -3411,7 +3411,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -3420,7 +3420,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -3429,7 +3429,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -3438,7 +3438,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -3447,7 +3447,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -3458,7 +3458,7 @@
 "z": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -3467,7 +3467,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -3476,7 +3476,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -3485,7 +3485,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -3494,7 +3494,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -3503,7 +3503,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -3747,22 +3747,22 @@
 "worker_time": {
 "S1": {
 "pake": "DT",
-"when": "2026/11/02 10:11:27",
+"when": "2026/11/02 10:11:41",
 "who": "検査員01"
 },
 "S2": {
 "pake": "DT",
-"when": "2026/11/02 10:12:58",
+"when": "2026/11/02 10:13:12",
 "who": "検査員01"
 },
 "S3": {
 "pake": "DT",
-"when": "2026/11/02 10:14:29",
+"when": "2026/11/02 10:14:43",
 "who": "検査員01"
 },
 "S4": {
 "pake": "DT",
-"when": "2026/11/02 10:16:00",
+"when": "2026/11/02 10:16:14",
 "who": "検査員01"
 }
 },
@@ -3864,7 +3864,7 @@
 },
 "WorkerTime_HVC": {
 "1,1": "H7345B0",
-"1,2": "2026/11/02 10:11:27",
+"1,2": "2026/11/02 10:11:41",
 "15,1": "DT",
 "15,2": "DT",
 "15,3": "DT",
@@ -3883,10 +3883,10 @@
 "3,2": "検査員01",
 "3,3": "検査員01",
 "3,4": "検査員01",
-"9,1": "2026/11/02 10:11:27",
-"9,2": "2026/11/02 10:12:58",
-"9,3": "2026/11/02 10:14:29",
-"9,4": "2026/11/02 10:16:00"
+"9,1": "2026/11/02 10:11:41",
+"9,2": "2026/11/02 10:13:12",
+"9,3": "2026/11/02 10:14:43",
+"9,4": "2026/11/02 10:16:14"
 },
 "作業保存_HVC": {
 "1,1": "H7345B0",
@@ -4398,7 +4398,7 @@
 },
 "qf": "",
 "resize_tag": "",
-"start_time": "2026/11/02 10:11:27",
+"start_time": "2026/11/02 10:11:41",
 "strain": {
 "C": {
 "cb1": "",
@@ -4671,7 +4671,7 @@
 "EBad": "",
 "E_UnderVisual": "",
 "E_UpVisual": "",
-"EachTime": "2026/11/02 10:16:00",
+"EachTime": "2026/11/02 10:16:14",
 "EachValue": "15.012",
 "EndTime": "",
 "F": "",
@@ -4823,7 +4823,7 @@
 "OPS5": "E",
 "OPS6": "F",
 "PakeD": "DT",
-"PicFM.Tag": "0",
+"PicFM.Tag": "1",
 "ProofreadFlag": "ok",
 "QF": "",
 "ReSize.Tag": "",
@@ -4849,7 +4849,7 @@
 "S_UnderVisual": "",
 "S_UpVisual": "",
 "SplitFlag": "",
-"StartTime": "2026/11/02 10:11:27",
+"StartTime": "2026/11/02 10:11:41",
 "Sumisei": "",
 "T1": "検査員01",
 "T2": "",
@@ -5499,7 +5499,7 @@
 "diag_kou": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -5508,7 +5508,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -5517,7 +5517,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -5526,7 +5526,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -5535,7 +5535,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -5544,7 +5544,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -5557,7 +5557,7 @@
 "lateral": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -5566,7 +5566,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -5575,7 +5575,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -5584,7 +5584,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -5593,7 +5593,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -5602,7 +5602,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -5703,7 +5703,7 @@
 {
 "cells": [
 {
-"border": "",
+"border": "RED",
 "color": "NG",
 "enabled": true,
 "name": "S1",
@@ -5712,8 +5712,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U1",
 "underline": false,
@@ -5721,8 +5721,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C1",
 "underline": false,
@@ -5730,8 +5730,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D1",
 "underline": false,
@@ -5739,8 +5739,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E1",
 "underline": false,
@@ -5748,8 +5748,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F1",
 "underline": false,
@@ -5773,8 +5773,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U2",
 "underline": false,
@@ -5782,8 +5782,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C2",
 "underline": false,
@@ -5791,8 +5791,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D2",
 "underline": false,
@@ -5800,8 +5800,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E2",
 "underline": false,
@@ -5809,8 +5809,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F2",
 "underline": false,
@@ -5834,8 +5834,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U3",
 "underline": false,
@@ -5843,8 +5843,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C3",
 "underline": false,
@@ -5852,8 +5852,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D3",
 "underline": false,
@@ -5861,8 +5861,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E3",
 "underline": false,
@@ -5870,8 +5870,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F3",
 "underline": false,
@@ -5895,8 +5895,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "U4",
 "underline": false,
@@ -5904,8 +5904,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C4",
 "underline": false,
@@ -5913,8 +5913,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "D4",
 "underline": false,
@@ -5922,8 +5922,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E4",
 "underline": false,
@@ -5931,8 +5931,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F4",
 "underline": false,
@@ -5956,8 +5956,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U5",
 "underline": false,
@@ -5965,8 +5965,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C5",
 "underline": false,
@@ -5974,8 +5974,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D5",
 "underline": false,
@@ -5983,8 +5983,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E5",
 "underline": false,
@@ -5992,8 +5992,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F5",
 "underline": false,
@@ -6008,8 +6008,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S6",
 "underline": false,
@@ -6017,8 +6017,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U6",
 "underline": false,
@@ -6026,8 +6026,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C6",
 "underline": false,
@@ -6035,8 +6035,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D6",
 "underline": false,
@@ -6044,8 +6044,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E6",
 "underline": false,
@@ -6053,8 +6053,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F6",
 "underline": false,
@@ -6069,8 +6069,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S7",
 "underline": false,
@@ -6078,8 +6078,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U7",
 "underline": false,
@@ -6087,8 +6087,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C7",
 "underline": false,
@@ -6096,8 +6096,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D7",
 "underline": false,
@@ -6105,8 +6105,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E7",
 "underline": false,
@@ -6114,8 +6114,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F7",
 "underline": false,
@@ -6130,8 +6130,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S8",
 "underline": false,
@@ -6139,8 +6139,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U8",
 "underline": false,
@@ -6148,8 +6148,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C8",
 "underline": false,
@@ -6157,8 +6157,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D8",
 "underline": false,
@@ -6166,8 +6166,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E8",
 "underline": false,
@@ -6175,8 +6175,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F8",
 "underline": false,
@@ -6191,8 +6191,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S9",
 "underline": false,
@@ -6200,8 +6200,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U9",
 "underline": false,
@@ -6209,8 +6209,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C9",
 "underline": false,
@@ -6218,8 +6218,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D9",
 "underline": false,
@@ -6227,8 +6227,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E9",
 "underline": false,
@@ -6236,8 +6236,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F9",
 "underline": false,
@@ -6252,8 +6252,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "S10",
 "underline": false,
@@ -6261,8 +6261,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U10",
 "underline": false,
@@ -6270,8 +6270,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "C10",
 "underline": false,
@@ -6279,8 +6279,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D10",
 "underline": false,
@@ -6288,8 +6288,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "E10",
 "underline": false,
@@ -6297,8 +6297,8 @@
 "visible": true
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": true,
 "name": "F10",
 "underline": false,
@@ -6313,8 +6313,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S11",
 "underline": false,
@@ -6322,8 +6322,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U11",
 "underline": false,
@@ -6331,8 +6331,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C11",
 "underline": false,
@@ -6340,8 +6340,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D11",
 "underline": false,
@@ -6349,8 +6349,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E11",
 "underline": false,
@@ -6371,8 +6371,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S12",
 "underline": false,
@@ -6380,8 +6380,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U12",
 "underline": false,
@@ -6389,8 +6389,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C12",
 "underline": false,
@@ -6398,8 +6398,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D12",
 "underline": false,
@@ -6407,8 +6407,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E12",
 "underline": false,
@@ -6429,8 +6429,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S13",
 "underline": false,
@@ -6438,8 +6438,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U13",
 "underline": false,
@@ -6447,8 +6447,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C13",
 "underline": false,
@@ -6456,8 +6456,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D13",
 "underline": false,
@@ -6465,8 +6465,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E13",
 "underline": false,
@@ -6487,8 +6487,8 @@
 {
 "cells": [
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "S14",
 "underline": false,
@@ -6496,8 +6496,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "U14",
 "underline": false,
@@ -6505,8 +6505,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "C14",
 "underline": false,
@@ -6514,8 +6514,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "D14",
 "underline": false,
@@ -6523,8 +6523,8 @@
 "visible": false
 },
 {
-"border": "",
-"color": "",
+"border": "BLACK",
+"color": "WHITE",
 "enabled": false,
 "name": "E14",
 "underline": false,
@@ -7160,7 +7160,7 @@
 "g": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -7169,7 +7169,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -7178,7 +7178,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -7187,7 +7187,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -7196,7 +7196,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -7205,7 +7205,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -7216,7 +7216,7 @@
 "z": [
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "S",
 "underline": false,
@@ -7225,7 +7225,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "U",
 "underline": false,
@@ -7234,7 +7234,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "C",
 "underline": false,
@@ -7243,7 +7243,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "D",
 "underline": false,
@@ -7252,7 +7252,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "E",
 "underline": false,
@@ -7261,7 +7261,7 @@
 },
 {
 "border": "",
-"color": "",
+"color": "WHITE",
 "enabled": true,
 "pos": "F",
 "underline": false,
@@ -7505,22 +7505,22 @@
 "worker_time": {
 "S1": {
 "pake": "DT",
-"when": "2026/11/02 10:11:27",
+"when": "2026/11/02 10:11:41",
 "who": "検査員01"
 },
 "S2": {
 "pake": "DT",
-"when": "2026/11/02 10:12:58",
+"when": "2026/11/02 10:13:12",
 "who": "検査員01"
 },
 "S3": {
 "pake": "DT",
-"when": "2026/11/02 10:14:29",
+"when": "2026/11/02 10:14:43",
 "who": "検査員01"
 },
 "S4": {
 "pake": "DT",
-"when": "2026/11/02 10:16:00",
+"when": "2026/11/02 10:16:14",
 "who": "検査員01"
 }
 },
@@ -7622,11 +7622,11 @@
 },
 "WorkerTime_HVC": {
 "1,1": "H7345B0",
-"1,2": "2026/11/02 10:11:27",
-"10,1": "2026/11/02 10:19:09",
-"10,2": "2026/11/02 10:20:40",
-"10,3": "2026/11/02 10:22:11",
-"10,4": "2026/11/02 10:23:42",
+"1,2": "2026/11/02 10:11:41",
+"10,1": "2026/11/02 10:19:23",
+"10,2": "2026/11/02 10:20:54",
+"10,3": "2026/11/02 10:22:25",
+"10,4": "2026/11/02 10:23:56",
 "15,1": "DT",
 "15,2": "DT",
 "15,3": "DT",
@@ -7653,10 +7653,10 @@
 "4,2": "検査員01",
 "4,3": "検査員01",
 "4,4": "検査員01",
-"9,1": "2026/11/02 10:11:27",
-"9,2": "2026/11/02 10:12:58",
-"9,3": "2026/11/02 10:14:29",
-"9,4": "2026/11/02 10:16:00"
+"9,1": "2026/11/02 10:11:41",
+"9,2": "2026/11/02 10:13:12",
+"9,3": "2026/11/02 10:14:43",
+"9,4": "2026/11/02 10:16:14"
 },
 "作業保存_HVC": {
 "1,1": "H7345B0",
@@ -8173,7 +8173,7 @@
 },
 "qf": "",
 "resize_tag": "",
-"start_time": "2026/11/02 10:11:27",
+"start_time": "2026/11/02 10:11:41",
 "strain": {
 "C": {
 "cb1": "",
@@ -8446,7 +8446,7 @@
 "EBad": "",
 "E_UnderVisual": "",
 "E_UpVisual": "",
-"EachTime": "2026/11/02 10:23:42",
+"EachTime": "2026/11/02 10:23:56",
 "EachValue": "15.012",
 "EndTime": "",
 "F": "",
@@ -8598,7 +8598,7 @@
 "OPS5": "E",
 "OPS6": "F",
 "PakeD": "DT",
-"PicFM.Tag": "0",
+"PicFM.Tag": "1",
 "ProofreadFlag": "ok",
 "QF": "",
 "ReSize.Tag": "",
@@ -8624,7 +8624,7 @@
 "S_UnderVisual": "",
 "S_UpVisual": "",
 "SplitFlag": "",
-"StartTime": "2026/11/02 10:11:27",
+"StartTime": "2026/11/02 10:11:41",
 "Sumisei": "",
 "T1": "検査員01",
 "T2": "",
@@ -11280,42 +11280,42 @@
 "worker_time": {
 "S1": {
 "pake": "DT",
-"when": "2026/11/02 10:11:27",
+"when": "2026/11/02 10:11:41",
 "who": "検査員01"
 },
 "S2": {
 "pake": "DT",
-"when": "2026/11/02 10:12:58",
+"when": "2026/11/02 10:13:12",
 "who": "検査員01"
 },
 "S3": {
 "pake": "DT",
-"when": "2026/11/02 10:14:29",
+"when": "2026/11/02 10:14:43",
 "who": "検査員01"
 },
 "S4": {
 "pake": "DT",
-"when": "2026/11/02 10:16:00",
+"when": "2026/11/02 10:16:14",
 "who": "検査員01"
 },
 "U1": {
 "pake": "DT",
-"when": "2026/11/02 10:19:09",
+"when": "2026/11/02 10:19:23",
 "who": "検査員01"
 },
 "U2": {
 "pake": "DT",
-"when": "2026/11/02 10:20:40",
+"when": "2026/11/02 10:20:54",
 "who": "検査員01"
 },
 "U3": {
 "pake": "DT",
-"when": "2026/11/02 10:22:11",
+"when": "2026/11/02 10:22:25",
 "who": "検査員01"
 },
 "U4": {
 "pake": "DT",
-"when": "2026/11/02 10:23:42",
+"when": "2026/11/02 10:23:56",
 "who": "検査員01"
 }
 },

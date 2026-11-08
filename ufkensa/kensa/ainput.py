@@ -712,7 +712,16 @@ class OutputResult:
 
 
 def a_output(form: AinputForm, lot: str, ken: str, *, now: datetime) -> OutputResult:
-    """Input.A_Output (Input:805-835)。CSV(梱包課保存用)を先に、次に hostsend.txt を書く。"""
+    """Input.A_Output (Input:805-835)。CSV(梱包課保存用)を先に、次に hostsend.txt を書く。
+
+    2026-11-08: 書く前に hostsend.txt のフォルダ(送信アプリの場所)があるかを確かめる。無ければ何も書かずに
+    分かる言葉で止める(前は CSV だけ書いてから FileNotFoundError になり、半端に残っていた)。
+    """
+    host_dir = paths.to_local(hostsend_path()).parent
+    if not host_dir.is_dir():
+        raise Stop(f"送信アプリ(測定データ電子化)のフォルダがありません: {host_dir}\r\n"
+                   "設定 → 使用パス の「測定データ電子化」を確かめてください(アイカスへは送っていません)",
+                   source="A_Output")
     csv = save_ainput_csv(form, lot, ken, now=now)
     host = write_hostsend(form)
     return OutputResult(csv, host)

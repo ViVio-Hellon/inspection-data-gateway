@@ -726,6 +726,10 @@ class Session:
         st.work_button_tag = "jump" if self.calibration_skip() else ""
         st.proofread_flag = "ok" if self._calibrated() else ""
         # 入力先が決まらず抜けたとき FlagLabel=0 が残るのは VBA どおり(click("") = UserForm_Click で戻る)
+        if st.inp_tag == "" and st.lot != "" and st.work != "" and st.load != Switch.OFF:
+            # 2026-11-08: 「〜検査済」の後は、VBA ではフォームの余白を押して次の入力先を決めていた(UserForm_Click)。
+            # 画面には余白が無く、測定器の値が黙って捨てられていたので、入力先が無ければここで同じことをしてから受ける
+            self.hooks.user_form_click(st)
         self.env.messages.extend(input_router.receive(st, text, self.hooks))
         if self.env.proofread is not None:
             self.calibration_required = True
