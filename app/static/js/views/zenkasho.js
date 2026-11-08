@@ -40,7 +40,8 @@ async function op(name, body = {}, answers = {}) {
   if (res.question) {
     const q = res.question;
     if (q.buttons === "input") {
-      const v = await promptBox(q.text);
+      // 作業選択は「一般」しか使わない(D21)ので、最初から入れておく(Enter だけで開ける。空のまま閉じると VBA どおり止まる)
+      const v = await promptBox(q.text, { value: q.key === "mit_choice" ? "一般" : "" });
       return op(name, { ...body, choice_input: v ?? "" }, answers);
     }
     const yes = await confirmBox(q.text, { ok: q.buttons === "okcancel" ? "OK" : "はい",
