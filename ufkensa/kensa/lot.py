@@ -139,6 +139,37 @@ def lot_from_second(target: str, flt: str, first_file: str) -> tuple[Optional[li
     return _remap(rows, src, dst), second_file
 
 
+def merge_hiki_from_second(rows: Optional[list], flt: str, first_file: str) -> tuple[Optional[list], list[str]]:
+    """2026-11-08(ご依頼): 第1の SIKAHIKI にロットの行があっても、引当が足りないことがある。
+
+    第2(控え)にだけある引当番号の行を、第1の行の後ろに足す(第1の行はそのまま使う。第2の方が古いこともあるので
+    第2を丸ごとは使わない)。オンラインで第1と第2が別の場所のときだけ。戻り値は (行, 足した引当番号)。
+    """
+    main, nxt = paths.get("main"), paths.get("next")
+    if not rows or main == nxt or first_file != db_path(main, "SIKAHIKINOW"):
+        return rows, []
+    try:
+        cols = datasource.get_fields(first_file, TABLE, "") or []
+    except (datasource.DbMissing, datasource.TableMissing, sqlite3.Error):
+        return rows, []
+    i = datasource.column_index(cols, "引当番号")
+    if i < 0:
+        return rows, []
+    extra, _second = lot_from_second("SIKAHIKINOW", flt, first_file)
+    have = {vbx.cstr(r[i]) for r in rows if i < len(r)}
+    add = [r for r in (extra or []) if i < len(r) and vbx.cstr(r[i]) not in have]
+    if not add:
+        return rows, []
+    nos = sorted({vbx.cstr(r[i]) for r in add})
+    from ..logging_utils import get_logger
+    get_logger("kensa.lot").info("第1パスに無い引当を第2パスから足しました: %s (%s)", ", ".join(nos), flt)
+    return list(rows) + add, nos
+
+
+def hiki_added_message(nos: Sequence[str], source: str) -> Message:
+    return Message("第1パスに無い引当を第2パスから足しました: 引当NO " + ", ".join(nos), INFO, source=source)
+
+
 def fields_from_second(target: str) -> tuple[Optional[list], str]:
     """D26: 第1の仕掛の表が空(列名が取れない)とき、第2の列名。"""
     main, nxt = paths.get("main"), paths.get("next")
@@ -318,6 +349,10 @@ def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "
         res.value = datasource.get_records(file_path, TABLE, arrbox_filter(sql_filter))
     else:
         res.value = datasource.get_fields(file_path, TABLE, "")
+    if use == "Record" and target == "SIKAHIKINOW" and fpath == main and res.value is not None:
+        res.value, added = merge_hiki_from_second(res.value, arrbox_filter(sql_filter), file_path)
+        if added:
+            res.messages.append(hiki_added_message(added, "Arrbox"))
     if res.value is None and fpath == main:
         # D26: 第1にロット(行・列名)が無ければ第2を見る(VBA の L60 以降は到達しないので VBA には無い動き)
         if use == "Record":
@@ -968,6 +1003,10 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
             res.file_path = file_path
             return res
     res.file_path = file_path
+    if fpath == main:
+        temp_hiki, added = merge_hiki_from_second(temp_hiki, flt, file_path)     # 2026-11-08
+        if added:
+            res.messages.append(hiki_added_message(added, "HistorySave"))
 
     hiki_fields = datasource.get_fields(file_path, TABLE, "")
     if hiki_fields is None:

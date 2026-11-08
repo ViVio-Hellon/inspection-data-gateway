@@ -929,6 +929,8 @@ class RealHooks(Hooks):
         if rows is None and file_path == lotmod.db_path(main, target):
             # D26(ロットごとの第2): 第1の SIKAHIKI にロットが無ければ第2(控え)を見る
             rows, _second = lotmod.lot_from_second(target, flt, file_path)
+        elif file_path == lotmod.db_path(main, target):
+            rows, _added = lotmod.merge_hiki_from_second(rows, flt, file_path)   # 2026-11-08: 足りない引当
         return True, rows
 
     # --- 値を返さないもの ---------------------------------------------
