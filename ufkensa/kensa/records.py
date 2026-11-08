@@ -1574,7 +1574,8 @@ def exp_csv(sheet, file_name: str = "", file_path: Union[str, Path] = "", sep: s
             target = Path(str(target).replace("\\", "/"))
     else:
         target = Path(folder) / (name + ext)
-    target.parent.mkdir(parents=True, exist_ok=True)
+    # 2026-11-08: 届かない共有にフォルダの形を作らない(Unreadable は OSError。呼び手は「書き出せませんでした」を出す)
+    safe_io.mkdir_reachable(target.parent)
     if name == "hostsend":
         if len(data) != 1 or len(data[0]) != 1:
             raise _err13("Input:860")                 # 配列を String に入れる → 型エラー

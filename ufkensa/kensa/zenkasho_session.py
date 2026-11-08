@@ -60,7 +60,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from .. import trace
+from .. import safe_io, trace
 from .model import ken_h_name
 from . import checks, datasource, judge, legacy_log, packing, paths, quality, report_html, report_model, \
     terminal, vbx, workers
@@ -869,7 +869,7 @@ class ZenkashoSession(SubInspectionCommon):
         lp = legacy_log.local_path(xlsx_path)
         stem = lp.name[:-5] if lp.name.lower().endswith(".xlsx") else lp.name
         folder = lp.parent
-        folder.mkdir(parents=True, exist_ok=True)
+        safe_io.mkdir_reachable(folder)   # 2026-11-08: 届かない共有にフォルダの形を作らない
         files: list[Path] = []
         main: Optional[tuple[str, dict[str, Any]]] = None
         book: list[tuple[str, list[list[Any]]]] = []

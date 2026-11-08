@@ -64,6 +64,33 @@ def mkdir_under(root: Union[str, Path], target: Union[str, Path]) -> Path:
     return t
 
 
+def mkdir_reachable(target: Union[str, Path]) -> Path:
+    """出力先のフォルダを作る。ただし、設定のパスの根元(共有 \\\\server\\share やドライブ)より下に、
+    **すでにあるフォルダが 1 つでも見えるとき**だけ(2026-11-08)。
+
+    共有に届かない・ドライブの割り当てが外れたときは、根元しか見えない(または何も見えない)ので作らずに
+    `Unreadable`。手元のフォルダ(すでにある所の下)はこれまでどおり作る。
+    """
+    t = Path(target)
+    try:
+        if t.is_dir():
+            return t
+        anchor = Path(t.anchor) if t.anchor else None
+        base = None
+        for up in t.parents:
+            if anchor is not None and up == anchor:
+                break
+            if up.exists():
+                base = up
+                break
+    except OSError:
+        base = None
+    if base is None or not base.is_dir():
+        raise Unreadable(f"出力先に届かないのでフォルダを作りません: {t}(共有フォルダならつながっているか確かめてください)")
+    t.mkdir(parents=True, exist_ok=True)
+    return t
+
+
 def read_json_or_absent(path: Union[str, Path], encoding: str = "utf-8", *, local: bool = False) -> tuple[str, Any]:
     """JSON を読む → (状態, 中身)。無い → (ABSENT, None)、読めない・壊れている → (UNREADABLE, 理由の文字)。"""
     p = Path(path)

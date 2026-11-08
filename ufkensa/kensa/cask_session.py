@@ -44,7 +44,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
 
-from .. import trace
+from .. import safe_io, trace
 from ..logging_utils import get_logger
 from . import datasource, legacy_log, lot as lotmod, packing, paths, report_html, terminal, vbx, wiring, workers
 from . import sound as snd
@@ -564,7 +564,7 @@ class CaskSession(SubInspectionCommon):
 
     def _write_sheets(self, plan: sh.SavePlan, folder: Path, stem: str, edge: Optional[str]) -> list[Path]:
         out: list[Path] = []
-        folder.mkdir(parents=True, exist_ok=True)
+        safe_io.mkdir_reachable(folder)   # 2026-11-08: 届かない共有にフォルダの形を作らない
         # VBA と同じく 1 つの xlsx にシートを並べる(値だけ・パスワードなし。2026-11-07 のご判断)
         from .xlsx_writer import grid_rows, write_xlsx
         book = [(name, grid_rows((*sh.a1(k), v) for k, v in snap.items())) for name, snap in plan.sheets.items()]

@@ -18,6 +18,7 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
+from .. import safe_io
 from .report_model import ReportModel
 
 _WEIGHT_PX = {"hairline": 1, "thin": 1, "medium": 2, "thick": 3, "": 1}
@@ -142,7 +143,7 @@ def make_pdf(html_path: Path, pdf_path: Path, edge: str, *, timeout_sec: float =
     exe = Path(edge)
     if not exe.is_file():
         raise PdfError(f"Edge が見つかりません: {edge}(設定 → 使用パス で場所を直してください)")
-    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    safe_io.mkdir_reachable(pdf_path.parent)   # 2026-11-08: 届かない共有にフォルダの形を作らない
     cmd = [str(exe), "--headless", "--disable-gpu", "--no-pdf-header-footer",
            f"--print-to-pdf={pdf_path}", html_path.resolve().as_uri()]
     try:
@@ -157,7 +158,7 @@ def make_pdf(html_path: Path, pdf_path: Path, edge: str, *, timeout_sec: float =
 
 def save_html_and_pdf(model: ReportModel, folder: Path, stem: str, edge: Optional[str]) -> dict[str, str]:
     """HTML を書き、Edge があれば PDF も作る。作ったファイルのパスを返す(Edge が無ければ html だけ)。"""
-    folder.mkdir(parents=True, exist_ok=True)
+    safe_io.mkdir_reachable(folder)   # 2026-11-08: 届かない共有にフォルダの形を作らない
     h = folder / f"{stem}.html"
     h.write_text(render(model, title=stem), encoding="utf-8")
     out = {"html": str(h)}

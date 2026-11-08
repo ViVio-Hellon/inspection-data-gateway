@@ -164,3 +164,44 @@ class LotCopyTest(_Tmp):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OutputFolderTest(_Tmp):
+    """出力先(帳票・保存・CSV)は、届かない共有にフォルダの形を作らない(2026-11-08)。"""
+
+    def _unreachable(self) -> Path:
+        # 根元(ドライブ・\\server\share)しか見えない状態を、anchor をこのフォルダに見せて作る
+        return self.tmp / "gone_server" / "share" / "検査履歴" / "2026.11"
+
+    def test_mkdir_reachable(self) -> None:
+        ok = self.tmp / "a" / "b"
+        self.assertEqual(safe_io.mkdir_reachable(ok), ok)
+        self.assertTrue(ok.is_dir())
+        far = self._unreachable()
+        with mock.patch.object(Path, "anchor", new=str(self.tmp)):
+            with self.assertRaises(safe_io.Unreadable):
+                safe_io.mkdir_reachable(far)
+        self.assertFalse((self.tmp / "gone_server").exists())
+
+    def test_report_html_and_exp_csv_do_not_create(self) -> None:
+        from ufkensa.kensa import report_html
+        far = self._unreachable()
+        with mock.patch.object(Path, "anchor", new=str(self.tmp)):
+            with self.assertRaises(OSError):
+                report_html.save_html_and_pdf(mock.Mock(), far, "x", None)
+            with self.assertRaises(OSError):
+                records.exp_csv(mock.Mock(last_cell=lambda: (1, 1), read_range=lambda *a: [["v"]]),
+                                file_path=str(far), file_name="x")
+        self.assertFalse((self.tmp / "gone_server").exists())
+
+    def test_save_plan_unreachable_warns_without_creating(self) -> None:
+        from ufkensa.kensa import special_common
+        far = self._unreachable()
+        plan = mock.Mock(name="plan", steps=[mock.Mock(kind="mkdir", path=str(far), src="")])
+        plan.name = "保存"
+        with mock.patch.object(Path, "anchor", new=str(self.tmp)), \
+                mock.patch("ufkensa.kensa.legacy_log.local_path", side_effect=lambda t: Path(t)):
+            obj = mock.Mock()
+            files, msgs = special_common.SubInspectionCommon._run_save_plan(obj, plan, lambda f, s: [])
+        self.assertTrue(msgs and "保存できませんでした" in msgs[0].text)
+        self.assertFalse((self.tmp / "gone_server").exists())
