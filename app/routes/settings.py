@@ -19,7 +19,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, render_template, request
 
 from ufkensa import access_rights, auth, config, logging_utils, trace, user_settings
-from ufkensa.kensa import paths, quirks, terminal
+from ufkensa.kensa import paths, quirks, reload_data, terminal
 from ufkensa.logging_utils import get_logger
 from ufkensa.presenters import fs_browse
 
@@ -223,7 +223,17 @@ def save_path():
     if key == "access_master":                      # 権限の表の場所が変わったので読み直す(鍵は開けたまま)
         auth.end()
         auth.ensure()
+    reload_data.clear_caches()                      # 次に読むときは新しい場所から(2026-11-08)
     return jsonify(_state())
+
+
+@bp.post("/api/settings/paths/reload")
+def reload_paths():
+    """「読み込む」: 読んだ DB・表の覚えを捨て、検査中のロットがあれば読み直す(2026-11-08)。誰でも押せる。"""
+    with trace.timed("settings.reload", "使用パスの読み込み"):
+        out = reload_data.reload_now()
+    out["state"] = _state()
+    return jsonify(out)
 
 
 @bp.post("/api/settings/path/reset")

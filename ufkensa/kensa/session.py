@@ -47,6 +47,7 @@ from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from . import lot_watch, shadow
+from . import reasons as reason_master
 from .model import Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
@@ -60,7 +61,8 @@ FACILITY_OPTION = {"L-1": "L1Work", "LVC": "LVC", "HVC": "HVC", "バランサー
 log = get_logger(__name__)
 NO_LINE_TEXT = "ライン設定がありません" + "\r\n" + "担当者に連絡して下さい"          # UF1:225
 CONFI_CHOICES = ("公差外", "再測定", "許容", "保留")
-CONFI_REASONS = ("入力位置間違い", "測定位置間違い", "測定ボタン押し間違い", "再測定", "0点確認", "板廃棄", "その他")
+#: 理由の選択肢は 伝送用ファイル の表「理由選択」(reasons.py。無ければ VBA と同じ既定で自動で作る)
+CONFI_REASONS = reason_master.DEFAULTS[reason_master.KIND_DELETE]
 
 
 @dataclass
@@ -252,7 +254,7 @@ class Session:
         self.confi = {"posi": req.posi, "n": req.n, "line_name": req.line_name, "moto": req.moto,
                       "return_moto": req.return_moto, "del_count": req.del_count, "page": req.page,
                       "ken_name": req.ken_name or "", "list2": False,
-                      "choices": list(CONFI_CHOICES) if req.page == 0 else list(CONFI_REASONS)}
+                      "choices": list(CONFI_CHOICES) if req.page == 0 else reason_master.choices(reason_master.KIND_DELETE)}
         if req.page == 0:
             self.env.messages.append(Message("検査ﾃﾞｰﾀに公差外有り！", WARN, title="2024.7.26_Ver",
                                              source="UFConfi.Label1"))
@@ -939,7 +941,7 @@ class Session:
         d = checks.confi_decide(tb1, str(c["del_count"]))
         if d.action == "need_reason":
             c["list2"] = True
-            c["choices"] = list(d.reasons)
+            c["choices"] = reason_master.choices(reason_master.KIND_REMEASURE) or list(d.reasons)   # 理由選択のマスタ
             env.messages.append(d.message)
             return
         if d.action == "error":

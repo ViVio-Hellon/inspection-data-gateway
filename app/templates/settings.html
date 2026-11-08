@@ -66,7 +66,8 @@
           <div class="field">
             <button class="btn" type="button" id="checkAll">すべて確認</button>
             <button class="btn" type="button" id="resetAll">すべて既定に戻す</button>
-            <small class="muted">既定 = VBA のオンラインの値(本番のフォルダ)。仕掛台帳は 第1・第2のパスと名前をまとめて戻します。ログの出力パスとモードは変えません。</small>
+            <button class="btn btn--commit" type="button" id="reloadPaths" title="読んだ DB・表・公差表の覚えを捨て、検査中のロットがあれば新しいパスから読み直します">読み込む</button>
+            <small class="muted">「読み込む」= いまの使用パスで DB を読み直します(検査中のロットも読み直し、測定値はそのまま)。既定 = VBA のオンラインの値(本番のフォルダ)。仕掛台帳は 第1・第2のパスと名前をまとめて戻します。ログの出力パスとモードは変えません。</small>
           </div>
           <div class="tablewrap">
             <table class="table" id="pathsTable">

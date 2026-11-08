@@ -629,6 +629,15 @@ function init() {
     if (row) { row.scrollIntoView({ block: "center" }); const i = row.querySelector("input"); if (i && !i.disabled) i.focus(); }
   });
   $("resetAll").addEventListener("click", resetAll);
+  $("reloadPaths").addEventListener("click", async () => {
+    $("reloadPaths").disabled = true;
+    try {
+      const r = await api.post("/api/settings/paths/reload", {});
+      S = r.state;
+      render();
+      for (const m of r.messages || []) toast(m.text, m.level === "error" ? "error" : m.level === "warn" ? "warn" : "ok");
+    } catch (e) { toastError(e); } finally { $("reloadPaths").disabled = false; }
+  });
   $("rightsToPaths").addEventListener("click", () => {
     tabs.select($("settingsTabs"), "paths");
     const row = document.querySelector('#pathsTable tr[data-key="access_master"]');
