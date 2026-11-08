@@ -400,9 +400,10 @@ select.input { cursor: pointer; }
    モーダルは「取り消せない操作」だけに使う
    ================================================================ */
 .toasts {
-  position: fixed; right: 16px; bottom: 16px; z-index: 50;
-  display: flex; flex-direction: column; gap: 8px;
-  max-width: min(420px, calc(100vw - 32px));
+  /* 下中央。右端は各画面の「操作」ボタンが並ぶので、そこに被せない */
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: max-content; max-width: min(420px, calc(100vw - 32px));
 }
 .toast {
   background: var(--surface); color: var(--ink);
