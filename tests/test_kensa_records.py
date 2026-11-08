@@ -76,6 +76,16 @@ class MainDataSaveTest(Base):
             r = rc.main_data_save(self.store, s, register=False)
             self.assertEqual(self.store.sheet(st.HOZON).get(r.row, 83), expect)
 
+    def test_allowed_restored_by_history_load(self) -> None:
+        # 2026-11-08: 許容・保留は別シートに控え、履歴から戻すときに戻す(保存用の列は変えない)
+        s = make_snap()
+        s.ng["S"], s.ng["C"], s.ng["U"] = "許容", "保留", "NG"
+        r = rc.main_data_save(self.store, s, register=False)
+        self.assertEqual(self.store.sheet(st.HOZON).last_col(1), len(st.HOZON_HEADERS))
+        out = rc.history_load(self.store, s.lot, row_no=r.row)
+        self.assertEqual((out.values["NGS"], out.values["NGC"]), ("許容", "保留"))
+        self.assertNotEqual(out.values.get("NGU"), "NG")
+
     def test_b17_fix_writes_bh(self) -> None:
         s = make_snap()
         s.bh["S"] = "65"
