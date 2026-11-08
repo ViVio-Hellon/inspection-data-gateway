@@ -68,18 +68,31 @@ function kv(dl, pairs) {
   dl.replaceChildren(...pairs.flatMap(([k, v]) => [el("dt", { textContent: k }), el("dd", { textContent: v ?? "" })]));
 }
 
-function cellTd(c, cls) {
+/* ---------- 測定者と時刻(WorkerTime。2026-11-08) ---------- */
+const WHO_KEY = "kensa.showWho";
+function showWho() { try { return localStorage.getItem(WHO_KEY) === "1"; } catch { return false; } }
+function whoText(w) {
+  if (!w) return "";
+  const time = String(w.when || "").replace(/^\d{4}\/\d{1,2}\/\d{1,2}\s*/, "");     // 日付は省いて時刻だけ
+  return [w.who, time].filter(Boolean).join(" ");
+}
+
+function cellTd(c, cls, wt) {
   const td = document.createElement("td");
   if (cls) td.className = cls;
   if (!c || c.visible === false) { td.dataset.hidden = "1"; return td; }
   td.textContent = c.value ?? "";
+  const w = wt && c.name ? wt[c.name] : null;
+  if (w && showWho() && c.value) {
+    td.append(el("small", { class: "who", textContent: whoText(w) }));
+  }
   td.dataset.color = c.color || "";
   if (c.border) td.dataset.border = c.border;
   if (c.underline) td.dataset.underline = "1";
   if (c.name) {
     td.dataset.name = c.name;
     td.tabIndex = 0;
-    td.title = c.name;
+    td.title = w ? `${c.name}  測定: ${w.who || "-"}  ${w.when || ""}${w.pake ? "  パケット " + w.pake : ""}` : c.name;
   }
   return td;
 }
@@ -156,7 +169,7 @@ function renderGrid(g, v) {
     if (first) n += 1;
     lastGroup = group;
     const gk = { 厚: "atu", 幅: "hab", 丈: "tak", 対: "taik" }[group] || (n % 2 ? "a" : "b");
-    const tr = rowOf(r.label, r.cells.map((c) => cellTd(c)), `grp grp--${gk}${first ? " grp--first" : ""}`,
+    const tr = rowOf(r.label, r.cells.map((c) => cellTd(c, "", v && v.worker_time)), `grp grp--${gk}${first ? " grp--first" : ""}`,
       first ? tolOf(r.label, v) : "");
     rows.push(tr);
   }
@@ -728,6 +741,12 @@ function init() {
   initReceiver();
   initDirect();
   $("kAddClose").addEventListener("click", () => { $("kAdd").close(); refocus(); });
+  $("whoToggle").addEventListener("click", () => {
+    try { localStorage.setItem(WHO_KEY, showWho() ? "0" : "1"); } catch { /* 覚えられなくても動く */ }
+    $("whoToggle").setAttribute("aria-pressed", String(showWho()));
+    if (V) render(V);
+  });
+  $("whoToggle").setAttribute("aria-pressed", String(showWho()));
   initTabs();
   const closeAdd = () => { if ($("kAdd").open) $("kAdd").close(); };
   onEnter("cardIn", async (card) => { closeAdd(); await op("worker", { card }); refocus(); }, 13);
