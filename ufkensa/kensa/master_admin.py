@@ -134,6 +134,9 @@ def list_sources() -> list[dict[str, Any]]:
 
 def tables(key: str) -> dict[str, Any]:
     s = source(key)
+    if key == "denso":
+        from . import reasons                  # 理由選択のマスタが無ければ作ってから並べる(2026-11-08)
+        reasons.ensure_table(_path(s))
     with _open_read(s) as conn:
         out = []
         for n in _table_names(conn, s):
