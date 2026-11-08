@@ -3686,6 +3686,7 @@
 }
 },
 "worker_needed": false,
+"worker_time": {},
 "workers": [
 "T1: 検査員01(2026.11.02  10:06)"
 ],
@@ -7382,6 +7383,7 @@
 }
 },
 "worker_needed": false,
+"worker_time": {},
 "workers": [
 "T1: 検査員01(2026.11.02  10:06)"
 ],
@@ -11074,6 +11076,7 @@
 }
 },
 "worker_needed": false,
+"worker_time": {},
 "workers": [
 "T1: 検査員01(2026.11.02  10:06)"
 ],
