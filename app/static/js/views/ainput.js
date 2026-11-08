@@ -116,6 +116,7 @@ function renderLeft(v) {
   document.querySelectorAll(".matl").forEach((el) => off(el, !s.material));
   off($("f_material2"), !s.material2); off($("f_material3"), !s.material3);
   $("exCard").hidden = !s.ex;
+  $("l_ex_case_no").hidden = $("f_ex_case_no").hidden = s.ex_case_no === false;    // EX のストアはケースNo 無し
   off($("f_ex_material2"), !s.ex_material2); off($("f_ex_material3"), !s.ex_material3);
 }
 
