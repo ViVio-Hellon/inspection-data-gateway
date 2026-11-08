@@ -41,7 +41,7 @@ from typing import Optional
 APP_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(APP_ROOT))
 
-from ufkensa import app_config, modes  # noqa: E402
+from ufkensa import modes  # noqa: E402
 from ufkensa.logging_utils import get_logger  # noqa: E402
 
 log = get_logger("process_manager")
@@ -102,12 +102,14 @@ def stop(mode: str, *, force: bool = False) -> StopResult:
     health = launch_guard.probe_health(info.port)
     if not launch_guard.is_our_app(health, mode):
         # 応答しない、または別のアプリ。ロックだけ残っている状態
-        if launch_guard.is_process_alive(info.pid):
+        if launch_guard.is_lock_owner_alive(info) and _looks_like_our_process(info):
             return _stop_by_pid(mode, info, result, force=force)
+        # 2026-11-08: 居ない、または同じ番号の別のプログラム(再起動での番号の使い回し)→ ロックだけ片付ける
         launch_guard.remove_lock(mode)
         result.stopped = True
         result.method = "stale-lock"
-        result.message = "動いていませんでした(残っていたロックを片付けました)"
+        result.message = "動いていませんでした。片付けました。Start.vbs で起動できます"
+        log.info(result.message)
         return result
 
     # --- 1. 正常終了を要求する ---
@@ -172,7 +174,7 @@ def _stop_by_pid(mode: str, info, result: StopResult, *, force: bool) -> StopRes
     """PIDで止める。**落とす前に本当にこのアプリかを確かめる。**"""
     import launch_guard
 
-    if not launch_guard.is_process_alive(info.pid):
+    if not launch_guard.is_lock_owner_alive(info):
         launch_guard.remove_lock(mode)
         result.stopped = True
         result.method = "already-gone"
@@ -232,18 +234,7 @@ def _looks_like_our_process(info) -> bool:
     (誤って別のアプリを落とすより、止まらないほうが害が小さい)。
     """
     import launch_guard
-
-    cmdline = launch_guard.process_command_line(info.pid)
-    if not cmdline:
-        log.warning("pid=%s のコマンドラインを取得できませんでした", info.pid)
-        return False
-
-    root = (info.app_root or str(app_config.APP_ROOT)).replace("\\", "/")
-    normalized = cmdline.replace("\\", "/")
-    if root and root in normalized:
-        return True
-    # 起動スクリプト名でも照合する(相対パスで起動された場合)
-    return "start_app.py" in normalized
+    return launch_guard.looks_like_our_process(info)
 
 
 def _wait_gone(port: int, timeout: float) -> bool:

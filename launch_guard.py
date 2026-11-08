@@ -181,6 +181,60 @@ def is_process_alive(pid: int) -> bool:
     return not _is_zombie(pid)
 
 
+# 2026-11-08: PID の使い回し対策。ロックを書いたのは、ロックの時刻(started_at)より前に起動したプロセスだけ。
+# それより後に起動したプロセスが同じ PID を持っていたら、再起動などで番号を使い回された別のプログラム
+#: プロセスの起動時刻とロックの時刻の比べのゆとり(秒。時計の丸め・ロックを書くまでの差)
+START_SLACK_SEC = 2.0
+
+
+def process_start_time(pid: int) -> Optional[float]:
+    """そのPIDのプロセスが起動した時刻(エポック秒)。分からなければ None。"""
+    if pid <= 0:
+        return None
+    if os.name == "nt":
+        try:
+            import ctypes
+            from ctypes import wintypes
+            k32 = ctypes.windll.kernel32
+            h = k32.OpenProcess(0x1000, False, pid)          # PROCESS_QUERY_LIMITED_INFORMATION
+            if not h:
+                return None
+            try:
+                ft = [wintypes.FILETIME() for _ in range(4)]
+                if not k32.GetProcessTimes(h, *[ctypes.byref(f) for f in ft]):
+                    return None
+                v = (ft[0].dwHighDateTime << 32) | ft[0].dwLowDateTime
+                return v / 1e7 - 11644473600.0               # 1601 年起点の 100ns → エポック秒
+            finally:
+                k32.CloseHandle(h)
+        except Exception:                                    # noqa: BLE001
+            return None
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text(encoding="ascii", errors="replace")
+        ticks = int(stat.rpartition(")")[2].split()[19])
+        for line in Path("/proc/stat").read_text(encoding="ascii").splitlines():
+            if line.startswith("btime "):
+                return int(line.split()[1]) + ticks / os.sysconf("SC_CLK_TCK")
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def is_lock_owner_alive(info: "LockInfo") -> bool:
+    """ロックを書いた本人がまだ動いているか(PID が居て、かつ起動時刻がロックの時刻より前)。
+
+    前の版のロックも started_at を持っているので同じ比べ方でよい。起動時刻が取れないときは PID だけで判断する。
+    """
+    if not is_process_alive(info.pid):
+        return False
+    started = process_start_time(info.pid)
+    if started is not None and info.started_at and started > info.started_at + START_SLACK_SEC:
+        log.info("pid=%s はロックより後(%.0f秒後)に起動した別のプログラムです(番号の使い回し)",
+                 info.pid, started - info.started_at)
+        return False
+    return True
+
+
 def _is_zombie(pid: int) -> bool:
     """終わったが親がまだ片付けていない(Linux の Z)。もう何もしないので「消えた」と数える。"""
     try:
@@ -361,8 +415,8 @@ def check_existing(mode: str) -> GuardResult:
     if info is None:
         return GuardResult(True, reason="ロックなし")
 
-    if not is_process_alive(info.pid):
-        log.info("死んだロックを掃除します (pid=%s は不在)", info.pid)
+    if not is_lock_owner_alive(info):
+        log.info("死んだロックを掃除します (pid=%s は不在か別のプログラム)", info.pid)
         remove_lock(mode)
         return GuardResult(True, reason=f"ロックは残っていたがpid {info.pid} は不在")
 
@@ -370,13 +424,18 @@ def check_existing(mode: str) -> GuardResult:
         return _wait_for_starting(mode, info)
 
     health = probe_health(info.port)
+    deadline = time.monotonic() + HUNG_WAIT_SEC
+    while not is_our_app(health, mode) and time.monotonic() < deadline:
+        time.sleep(0.5)                              # 2026-11-08: 前回の本人なら 5 秒まで応答を待つ
+        health = probe_health(info.port)
     if not is_our_app(health, mode):
-        # プロセスは居るがアプリではない(PIDの使い回し、または
-        # 起動途中で落ちた)。ロックを消して新しく起動する
-        log.info("pid=%s は生きているが %s:%s は自分ではない",
-                 info.pid, mode, info.port)
+        # 本人(起動時刻も合う)なのに応答しない → 終わらせてから起動し直す。コマンドラインで確かめられなければ触らない
+        if _kill_if_ours(info):
+            log.warning("前回のツール(pid=%s)が %.0f秒 応答しないので終わらせました", info.pid, HUNG_WAIT_SEC)
+        else:
+            log.info("pid=%s は生きているが %s:%s は自分ではない", info.pid, mode, info.port)
         remove_lock(mode)
-        return GuardResult(True, reason="ロックのプロセスは別物だった")
+        return GuardResult(True, reason="ロックのプロセスは別物か応答なし")
 
     running = str((health or {}).get("version", ""))
     mine = app_config.version()
@@ -411,7 +470,7 @@ def _wait_for_starting(mode: str, info: "LockInfo") -> GuardResult:
             log.info("1つ目が立ち上がりました。合流します: %s", now.url)
             return GuardResult(False, url=now.url, existing=now,
                                reason="起動中だった1つ目に合流します")
-        if not is_process_alive(now.pid):
+        if not is_lock_owner_alive(now):
             remove_lock(mode)
             return GuardResult(True, reason="起動中のプロセスが居なくなりました")
 
@@ -419,6 +478,36 @@ def _wait_for_starting(mode: str, info: "LockInfo") -> GuardResult:
                 STARTING_WAIT_SEC)
     remove_lock(mode)
     return GuardResult(True, reason="起動中のまま応答がないので引き継ぎます")
+
+
+#: 前回のツールが応答しないとき待つ秒数(過ぎたら終わらせて起動し直す)
+HUNG_WAIT_SEC = 5.0
+
+
+def looks_like_our_process(info: "LockInfo") -> bool:
+    """コマンドラインにこのアプリの置き場所か start_app.py があるか(取れなければ False = 触らない)。"""
+    cmdline = process_command_line(info.pid)
+    if not cmdline:
+        return False
+    root = (info.app_root or str(app_config.APP_ROOT)).replace("\\", "/")
+    normalized = cmdline.replace("\\", "/")
+    return bool(root and root in normalized) or "start_app.py" in normalized
+
+
+def _kill_if_ours(info: "LockInfo") -> bool:
+    """本人(起動時刻が合い、コマンドラインもこのアプリ)なら終わらせる。終わらせたら True。"""
+    if not is_lock_owner_alive(info) or not looks_like_our_process(info):
+        return False
+    import signal
+    try:
+        os.kill(info.pid, getattr(signal, "SIGKILL", signal.SIGTERM))
+    except OSError as exc:
+        log.warning("pid=%s を終わらせられませんでした: %s", info.pid, exc)
+        return False
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline and is_process_alive(info.pid):
+        time.sleep(0.2)
+    return True
 
 
 def _replace_stale(mode: str, info: "LockInfo",
