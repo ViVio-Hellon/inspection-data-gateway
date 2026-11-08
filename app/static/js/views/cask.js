@@ -12,6 +12,7 @@ import { playMessage } from "../sound.js";
 import { confirmBox } from "../askbox.js";
 import { packDialog } from "./pack_dialog.js";
 import { startReceiver } from "../recv.js";
+import { canSpeak, readOn, setReadOn, speak } from "../speak.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -211,6 +212,7 @@ function renderSide(v) {
   text($("nextHint"), n && n.locked ? "このセルは保護されています(入力できません)" : "");
   $("flash").hidden = !v.flash;
   if (v.flash) {
+    lastFlash = v.flash;
     $("flash").dataset.mark = v.flash.mark;
     text($("flashMark"), v.flash.mark);
     text($("flashText"), [v.flash.no && `No.${v.flash.no}`, v.flash.label].filter(Boolean).join(" "));
@@ -232,6 +234,25 @@ function renderSide(v) {
   $("closed").hidden = v.visible;
   text($("closedText"), "キャスク検査は開いていません。検査画面で検査員を登録してから「開く」を押してください。");
 }
+
+/* ---- 読み上げ(UFCask.Read / CommandButton14。2026-11-08) ---- */
+let lastFlash = null;
+function flashWords(f) { return f ? [f.no, f.label].filter(Boolean).join("、") : ""; }
+async function receive(t) {
+  const r = await op("receive", { text: t });
+  const f = r && r.view && r.view.flash;
+  if (f) { lastFlash = f; if (readOn()) speak(flashWords(f)); }
+}
+function renderRead() {
+  const on = readOn();
+  $("readToggle").setAttribute("aria-pressed", String(on));
+  $("readToggle").textContent = on ? "読み上げ ON" : "読み上げ OFF";
+  $("readToggle").disabled = $("readNow").disabled = !canSpeak();
+  if (!canSpeak()) $("readToggle").title = "このブラウザは読み上げに対応していません";
+}
+$("readToggle").addEventListener("click", () => { setReadOn(!readOn()); renderRead(); });
+$("readNow").addEventListener("click", () => speak(flashWords(lastFlash)));
+renderRead();
 
 function render(v) {
   V = v;
@@ -259,7 +280,7 @@ function onEnter(id, fn) {
 
 function init() {
   pack = packDialog({ imageUrl: "/api/cask/pack_image", send: (name, body) => op(name, body) });
-  onEnter("measIn", (t) => { remember(t); op("receive", { text: t }); });
+  onEnter("measIn", (t) => { remember(t); receive(t); });
   onEnter("zeroIn", (t) => op("zero", { text: t }));
   $("lotIn").addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
@@ -302,4 +323,4 @@ function init() {
 init();
 
 // 受信機から直接受け取る(保守で「検査画面で受け取る」にした受信機)。この画面が開いている間だけ、この画面に入る
-startReceiver("cask", (text) => op("receive", { text }));
+startReceiver("cask", (text) => receive(text));
