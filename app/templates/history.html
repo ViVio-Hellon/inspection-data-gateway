@@ -2,6 +2,7 @@
 {% block title %}履歴 — {{ display_name }}{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/history.css') }}">
 <section class="page-head">
   <h2>履歴</h2>
   <p class="muted">この端末で保存した検査(VBA の「保存用」・耳付は「耳用」)を見ます。左で選ぶと右に中身が出ます。</p>
@@ -24,6 +25,7 @@
     <header><h3 id="histTitle">検査の中身</h3><button class="btn btn--primary" type="button" id="histRestore" hidden>検査画面へ戻す</button></header>
     <div class="pad">
       <p class="muted" id="histNone">左の一覧から選んでください。</p>
+      <p class="muted" id="histWho"></p>
       <div class="tablewrap"><table class="table" id="histGrid"></table></div>
       <div class="tablewrap" style="margin-top:8px"><table class="table" id="histExtra"></table></div>
       <dl class="kv" id="histOthers"></dl>

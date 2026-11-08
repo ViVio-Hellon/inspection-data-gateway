@@ -47,11 +47,26 @@ async function show(row) {
     $("histRestore").hidden = false;
     const head = document.createElement("tr");
     head.append(td("", "th"), ...v.faces.map((f) => td(f, "th")));
+    const wt = v.worker_time || {};
     $("histGrid").replaceChildren(head, ...v.grid.map((r) => {
       const tr = document.createElement("tr");
-      tr.append(td(String(r.no), "th"), ...r.cells.map((c) => td(c)));
+      tr.append(td(String(r.no), "th"), ...r.cells.map((c, i) => {
+        const cell = td(c);
+        const w = wt[`${v.faces[i]}${r.no}`];
+        if (w && c) {                                   // 測定値の下に 検査員・時刻(2026-11-08)
+          const sm = document.createElement("small");
+          sm.className = "who";
+          sm.textContent = [w.who, String(w.when || "").replace(/^\d{4}\/\d{1,2}\/\d{1,2}\s*/, "")].filter(Boolean).join(" ");
+          cell.append(sm);
+          cell.title = `測定: ${w.who || "-"}  ${w.when || ""}${w.pake ? "  パケット " + w.pake : ""}`;
+        }
+        return cell;
+      }));
       return tr;
     }));
+    $("histWho").textContent = Object.keys(wt).length
+      ? "各値の下は、測った検査員と時刻です。"
+      : "この検査は、測定者と時刻の控えがありません(2026-11-08 より前に印刷したもの)。";
     const head2 = document.createElement("tr");
     head2.append(td("", "th"), ...v.faces.map((f) => td(f, "th")));
     $("histExtra").replaceChildren(head2, ...Object.entries(v.extras).map(([k, list]) => {

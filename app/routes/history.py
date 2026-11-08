@@ -89,7 +89,11 @@ def view():
         known = {f"{f}{i}" for f in FACES for i in range(1, 15)}
         others = {k: x for k, x in v.items() if k not in known and x and not k.endswith(("late", "_Angle", "_BH", "_Vis"))
                   and not k[1:] in ("ZH", "GH", "ZH_B", "GH_B")}
+        sheet = s.sheet(st.MIMI if mimi else st.HOZON)
+        from ufkensa.kensa import worker_archive
+        wt = worker_archive.lookup(s, st.cell_text(sheet.get(row, 1)), lot)       # 測定値ごとの検査員と時刻(控え)
         return jsonify({"lot": lot, "row": row, "faces": list(FACES), "grid": grid, "extras": extras, "others": others,
+                        "worker_time": wt,
                         "messages": [m.to_dict() for m in kv.messages]})
     finally:
         s.close()
