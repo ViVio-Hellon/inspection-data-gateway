@@ -5,7 +5,10 @@
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, render_template, request
+import re
+from pathlib import Path
+
+from flask import Blueprint, jsonify, render_template, request, send_file
 
 from ufkensa.kensa import session, view
 from ufkensa.kensa.flow import Stop
@@ -95,6 +98,18 @@ def pack_image():
     if f is None or not f.is_file():
         return jsonify({"error": {"code": "not_found", "message": "包装仕様書の画像がありません"}}), 404
     return send_file(f, mimetype="image/jpeg", max_age=0)
+
+
+@bp.get("/api/kensa/report/<path:name>")
+def report(name: str):
+    """印刷した帳票(D8: ブラウザで開いて印刷する HTML)。手元のデータフォルダの print にあるものだけ(キャスクと同じ)。"""
+    safe = Path(name).name
+    if not re.fullmatch(r"[^\\/]+\.html", safe):
+        return jsonify({"error": {"code": "bad_value", "message": "帳票の名前が正しくありません"}}), 400
+    f = session.get().store.path.parent / "print" / safe
+    if not f.is_file():
+        return jsonify({"error": {"code": "not_found", "message": f"帳票がありません: {safe}"}}), 404
+    return send_file(f, mimetype="text/html", max_age=0)
 
 
 @bp.get("/api/kensa/lot-watch")

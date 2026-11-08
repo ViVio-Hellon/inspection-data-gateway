@@ -1800,9 +1800,11 @@ class Session:
         lot, when = lots[row - 2], records.cell_text(sheet.get(row, 1))
         r = records.kanri_load(self.store, lot, when, uf1_visible=True, uf1_lot=st.lot, mimi=mimi,
                                lname=st.lname, aorb=st.strain_face, row_no=row)
-        hooks.env.messages.extend(r.messages)
         if not r.found:
+            # 止めた理由は Stop で 1 回だけ出す(知らせにも入れると同じ文言が 2 回出る)
+            hooks.env.messages.extend(r.messages[:-1])
             raise Stop(r.messages[-1].text if r.messages else "該当する履歴がありません", source="UF管理:622")
+        hooks.env.messages.extend(r.messages)
         wiring.apply_restore(st, r, hooks)
 
     # ------------------------------------------------------------------

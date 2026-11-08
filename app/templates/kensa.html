@@ -56,7 +56,7 @@
   <div class="kensa__col kensa__center">
     <section class="card kwait" id="kwait"><div class="pad"><p class="kwait__text" id="kwaitText"></p></div></section>
     <section class="card chooser" id="chooser">
-      <header><h3>作業選択</h3><span class="muted" id="chooserHint">どれかを選ぶと測定表が出ます</span></header>
+      <header><h3>作業選択</h3><span class="muted" id="chooserHint">どれかを選ぶと測定表が出ます</span><span class="chooser__ops" id="chooserOps"></span></header>
       <div class="pad" id="workPad">
         <div class="works" id="works"></div>
         <div class="inbox" id="yamaBox" hidden><label for="yamaSel">山数</label><select class="input" id="yamaSel"></select></div>
@@ -67,7 +67,7 @@
     </section>
     <section class="card kmeasure">
       <header><h3>測定</h3><span class="lv lv--info" id="workLv"></span></header>
-      <div class="pad" style="overflow-x:auto">
+      <div class="pad mgrid-wrap" id="mgridWrap" style="overflow-x:auto">
         <table class="mgrid" id="mgrid" aria-label="測定値"></table>
       </div>
     </section>

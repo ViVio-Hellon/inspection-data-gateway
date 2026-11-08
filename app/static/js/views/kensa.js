@@ -45,8 +45,26 @@ async function op(name, body = {}, answers = {}) {
     return op(name, body, { ...answers, [q.key]: !!yes });
   }
   if (res.stop) toast(res.stop.text, "error");
-  if (res.view && res.view.report && res.view.report.report) toast(`帳票: ${res.view.report.report.html}`, "info");
+  if (name === "print-commit" || name === "print-check") announceReport(res.view);
   return res;
+}
+
+/** 印刷のあと 1 回だけ「帳票を開く」を知らせる(キャスクと同じく /api/…/report/<名前> で開く。サーバのパスは出さない)。 */
+let lastReport = "";
+function reportUrl(v) {
+  const h = v && v.report && v.report.report && v.report.report.html;
+  if (!h) return "";
+  const name = String(h).split(/[\\/]/).pop();
+  return tokenUrl(`/api/kensa/report/${encodeURIComponent(name)}`);
+}
+function announceReport(v) {
+  const url = reportUrl(v);
+  if (!url) return;
+  const key = url + "|" + JSON.stringify((v.report && v.report.saved) || {}) + "|" + !!(v.report && v.report.reprint);
+  if (key === lastReport) return;
+  lastReport = key;
+  toast(v.report.reprint ? "帳票を作り直しました" : "帳票を作りました", "ok",
+        { label: "帳票を開く", onClick: () => window.open(url, "_blank", "noopener") });
 }
 
 const refocus = () => $("measIn")?.focus();   // 画面を移ったあと(入れ替え式)でも落ちない
@@ -488,7 +506,16 @@ function renderPhase(v) {
   // 測定中の上の1行
   const info = $("kbarInfo");
   const chip = (cls, t) => el("span", { class: "lv " + cls, textContent: t });
-  if (phase === "measure" && $("newBtn").parentElement.id !== "kbarOps") $("kbarOps").append($("newBtn"));
+  // 新規検査: 測定中は上の行、選ぶまで(印刷のあとを含む)は作業選択の見出しに出す
+  const newHome = phase === "measure" ? $("kbarOps") : $("chooserOps");
+  if ($("newBtn").parentElement !== newHome) newHome.append($("newBtn"));
+  // 上の帯の「利用者」: 検査員を登録したらその名前を出す(ログインの名前が無いとき)
+  const rb = document.getElementById("rb-user");
+  if (rb && (rb.dataset.state === "unset" || rb.dataset.worker === "1")) {
+    const names = workerOk ? ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") : "";
+    if (names) { rb.textContent = names; rb.dataset.worker = "1"; delete rb.dataset.state; }
+    else if (rb.dataset.worker === "1") { rb.textContent = "未ログイン"; rb.dataset.state = "unset"; delete rb.dataset.worker; }
+  }
   info.replaceChildren(
     chip(workerOk ? "lv--ok" : "lv--ng", workerOk ? "検査員" : "検査員登録なし"),
     el("span", { class: "kbar__names", textContent: ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") }),

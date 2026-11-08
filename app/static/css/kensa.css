@@ -195,3 +195,6 @@ li.is-stale { opacity: .6; }
 #mgrid td .who { display: block; font-size: 10px; line-height: 1.2; color: var(--muted); font-weight: 400; white-space: nowrap; }
 .who-toggle { align-self: flex-start; }
 .who-toggle[aria-pressed="true"] { background: var(--accent-soft, #e0eeea); font-weight: 700; }
+/* 1366x768 でも歪・外観のタブ見出しが折り返し内に入るように、測定表は画面の高さに合わせて中でスクロールする */
+.kensa[data-phase="measure"] .mgrid-wrap { max-height: max(220px, calc(100vh - 370px)); overflow-y: auto; }
+.chooser__ops { margin-left: auto; display: flex; gap: 6px; }
