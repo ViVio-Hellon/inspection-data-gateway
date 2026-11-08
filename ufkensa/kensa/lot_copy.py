@@ -17,7 +17,6 @@ import threading
 import time
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote as _urlquote
 
 from ..logging_utils import get_logger
 

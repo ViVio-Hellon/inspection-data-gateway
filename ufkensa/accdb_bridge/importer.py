@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import csv
 import os
-import re
 import shutil
 import sqlite3
 import subprocess

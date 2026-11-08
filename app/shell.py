@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from flask import current_app, request
 
-from ufkensa import app_config, idle_exit, modes, user_settings
+from ufkensa import app_config, idle_exit, modes
 
 
 @dataclass

@@ -23,10 +23,9 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
-from urllib.parse import quote as _urlquote
 
 from .. import access_rights, trace
-from . import datasource, paths
+from . import datasource
 
 ROW_KEY = "__rowid"
 ROW_LIMIT = 500

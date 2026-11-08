@@ -21,7 +21,7 @@ from __future__ import annotations
 import math
 import re
 import struct
-from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal
 from typing import Any, Optional, Union
 
 Number = Union[int, float]
