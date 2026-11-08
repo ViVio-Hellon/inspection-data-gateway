@@ -159,7 +159,8 @@ class Session:
         for t, day, label in ((reg.t1, reg.day1, "T1"), (reg.t2, reg.day2, "T2"), (reg.t3, reg.day3, "T3")):
             if t != "" or day != "":
                 workers_list.append(f"{label}: {t}" + (f"({day})" if day else ""))
-        return {**self._extra_more(), "lot_source": self._lot_source_view(), "workers": workers_list, "checks": self.checks, "print_ready": self.print_ready,
+        return {**self._extra_more(), "lot_source": self._lot_source_view(), "workers": workers_list,
+                "worker_time": self._worker_time(), "checks": self.checks, "print_ready": self.print_ready,
                 "confi": self.confi, "calibration_required": self.calibration_required and not self._calibrated(),
                 "report": self.report or None, "proofread": "ok" if self._calibrated() else "",
                 "range": {"ops": st.ops, "ope": st.ope,
@@ -1035,6 +1036,27 @@ class Session:
     # 画面に足りなかった操作(外観・不良要因・歪コンボ・検入高さ・オーダー・包装仕様・VC・保留・廃棄フラグ・
     # 印刷履歴クリア・サイズ修正・強制描写・検査員不一致)
     # ------------------------------------------------------------------
+    def _worker_time(self) -> dict[str, dict[str, str]]:
+        """測定値ごとの検査員・時刻・パケット(WorkerTime_<L>。VBA の Time_Posting と同じシート。2026-11-08 に画面へ)。
+
+        行 3〜8 = 検査員、9〜14 = 時刻、15〜20 = パケット(S, U, C, D, E, F の順)、列 = 欄の行番号。
+        いまのロットのシート(A1 = ロット)のときだけ返す。欄の名前("S1" など) → {"who", "when", "pake"}。
+        """
+        st = self.state
+        if st.lot == "" or st.lname == "":
+            return {}
+        cells = wiring.sheet_cells(self.store, line_sheet(records.WORKER_TIME, st.lname))
+        if not cells or records.cell_text(cells.get((1, 1))) != st.lot:
+            return {}
+        out: dict[str, dict[str, str]] = {}
+        for i, p in enumerate(grid.POSITIONS, start=1):
+            for x in range(1, grid.ROW_COUNT[p] + 1):
+                who = records.cell_text(cells.get((i + 2, x)))
+                when = records.cell_text(cells.get((i + 8, x)))
+                if who or when:
+                    out[f"{p}{x}"] = {"who": who, "when": when, "pake": records.cell_text(cells.get((i + 14, x)))}
+        return out
+
     def _extra_more(self) -> dict[str, Any]:
         """view に足す値(選択肢・オーダー・包装仕様・VC・印刷ボタン)。判断はここで済ませる。"""
         st, env = self.state, self._env()

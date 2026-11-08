@@ -125,6 +125,8 @@
   <!-- 右(作業を選んだら): 次に測る・チェック・操作 -->
   <div class="kensa__col krail" id="krail">
     <div class="next" id="nextBox"><small>次に測る</small><b id="nextName">-</b><small id="nextHint"></small></div>
+    <button class="btn btn--sm who-toggle" type="button" id="whoToggle" aria-pressed="false"
+            title="測定値の下に、測った検査員と時刻を出します(VBA の WorkerTime シート)。欄にマウスを置いても出ます">測定者と時刻を表示</button>
     <!-- 測定器の伝送を受ける欄。測定器はキーボードと同じく「カーソルのある欄」に打つので、見える所に置き、
          受け取れる状態か(カーソルがあるか)を色で出す。手入力(VBA の隠しモード)は出さない -->
     <label class="recv" id="recvBox" for="measIn"><span class="recv__state" id="recvState">受信待ち</span>
