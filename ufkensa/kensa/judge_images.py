@@ -68,12 +68,9 @@ def resolve(slot: str) -> tuple[Path, str]:
 
 
 def slots_of(kind: str) -> list[str]:
-    """出す枠。対角線は決めた枠だけ(1 つも決めていなければ同梱の 対角1〜5。VBA の DB1〜DB5 を乱数で)。"""
-    keys = [k for k, v in SLOTS.items() if v[0] == kind]
-    if kind == "diag":
-        chosen = [k for k in keys if configured(k)]
-        return chosen or keys
-    return keys
+    """出す枠。対角線は 5 枠すべてから乱数で 1 枚(VBA の DB1〜DB5)。
+    2026-11-09(ご判断): 決めた枠はその画像、空の枠は同梱の絵で、混ぜて選ぶ。"""
+    return [k for k, v in SLOTS.items() if v[0] == kind]
 
 
 def slot_info(slot: str) -> dict:

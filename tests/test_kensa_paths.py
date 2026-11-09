@@ -460,10 +460,12 @@ class JudgeImagesTest(_Saved):
         paths.set_path("judge_ok", str(a))
         paths.set_path("judge_diag3", str(b))
         self.assertEqual(judge_images.resolve("judge_ok"), (a, "set"))
-        self.assertEqual(judge_images.available()["diag"], ["judge_diag3"])       # 決めた枠だけから乱数
-        self.assertEqual(judge_images.effective("diag"), [b])
+        self.assertEqual(judge_images.available()["diag"], [f"judge_diag{i}" for i in range(1, 6)])   # 決めた枠と同梱の絵を混ぜて乱数
+        eff = judge_images.effective("diag")                                     # 対角3 は決めた画像、ほかは同梱の絵
+        self.assertEqual((len(eff), eff[2]), (5, b))
+        self.assertEqual(eff[0].name, "対角1.jpg")
         self.assertEqual(judge_images.resolve("judge_ng")[1], "default")
-        self.assertIsNone(judge_images.find("diag", "judge_diag1"))
+        self.assertEqual(judge_images.find("diag", "judge_diag1").name, "対角1.jpg")   # 空の枠は同梱の絵
         row = [r for r in paths.overview() if r["key"] == "judge_ok"][0]
         self.assertEqual((row["kind"], row["image"]["source"]), ("file", "set"))
         self.assertNotIn("judge_images", paths.BY_KEY)                             # フォルダの項目は一覧に出さない
@@ -510,4 +512,4 @@ class JudgeImagesTest(_Saved):
         self.assertEqual(paths.get("judge_diag1"), paths.join(str(self.d1), "対角2.png"))
         saved = user_settings.get(paths.KEY_PATHS)[paths.KEY_ITEMS]
         self.assertNotIn("judge_images", saved)                                  # 1 回だけ
-        self.assertEqual(judge_images.available()["diag"], ["judge_diag1"])
+        self.assertEqual(judge_images.available()["diag"], [f"judge_diag{i}" for i in range(1, 6)])
