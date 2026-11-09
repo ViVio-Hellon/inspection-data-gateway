@@ -55,7 +55,28 @@ def files(kind: str, folder: Optional[Path] = None) -> list[Path]:
     except OSError:
         return []
     out = [f for f in (_find(folder, s) for s in KINDS[kind]) if f is not None]
+    if not out:
+        out = _loose(folder, kind)
     return out
+
+
+#: 2026-11-09: 決まった名前でなくても、名前に含む言葉で見分ける(合格・不合格・対角)。NG・不合格 を先に見る
+WORDS = {"ng": ("NG", "不合格", "ﾌｺﾞｳｶｸ", "ダメ", "NO"), "ok": ("OK", "合格", "ｺﾞｳｶｸ"), "diag": ("対角", "ﾀｲｶｸ", "DIAG")}
+
+
+def _loose(folder: Path, kind: str) -> list[Path]:
+    try:
+        fs = sorted(f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in EXT)
+    except OSError:
+        return []
+
+    def kind_of(f: Path) -> str:
+        stem = f.stem.upper()
+        for k in ("ng", "diag", "ok"):
+            if any(w.upper() in stem for w in WORDS[k]):
+                return k
+        return ""
+    return [f for f in fs if kind_of(f) == kind][: (5 if kind == "diag" else 1)]
 
 
 def effective(kind: str) -> list[Path]:
@@ -86,3 +107,12 @@ def listing(folder: Path) -> list[dict]:
         out.append({"kind": k, "label": LABELS[k], "exists": bool(fs),
                     "name": "・".join(f.name for f in fs) if fs else "(無いので同梱の VBA の絵を出します)"})
     return out
+
+
+def unused(folder: Path) -> list[str]:
+    """フォルダにある画像のうち、どの種類にも使われないもの(設定の確認で知らせる)。"""
+    used = {f.name for k in KINDS for f in files(k, folder)}
+    try:
+        return sorted(f.name for f in folder.iterdir() if f.is_file() and f.suffix.lower() in EXT and f.name not in used)
+    except OSError:
+        return []

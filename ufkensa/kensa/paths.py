@@ -728,6 +728,10 @@ def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
         out["files"] = judge_images.listing(p)
         out["message"] += "(" + "・".join(f'{f["label"]} ' + (f["name"] if f["exists"] else "ファイルがありません")
                                          for f in out["files"]) + ")"
+        unused = judge_images.unused(p)
+        if unused:
+            # 2026-11-09: どれにも当たらなかった画像(名前に OK・NG・合格・不合格・対角 が入っていない)
+            out["message"] += f"(使っていない画像: {'・'.join(unused[:6])}。名前に OK / NG / 対角 を入れてください)"
     return out
 
 
