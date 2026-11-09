@@ -177,3 +177,49 @@ def unused(folder: Path) -> list[str]:
         return sorted(f.name for f in folder.iterdir() if f.is_file() and f.suffix.lower() in EXT and f.name not in used)
     except OSError:
         return []
+
+
+# ------------------------------------------------------------------
+# 2026-11-09: 表示時間・表示サイズ(保守 → 判定の画像。PC ごと: user_settings)
+DISPLAY_KEY = "judge_display"
+MS_MIN, MS_MAX = 500, 30000                     # 0.5〜30 秒
+SIZE_MIN, SIZE_MAX = 20, 100                    # 画面に対する % (100 = 全画面)
+SIZE_DEFAULT = 80                               # 前からの大きさ(80vw × 80vh)
+SIZE_PRESETS = [("小", 40), ("中", 60), ("大", 80), ("全画面", 100)]
+
+
+def _clamp(v, lo: int, hi: int, default: int) -> int:
+    try:
+        n = int(round(float(v)))
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, n))
+
+
+def normalize_display(d) -> dict:
+    """{種類: {ms, size}}。足りない・おかしい値は既定、範囲外は端へ寄せる。"""
+    d = d if isinstance(d, dict) else {}
+    out = {}
+    for k in KINDS:
+        v = d.get(k) if isinstance(d.get(k), dict) else {}
+        out[k] = {"ms": _clamp(v.get("ms"), MS_MIN, MS_MAX, SHOW_MS[k]),
+                  "size": _clamp(v.get("size"), SIZE_MIN, SIZE_MAX, SIZE_DEFAULT)}
+    return out
+
+
+def display() -> dict:
+    from ufkensa import user_settings
+    return normalize_display(user_settings.get(DISPLAY_KEY, {}) or {})
+
+
+def save_display(d) -> dict:
+    from ufkensa import user_settings
+    out = normalize_display(d)
+    user_settings.save_or_raise(DISPLAY_KEY, out)
+    return out
+
+
+def display_meta() -> dict:
+    return {"defaults": normalize_display({}), "ms_min": MS_MIN, "ms_max": MS_MAX, "size_min": SIZE_MIN,
+            "size_max": SIZE_MAX, "presets": [{"label": a, "size": b} for a, b in SIZE_PRESETS],
+            "labels": {"ok": "合格", "ng": "不合格", "diag": "対角線"}}

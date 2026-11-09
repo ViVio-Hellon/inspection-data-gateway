@@ -306,3 +306,14 @@
 .maint__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono, monospace); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .maint__ftitle { font-family: inherit; font-weight: 600; font-size: var(--fs-sm); }
 .maint__fwarn { color: var(--ng, #c0392b); }
+
+/* 判定の画像(2026-11-09) */
+.jd { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 10px 0; }
+.jd__card { border: 1px solid var(--line, #ddd); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+.jd__card h4 { margin: 0; font-size: 18px; }
+.jd__row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--fs-sm); }
+.jd__row .input { width: 6em; }
+.jd__thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.jd__thumbs figure { margin: 0; text-align: center; font-size: 11px; max-width: 84px; }
+.jd__thumbs img { width: 80px; height: 60px; object-fit: contain; background: #fff; border: 1px solid var(--line, #ddd); border-radius: 6px; }
+.jd__thumbs .is-warn { color: #b26a00; }

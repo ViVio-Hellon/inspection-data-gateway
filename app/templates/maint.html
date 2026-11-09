@@ -18,6 +18,7 @@
       <button class="tab" role="tab" type="button" data-tab="lookup">ソリ・設備仕様</button>
       <button class="tab" role="tab" type="button" data-tab="hist">履歴出力</button>
       <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
+      <button class="tab" role="tab" type="button" data-tab="judge">判定の画像</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -298,6 +299,22 @@
               <thead><tr><th>PC</th><th>ログインID</th><th>様子</th><th>残っているもの・詳しく</th><th>版</th><th>最後の知らせ</th></tr></thead>
               <tbody id="rsRows"></tbody>
             </table>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 判定の画像(表示時間・大きさ。PC ごと) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="judge" id="pJudge" hidden>
+      <section class="card">
+        <header><h3>判定の画像の出し方</h3><span class="lv">この PC だけ</span></header>
+        <div class="pad">
+          <p class="muted maint__small">検査画面で合格・不合格・対角線のときに出す絵(VBA の UFOK / UFNG / UF対角)の表示時間と大きさです。
+            変えるには編集の鍵が要ります。絵のファイルは <a href="/settings?tab=paths">設定 → 使用パス</a>(合格の画像・不合格の画像・対角線の画像1〜5)で決めます。</p>
+          <div class="jd" id="mJudge"></div>
+          <div class="btn-row">
+            <button class="btn btn--commit" type="button" id="mJudgeSave">保存する</button>
+            <button class="btn" type="button" id="mJudgeReset">既定に戻す(3・3・2 秒、大)</button>
           </div>
         </div>
       </section>

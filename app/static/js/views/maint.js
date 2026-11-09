@@ -9,6 +9,8 @@ import { api } from "../api.js";
 import { confirmBox } from "../askbox.js";
 import { adminState, mountLockBadge, withUnlock } from "../admin_unlock.js";
 import { toast, toastError } from "../toast.js";
+import { testJudgeImage } from "../judgebox.js";
+import { tokenUrl } from "../api.js";
 import { createMasterGrid } from "./master_grid.js";
 
 const $ = (id) => document.getElementById(id);
@@ -135,6 +137,7 @@ function showTab(name) {
   if (name === "master") openMaster();
   if (name === "device") openDevice();
   if (name === "hist") openHist();
+  if (name === "judge") openJudge();
   if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -457,6 +460,87 @@ async function setTerm(action, question) {
   } catch (err) { toastError(err); }
 }
 $("mClear").addEventListener("click", () => setTerm("clear", "設備名・号機・モードを消します。次に検査画面を開くと、この端末の設定を求めます。よろしいですか？"));
+
+/* ---------- 判定の画像: 表示時間・大きさ(PC ごと。2026-11-09) ---------- */
+let JD = null;
+function jdRead() {
+  const out = {};
+  for (const k of ["ok", "ng", "diag"]) {
+    out[k] = { ms: Math.round(parseFloat($(`jdSec-${k}`).value) * 1000), size: parseInt($(`jdSize-${k}`).value, 10) };
+  }
+  return out;
+}
+function jdRender(disp) {
+  const box = $("mJudge");
+  box.replaceChildren(...["ok", "ng", "diag"].map((k) => {
+    const c = el("div", "jd__card");
+    c.dataset.kind = k;
+    c.append(el("h4", "", JD.labels[k]));
+    const r1 = el("label", "jd__row");
+    const sec = el("input", "input");
+    Object.assign(sec, { type: "number", id: `jdSec-${k}`, min: JD.ms_min / 1000, max: JD.ms_max / 1000, step: 0.5,
+                         value: disp[k].ms / 1000 });
+    r1.append("表示時間", sec, `秒(${JD.ms_min / 1000}〜${JD.ms_max / 1000}、既定 ${JD.defaults[k].ms / 1000})`);
+    const r2 = el("div", "jd__row");
+    const size = el("input", "input");
+    Object.assign(size, { type: "number", id: `jdSize-${k}`, min: JD.size_min, max: JD.size_max, step: 5, value: disp[k].size });
+    size.setAttribute("aria-label", `${JD.labels[k]}の表示サイズ(%)`);
+    r2.append("表示サイズ", size, "% ");
+    for (const p of JD.presets) {
+      const b = el("button", "btn btn--select", p.label);
+      b.type = "button";
+      b.addEventListener("click", () => { size.value = p.size; });
+      r2.append(b);
+    }
+    const th = el("div", "jd__thumbs");
+    const slots = JD.slots.filter((x) => x.kind === k);
+    for (const sl of slots) {
+      const f = el("figure");
+      const im = el("img");
+      im.src = tokenUrl(`/api/kensa/judge_image/${encodeURIComponent(sl.slot)}`);
+      im.alt = sl.label;
+      f.append(im, el("figcaption", sl.source === "missing" ? "is-warn" : "", sl.path ? sl.file : `${sl.label}(既定)`));
+      f.title = sl.note || sl.path;
+      th.append(f);
+    }
+    const r3 = el("div", "jd__row");
+    let pick = null;
+    if (k === "diag") {
+      pick = el("select", "input");
+      pick.id = "jdSlot-diag";
+      pick.append(new Option("乱数(検査と同じ)", ""), ...slots.map((x) => new Option(x.label, x.slot)));
+      pick.style.width = "auto";
+      r3.append(pick);
+    }
+    const t = el("button", "btn", "テスト表示");
+    t.type = "button";
+    t.id = `jdTest-${k}`;
+    t.addEventListener("click", () => {
+      const v = jdRead()[k];
+      testJudgeImage(k, { slot: pick ? pick.value : "", ms: Math.min(Math.max(v.ms || 0, JD.ms_min), JD.ms_max),
+                          size: Math.min(Math.max(v.size || 0, JD.size_min), JD.size_max) });
+    });
+    r3.append(t, el("span", "muted maint__small", "検査画面と同じ窓・大きさ・時間で出します(押すか Esc で消える)"));
+    c.append(r1, r2, th, r3);
+    return c;
+  }));
+}
+async function openJudge() {
+  try {
+    JD = await api.get("/api/maint/judge_display");
+    jdRender(JD.display);
+  } catch (err) { toastError(err); }
+}
+$("mJudgeSave").addEventListener("click", async () => {
+  try {
+    const d = await withUnlock(() => api.post("/api/maint/judge_display", { display: jdRead() }));
+    if (!d) return;
+    JD.display = d.display;
+    jdRender(d.display);
+    toast("判定の画像の出し方を保存しました(検査画面は 30 秒以内に変わります)", "ok");
+  } catch (err) { toastError(err); }
+});
+$("mJudgeReset").addEventListener("click", () => { if (JD) jdRender(JD.defaults); });
 
 /* ---------- 仮ロット ---------- */
 let K = { fields: [], rows: [], original: "", hikiExtra: [], source: "" };

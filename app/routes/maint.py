@@ -256,6 +256,31 @@ def kari_delete():
 
 
 # ------------------------------------------------------------------
+# 判定の画像: 表示時間・表示サイズ(PC ごと)。見るのは誰でも、変えるのは編集の鍵(端末設定と同じ)
+@bp.get("/api/maint/judge_display")
+def judge_display_get():
+    from ufkensa.kensa import judge_images
+    return jsonify({"display": judge_images.display(), **judge_images.display_meta(),
+                    "slots": [{**judge_images.slot_info(k), "kind": judge_images.SLOTS[k][0]}
+                              for k in judge_images.SLOTS]})
+
+
+@bp.post("/api/maint/judge_display")
+def judge_display_set():
+    if (d := _need_edit()) is not None:
+        return d
+    from ufkensa.kensa import judge_images
+    before = judge_images.display()
+    from ufkensa import user_settings
+    try:
+        after = judge_images.save_display(_body().get("display"))
+    except (OSError, user_settings.NotSaved) as e:
+        return _err("not_saved", str(e), 500)
+    log.info("保守: 判定の画像の表示 %s → %s", before, after)
+    return jsonify({"display": after})
+
+
+# ------------------------------------------------------------------
 # マスタ管理(見るのは誰でも。直す・足す・消す は編集の鍵が要る)。ufkensa/kensa/master_admin.py
 # ------------------------------------------------------------------
 def _master_err(e: master_admin.MasterError):

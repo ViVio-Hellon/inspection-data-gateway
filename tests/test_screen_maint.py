@@ -518,3 +518,47 @@ class AdminAuthTest(MaintRouteTest):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+class JudgeDisplayTest(MaintRouteTest):
+    """保守 → 判定の画像: 表示時間・大きさ(PC ごと。2026-11-09)。"""
+
+    def tearDown(self) -> None:
+        user_settings.save("judge_display", {})
+        super().tearDown()
+
+    def test_normalize_clamps(self) -> None:
+        from ufkensa.kensa import judge_images as ji
+        d = ji.normalize_display({})
+        self.assertEqual(d, {"ok": {"ms": 3000, "size": 80}, "ng": {"ms": 3000, "size": 80},
+                             "diag": {"ms": 2000, "size": 80}})
+        d = ji.normalize_display({"ok": {"ms": 10, "size": 5}, "ng": {"ms": 99999, "size": 500},
+                                  "diag": {"ms": "x", "size": "60.4"}})
+        self.assertEqual(d["ok"], {"ms": 500, "size": 20})
+        self.assertEqual(d["ng"], {"ms": 30000, "size": 100})
+        self.assertEqual(d["diag"], {"ms": 2000, "size": 60})
+        self.assertEqual(ji.normalize_display("bad")["ok"]["ms"], 3000)
+
+    def test_route_get_save_and_kensa_uses_it(self) -> None:
+        d = self.client.get("/api/maint/judge_display", headers=self.h).get_json()
+        self.assertEqual(d["display"]["diag"], {"ms": 2000, "size": 80})
+        self.assertEqual(len([x for x in d["slots"] if x["kind"] == "diag"]), 5)
+        d = self.post("/api/maint/judge_display", {"display": {"ok": {"ms": 1500, "size": 100},
+                                                               "ng": {"ms": 60000, "size": 40}}}).get_json()
+        self.assertEqual(d["display"]["ok"], {"ms": 1500, "size": 100})
+        self.assertEqual(d["display"]["ng"], {"ms": 30000, "size": 40})
+        self.assertEqual(user_settings.get("judge_display")["ok"]["size"], 100)
+        from app.routes import kensa as kensa_routes
+        app = self.client.application
+        if "kensa" not in app.blueprints:
+            app.register_blueprint(kensa_routes.bp)
+        k = self.client.get("/api/kensa/judge_images", headers=self.h).get_json()
+        self.assertEqual(k["show_ms"], {"ok": 1500, "ng": 30000, "diag": 2000})
+        self.assertEqual(k["size"], {"ok": 100, "ng": 40, "diag": 80})
+
+    def test_save_needs_unlock(self) -> None:
+        auth.lock_master()
+        r = self.post("/api/maint/judge_display", {"display": {"ok": {"ms": 1000}}})
+        self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
+        self.assertEqual(self.client.get("/api/maint/judge_display", headers=self.h).status_code, 200)

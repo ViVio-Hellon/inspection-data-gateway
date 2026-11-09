@@ -7,7 +7,7 @@
 
   2. 判定の画像(VBA の UFOK / UFNG / UF対角 フォームの絵)
      合格・不合格・対角線の出来事(音と同じ鍵 cue)で、設定 → 使用パス「判定の画像」の画像を大きく出す。
-     OK・NG は 3 秒、対角線は 2 秒(VBA と同じ)。押すか Esc でもすぐ消える。
+     OK・NG は 3 秒、対角線は 2 秒(VBA と同じ。保守 → 判定の画像 で時間・大きさを PC ごとに変えられる)。押すか Esc でもすぐ消える。
      フォルダが空・ファイルが無いときは何も出さない(エラーにしない)。
 */
 import { api, tokenUrl } from "./api.js";
@@ -34,7 +34,8 @@ function style() {
     .judgeimg { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
                 background: rgb(0 0 0 / 35%); cursor: pointer; }
     .judgeimg[hidden] { display: none; }
-    .judgeimg img { max-width: 80vw; max-height: 80vh; border-radius: 12px; background: #fff;
+    .judgeimg[data-full] img { width: 100vw; height: 100vh; object-fit: contain; border-radius: 0; }
+    .judgeimg img { max-width: var(--judge-size, 80vw); max-height: var(--judge-size-h, 80vh); border-radius: 12px; background: #fff;
                     box-shadow: 0 25px 80px rgb(0 0 0 / 45%); }
   `;
   document.head.appendChild(s);
@@ -99,6 +100,7 @@ export function isAbnormal(m) {
 const CUE_KIND = { kensa_ok: "ok", kensa_ng: "ng", kensa_diag: "diag" };
 let images = null;           // {ok: [枠], ng: [...], diag: [...]}(2026-11-09: 枠 judge_ok など)
 let showMs = { ok: 3000, ng: 3000, diag: 2000 };
+let sizePct = { ok: 80, ng: 80, diag: 80 };    // 2026-11-09: 画面に対する % (保守 → 判定の画像。100 = 全画面)
 let layer = null, timer = 0, loadedAt = 0;
 
 async function loadImages() {
@@ -107,6 +109,7 @@ async function loadImages() {
     const r = await api.get("/api/kensa/judge_images");
     images = r.images || {};
     showMs = { ...showMs, ...(r.show_ms || {}) };
+    sizePct = { ...sizePct, ...(r.size || {}) };
   } catch (e) {
     images = images || {};
   }
@@ -142,12 +145,29 @@ export async function showJudgeImage(m) {
   if (!list.length) return;
   if (document.querySelector("dialog.alarmbox[open]")) return;     // 異常値の窓を隠さない
   const name = list[Math.floor(Math.random() * list.length)];       // UF対角: 乱数で DB1〜DB5 のどれか
+  display(kind, name, showMs[kind] || 3000, sizePct[kind] || 80);
+}
+
+/** 保守 → 判定の画像の「テスト表示」。検査画面と同じ窓で、時間・大きさ・枠を指定して出す(slot 空 = 乱数)。 */
+export async function testJudgeImage(kind, { slot = "", ms, size } = {}) {
+  const list = (await loadImages())[kind] || [];
+  const name = slot || list[Math.floor(Math.random() * list.length)];
+  if (!name) return "";
+  display(kind, name, ms || showMs[kind] || 3000, size || sizePct[kind] || 80);
+  return name;
+}
+
+function display(kind, name, ms, size) {
   const el = ensureLayer();
   const img = el.querySelector("img");
   img.alt = { ok: "OK", ng: "NG", diag: "対角線" }[kind];
   img.src = tokenUrl(`/api/kensa/judge_image/${encodeURIComponent(name)}`);   // 2026-11-09: 枠ごと
+  el.style.setProperty("--judge-size", `${size}vw`);
+  el.style.setProperty("--judge-size-h", `${size}vh`);
+  if (size >= 100) el.dataset.full = "1"; else delete el.dataset.full;
   el.dataset.kind = kind;
+  el.dataset.slot = name;
   el.hidden = false;
   if (timer) clearTimeout(timer);
-  timer = setTimeout(hideImage, showMs[kind] || 3000);
+  timer = setTimeout(hideImage, ms);
 }
