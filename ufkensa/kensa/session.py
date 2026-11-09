@@ -113,6 +113,8 @@ class Session:
         self.print_ready = False
         self.report: dict[str, Any] = {}
         self.calibration_required = False
+        #: 2026-11-09: 最後に受けた測定値が入らなかった理由(入ったら "")。画面の受信状態に出す(view には入れない)
+        self.receive_why = ""
         self.visual_lists: checks.VisualLists = checks.VisualLists()   # Visual_Add(外観・山・不良要因の選択肢)
         self.orders: list[str] = []                                   # OrdNoCB の一覧(OrdNoOpen)
         self.order: str = ""                                          # OrdNoCB.Text
@@ -730,9 +732,52 @@ class Session:
             # 2026-11-08: 「〜検査済」の後は、VBA ではフォームの余白を押して次の入力先を決めていた(UserForm_Click)。
             # 画面には余白が無く、測定器の値が黙って捨てられていたので、入力先が無ければここで同じことをしてから受ける
             self.hooks.user_form_click(st)
-        self.env.messages.extend(input_router.receive(st, text, self.hooks))
+        # 2026-11-09: 「検査できない理由を表示して」(現場の声)。入らなかったとき、その理由を残す。
+        # VBA は黙って捨てる道(ロット未登録・入力先が無い・同じ値の続き)があるので、ここで言葉にする(動きは変えない)
+        self.receive_why = ""
+        landed: list[int] = []
+        hooks = self.hooks
+        had_own = "posting" in vars(hooks)
+        orig = hooks.posting
+        hooks.posting = lambda s: (landed.append(s.inp_tag), orig(s))[1]  # 入力先に入ると Posting が呼ばれる
+        pre = ("ロット未登録(LotNo を入れてください)" if st.lot == "" else
+               "同じ値が続けて届いたので受け付けませんでした" if st.inp == text and text != "" else "")
+        n0 = len(self.env.messages)
+        try:
+            self.env.messages.extend(input_router.receive(st, text, self.hooks))
+        except Stop as e:
+            self.receive_why = e.text
+            raise
+        finally:
+            if had_own:
+                hooks.posting = orig
+            else:
+                del hooks.posting
         if self.env.proofread is not None:
             self.calibration_required = True
+        if landed and landed[0] and st.has_ctl(landed[0]) and st.ctl(landed[0]).value == "":
+            # 入力先には入ったが、異常値・2度押しなどで消された
+            texts = [" ".join(m.text.split()) for m in self.env.messages[n0:] if m.text.strip()]
+            try:
+                val = f"(値 {input_router.vbx.cstr(input_router.vbx.val(input_router.conv(text)))})"
+            except Exception:                                          # noqa: BLE001 - 理由の文言だけ
+                val = ""
+            self.receive_why = (f"入れた値{val}を消しました: " + texts[0]) if texts else f"入れた値{val}が消されました(異常値・2度押しなど)"
+        if not landed:
+            warn = [m.text for m in self.env.messages[n0:] if m.level in (WARN, ERROR) or "検査済" in m.text]
+            if st.lot == "":
+                why = pre
+            elif st.work == "":
+                why = "作業選択してください(作業が選ばれていません)"
+            elif self.env.proofread is not None or (st.proofread_flag != "ok" and st.work_button_tag != "jump"):
+                why = "校正未済(校正画面で校正してから測ってください)"
+            elif warn:
+                why = ("パケット不一致(DT・#L・#〆 で始まらない値)" if "ﾊﾟｹｯﾄ無し" in warn[0] else warn[0])
+            else:
+                why = pre or ("入力先が無い(入れる欄が決まりません。欄を押してください)"
+                              if input_router.maker(text) in input_router.PACKETS else
+                              "パケット不一致(DT・#L・#〆 で始まらない値)")
+            self.receive_why = why
 
     def click(self, name: str) -> Result:
         return self._run(self._click, name)
@@ -1873,8 +1918,11 @@ class Session:
                 return Question("new", "新規検査作業を開始しますか", title="確認", source="UF1:3373")
             if not ans:
                 return None
-            found = False
-            for sheet in (HOZON, MIMI):
+            # 2026-11-09(意図した差異。docs/06): 測定値が 1 つも無ければ、残すものが無いので履歴の保存を求めずに新規へ。
+            # VBA は保存用・耳用にロットが無いと「該当LotNoが保存されていません」で止めていた(Lot登録だけで測っていなくても)
+            measured = any(c.value != "" for c in st.cells.values()) or any(z.value != "" for z in st.strain_z.values())
+            found = not measured
+            for sheet in (HOZON, MIMI) if measured else ():
                 rows = wiring.sheet_rows(self.store, sheet) or []
                 if any(records.cell_text(r[1]) == st.lot for r in rows[1:] if len(r) > 1):
                     found = True

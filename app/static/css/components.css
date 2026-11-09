@@ -1171,3 +1171,11 @@ tr[aria-selected="true"] .cell-act--open, tr[aria-selected="true"] .cell-act--pr
 .progress-pop__track i.is-indef { animation: progress-indef 1.1s ease-in-out infinite alternate; }
 @keyframes progress-indef { from { margin-left: 0; } to { margin-left: 65%; } }
 @media (prefers-reduced-motion: reduce) { .progress-pop__track i.is-indef { animation: none; } }
+
+/* 2026-11-09: 受信機の状態の行(recv.js renderRecvStatus。検査以外の画面) */
+.recv-status { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 6px 10px; margin: 6px 0;
+  border-radius: var(--radius); border: 2px solid var(--state-error); font-size: var(--fs-sm); }
+.recv-status[data-on="1"] { border-color: var(--state-ok); }
+.recv-status__dev { font-weight: 700; }
+.recv-status__why { font-weight: 700; color: var(--state-error); }
+.recv-status:empty { display: none; }

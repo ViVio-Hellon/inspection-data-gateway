@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import unittest
+
+from ufkensa import user_settings
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
@@ -210,6 +212,51 @@ class ReceiverRoutingTest(FlowBase):
         self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h)                 # 検査を開いた
         rk._to_kensa("DT10001+0000015.012M")
         self.assertEqual(self.s.state.cells["S1"].value, "15.012")
+
+
+    def test_rejection_reason_and_last_value(self) -> None:
+        """2026-11-09: 入らなかった理由(作業未選択)と、最後に届いた値を状態で返す。"""
+        from app.routes import kensa as rk
+        self.ready()
+        rk._recv_seen.clear()
+        self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h)
+        rk._to_kensa("DT10001+0000015.012M")                     # 作業を選んでいない
+        d = self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h).get_json()
+        self.assertIn("作業選択してください", d["results"][-1]["why"])
+        self.assertEqual(d["received"]["text"], "DT10001+0000015.012M")
+        self.assertIn("作業選択してください", d["received"]["why"])
+        self.op("work", work="厚板")
+        rk._to_kensa("ZZ1234")                                   # パケット不一致
+        d = self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h).get_json()
+        self.assertIn("パケット不一致", d["results"][-1]["why"])
+        rk._to_kensa("DT10001+0000015.012M")                     # 入った
+        d = self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h).get_json()
+        self.assertEqual(d["results"][-1]["why"], "")
+
+
+class ReceiverChoiceTest(FlowBase):
+    def test_cards_used_when_none_checked(self) -> None:
+        """2026-11-09: 「検査画面はこれだけ使う」に印が無ければ、保守で足した受信機を使う。保守の受信は止めてから開く。"""
+        from unittest import mock
+        from app.routes import kensa as rk
+        from app.routes import maint as rm
+        from ufkensa.kensa import comport
+        for k, v in ((rm.KEY_COM_KENSA, []), (rm.KEY_COM_CARDS, {})):
+            user_settings.save_or_raise(k, v)
+            self.addCleanup(user_settings.save_or_raise, k, v)
+        d = self.c.post("/api/kensa/recv/start", json={}, headers=self.h).get_json()
+        self.assertFalse(d["on"])
+        self.assertIn("受信機が登録されていません", d["why"])
+        user_settings.save_or_raise(rm.KEY_COM_CARDS, {"COM9": {"baud": 57600, "flow": "rtscts"}})
+        calls = []
+        with mock.patch.object(comport, "stop", side_effect=lambda slot=None: calls.append(("stop", slot))), \
+                mock.patch.object(comport, "start", side_effect=lambda port, *a, **k: calls.append(("start", k["slot"]))), \
+                mock.patch.object(comport, "receivers", return_value=[]):
+            self.c.post("/api/kensa/recv/start", json={}, headers=self.h)
+        self.assertEqual(calls, [("stop", "mnt:COM9"), ("start", "kensa:COM9")])
+        self.assertEqual([c["port"] for c in rk._kensa_receivers()], ["COM9"])
+        user_settings.save_or_raise(rm.KEY_COM_KENSA, [{"port": "COM3"}])   # 印があれば印のものだけ
+        self.assertEqual([c["port"] for c in rk._kensa_receivers()], ["COM3"])
 
 
 class SaveIntegrityTest(FlowBase):

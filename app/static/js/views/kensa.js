@@ -349,6 +349,8 @@ function renderLeft(v) {
   $("lotEmpty").hidden = hasLot;
   $("lotInLabel").textContent = hasLot ? "別のロット" : "LotNo";
   text($("lotRegNo"), h.lot || "");
+  // 2026-11-09: 製品サイズ(厚 × 巾 × 丈)を大きく出す(現場の声)
+  text($("lotSize"), hasLot && (t.atu || t.hab || t.tak) ? `${t.atu || "-"} × ${t.hab || "-"} × ${t.tak || "-"}` : "");
   kv($("lotRegKv"), [["検査No", h.ken_no], ["用途", h.youto], ["材質/調質", [h.zai, h.tyu].filter(Boolean).join(" ")]]);
   kv($("lotKv"), [["ライン", h.line + (h.line_no || "")], ["コメント", h.comment]]);
   kv($("tolKv"), [["厚", t.atu && `${t.atu}  +${t.ap}/-${t.am}  (${t.amk}〜${t.apk})`],
@@ -447,6 +449,8 @@ function setPhase(p) {
   (measure ? $("kbarWorks") : $("chooser")).append($("workPad"));
   // 公差の詳しい欄(対角・ラテラル・サイズ修正)は測定中は右の列へ。測定表の行にも出す
   (measure ? $("krail") : $("kside")).append($("tolCard"));
+  // 2026-11-09: 受信機の状態(入らない理由)は選ぶまでも見えるように左の列へ。測定中は右の列(次に測るの下)
+  if (measure) $("whoToggle").after($("recvBox")); else $("kside").prepend($("recvBox"));
   // カードの追加・別のロットの入力は、測定中は右の列の下へ
   const add = $("kAddPad");
   if (measure) add.append($("cardBox"), $("lotBox"), $("lotSrcRow"));
@@ -521,6 +525,9 @@ function renderPhase(v) {
     el("span", { class: "kbar__names", textContent: ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") }),
     chip(calibOk ? "lv--ok" : "lv--ng", calibOk ? "校正済" : "未校正"),
     el("b", { class: "kbar__lot", textContent: h.lot || "" }),
+    // 2026-11-09: 測定中も製品サイズ(厚 × 巾 × 丈)を見える所に
+    el("b", { class: "kbar__size", textContent: (v.tolerance && (v.tolerance.atu || v.tolerance.hab || v.tolerance.tak))
+      ? `${v.tolerance.atu || "-"} × ${v.tolerance.hab || "-"} × ${v.tolerance.tak || "-"}` : "" }),
     el("span", { textContent: [h.ken_no && `検査No ${h.ken_no}`, h.youto && `用途 ${h.youto}`, [h.zai, h.tyu].filter(Boolean).join(" ")].filter(Boolean).join("　") }),
   );
 }
@@ -704,6 +711,7 @@ function initReceiver() {
     $("recvBox").dataset.on = on ? "1" : "";
     text($("recvState"), on ? "受信待ち(測定器のボタンで入ります)" : "受け取れません — ここを押してください");
   };
+  initReceiverShow = show;
   box.addEventListener("focus", show);
   box.addEventListener("blur", () => setTimeout(show, 0));
   document.addEventListener("keydown", (e) => {
@@ -731,6 +739,8 @@ async function handleRecv(r) {
     await op("receive", { text: r.text }, { [q.key]: !!yes });
   }
   if (r.stop) toast(r.stop.text, "error");
+  // 2026-11-09: 入らなかった理由を見える所に出す(知らせ・止めで出ていないときもトーストで出す)
+  else if (r.why && !(r.messages || []).some((m) => m.text === r.why)) toast(`受信した値 ${r.text} は入りませんでした: ${r.why}`, "warn");
 }
 async function recvPoll() {
   try {
@@ -738,27 +748,37 @@ async function recvPoll() {
     const d = await api.get(`/api/kensa/recv?since=${recvLast}&screen=kensa&visible=${vis}`);
     for (const r of d.results) await handleRecv(r);
     recvLast = d.last;
-    recvShow(d.running, d.port, d.error);
+    recvShow(d);
   } catch (e) { /* 次の回で */ }
-  if (recvOn) setTimeout(recvPoll, 400);
+  setTimeout(recvPoll, recvOn ? 400 : 3000);      // 止まっていても状態(理由)は見続ける
 }
-function recvShow(on, port, error) {
+/* 2026-11-09: 受信機の状態・最後に届いた値と時刻・入らなかった理由を出す(「検査できない理由を表示して」) */
+function recvShow(d) {
+  const on = !!(d.running ?? d.on);
   recvOn = on;
   $("recvBox").dataset.direct = on ? "1" : "";
+  const why = d.why || "";
   if (on) {
     $("recvBox").dataset.on = "1";
-    text($("recvState"), `受信機から直接受信中(${port})— カーソルに関係なく入ります`);
-  } else if (error) {
-    text($("recvState"), `受信機を開けません: ${error}(キー入力で受け取ります)`);
+    text($("recvState"), `受信機から直接受信中(${d.port})— カーソルに関係なく入ります`);
+    text($("recvDev"), `受信機 ${d.port}: 受信中`);
+  } else {
+    text($("recvDev"), `受信機: 止まっている — ${why || d.error || "理由不明"}(キー入力で受け取ります)`);
+    if ($("recvBox").dataset.direct !== "1") initReceiverShow();
   }
+  const last = d.received || d.last_received || {};
+  text($("recvLastText"), last.text ? `最後に届いた値 ${last.text}(${last.at})` + (last.screen && last.screen !== "kensa" ? ` → ${last.screen} 画面` : "") : "まだ値は届いていません");
+  const rej = last.text && last.screen === "kensa" && last.why ? `入らなかった理由: ${last.why}` : "";
+  $("recvWhy").hidden = !rej;
+  text($("recvWhy"), rej);
 }
+let initReceiverShow = () => {};
 async function initDirect() {
   try {
     const d = await api.post("/api/kensa/recv/start", {});
-    if (!d.on) { if (d.error) recvShow(false, "", d.error); return; }
+    recvShow({ ...d, received: d.last });
     const p = await api.get("/api/kensa/recv?since=999999999&screen=kensa");
-    recvLast = p.last;                            // 開く前に届いた分は流さない
-    recvShow(true, d.port, "");
+    recvLast = p.last;                              // 開く前に届いた分は流さない
     recvPoll();
   } catch (e) { /* キー入力のまま */ }
 }

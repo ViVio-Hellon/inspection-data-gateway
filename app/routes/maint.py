@@ -507,6 +507,8 @@ def rx_start():
     port = str(b.get("port", "")).strip()
     cards = _cards_saved()
     conf = _conf_of(b, cards.get(port))
+    # 2026-11-09: 検査画面が同じポートで受信中(kensa:)だと開けない。保守で始めるときは検査画面の受信を止める
+    comport.stop("kensa:" + port)
     try:
         comport.start(port, conf["baud"], conf["flow"], conf["bytesize"], conf["parity"], conf["stopbits"],
                       slot="mnt:" + port)

@@ -31,6 +31,9 @@ export function speak(text, { onstart, onend } = {}) {
   u.lang = "ja-JP";
   if (voice) u.voice = voice;
   u.rate = 1.2;
+  // 2026-11-09: 「読み上げが小さい」(現場の声)。音量は最大(1.0)で読む。Web Speech API は 1.0 が上限で、
+  // それより大きくはできない(OS の音量・スピーカーの音量で上げる)
+  u.volume = 1.0;
   if (onstart) u.onstart = onstart;
   if (onend) { u.onend = onend; u.onerror = (e) => onend(e); }
   s.speak(u);

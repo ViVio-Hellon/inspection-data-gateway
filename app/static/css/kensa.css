@@ -154,6 +154,7 @@ li.is-stale { opacity: .6; }
 .kbar__info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; font-size: var(--fs-sm); }
 .kbar__names { font-weight: 800; font-size: var(--fs-md, 1rem); }
 .kbar__lot { font-family: var(--mono); font-size: 1.4rem; font-weight: 800; }
+.kbar__size { font-family: var(--mono); font-size: 1.3rem; font-weight: 800; color: var(--accent, inherit); white-space: nowrap; }
 .kbar__works { margin-left: auto; }
 .kbar__works .pad { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0; }
 .kbar__works .works .btn { min-height: 34px; }
@@ -198,3 +199,10 @@ li.is-stale { opacity: .6; }
 /* 1366x768 でも歪・外観のタブ見出しが折り返し内に入るように、測定表は画面の高さに合わせて中でスクロールする */
 .kensa[data-phase="measure"] .mgrid-wrap { max-height: max(220px, calc(100vh - 370px)); overflow-y: auto; }
 .chooser__ops { margin-left: auto; display: flex; gap: 6px; }
+
+/* 2026-11-09: 受信機の状態・最後に届いた値・入らなかった理由 / 製品サイズ */
+.recv__dev, .recv__last { font-size: var(--fs-sm); color: var(--text-2, inherit); }
+.recv__why { font-size: var(--fs-sm); font-weight: 700; color: var(--state-error); background: var(--error-bg, transparent);
+  padding: 2px 6px; border-radius: 4px; }
+.reg-lot__size { font-size: 1.2rem; font-weight: 800; letter-spacing: .02em; margin: 4px 0; font-variant-numeric: tabular-nums; }
+.reg-lot__size:empty { display: none; }
