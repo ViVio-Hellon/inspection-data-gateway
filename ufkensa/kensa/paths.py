@@ -90,7 +90,7 @@ ITEMS: tuple[PathItem, ...] = (
     PathItem("judge_ng", "不合格の画像", "UFNG のフォームの絵", "",
              "不合格のとき 3 秒大きく出す画像のファイル。空・ファイルが無いときは同梱の VBA の絵(NG.jpg)", kind="file"),
     *(PathItem(f"judge_diag{n}", f"対角線の画像{n}", f"UF対角 の DB{n}", "",
-               "対角線の欄に値が入ったとき 2 秒出す画像のファイル(決めた枠から乱数で 1 枚。"
+               "対角線の欄に値が入ったとき 2 秒出す画像のファイル(5 枠から乱数で 1 枚。空の枠は同梱の絵。"
                f"1 つも決めなければ同梱の 対角1〜5)。空・ファイルが無いときは同梱の VBA の絵(対角{n}.jpg)",
                kind="file") for n in range(1, 6)),
     PathItem("history", "検査履歴", "HistoryPath",
