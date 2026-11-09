@@ -494,6 +494,9 @@ def rx_state():
                                            a.get("youto", ""), a.get("st", "S1") or "S1", a.get("tak", ""))
         except ValueError as e:
             ln["test"] = {"error": str(e)}
+        except Exception as e:                       # noqa: BLE001
+            # 2026-11-09: 判定(測定機器ID の表を読む)で失敗しても、受信記録は返す(前は一覧ごと返らなかった)
+            ln["test"] = {"error": f"判定できませんでした: {e}"}
     return jsonify({"cards": _rx_cards(), "ports": comport.list_ports(), "lines": lines, "last": last})
 
 
@@ -511,7 +514,12 @@ def rx_start():
         trace.event("maint.com", f"受信を始められません {port}: {e}")
         return _err("com", str(e))
     cards[port] = conf
-    _save_cards(cards)
+    try:
+        _save_cards(cards)
+    except Exception as e:                           # noqa: BLE001
+        # 2026-11-09: 受信は始まっている。設定を覚えられなくても受信は止めない(知らせるだけ)
+        trace.event("maint.com", f"受信機の設定を覚えられませんでした {port}: {e}")
+        return jsonify({"cards": _rx_cards(), "warning": f"受信は始めましたが、設定を覚えられませんでした: {e}"})
     trace.event("maint.com", f"受信を始めました {port} {conf}")
     return jsonify({"cards": _rx_cards()})
 
