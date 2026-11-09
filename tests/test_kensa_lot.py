@@ -164,6 +164,25 @@ class AccReflecTest(_Base):
         self.assertEqual(r.shiji_taik, "ﾓｸﾋﾖｳ3MM")
         self.assertEqual(r.taik_text, "3.0")
 
+    def test_zero_tolerance_names_missing_columns(self) -> None:
+        # 2026-11-09: 読んだ台帳に公差の列が無いと公差 0(下限 = 上限)になる → 無い列を知らせる
+        f = self.d.main / kensa_fixture.file_name("SIKALOTNOW")
+        with sqlite3.connect(f) as c:
+            for k in ("ｵｰﾀﾞｰ_ﾌﾟﾗｽ", "ｵｰﾀﾞｰ_ﾏｲﾅｽ", "製造_ﾌﾟﾗｽ", "製造_ﾏｲﾅｽ"):
+                c.execute(f'ALTER TABLE "仕掛" DROP COLUMN "板厚公差_{k}"')
+        r = self.reflect("N9170B0")
+        texts = " ".join(m.text for m in r.messages)
+        self.assertIn("板厚の公差が 0 になります", texts)
+        self.assertIn("列 板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ", texts)
+
+    def test_full_width_tolerance(self) -> None:
+        f = self.d.main / kensa_fixture.file_name("SIKALOTNOW")
+        with sqlite3.connect(f) as c:
+            c.execute('UPDATE "仕掛" SET "板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ" = ?, "板厚公差_ｵｰﾀﾞｰ_ﾏｲﾅｽ" = ? WHERE "ﾛｯﾄ番号" = ?',
+                      ("０．２", "０．１", "N9170B0"))
+        r = self.reflect("N9170B0")
+        self.assertEqual((r.form["Ap"], r.form["Am"]), ("0.200", "0.100"))
+
     def test_lot_case_insensitive(self) -> None:
         # Access の Text の = は大文字小文字を区別しない
         r = lot.acc_reflec(lot.LotScreen(lot="x", cb_text="h2500k0"), check_equipment=_ok)
