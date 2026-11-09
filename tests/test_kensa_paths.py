@@ -435,38 +435,79 @@ class SettingsApiTest(_Saved):
 
 
 class JudgeImagesTest(_Saved):
-    """2026-11-09: 判定の画像(VBA の UFOK / UFNG / UF対角 の絵)。空・ファイルが無いときは出さない。"""
+    """2026-11-09: 判定の画像(VBA の UFOK / UFNG / UF対角 の絵)は枠ごとのファイル。空・無いときは同梱の絵。"""
+
+    DIAG = [f"judge_diag{i}" for i in range(1, 6)]
+
+    def client(self):
+        from app import create_app
+        app = create_app("main", token="t", port=0)
+        app.config["READY"] = True
+        return app.test_client(), {"X-Tool-Token": "t"}
 
     def test_unset_gives_bundled_vba_pictures(self) -> None:
-        # 2026-11-09: 空なら同梱の VBA の絵(UFOK / UFNG / UF対角 から取り出したもの)を出す
         from ufkensa.kensa import judge_images
-        paths.set_path("judge_images", "")
-        self.assertEqual(judge_images.available(), {"ok": ["OK.jpg"], "ng": ["NG.jpg"],
-                                                    "diag": [f"対角{i}.jpg" for i in range(1, 6)]})
-        self.assertIsNotNone(judge_images.find("ok", "OK.jpg"))
+        user_settings.delete(paths.KEY_PATHS)
+        self.assertEqual(judge_images.available(), {"ok": ["judge_ok"], "ng": ["judge_ng"], "diag": self.DIAG})
+        self.assertEqual([f.name for f in judge_images.effective("diag")], [f"対角{i}.jpg" for i in range(1, 6)])
+        self.assertEqual(judge_images.resolve("judge_ok"), (judge_images.DEFAULT_DIR / "OK.jpg", "default"))
+        self.assertTrue(paths.check("judge_ok")["ok"])
 
-    def test_fixed_names_and_check(self) -> None:
+    def test_any_file_name_and_diag_pool(self) -> None:
+        from ufkensa.kensa import judge_images
+        a = self.d1 / "よくできた.PNG"; a.write_bytes(b"\x89PNG")
+        b = self.d1 / "x.gif"; b.write_bytes(b"GIF8")
+        paths.set_path("judge_ok", str(a))
+        paths.set_path("judge_diag3", str(b))
+        self.assertEqual(judge_images.resolve("judge_ok"), (a, "set"))
+        self.assertEqual(judge_images.available()["diag"], ["judge_diag3"])       # 決めた枠だけから乱数
+        self.assertEqual(judge_images.effective("diag"), [b])
+        self.assertEqual(judge_images.resolve("judge_ng")[1], "default")
+        self.assertIsNone(judge_images.find("diag", "judge_diag1"))
+        row = [r for r in paths.overview() if r["key"] == "judge_ok"][0]
+        self.assertEqual((row["kind"], row["image"]["source"]), ("file", "set"))
+        self.assertNotIn("judge_images", paths.BY_KEY)                             # フォルダの項目は一覧に出さない
+
+    def test_missing_file_gives_bundled_and_note(self) -> None:
+        from ufkensa.kensa import judge_images
+        paths.set_path("judge_ng", str(self.d1 / "無い.jpg"))
+        f, src = judge_images.resolve("judge_ng")
+        self.assertEqual((f.name, src), ("NG.jpg", "missing"))
+        self.assertIn("ファイルがありません", judge_images.slot_info("judge_ng")["note"])
+        self.assertIn("ファイルがありません", paths.check("judge_ng")["message"])
+        c, h = self.client()
+        r = c.get("/api/kensa/judge_image/judge_ng", headers=h)
+        self.assertEqual((r.status_code, r.headers["X-Judge-Source"]), (200, "missing"))
+        self.assertEqual(r.data, (judge_images.DEFAULT_DIR / "NG.jpg").read_bytes())
+
+    def test_route_serves_only_configured_slot(self) -> None:
+        from ufkensa.kensa import judge_images
+        a = self.d1 / "mine.png"; a.write_bytes(b"\x89PNG-mine")
+        (self.d1 / "secret.png").write_bytes(b"\x89PNG-secret")
+        paths.set_path("judge_ok", str(a))
+        c, h = self.client()
+        r = c.get("/api/kensa/judge_image/judge_ok", headers=h)
+        self.assertEqual((r.status_code, r.data, r.headers["X-Judge-Source"]), (200, b"\x89PNG-mine", "set"))
+        self.assertEqual(c.get("/api/kensa/judge_image/judge_ng", headers=h).data,
+                         (judge_images.DEFAULT_DIR / "NG.jpg").read_bytes())          # 空 → 同梱
+        for bad in ("secret.png", "..", "judge_images", "OK.jpg"):
+            self.assertEqual(c.get(f"/api/kensa/judge_image/{bad}", headers=h).status_code, 404, bad)
+        self.assertEqual(c.get("/api/kensa/judge_image/ok/secret.png", headers=h).status_code, 404)
+        self.assertEqual(c.get("/api/kensa/judge_image/ng/judge_ok", headers=h).status_code, 404)
+        self.assertEqual(c.get("/api/kensa/judge_image/ok/judge_ok", headers=h).status_code, 200)
+        d = c.get("/api/kensa/judge_images", headers=h).get_json()
+        self.assertEqual(d["images"]["ok"], ["judge_ok"])
+        self.assertEqual(d["show_ms"], {"ok": 3000, "ng": 3000, "diag": 2000})
+
+    def test_migrates_old_folder_once(self) -> None:
         from ufkensa.kensa import judge_images
         (self.d1 / "ok.JPG").write_bytes(b"\xff\xd8\xff")
         (self.d1 / "対角2.png").write_bytes(b"\x89PNG")
-        (self.d1 / "other.jpg").write_bytes(b"\xff\xd8\xff")
-        paths.set_path("judge_images", str(self.d1))
-        # 置いた画像を優先し、無い種類(NG)は同梱の絵
-        self.assertEqual(judge_images.available(), {"ok": ["ok.JPG"], "ng": ["NG.jpg"], "diag": ["対角2.png"]})
-        self.assertIsNone(judge_images.find("ok", "other.jpg"))       # 決まった名前のものだけ配る
-        self.assertIsNotNone(judge_images.find("diag", "対角2.png"))
-        r = paths.check("judge_images")
-        self.assertIn("NG ファイルがありません", r["message"])
-        self.assertIn("OK ok.JPG", r["message"])
-
-    def test_route(self) -> None:
-        from app import create_app
-        (self.d1 / "NG.png").write_bytes(b"\x89PNG")
-        paths.set_path("judge_images", str(self.d1))
-        app = create_app("main", token="t", port=0)
-        app.config["READY"] = True
-        c = app.test_client()
-        h = {"X-Tool-Token": "t"}
-        self.assertEqual(c.get("/api/kensa/judge_images", headers=h).get_json()["images"]["ng"], ["NG.png"])
-        self.assertEqual(c.get("/api/kensa/judge_image/ng/NG.png", headers=h).status_code, 200)
-        self.assertEqual(c.get("/api/kensa/judge_image/ok/NG.png", headers=h).status_code, 404)
+        (self.d1 / "不合格のとき.bmp").write_bytes(b"BM")        # 決まった名前でなくても言葉で
+        user_settings.save(paths.KEY_PATHS, {paths.KEY_ITEMS: {"judge_images": str(self.d1), "judge_ok": str(self.d2 / "既.jpg")}})
+        self.assertEqual(paths.get("judge_ok"), str(self.d2 / "既.jpg"))         # 決めてある枠は変えない
+        self.assertEqual(paths.get("judge_ng"), paths.join(str(self.d1), "不合格のとき.bmp"))
+        self.assertEqual(paths.get("judge_diag1"), paths.join(str(self.d1), "対角2.png"))
+        saved = user_settings.get(paths.KEY_PATHS)[paths.KEY_ITEMS]
+        self.assertNotIn("judge_images", saved)                                  # 1 回だけ
+        self.assertEqual(judge_images.available()["diag"], ["judge_diag1"])

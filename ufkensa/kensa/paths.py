@@ -82,9 +82,17 @@ ITEMS: tuple[PathItem, ...] = (
              "VC の種類の画像(<品名ｺｰﾄﾞ>.JPG)。空なら 参照用ファイル\\VC種類画像"),
     PathItem("quality_photo", "品質写真", "QualityPath & \"品質写真\"", "",
              "品質基準画面の写真(フォルダごとにタブ、中の .jpg)。空なら 品証やり取り\\品質写真"),
-    PathItem("judge_images", "判定の画像(OK・NG・対角線)", "UFOK / UFNG / UF対角(DB1〜DB5)のフォームの絵", "",
-             "判定のときに大きく出す画像のフォルダ。中の OK.jpg(合格)・NG.jpg(不合格)・対角1.jpg〜対角5.jpg"
-             "(対角線。1 枚だけなら 対角.jpg)。png・gif・bmp も可。空・ファイルが無いときは画像を出さない"),
+    # 2026-11-09: 判定の画像はフォルダをやめ、絵ごとにファイルを決める(空なら同梱の VBA の絵)。
+    # 前の「判定の画像」フォルダ(judge_images)は _saved で 1 回だけ枠へ読み替える
+    PathItem("judge_ok", "合格の画像", "UFOK のフォームの絵", "",
+             "合格のとき 3 秒大きく出す画像のファイル(jpg・jpeg・png・gif・bmp。名前は自由)。"
+             "空・ファイルが無いときは同梱の VBA の絵(OK.jpg)", kind="file"),
+    PathItem("judge_ng", "不合格の画像", "UFNG のフォームの絵", "",
+             "不合格のとき 3 秒大きく出す画像のファイル。空・ファイルが無いときは同梱の VBA の絵(NG.jpg)", kind="file"),
+    *(PathItem(f"judge_diag{n}", f"対角線の画像{n}", f"UF対角 の DB{n}", "",
+               "対角線の欄に値が入ったとき 2 秒出す画像のファイル(決めた枠から乱数で 1 枚。"
+               f"1 つも決めなければ同梱の 対角1〜5)。空・ファイルが無いときは同梱の VBA の絵(対角{n}.jpg)",
+               kind="file") for n in range(1, 6)),
     PathItem("history", "検査履歴", "HistoryPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
@@ -249,7 +257,19 @@ def _norm(raw: dict, m: str) -> dict[str, Any]:
 def _saved() -> dict[str, Any]:
     raw = _d(user_settings.get(KEY_PATHS, {}) or {})
     d = _norm(raw, mode())
-    if any(k in raw for k in (ONLINE, OFFLINE, FIRST, SECOND)):
+    old = str(_d(raw.get(KEY_ITEMS)).get("judge_images") or "").strip()
+    if "judge_images" in _d(raw.get(KEY_ITEMS)):
+        # 2026-11-09: 前の「判定の画像」フォルダ → 枠ごとのファイル(1 回だけ。決めてある枠は変えない)
+        from . import judge_images
+        if old:
+            for k, v in judge_images.migrate_from_folder(old).items():
+                d[KEY_ITEMS].setdefault(k, v)
+        try:
+            user_settings.save_or_raise(KEY_PATHS, d)
+            log.info("判定の画像のフォルダを、画像ごとのファイルに読み替えました: %s", old)
+        except Exception as e:  # noqa: BLE001  保存できなくても読み替えた値で動く(次に読むときもう一度)
+            log.warning("判定の画像の読み替えを保存できません: %s", e)
+    elif any(k in raw for k in (ONLINE, OFFLINE, FIRST, SECOND)):
         user_settings.save(KEY_PATHS, d)            # 前の形を見つけたら、読み替えた形で保存し直す(1 回だけ)
         log.info("使用パスの保存の形を読み替えました(仕掛台帳だけ第1/第2、ほかはパス1つ)")
     return d
@@ -684,6 +704,9 @@ def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
                            "readable": False, "writable": False, "ok": False, "message": "", "files": []}
     if not text:
         out["message"] = "設定されていません"
+        if k.startswith("judge_"):
+            out["ok"] = True
+            out["message"] = "空なので同梱の VBA の絵を出します"   # 2026-11-09
         return out
     p = to_local(text)
     try:
@@ -723,15 +746,15 @@ def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
             have.append(f"{fname} " + ("あり" if ok else ("写せません" if there else "なし"))
                         + (f"(足りない列 {len(lack)}: {_short(lack)})" if lack else ""))
         out["message"] += "(" + "・".join(have) + ")"
-    if k == "judge_images" and out["exists"]:
+    if k.startswith("judge_"):
+        # 2026-11-09: 判定の画像。空・無いときは同梱の絵を出す(ここで知らせる)
         from . import judge_images
-        out["files"] = judge_images.listing(p)
-        out["message"] += "(" + "・".join(f'{f["label"]} ' + (f["name"] if f["exists"] else "ファイルがありません")
-                                         for f in out["files"]) + ")"
-        unused = judge_images.unused(p)
-        if unused:
-            # 2026-11-09: どれにも当たらなかった画像(名前に OK・NG・合格・不合格・対角 が入っていない)
-            out["message"] += f"(使っていない画像: {'・'.join(unused[:6])}。名前に OK / NG / 対角 を入れてください)"
+        if k in judge_images.SLOTS:
+            if not out["exists"]:
+                out["message"] = judge_images.MISSING_NOTE
+            elif Path(str(p)).suffix.lower() not in judge_images.EXT:
+                out["ok"] = False
+                out["message"] = "画像ではありません(jpg・jpeg・png・gif・bmp)。同梱の VBA の絵を出します"
     return out
 
 
@@ -783,5 +806,9 @@ def overview(m: Optional[str] = None) -> list[dict[str, Any]]:
             })
         else:
             row.update({"path": slot_value(i.key), "default": slot_default(i.key), "changed": changed(i.key)})
+            if i.key.startswith("judge_"):
+                from . import judge_images          # 2026-11-09: 見本(小さな画像)と「ファイルがありません」
+                if i.key in judge_images.SLOTS:
+                    row["image"] = judge_images.slot_info(i.key)
         rows.append(row)
     return rows

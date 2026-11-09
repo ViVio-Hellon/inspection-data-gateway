@@ -6,7 +6,8 @@ VBA は絵をフォームに埋め込み、判定のたびに出していた:
 - UF対角(UF対角.frm:12-50): 対角線の欄に値が入ったとき(Cask.bas:1899 UF対角起動。音楽対角 と同時)、
   DB1〜DB5 のうち 1 枚(検査シートは行 14〜18 で決まり、ほかは乱数)を 2 秒出す
 
-ここでは、使用パス「判定の画像」のフォルダに決まった名前で置いた画像を配る。
+ここでは、使用パス「合格の画像」「不合格の画像」「対角線の画像1〜5」(2026-11-09: 絵ごとのファイル。
+前は「判定の画像」フォルダに決まった名前で置いた。そのフォルダは 1 回だけ枠へ読み替える)の画像を配る。
 2026-11-09: VBA のフォームに埋め込まれていた絵(UF検査判定.xlsm の vbaProject.bin から取り出したもの)を
 `assets/judge/` に同梱し、使用パスが空・その画像が無いときはそれを出す(設定しなくても VBA と同じ絵が出る)。
 名前: OK.* / NG.* / 対角1.*〜対角5.*(DB1〜DB5。1 枚だけなら 対角.*)。拡張子は jpg・jpeg・png・gif・bmp。
@@ -26,12 +27,76 @@ SHOW_MS = {"ok": 3000, "ng": 3000, "diag": 2000}       # UFOK・UFNG は 3 秒�
 DEFAULT_DIR = Path(__file__).resolve().parent / "assets" / "judge"
 
 
-def root() -> Optional[Path]:
+#: 2026-11-09: フォルダをやめ、絵ごとにファイルを決める(設定 → 使用パス)。key → (種類, 同梱の名前, 表示名)
+SLOTS = {
+    "judge_ok": ("ok", "OK.jpg", "合格の画像"),
+    "judge_ng": ("ng", "NG.jpg", "不合格の画像"),
+    **{f"judge_diag{i}": ("diag", f"対角{i}.jpg", f"対角線の画像{i}") for i in range(1, 6)},
+}
+#: 前の設定(フォルダ)。読み替えのためだけに残す
+OLD_KEY = "judge_images"
+MISSING_NOTE = "ファイルがありません(同梱の VBA の絵を出します)"
+
+
+def bundled(slot: str) -> Path:
+    return DEFAULT_DIR / SLOTS[slot][1]
+
+
+def configured(slot: str) -> str:
     from . import paths
-    text = paths.get("judge_images")
+    return paths.get(slot) if slot in SLOTS else ""
+
+
+def _usable(p: Path) -> bool:
+    try:
+        return p.is_file() and p.suffix.lower() in EXT
+    except OSError:
+        return False
+
+
+def resolve(slot: str) -> tuple[Path, str]:
+    """その枠で出すファイルと、その出どころ("set" / "missing" / "default")。"""
+    from . import paths
+    text = configured(slot)
     if not text:
-        return None
-    return Path(paths.to_local(text))
+        return bundled(slot), "default"
+    try:
+        p = Path(paths.to_local(text))
+    except Exception:  # noqa: BLE001
+        return bundled(slot), "missing"
+    return (p, "set") if _usable(p) else (bundled(slot), "missing")
+
+
+def slots_of(kind: str) -> list[str]:
+    """出す枠。対角線は決めた枠だけ(1 つも決めていなければ同梱の 対角1〜5。VBA の DB1〜DB5 を乱数で)。"""
+    keys = [k for k, v in SLOTS.items() if v[0] == kind]
+    if kind == "diag":
+        chosen = [k for k in keys if configured(k)]
+        return chosen or keys
+    return keys
+
+
+def slot_info(slot: str) -> dict:
+    """設定画面の見本用。"""
+    f, src = resolve(slot)
+    return {"slot": slot, "label": SLOTS[slot][2], "path": configured(slot), "file": f.name, "source": src,
+            "note": MISSING_NOTE if src == "missing" else ("既定(同梱の VBA の絵)" if src == "default" else "")}
+
+
+def migrate_from_folder(folder_text: str) -> dict[str, str]:
+    """前の「判定の画像」フォルダ → 枠ごとのファイル(決まった名前、無ければ名前に含む言葉で)。"""
+    from . import paths
+    try:
+        folder = Path(paths.to_local(folder_text))
+    except Exception:  # noqa: BLE001
+        return {}
+    out: dict[str, str] = {}
+    for kind in KINDS:
+        fs = files(kind, folder)
+        keys = [k for k, v in SLOTS.items() if v[0] == kind]
+        for k, f in zip(keys, fs):
+            out[k] = paths.join(folder_text, f.name)
+    return out
 
 
 def _find(folder: Path, stem: str) -> Optional[Path]:
@@ -80,22 +145,21 @@ def _loose(folder: Path, kind: str) -> list[Path]:
 
 
 def effective(kind: str) -> list[Path]:
-    """出す画像。使用パスのフォルダにあればそれ、無ければ同梱の絵。"""
-    return files(kind) or files(kind, DEFAULT_DIR)
+    """出す画像(枠ごとに決めたファイル。空・無いときは同梱の絵)。"""
+    return [resolve(k)[0] for k in slots_of(kind)]
 
 
 def available(folder: Optional[Path] = None) -> dict[str, list[str]]:
-    """{種類: [ファイル名…]}(画面が出せる画像だけ)。"""
+    """{種類: [枠…]}。2026-11-09: ファイル名ではなく枠(judge_ok など)を返す。folder を渡すと前の形(名前)。"""
     if folder is None:
-        return {k: [f.name for f in effective(k)] for k in KINDS}
+        return {k: slots_of(k) for k in KINDS}
     return {k: [f.name for f in files(k, folder)] for k in KINDS}
 
 
 def find(kind: str, name: str) -> Optional[Path]:
-    """配ってよいファイル(その種類の決まった名前のものだけ)。"""
-    for f in effective(kind):
-        if f.name == name:
-            return f
+    """配ってよいファイル。name は枠(judge_ok など)。その種類の枠だけ。"""
+    if name in SLOTS and SLOTS[name][0] == kind and name in slots_of(kind):
+        return resolve(name)[0]
     return None
 
 
