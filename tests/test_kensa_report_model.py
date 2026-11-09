@@ -115,6 +115,16 @@ class PrintTransferTest(Base):
         rep2 = self.run_print(make_snap()).report
         self.assertEqual(rep2.text("J18"), "")                      # 要らなければ消す
 
+    def test_thick_no_lateral_right_border(self) -> None:
+        # 厚板・ラテラルボー無: J18:N23 の Borders=None (Print:1097-1098) は I 列(差)の右の線を消さない
+        # (実機 L-1 H8460F0 の印刷物)。20/22 行は Print:787-790 で I 自身の右を消す。
+        rep = self.run_print(make_snap()).report
+        self.assertEqual(rep.text("J18"), "")
+        for r in (18, 19, 21, 23):
+            self.assertEqual(rep.cell(f"I{r}")["borders"]["right"], ["continuous", "medium"], r)
+        for r in range(11, 17):                                    # 厚の表(厚4 = J 列)の右枠
+            self.assertEqual(rep.cell(f"J{r}")["borders"]["right"], ["continuous", "medium"], r)
+
     def test_r115_columns_vanish(self) -> None:
         # U10: R115 では J/K に写したラテラル・直角度を直後の「ラテ=""」の処理が消す(VBA のまま)
         s = make_snap(sumisei="白銅", youto="R115")
