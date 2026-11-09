@@ -82,6 +82,9 @@ ITEMS: tuple[PathItem, ...] = (
              "VC の種類の画像(<品名ｺｰﾄﾞ>.JPG)。空なら 参照用ファイル\\VC種類画像"),
     PathItem("quality_photo", "品質写真", "QualityPath & \"品質写真\"", "",
              "品質基準画面の写真(フォルダごとにタブ、中の .jpg)。空なら 品証やり取り\\品質写真"),
+    PathItem("judge_images", "判定の画像(OK・NG・対角線)", "UFOK / UFNG / UF対角(DB1〜DB5)のフォームの絵", "",
+             "判定のときに大きく出す画像のフォルダ。中の OK.jpg(合格)・NG.jpg(不合格)・対角1.jpg〜対角5.jpg"
+             "(対角線。1 枚だけなら 対角.jpg)。png・gif・bmp も可。空・ファイルが無いときは画像を出さない"),
     PathItem("history", "検査履歴", "HistoryPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
@@ -720,6 +723,11 @@ def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
             have.append(f"{fname} " + ("あり" if ok else ("写せません" if there else "なし"))
                         + (f"(足りない列 {len(lack)}: {_short(lack)})" if lack else ""))
         out["message"] += "(" + "・".join(have) + ")"
+    if k == "judge_images" and out["exists"]:
+        from . import judge_images
+        out["files"] = judge_images.listing(p)
+        out["message"] += "(" + "・".join(f'{f["label"]} ' + (f["name"] if f["exists"] else "ファイルがありません")
+                                         for f in out["files"]) + ")"
     return out
 
 

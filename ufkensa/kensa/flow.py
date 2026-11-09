@@ -39,6 +39,8 @@ class Message:
     def to_dict(self) -> dict[str, Any]:
         d = {"text": self.text, "level": self.level, "title": self.title, "sound": "", "source": self.source}
         if self.sound:
+            d["cue"] = self.sound          # 2026-11-09: 出来事の鍵(音を鳴らさない設定でも、判定の画像はこれで出す)
+        if self.sound:
             from . import sound as _sound                 # 鳴らさないと決めた出来事は画面へ渡さない(D29)
             if _sound.enabled(self.sound):
                 d["sound"] = self.sound

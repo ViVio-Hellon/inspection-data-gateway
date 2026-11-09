@@ -72,6 +72,25 @@ def _blank_vis(state: KensaState, name: str) -> bool:
     return c.value == "" and c.visible
 
 
+def _thick_off(state: KensaState, name: str) -> bool:
+    """厚板の厚の欄(行 1〜4)が隠れているか使えない(B93: そこへは DT を入れず、黄色にもしない)。"""
+    if not state.is_work("厚板"):
+        return False
+    row = name.lstrip("SUCDEF")
+    if not (row.isdigit() and is_thick(int(row))):
+        return False
+    c = state.ctl(name)
+    return not (c.visible and c.enabled)
+
+
+def _open(state: KensaState, name: str) -> bool:
+    return _blank(state, name) and not _thick_off(state, name)
+
+
+def _open_vis(state: KensaState, name: str) -> bool:
+    return _blank_vis(state, name) and not _thick_off(state, name)
+
+
 def _set_target(state: KensaState, name: str) -> None:
     state.inp_tag = name
     state.tagtext = name
@@ -92,7 +111,7 @@ def all_check(state: KensaState, a: int, n: int, ken_no: str, temp: str, hooks: 
     def scan(cols_for_row) -> bool:
         for i in range(a, n + 1):
             for p in cols_for_row(i):
-                if _blank(state, f"{p}{i}"):
+                if _blank(state, f"{p}{i}") and not _thick_off(state, f"{p}{i}"):
                     return True
         return False
 
@@ -151,7 +170,13 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
     f = ken_flags(state, ken_no)
     a = n = 0
     if pucket == "DT":
-        if state.at_butt_caption == "厚2ヵ所":       # ボタン表示が2ヵ所 = いま 4 回検査
+        if state.is_work("厚板"):
+            # 2026-11-09: 直した(B93)。厚板は AtButt を隠し、厚 1〜4 行を全部の位置で出す(LSelect)。
+            # VBA(FormRelat:748-754)は薄板用の AtButt.Caption を見るため、前の薄板・作業保存の読込で「厚4ヵ所」が
+            # 残ると 1〜2 行しか見ず、S厚2 の次が S1厚1 になり S厚3 へ行かない(黄色の印は S厚3 に出る)。
+            # 直すと、厚板は 1〜4 行の、出ていて使える厚の欄を全部埋める
+            a, n = 1, 4
+        elif state.at_butt_caption == "厚2ヵ所":       # ボタン表示が2ヵ所 = いま 4 回検査
             a, n = 1, 4
         elif state.at_butt_caption == "厚4ヵ所":
             a, n = 1, 2
@@ -177,98 +202,98 @@ def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: 
 
     rows = range(a, n + 1)
     for i in rows:                                              # S
-        if _blank(state, f"S{i}"):
+        if _open(state, f"S{i}"):
             return _set_target(state, f"S{i}")
 
     # U
     if state.is_work("厚板"):
         for i in rows:
             if is_thick(i):
-                if _blank(state, f"U{i}"):
+                if _open(state, f"U{i}"):
                     return _set_target(state, f"U{i}")
             elif 5 <= i <= 10:
                 for b in NORMAL.size_rows:
-                    if _blank(state, f"C{b}"):
+                    if _open(state, f"C{b}"):
                         return _set_target(state, f"C{b}")
     elif state.is_work("スラブ"):
         # 2026-11-08 に直した(B90): 厚 1〜4 行(DT)は U を飛ばし、次の厚欄(S のあと C1〜C4)へ進む。
         # VBA(FormRelat:831-847 ほか `Case 1 To 4: For b = 5 To 8`)は厚の読みを巾丈の U5〜U8 へ入れていた
         for i in rows:
             if 5 <= i <= 8:
-                if _blank(state, f"U{i}"):
+                if _open(state, f"U{i}"):
                     return _set_target(state, f"U{i}")
     elif state.is_work("薄板"):
         if f[2] or f[5] or f[3] or f[6]:
             for i in rows:
-                if _blank(state, f"U{i}"):
+                if _open(state, f"U{i}"):
                     return _set_target(state, f"U{i}")
         elif f[4]:
             for i in rows:
-                if 1 <= i <= 10 and _blank(state, f"E{i}"):
+                if 1 <= i <= 10 and _open(state, f"E{i}"):
                     return _set_target(state, f"E{i}")
         elif f[1]:
             for i in rows:
-                if 1 <= i <= 10 and _blank(state, f"C{i}"):
+                if 1 <= i <= 10 and _open(state, f"C{i}"):
                     return _set_target(state, f"C{i}")
     else:
         for i in rows:
-            if _blank_vis(state, f"U{i}"):
+            if _open_vis(state, f"U{i}"):
                 return _set_target(state, f"U{i}")
 
     # C
     if not state.is_work("薄板"):
         for i in rows:
-            if _blank_vis(state, f"C{i}"):
+            if _open_vis(state, f"C{i}"):
                 return _set_target(state, f"C{i}")
     elif f[1] or f[2] or f[3] or f[5] or f[6]:
         for i in rows:
-            if _blank(state, f"C{i}"):
+            if _open(state, f"C{i}"):
                 return _set_target(state, f"C{i}")
     elif f[4]:
         for i in rows:
-            if 1 <= i <= 10 and _blank(state, f"E{i}"):
+            if 1 <= i <= 10 and _open(state, f"E{i}"):
                 return _set_target(state, f"E{i}")
 
     # D
     if state.is_work("厚板"):
         for i in rows:
             if is_thick(i):
-                if _blank(state, f"D{i}"):
+                if _open(state, f"D{i}"):
                     return _set_target(state, f"D{i}")
             elif 5 <= i <= 10:
                 for b in NORMAL.size_rows:
-                    if _blank(state, f"E{b}"):
+                    if _open(state, f"E{b}"):
                         return _set_target(state, f"E{b}")
     elif state.is_work("スラブ"):
         # 2026-11-08 に直した(B90): 厚 1〜4 行(DT)は D を飛ばし、次の厚欄(S のあと C1〜C4)へ進む。
         # VBA(FormRelat:831-847 ほか `Case 1 To 4: For b = 5 To 8`)は厚の読みを巾丈の D5〜D8 へ入れていた
         for i in rows:
             if 5 <= i <= 8:
-                if _blank(state, f"D{i}"):
+                if _open(state, f"D{i}"):
                     return _set_target(state, f"D{i}")
     elif state.is_work("薄板"):
         if f[2] or f[5] or f[3] or f[6]:
             for i in rows:
-                if _blank(state, f"D{i}"):
+                if _open(state, f"D{i}"):
                     return _set_target(state, f"D{i}")
         elif f[4] or f[1]:
             for i in rows:
-                if 1 <= i <= 10 and _blank(state, f"E{i}"):
+                if 1 <= i <= 10 and _open(state, f"E{i}"):
                     return _set_target(state, f"E{i}")
     else:
         for i in rows:
-            if _blank_vis(state, f"D{i}"):
+            if _open_vis(state, f"D{i}"):
                 return _set_target(state, f"D{i}")
 
     for i in rows:                                              # E
-        if _blank_vis(state, f"E{i}"):
+        if _open_vis(state, f"E{i}"):
             return _set_target(state, f"E{i}")
 
     # F(F11 以降は無い → KeyError = VBA の実行時エラー)
     # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見てエラー。直す: 極厚には F 列が無いので見ない
     if f[6] and (not state.is_work("極厚")):
         for i in rows:
-            if _blank_vis(state, f"F{i}"):
+            if _open_vis(state, f"F{i}"):
                 return _set_target(state, f"F{i}")
     return None
 
@@ -389,7 +414,8 @@ def smallnumber_blank(state: KensaState, a: int, n: int, xa: int) -> None:
 def look_blank(state: KensaState, a: int, n: int) -> None:
     """FormRelat.Look_Blank (FormRelat:1341-1500)。厚板・極厚・スラブ・少枚数(枚数なし)の次の空き欄。
 
-    表示(Visible)は見ない。厚板の行5〜10 は C1〜C10・E1〜E10 から探す(PucketMove は 5〜10)。
+    表示(Visible)は見ない。2026-11-09(B93): 厚板の厚 1〜4 行だけは、隠れた・使えない欄を黄色にしない
+    (PucketMove の DT が入れない欄に印を出さない)。厚板の行5〜10 は C1〜C10・E1〜E10 から探す(PucketMove は 5〜10)。
     """
     if state.auto != Switch.ON:
         return
@@ -406,11 +432,11 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
         if state.is_work("厚板"):
             for i in rows:
                 if is_thick(i):
-                    if _blank(state, f"{p}{i}"):
+                    if _open(state, f"{p}{i}"):
                         return pick(f"{p}{i}")
                 elif 5 <= i <= 10:
                     for b in range(1, 11):
-                        if _blank(state, f"{mid}{b}"):
+                        if _open(state, f"{mid}{b}"):
                             return pick(f"{mid}{b}")
         elif state.is_work("スラブ"):
             # 2026-11-09(B90 の続き): U・D は厚の欄を持たない。厚の行(1〜4)では U5〜U8 / D5〜D8 を黄色にせず、
@@ -419,34 +445,34 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
                 if is_thick(i):
                     continue
                 elif 5 <= i <= 8:
-                    if _blank(state, f"{p}{i}"):
+                    if _open(state, f"{p}{i}"):
                         return pick(f"{p}{i}")
         else:
             for i in rows:
-                if _blank(state, f"{p}{i}"):
+                if _open(state, f"{p}{i}"):
                     return pick(f"{p}{i}")
         return False
 
     for i in rows:
-        if _blank(state, f"S{i}"):
+        if _open(state, f"S{i}"):
             pick(f"S{i}")
             return
     if side("U", "C"):
         return
     for i in rows:
-        if _blank(state, f"C{i}"):
+        if _open(state, f"C{i}"):
             pick(f"C{i}")
             return
     if side("D", "E"):
         return
     for i in rows:
-        if _blank(state, f"E{i}"):
+        if _open(state, f"E{i}"):
             pick(f"E{i}")
             return
     # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見て実行時エラー。直す: 極厚には F 列が無いので見ない
     if yama_is(state, 4) and (not state.is_work("極厚")):
         for i in rows:
-            if _blank(state, f"F{i}"):
+            if _open(state, f"F{i}"):
                 pick(f"F{i}")
                 return
 

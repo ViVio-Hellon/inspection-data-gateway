@@ -15,6 +15,7 @@ import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { playMessage } from "../sound.js";
 import { confirmBox, promptBox } from "../askbox.js";
+import { alarmBox, isAbnormal, showJudgeImage } from "../judgebox.js";
 import { packDialog } from "./pack_dialog.js";
 
 const $ = (id) => document.getElementById(id);
@@ -25,6 +26,14 @@ const recent = [];
 
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 
+/** サーバの知らせ 1 件。2026-11-09: 異常値は大きな赤い窓(確認を押すまで)、合格・不合格・対角線は判定の画像も出す */
+function showMessage(m) {
+  playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
+  showJudgeImage(m);                                            // VBA の UFOK / UFNG / UF対角(画像が無ければ出さない)
+  if (isAbnormal(m)) { alarmBox(m.text); return; }              // VBA の UF異常値発見
+  if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");     // 音だけの知らせはトーストを出さない
+}
+
 async function op(name, body = {}, answers = {}) {
   let res;
   try {
@@ -33,10 +42,7 @@ async function op(name, body = {}, answers = {}) {
     toastError(e);
     return null;
   }
-  for (const m of res.messages || []) {
-    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
-    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");     // 音だけの知らせはトーストを出さない
-  }
+  for (const m of res.messages || []) showMessage(m);
   if (res.view) render(res.view);
   if (res.question) {
     const q = res.question;
@@ -728,10 +734,7 @@ function initReceiver() {
 let recvLast = 0, recvOn = false;
 async function handleRecv(r) {
   remember(`受信機 ${r.text}`);
-  for (const m of r.messages || []) {
-    playMessage(m);
-    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
-  }
+  for (const m of r.messages || []) showMessage(m);
   if (r.view) render(r.view);
   if (r.question) {                              // 理由などを聞かれたら、答えを付けて同じ値を送り直す
     const q = r.question;
