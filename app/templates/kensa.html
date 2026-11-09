@@ -32,6 +32,7 @@
       <div class="pad">
         <div class="reg-lot" id="lotReg" hidden>
           <div class="reg-lot__head"><span class="reg-badge">登録済</span><span class="reg-lot__label">Lot</span><b class="reg-lot__no" id="lotRegNo"></b></div>
+          <div class="reg-lot__size" id="lotSize" title="製品サイズ 厚 × 巾 × 丈"></div>
           <dl class="reg-lot__kv" id="lotRegKv"></dl>
         </div>
         <p class="reg-empty" id="lotEmpty">ロット未登録 — LotNo を入れて Enter</p>
@@ -130,7 +131,10 @@
     <!-- 測定器の伝送を受ける欄。測定器はキーボードと同じく「カーソルのある欄」に打つので、見える所に置き、
          受け取れる状態か(カーソルがあるか)を色で出す。手入力(VBA の隠しモード)は出さない -->
     <label class="recv" id="recvBox" for="measIn"><span class="recv__state" id="recvState">受信待ち</span>
-      <input class="input recv__in" id="measIn" autocomplete="off" aria-label="測定器から受け取る欄"></label>
+      <input class="input recv__in" id="measIn" autocomplete="off" aria-label="測定器から受け取る欄">
+      <span class="recv__dev" id="recvDev" role="status"></span>
+      <span class="recv__last" id="recvLastText"></span>
+      <span class="recv__why" id="recvWhy" role="alert" hidden></span></label>
     <div class="notice" id="nameListBox" hidden></div>
     <section class="card">
       <header><h3>印刷前チェック</h3></header>

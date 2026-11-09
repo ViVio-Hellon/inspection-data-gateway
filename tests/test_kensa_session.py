@@ -240,6 +240,32 @@ class EndToEndTest(SessionBase):
         self.assertEqual((st2.lot, st2.cells["S1"].value, st2.amin), ("", "", ""))
 
 
+    def test_new_without_measurement_needs_no_history(self) -> None:
+        """2026-11-09: 測っていなければ、履歴に保存していなくても確認だけで新規検査にできる。"""
+        self.register()
+        r = self.s.new_inspection()
+        self.assertEqual(r.question.key, "new")
+        self.ok(self.s.new_inspection({"new": True}))
+        self.assertEqual(self.s.state.lot, "")
+
+    def test_receive_why(self) -> None:
+        """2026-11-09: 入らなかった理由を receive_why に残す(入ったら "")。"""
+        s = self.s
+        self.register()
+        s.receive("DT+0015.004")                                          # 値 4 → 異常値で消える
+        self.assertIn("入れた値(値 4)を消しました: 4", s.receive_why)
+        self.assertIn("異常値の閾値", s.receive_why)
+        s.receive("DT10001+0000015.012M")
+        self.assertEqual((s.receive_why, s.state.cells["S1"].value), ("", "15.012"))
+
+    def test_new_with_measurement_still_needs_history(self) -> None:
+        self.register()
+        self.s.state.cells["S1"].value = "15.012"
+        r = self.s.new_inspection({"new": True})
+        self.assertIsNotNone(r.stop)
+        self.assertIn("該当LotNoが保存されていません", r.stop.text)
+
+
 class NgTest(SessionBase):
     def test_ng_value(self) -> None:
         s = self.s

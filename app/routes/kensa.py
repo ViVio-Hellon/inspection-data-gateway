@@ -164,6 +164,8 @@ _recv_seq = 0
 _recv_seen: dict[str, float] = {}
 RECV_ALIVE_SEC = 3.0
 _recv_dropped = 0
+#: 2026-11-09: 最後に届いた値(画面の受信状態に出す)
+_recv_last: dict = {}
 
 
 def _recv_target() -> str:
@@ -185,34 +187,55 @@ def _to_kensa(text: str) -> None:
         from ufkensa.logging_utils import get_logger
         get_logger(__name__).warning("受信機の値を受け取る画面が開いていないので捨てました: %r", text)
         return
+    why = ""
     if target == "kensa":
-        out = session.get().receive(text).to_dict()
+        sess = session.get()
+        res = sess.receive(text)
+        out = res.to_dict()
+        # 2026-11-09: 入らなかった理由(検査員未登録・校正未済・ロット未登録・入力先が無い・パケット不一致 など)
+        why = res.stop.text if res.stop else getattr(sess, "receive_why", "")
+        out["why"] = why
     else:
         out = {}
     out["text"], out["screen"] = text, target
+    import time as _t
+    _recv_last.update({"text": text, "at": _t.strftime("%H:%M:%S"), "screen": target, "why": why})
     with _recv_lock:
         _recv_seq += 1
         out["seq"] = _recv_seq
         _recv_results.append(out)
 
 
+def _kensa_receivers() -> list:
+    """検査画面で使う受信機。2026-11-09: 現場で「検査・校正で測れない(保守の受信を始めるでは届く)」と言われた。
+    「検査画面で受け取る」に印が無いと 1 台も開かなかったため。いまは:
+    - 保守で「検査画面で受け取る」に印を付けた受信機があれば、それだけを使う
+    - 1 台も印が無ければ、保守 → 測定機器ID で足した受信機(カード)を全部使う"""
+    from .maint import _cards_saved, com_kensa_list
+    want = com_kensa_list()
+    if want:
+        return want
+    return [dict(c, port=p) for p, c in _cards_saved().items() if p]
+
+
 @bp.post("/api/kensa/recv/start")
 def recv_start():
-    """保守で「検査画面で受け取る」にした受信機(何台でも)から受け取りを始める。動いているものはそのまま。"""
+    """検査画面で使う受信機(_kensa_receivers。何台でも)から受け取りを始める。動いているものはそのまま。"""
     from ufkensa.kensa import comport
-    from .maint import com_kensa_list
-    want = com_kensa_list()
+    want = _kensa_receivers()
     running = {r["port"]: r for r in comport.receivers() if r["slot"].startswith("kensa:") and r["running"]}
     errors = []
     for c in want:
         if c["port"] in running:
             continue
+        # 2026-11-09: 保守で同じポートを受信中(mnt:)だとポートが塞がって開けない。検査画面を開いたら保守の受信を止める
+        comport.stop("mnt:" + c["port"])
         try:
             comport.start(c["port"], int(c.get("baud") or 57600), str(c.get("flow") or "rtscts"),
                           int(c.get("bytesize") or 8), str(c.get("parity") or "N"), int(c.get("stopbits") or 1),
                           sink=_to_kensa, slot="kensa:" + c["port"])
         except (comport.ComError, ValueError) as e:
-            errors.append(str(e))
+            errors.append(f"{c['port']} を開けません: {e}")
     return jsonify(_recv_state(errors))
 
 
@@ -220,8 +243,19 @@ def _recv_state(errors=None) -> dict:
     from ufkensa.kensa import comport
     rs = [r for r in comport.receivers() if r["slot"].startswith("kensa:")]
     on = [r["port"] for r in rs if r["running"]]
-    errs = list(errors or []) + [r["error"] for r in rs if r["error"]]
-    return {"on": bool(on), "ports": on, "port": "・".join(on), "error": " / ".join(errs)}
+    errs = list(errors or []) + [f"{r['port']}: {r['error']}" for r in rs if r["error"]]
+    # 2026-11-09: 受け取れないときは「なぜ」を人の言葉で返す
+    why = ""
+    if not on:
+        if not _kensa_receivers():
+            why = "受信機が登録されていません。保守 → 測定機器ID で受信機を足してください"
+        elif errs:
+            why = "受信機を開けません(ほかで使用中・抜けている など): " + " / ".join(errs)
+        else:
+            why = "受信機が止まっています(保守で受信中なら、保守の受信を止めてからこの画面を開き直してください)"
+    return {"on": bool(on), "ports": on, "port": "・".join(on), "error": " / ".join(errs), "why": why,
+            "receivers": [{"port": r["port"], "running": r["running"], "error": r["error"]} for r in rs],
+            "last": dict(_recv_last)}
 
 
 @bp.get("/api/kensa/recv")
@@ -238,4 +272,5 @@ def recv_poll():
         items = [r for r in _recv_results if r["seq"] > since and r.get("screen", "kensa") == screen]
         last = _recv_seq
     st = _recv_state()
-    return jsonify({"results": items, "last": last, "running": st["on"], "port": st["port"], "error": st["error"]})
+    return jsonify({"results": items, "last": last, "running": st["on"], "port": st["port"], "error": st["error"],
+                    "why": st["why"], "received": st["last"]})

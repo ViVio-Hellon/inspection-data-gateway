@@ -773,7 +773,9 @@ function rxCards(cards, ports) {
     const kz = el("label", "rx__kensa");
     const chk = el("input"); chk.type = "checkbox"; chk.checked = c.kensa;
     chk.addEventListener("change", () => rxKensa(c, chk.checked, chk));
-    kz.append(chk, document.createTextNode(" 検査画面で受け取る"));
+    kz.append(chk, document.createTextNode(" 検査画面はこれだけ使う"));
+    // 2026-11-09: 印が 1 つも無ければ、ここに足した受信機を全部 検査・校正画面で使う。印を付けると印の付いたものだけ
+    kz.title = "印が無いときは、ここに足した受信機を全部 検査・校正画面で使います。印を付けると、印の付いた受信機だけを使います";
     ops.append(go, kz);
     if (c.kind !== "ddm") {
       const cf = el("button", "btn btn--sm", "設定"); cf.type = "button";
@@ -825,7 +827,7 @@ async function rxStartStop(c) {
 async function rxKensa(c, on, chk) {
   try {
     await api.post("/api/maint/com/kensa", { on, port: c.port, ...c.conf });
-    toast(on ? `検査画面を開くと ${c.port} から受け取ります` : `${c.port} は検査画面で受け取りません`, "success");
+    toast(on ? `検査画面は印の付いた受信機(${c.port} など)だけを使います` : `${c.port} の印を外しました(印が 1 つも無ければ、足した受信機を全部使います)`, "success");
   } catch (e) { chk.checked = !on; toastError(e); }
   rxPoll();
 }

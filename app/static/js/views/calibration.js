@@ -7,7 +7,7 @@
 import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { playMessage } from "../sound.js";
-import { startReceiver } from "../recv.js";
+import { renderRecvStatus, startReceiver } from "../recv.js";
 
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
@@ -151,4 +151,15 @@ $("cal").addEventListener("click", (e) => {
 op("open").catch(toastError);
 
 // 受信機から直接受け取る(保守で「検査画面で受け取る」にした受信機)。この画面が開いている間だけ、この画面に入る
-startReceiver("calibration", (text) => op("receive", { text }));
+// 2026-11-09: 入らなかった・合格しなかった理由を受信状態の行に出す
+let calAccepting = true;
+startReceiver("calibration", async (text) => {
+  const was = calAccepting;
+  const res = await op("receive", { text });
+  const v = res && res.view;
+  if (v) calAccepting = v.accepting !== false;
+  if (!res || res.stop) return res;
+  if (!was) return { stop: { text: "ｸﾘｱ＆ﾘｾｯﾄ を押すまで次の測定値を受け付けません" } };
+  if (v && v.ng_value) return { stop: { text: v.ng_value + (v.saiken ? "(ｸﾘｱを押してもう1度測定してください)" : "") } };
+  return res;
+}, (st) => renderRecvStatus($("calRecv"), st));
