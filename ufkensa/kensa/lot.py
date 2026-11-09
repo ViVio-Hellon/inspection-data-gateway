@@ -115,6 +115,16 @@ def _remap(rows: list, src: Optional[list], dst: Optional[list]) -> list:
     return [[r[i] if 0 <= i < len(r) else "" for i in idx] for r in rows]
 
 
+def other_base() -> str:
+    """いま読んでいる側(main)と反対の仕掛台帳のフォルダ。同じ場所なら ""。
+
+    オンライン(main = 第1)→ 第2。2026-11-09(ご依頼): オフライン(main = 第2)→ 第1(第2に無いものは第1を見に行く)。
+    """
+    main = paths.get("main")
+    other = paths.get("next") if paths.lot_mode() == paths.ONLINE else paths.slot_value(paths.LOT, paths.FIRST)
+    return "" if (not other or other == main) else other
+
+
 def lot_from_second(target: str, flt: str, first_file: str) -> tuple[Optional[list], str]:
     """D26(ロットごとの第2): 第1の仕掛にロット(条件の行)が無いとき、第2(控え)から同じ条件で読む。
 
@@ -122,8 +132,8 @@ def lot_from_second(target: str, flt: str, first_file: str) -> tuple[Optional[li
     (オフライン・1 か所に置いたとき)は何もしない。行は第1の列の並びに直して返す。
     戻り値は (行 / None, 読んだ第2のファイル)。
     """
-    main, nxt = paths.get("main"), paths.get("next")
-    if main == nxt:
+    nxt = other_base()
+    if not nxt:
         return None, ""
     second_file = db_path(nxt, target)
     if not read_check(second_file, 1):
@@ -145,8 +155,8 @@ def merge_hiki_from_second(rows: Optional[list], flt: str, first_file: str) -> t
     第2(控え)にだけある引当番号の行を、第1の行の後ろに足す(第1の行はそのまま使う。第2の方が古いこともあるので
     第2を丸ごとは使わない)。オンラインで第1と第2が別の場所のときだけ。戻り値は (行, 足した引当番号)。
     """
-    main, nxt = paths.get("main"), paths.get("next")
-    if not rows or main == nxt or first_file != db_path(main, "SIKAHIKINOW"):
+    main = paths.get("main")
+    if not rows or not other_base() or first_file != db_path(main, "SIKAHIKINOW"):
         return rows, []
     try:
         cols = datasource.get_fields(first_file, TABLE, "") or []
@@ -167,13 +177,14 @@ def merge_hiki_from_second(rows: Optional[list], flt: str, first_file: str) -> t
 
 
 def hiki_added_message(nos: Sequence[str], source: str) -> Message:
-    return Message("第1パスに無い引当を第2パスから足しました: 引当NO " + ", ".join(nos), INFO, source=source)
+    here, there = ("第1パス", "第2パス") if paths.lot_mode() == paths.ONLINE else ("第2パス", "第1パス")
+    return Message(f"{here}に無い引当を{there}から足しました: 引当NO " + ", ".join(nos), INFO, source=source)
 
 
 def fields_from_second(target: str) -> tuple[Optional[list], str]:
-    """D26: 第1の仕掛の表が空(列名が取れない)とき、第2の列名。"""
-    main, nxt = paths.get("main"), paths.get("next")
-    if main == nxt:
+    """D26: 第1の仕掛の表が空(列名が取れない)とき、第2の列名(オフラインは第1。other_base)。"""
+    nxt = other_base()
+    if not nxt:
         return None, ""
     second_file = db_path(nxt, target)
     if not read_check(second_file, 1):
@@ -338,7 +349,11 @@ def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "
         if read_check(file_path, 1) is False:
             fpath = nxt
             file_path = db_path(fpath, target)
-            if read_check(db_path(nxt, target), 1) is False:
+            if read_check(db_path(nxt, target), 1) is False and other_base():
+                # 2026-11-09: オフラインで第2にファイルが無ければ第1を見る
+                fpath = other_base()
+                file_path = db_path(fpath, target)
+            if read_check(file_path, 1) is False:
                 if not over12:
                     res.messages.append(Message(paths.missing_text(target),
                                                 ERROR, source="AccHIki:33"))
@@ -599,7 +614,11 @@ def _select_lot(file_path: str, cb_text: str) -> tuple[list[str], Optional[tuple
         row = cur.fetchone()
         if row is None:
             return cols, None
+        n0 = len(cols)
         cols, rows = lot_columns.pad(cols, [row])
+        if len(cols) > n0:
+            # 2026-11-09: 第2(控え)に無い列(公差・品質ｸﾞﾚｰﾄﾞ)を第1の同じロットで補う(オフラインでも第1に届けば)
+            rows = datasource.fill_from_first(file_path, cols, rows, cols[n0:])
         return cols, tuple(rows[0])
 
 
@@ -630,14 +649,18 @@ def acc_reflec(screen: LotScreen, *,
         return out
     base = acc_reflec_path(screen.dbflag)
     out.db_path = file_path = db_path(base, "SIKALOTNOW")
+    if not read_check(file_path, 1) and base == paths.get("main") and other_base():
+        # 2026-11-09: オフラインで第2に台帳が無ければ第1を見る(オンラインは今までどおり)
+        base = other_base()
+        out.db_path = file_path = db_path(base, "SIKALOTNOW")
     if not read_check(file_path, 1):
         out.status = "db_missing"
         out.messages.append(Message("DBファイルが見つかりません:" + "\r\n" + file_path, ERROR, source="SaveLoad:116"))
         return out
     # D26: 第1(MainPath)で読むときは、ロットが無ければ第2(控え)の SIKALOT も見る
     second = ""
-    if base == paths.get("main") and base != paths.get("next"):
-        second = db_path(paths.get("next"), "SIKALOTNOW")
+    if base == paths.get("main") and other_base() and base != other_base():
+        second = db_path(other_base(), "SIKALOTNOW")       # オフラインは第1(2026-11-09)
     try:
         _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env, second)
     except flow.Stop:

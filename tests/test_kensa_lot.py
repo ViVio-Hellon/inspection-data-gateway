@@ -175,6 +175,26 @@ class AccReflecTest(_Base):
         self.assertIn("板厚の公差が 0 になります", texts)
         self.assertIn("列 板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ", texts)
 
+    def test_offline_fills_missing_columns_from_first(self) -> None:
+        # 2026-11-09: 第2(控え)に公差の列が無くても、第1の同じロットで補う(オフラインでも第1に届けば)
+        f = self.d.next / kensa_fixture.file_name("SIKALOTNOW")
+        with sqlite3.connect(f) as c:
+            for k in ("ｵｰﾀﾞｰ_ﾌﾟﾗｽ", "ｵｰﾀﾞｰ_ﾏｲﾅｽ", "製造_ﾌﾟﾗｽ", "製造_ﾏｲﾅｽ"):
+                c.execute(f'ALTER TABLE "仕掛" DROP COLUMN "板厚公差_{k}"')
+            c.execute('ALTER TABLE "仕掛" DROP COLUMN "品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ"')
+        online = self.reflect("N9170B0")
+        paths.set_mode(paths.OFFLINE)
+        try:
+            datasource._table_cache.clear()
+            r = self.reflect("N9170B0")
+            self.assertEqual((r.form["Ap"], r.form["Am"]), (online.form["Ap"], online.form["Am"]))
+            self.assertNotIn("公差が 0", " ".join(m.text for m in r.messages))
+            fields = lot.arrbox("SIKALOTNOW", "", "Fields", "").value
+            rec = lot.arrbox("SIKALOTNOW", "N9170B0", "Record", "").value[0]
+            self.assertNotEqual(rec[fields.index("品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ")], "")
+        finally:
+            paths.set_mode(paths.ONLINE)
+
     def test_full_width_tolerance(self) -> None:
         f = self.d.main / kensa_fixture.file_name("SIKALOTNOW")
         with sqlite3.connect(f) as c:
@@ -229,6 +249,8 @@ class AccReflecTest(_Base):
 
     def test_db_missing(self) -> None:
         self.d.remove(self.d.main, "SIKALOTNOW")
+        self.assertEqual(self.reflect("H2500K0").status, "ok")      # 2026-11-09: 第1に無ければ第2の台帳を読む
+        self.d.remove(self.d.next, "SIKALOTNOW")
         r = self.reflect("H2500K0")
         self.assertEqual(r.status, "db_missing")
         self.assertEqual(r.messages[0].text, "DBファイルが見つかりません:" + "\r\n" + r.db_path)
