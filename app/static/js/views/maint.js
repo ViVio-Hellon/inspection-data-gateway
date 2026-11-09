@@ -790,16 +790,23 @@ function rxCards(cards, ports) {
     return card;
   });
   // 足す: 一覧から(U-WAVE-R の直接・Bluetooth の COM・USB の COM)
+  // 2026-11-09: 0.5 秒ごとの描き直しで選択が勝手に戻っていた。選んでいる最中は作り直さず、選んだ値は引き継ぐ
+  const oldAdd = box.querySelector(".rx__add");
+  const act = document.activeElement;
+  if (oldAdd && act && oldAdd.contains(act)) { box.replaceChildren(...items, oldAdd); return; }
+  const prevSel = $("rxAddSel")?.value || "";
+  const prevTxt = $("rxAddText")?.value || "";
   const add = el("div", "card rx__add");
   const have = new Set(cards.map((c) => c.port));
   const sel = el("select", "input"); sel.id = "rxAddSel";
   const free = (ports || []).filter((p) => !have.has(p.port));
   sel.append(...(free.length ? free : [{ port: "", label: "(足せる受信機がありません)" }]).map((p) => new Option(p.label || p.port, p.port)));
-  const txt = el("input", "input"); txt.placeholder = "一覧に無ければ COM5 など"; txt.id = "rxAddText";
+  if (prevSel && [...sel.options].some((o) => o.value === prevSel)) sel.value = prevSel;
+  const txt = el("input", "input"); txt.placeholder = "一覧に無ければ COM5 など"; txt.id = "rxAddText"; txt.value = prevTxt;
   const b = el("button", "btn btn--sm btn--find", "＋ 受信機を足す"); b.type = "button";
   b.addEventListener("click", async () => {
     const port = txt.value.trim() || sel.value;
-    try { const d = await api.post("/api/maint/rx/add", { port }); rxCards(d.cards, d.ports); } catch (e) { toastError(e); }
+    try { const d = await api.post("/api/maint/rx/add", { port }); b.blur(); txt.value = ""; rxCards(d.cards, d.ports); } catch (e) { toastError(e); }
   });
   add.append(el("b", "", "受信機を足す"), sel, txt, b);
   box.replaceChildren(...items, add);
