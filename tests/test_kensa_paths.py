@@ -432,3 +432,38 @@ class SettingsApiTest(_Saved):
         d = self.post("/api/settings/path/check", key="lot", first=str(self.root / "無い"), second=str(self.d2),
                       second_names={"SIKALOTNOW": ""}).get_json()
         self.assertEqual([r["ok"] for r in d["results"]], [False, True])
+
+
+class JudgeImagesTest(_Saved):
+    """2026-11-09: 判定の画像(VBA の UFOK / UFNG / UF対角 の絵)。空・ファイルが無いときは出さない。"""
+
+    def test_unset_gives_nothing(self) -> None:
+        from ufkensa.kensa import judge_images
+        paths.set_path("judge_images", "")
+        self.assertEqual(judge_images.available(), {"ok": [], "ng": [], "diag": []})
+        self.assertIsNone(judge_images.find("ok", "OK.jpg"))
+
+    def test_fixed_names_and_check(self) -> None:
+        from ufkensa.kensa import judge_images
+        (self.d1 / "ok.JPG").write_bytes(b"\xff\xd8\xff")
+        (self.d1 / "対角2.png").write_bytes(b"\x89PNG")
+        (self.d1 / "other.jpg").write_bytes(b"\xff\xd8\xff")
+        paths.set_path("judge_images", str(self.d1))
+        self.assertEqual(judge_images.available(), {"ok": ["ok.JPG"], "ng": [], "diag": ["対角2.png"]})
+        self.assertIsNone(judge_images.find("ok", "other.jpg"))       # 決まった名前のものだけ配る
+        self.assertIsNotNone(judge_images.find("diag", "対角2.png"))
+        r = paths.check("judge_images")
+        self.assertIn("NG ファイルがありません", r["message"])
+        self.assertIn("OK ok.JPG", r["message"])
+
+    def test_route(self) -> None:
+        from app import create_app
+        (self.d1 / "NG.png").write_bytes(b"\x89PNG")
+        paths.set_path("judge_images", str(self.d1))
+        app = create_app("main", token="t", port=0)
+        app.config["READY"] = True
+        c = app.test_client()
+        h = {"X-Tool-Token": "t"}
+        self.assertEqual(c.get("/api/kensa/judge_images", headers=h).get_json()["images"]["ng"], ["NG.png"])
+        self.assertEqual(c.get("/api/kensa/judge_image/ng/NG.png", headers=h).status_code, 200)
+        self.assertEqual(c.get("/api/kensa/judge_image/ok/NG.png", headers=h).status_code, 404)

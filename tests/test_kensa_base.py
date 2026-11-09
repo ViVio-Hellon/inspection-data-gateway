@@ -77,13 +77,13 @@ class VbxTest(unittest.TestCase):
 class QuirksTest(unittest.TestCase):
     def test_summary_matches_decision(self) -> None:
         sm = quirks.summary()
-        self.assertEqual(len(sm["fix"]), 89)   # 2026-11-08: B90〜B92 を足した
+        self.assertEqual(len(sm["fix"]), 90)   # 2026-11-09: B93 を足した
         self.assertIn("B19", sm["keep"])
         self.assertIn("B37", sm["keep"])
 
-    def test_92_items(self) -> None:
-        self.assertEqual(len(quirks.TITLES), 92)
-        self.assertEqual(list(quirks.TITLES), [f"B{i}" for i in range(1, 93)])
+    def test_93_items(self) -> None:
+        self.assertEqual(len(quirks.TITLES), 93)
+        self.assertEqual(list(quirks.TITLES), [f"B{i}" for i in range(1, 94)])
 
 
 class AdoFilterTest(unittest.TestCase):

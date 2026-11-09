@@ -90,6 +90,25 @@ def picture(kind: str, name: str):
     return send_file(f, mimetype="image/jpeg", max_age=60)
 
 
+@bp.get("/api/kensa/judge_images")
+def judge_images_list():
+    """判定の画像(OK・NG・対角線)で出せるもの。使用パス「判定の画像」が空・無いときは全部 [](画像を出さない)。"""
+    from ufkensa.kensa import judge_images
+    return jsonify({"images": judge_images.available(), "show_ms": judge_images.SHOW_MS})
+
+
+@bp.get("/api/kensa/judge_image/<kind>/<path:name>")
+def judge_image(kind: str, name: str):
+    """判定の画像 1 枚(VBA の UFOK / UFNG / UF対角 の絵)。決まった名前のものだけ配る。"""
+    import mimetypes
+    from flask import send_file
+    from ufkensa.kensa import judge_images
+    f = judge_images.find(kind, name)
+    if f is None:
+        return jsonify({"error": {"code": "not_found", "message": f"画像がありません: {name}"}}), 404
+    return send_file(f, mimetype=mimetypes.guess_type(f.name)[0] or "image/jpeg", max_age=60)
+
+
 @bp.get("/api/kensa/pack_image")
 def pack_image():
     """いま出している包装仕様書の画像(UF_PackNo.PacIM。使用パス QualityPath\\包装仕様書)。"""

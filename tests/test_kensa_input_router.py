@@ -65,11 +65,11 @@ class PucketMoveTest(unittest.TestCase):
         self.assertEqual(s.inp_tag, "E5")               # D の代わりに E
 
     def test_dt_rows_by_at_butt(self) -> None:
-        s = ready(at_butt_caption="厚4ヵ所")             # いま 2 ヵ所検査 → 行1〜2
+        s = ready("少枚数", at_butt_caption="厚4ヵ所")   # いま 2 ヵ所検査 → 行1〜2(厚板は B93 で 1〜4 行)
         fill(s, ["S1", "S2"])
         ir.pucket_move(s, "DT", "", "", FakeHooks())
         self.assertEqual(s.inp_tag, "U1")
-        s = ready(at_butt_caption="")                   # どちらでもない → a=n=0 → 「DT検査済」(G1 §11-7)
+        s = ready("少枚数", at_butt_caption="")                   # どちらでもない → a=n=0 → 「DT検査済」(G1 §11-7)
         msgs = []
         ir.pucket_move(s, "DT", "", "", FakeHooks(), msgs)
         self.assertEqual(msgs[0].text, "DT検査済")
@@ -369,3 +369,45 @@ class FixedQuirksTest(QuirkCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AtuitaThickRowsTest(unittest.TestCase):
+    """2026-11-09(B93): 厚板に薄板の「厚4ヵ所」(2 ヵ所検査)が残っていても、DT は厚 1〜4 行を全部埋める。"""
+
+    def _dt(self, s: KensaState) -> str:
+        ir.pucket_move(s, "DT", "", "", FakeHooks())
+        tag = s.inp_tag
+        if tag:
+            s.cells[tag].value = "15.0"
+        return tag
+
+    def test_user_sequence_reaches_s3(self) -> None:
+        s = ready(at_butt_caption="厚4ヵ所")
+        got = [self._dt(s) for _ in range(5)]
+        # VBA は S1, S2, U1, U2, C1(S3 へ行かない)
+        self.assertEqual(got, ["S1", "S2", "S3", "S4", "U1"])
+        ir.look_blank(s, 1, 10)
+        self.assertEqual(s.inp_tag, "S5")               # 厚が埋まったので次は幅(黄色の印も DT の入る先と合う)
+
+    def test_marker_matches_next_dt(self) -> None:
+        s = ready(at_butt_caption="厚4ヵ所")
+        fill(s, ["S1", "S2"])
+        ir.look_blank(s, 1, 10)
+        marker = s.inp_tag
+        ir.pucket_move(s, "DT", "", "", FakeHooks())
+        self.assertEqual((marker, s.inp_tag), ("S3", "S3"))
+
+    def test_disabled_thick_cells_skipped(self) -> None:
+        s = ready()
+        for p in FIVE:
+            for i in (3, 4):
+                if p != "S":
+                    s.cells[f"{p}{i}"].enabled = False
+        got = [self._dt(s) for _ in range(12)]
+        self.assertEqual(got, ["S1", "S2", "S3", "S4", "U1", "U2", "C1", "C2", "D1", "D2", "E1", "E2"])
+        msgs = []
+        ir.pucket_move(s, "DT", "", "", FakeHooks(), msgs)
+        self.assertEqual(msgs[0].text, "DT検査済")        # 使えない U3 などは待たない
+        s.auto = "on"
+        ir.look_blank(s, 1, 10)
+        self.assertEqual(s.inp_tag, "S5")
