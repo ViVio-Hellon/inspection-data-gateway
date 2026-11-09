@@ -83,6 +83,11 @@ def which_db(cols: list[str]) -> str:
     return best if score >= 3 else ""
 
 
+#: 最後に読んだファイルで、無かったので空として足した列 / 第1の名前に当たらない列(DB ごと)
+last_padded: dict[str, list[str]] = {}
+last_unknown: dict[str, list[str]] = {}
+_ALL: frozenset[str] = frozenset(c for cs in COLUMNS.values() for c in cs)
+
 #: 足りなかった列を知らせた DB(同じことを何度もログに書かない)
 _told: set[tuple[str, tuple[str, ...]]] = set()
 
@@ -98,6 +103,9 @@ def pad(cols: list[str], rows: list) -> tuple[list[str], list]:
         return cols, rows
     have = set(cols)
     add = [c for c in COLUMNS[db] if c not in have]
+    # 2026-11-09: 最後に空として足した列と、知らない列を覚える(公差などが空になったとき、画面で理由を出すため)
+    last_padded[db] = list(add)
+    last_unknown[db] = [c for c in cols if c not in _ALL]
     if not add:
         return cols, rows
     key = (db, tuple(add))

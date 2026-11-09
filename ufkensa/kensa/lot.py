@@ -748,9 +748,16 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
             op, om = mp, mm
         if op == 0 and om == 0:
             # 2026-11-09: 公差が 0(下限 = 上限)になるときは、台帳の値をそのまま知らせる(原因を見つけるため)
+            from . import lot_columns
+            want = [f"{key}公差_{k}" for k in ("ｵｰﾀﾞｰ_ﾌﾟﾗｽ", "ｵｰﾀﾞｰ_ﾏｲﾅｽ", "製造_ﾌﾟﾗｽ", "製造_ﾏｲﾅｽ")]
+            gone = [c for c in want if c in lot_columns.last_padded.get("SIKALOTNOW", [])]
+            why = (f"読んだ台帳({out.db_path or file_path})に列 {'・'.join(gone)} がありません"
+                   + (f"(台帳にあって読めない列: {'・'.join(lot_columns.last_unknown.get('SIKALOTNOW', [])[:8])})"
+                      if lot_columns.last_unknown.get("SIKALOTNOW") else "")
+                   if gone else f"読んだ台帳: {out.db_path or file_path}")
             out.messages.append(Message(
                 f"{key}の公差が 0 になります(下限と上限が同じ)。仕掛台帳の値: "
-                f"ｵｰﾀﾞｰ +{raw[0]!r} -{raw[1]!r} / 製造 +{raw[2]!r} -{raw[3]!r}", WARN, source="SaveLoad:227"))
+                f"ｵｰﾀﾞｰ +{raw[0]!r} -{raw[1]!r} / 製造 +{raw[2]!r} -{raw[3]!r}。{why}", WARN, source="SaveLoad:227"))
         f[p_key] = vbx.fmt(op, pattern)
         f[m_key] = vbx.fmt(om, pattern)
 
