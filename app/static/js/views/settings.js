@@ -3,7 +3,7 @@
   判断はサーバが済ませてある(`app/routes/settings.py`)。ここは受け取ったものを並べて、押されたら送るだけ。
 */
 
-import { api } from "../api.js";
+import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import * as tabs from "../tabs.js";
 import { previewFile } from "../sound.js";
@@ -153,6 +153,23 @@ function lotPathCell(p, td, inputs, names) {
   td.append(use);
 }
 
+/* 2026-11-09: 判定の画像の見本(その枠に決めたファイル。空・無ければ同梱の VBA の絵) */
+function judgeThumb(p) {
+  const box = document.createElement("div");
+  box.className = "judge-thumb";
+  box.style.cssText = "display:flex;align-items:center;gap:.5em;margin-top:.3em";
+  const img = document.createElement("img");
+  img.src = tokenUrl(`/api/kensa/judge_image/${encodeURIComponent(p.key)}`) + `&v=${Date.now()}`;
+  img.alt = p.label + " の見本";
+  img.style.cssText = "height:48px;max-width:80px;object-fit:contain;border:1px solid #ccc;border-radius:4px;background:#fff";
+  const note = document.createElement("small");
+  note.className = p.image.source === "missing" ? "lv--ng" : "muted";
+  note.textContent = p.image.source === "missing" ? "ファイルがありません(同梱の VBA の絵を出します)"
+    : (p.image.source === "default" ? `既定(同梱の VBA の絵 ${p.image.file})` : p.image.file);
+  box.append(img, note);
+  return box;
+}
+
 function renderPaths() {
   const modeLabel = (S.modes.find((m) => m.key === S.mode) || {}).label;
   $("pathsMode").textContent = "いま: " + modeLabel;
@@ -186,6 +203,8 @@ function renderPaths() {
       const f = pathInput(p, "path", p.label + " のパス");
       pathTd.append(f.box);
       inputs.push(f.input);
+      if (p.image) pathTd.append(judgeThumb(p));
+
     } else {
       lotPathCell(p, pathTd, inputs, names);
     }
@@ -211,7 +230,7 @@ function renderPaths() {
         reset.className = "btn";
         reset.type = "button";
         reset.textContent = "既定に戻す";
-        reset.title = p.single ? "既定: " + (p.default || "(空)") : "第1・第2のパスと名前をまとめて既定に戻します";
+        reset.title = p.image ? "既定: 同梱の VBA の絵" : p.single ? "既定: " + (p.default || "(空)") : "第1・第2のパスと名前をまとめて既定に戻します";
         reset.addEventListener("click", () => (p.key === "log"
           ? postPath({ key: p.key, path: "", reset: true }, "ログの出力パスを既定に戻しました")
           : resetPaths({ key: p.key })));

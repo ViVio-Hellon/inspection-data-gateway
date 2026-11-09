@@ -99,14 +99,29 @@ def picture(kind: str, name: str):
 
 @bp.get("/api/kensa/judge_images")
 def judge_images_list():
-    """判定の画像(OK・NG・対角線)で出せるもの。使用パス「判定の画像」が空・無いときは全部 [](画像を出さない)。"""
+    """判定の画像(OK・NG・対角線)で出す枠。2026-11-09: 枠(judge_ok など)を返す。空・無い枠は同梱の絵。"""
     from ufkensa.kensa import judge_images
-    return jsonify({"images": judge_images.available(), "show_ms": judge_images.SHOW_MS})
+    return jsonify({"images": judge_images.available(), "show_ms": judge_images.SHOW_MS,
+                    "slots": [judge_images.slot_info(k) for k in judge_images.SLOTS]})
+
+
+@bp.get("/api/kensa/judge_image/<slot>")
+def judge_image_slot(slot: str):
+    """2026-11-09: 枠ごとの画像(設定の見本と判定のとき)。その枠に決めたファイル(空・無ければ同梱の絵)だけ配る。"""
+    import mimetypes
+    from flask import send_file
+    from ufkensa.kensa import judge_images
+    if slot not in judge_images.SLOTS:
+        return jsonify({"error": {"code": "not_found", "message": f"画像の枠がありません: {slot}"}}), 404
+    f, src = judge_images.resolve(slot)
+    r = send_file(f, mimetype=mimetypes.guess_type(f.name)[0] or "image/jpeg", max_age=0)
+    r.headers["X-Judge-Source"] = src
+    return r
 
 
 @bp.get("/api/kensa/judge_image/<kind>/<path:name>")
 def judge_image(kind: str, name: str):
-    """判定の画像 1 枚(VBA の UFOK / UFNG / UF対角 の絵)。決まった名前のものだけ配る。"""
+    """判定の画像 1 枚(VBA の UFOK / UFNG / UF対角 の絵)。前の形(種類/枠)。その種類で出す枠だけ配る。"""
     import mimetypes
     from flask import send_file
     from ufkensa.kensa import judge_images

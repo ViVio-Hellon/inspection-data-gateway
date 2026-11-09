@@ -97,7 +97,7 @@ export function isAbnormal(m) {
 
 /* ---------------- 判定の画像 ---------------- */
 const CUE_KIND = { kensa_ok: "ok", kensa_ng: "ng", kensa_diag: "diag" };
-let images = null;           // {ok: [名前], ng: [...], diag: [...]}
+let images = null;           // {ok: [枠], ng: [...], diag: [...]}(2026-11-09: 枠 judge_ok など)
 let showMs = { ok: 3000, ng: 3000, diag: 2000 };
 let layer = null, timer = 0, loadedAt = 0;
 
@@ -145,7 +145,7 @@ export async function showJudgeImage(m) {
   const el = ensureLayer();
   const img = el.querySelector("img");
   img.alt = { ok: "OK", ng: "NG", diag: "対角線" }[kind];
-  img.src = tokenUrl(`/api/kensa/judge_image/${kind}/${encodeURIComponent(name)}`);
+  img.src = tokenUrl(`/api/kensa/judge_image/${encodeURIComponent(name)}`);   // 2026-11-09: 枠ごと
   el.dataset.kind = kind;
   el.hidden = false;
   if (timer) clearTimeout(timer);
