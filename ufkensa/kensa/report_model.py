@@ -244,9 +244,17 @@ class XSheet:
 
     def borders_all(self, r1: int, c1: int, r2: int, c2: int, *, linestyle: Optional[str] = None,
                     weight: Optional[str] = None) -> None:
-        """`Range.Borders.LineStyle = …`(外枠と内側の全部)。"""
-        for idx in ("top", "bottom", "left", "right", "inside_h", "inside_v"):
-            self.border(r1, c1, r2, c2, idx, linestyle=linestyle, weight=weight)
+        """`Range.Borders.LineStyle = …`(添字なしの Borders。範囲の各セル自身の 4 辺)。
+
+        Excel の添字なし Borders はセル自身の辺(xlLeft/xlRight/xlTop/xlBottom)に効き、範囲の外の
+        隣のセルが持つ向かいの辺は消さない。実機の印刷物(厚板・ラテラルボー無)で、J:N を消しても
+        I 列(差)の右の太線が残ることを確かめた(Print:1097-1098 ほか)。
+        """
+        for r, c in self._iter(r1, c1, r2, c2):
+            x = self.cell(r, c)
+            for side in SIDES:
+                new = _apply_line(x.b[side][0], linestyle, weight)
+                x.b[side] = (new, next(_stamp))
 
     def effective(self, r: int, c: int, side: str) -> tuple[str, str]:
         """見えている線(自分の辺と隣のセルの向かいの辺のうち、後から引いた方)。"""

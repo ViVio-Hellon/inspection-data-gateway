@@ -105,13 +105,17 @@ class PrintFormatBase(SessionBase):
                 self.assertIsNone(self.val(m, ref), ref)
                 b = self.bd(m, ref)
                 if b:
-                    self.assertTrue(all(v[0] == "none" for v in b.values()), (ref, b))
+                    # J の左は I(差)の右と共有の辺(I 自身の線は消えない)。それ以外の辺は無い
+                    self.assertTrue(all(v[0] == "none" for k, v in b.items()
+                                        if not (ref[0] == "J" and k == "left")), (ref, b))
             self.assertNotIn("ﾗﾃﾗﾙﾎﾞｰ", [c["value"] for c in m.cells])
         # I 列(差)の右の線は J 列と共有の辺。ラテラルありは J の左(P 列から写した medium)で閉じ、
-        # なしは J18:N23 の Borders=None で共有の辺ごと消える(Excel の辺の共有を effective で再現)。
+        # なしも I 自身の右の線(N 列から写した medium)が残って閉じる。添字なしの Borders=None(J18:N23)は
+        # 隣の I の辺を消さない(実機の印刷物 L-1 H8460F0 で確認)。20/22 行は Print:787-790 で I 自身の右を消す。
         for r in range(18, 24):
+            closed = self.lateral or r not in (20, 22)
             self.assertEqual(self.bd(m, f"I{r}")["right"],
-                             ("continuous", "medium") if self.lateral else ("none", ""), r)
+                             ("continuous", "medium") if closed else ("none", ""), r)
         self.common = {ref: (self.val(m, ref), {k: v for k, v in self.bd(m, ref).items()
                                                 if not (ref[0] == "I" and 18 <= int(ref[1:]) <= 23 and k == "right")}
                              if self.bd(m, ref) else None) for ref in COMMON}
