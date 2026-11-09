@@ -101,7 +101,9 @@ def picture(kind: str, name: str):
 def judge_images_list():
     """判定の画像(OK・NG・対角線)で出す枠。2026-11-09: 枠(judge_ok など)を返す。空・無い枠は同梱の絵。"""
     from ufkensa.kensa import judge_images
-    return jsonify({"images": judge_images.available(), "show_ms": judge_images.SHOW_MS,
+    disp = judge_images.display()
+    return jsonify({"images": judge_images.available(), "show_ms": {k: v["ms"] for k, v in disp.items()},
+                    "size": {k: v["size"] for k, v in disp.items()},
                     "slots": [judge_images.slot_info(k) for k in judge_images.SLOTS]})
 
 
