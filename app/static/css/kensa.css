@@ -154,6 +154,7 @@ li.is-stale { opacity: .6; }
 .kbar__info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-width: 0; font-size: var(--fs-sm); }
 .kbar__names { font-weight: 800; font-size: var(--fs-md, 1rem); }
 .kbar__lot { font-family: var(--mono); font-size: 1.4rem; font-weight: 800; }
+.kbar__size { font-family: var(--mono); font-size: 1.3rem; font-weight: 800; color: var(--accent, inherit); white-space: nowrap; }
 .kbar__works { margin-left: auto; }
 .kbar__works .pad { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0; }
 .kbar__works .works .btn { min-height: 34px; }

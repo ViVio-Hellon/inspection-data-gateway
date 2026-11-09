@@ -413,11 +413,11 @@ def look_blank(state: KensaState, a: int, n: int) -> None:
                         if _blank(state, f"{mid}{b}"):
                             return pick(f"{mid}{b}")
         elif state.is_work("スラブ"):
+            # 2026-11-09(B90 の続き): U・D は厚の欄を持たない。厚の行(1〜4)では U5〜U8 / D5〜D8 を黄色にせず、
+            # 次の厚欄(C1〜C4)へ進む(VBA は厚 1-上 のあと幅の U5 を黄色にしていた。DT は B90 で C1 に入る)
             for i in rows:
                 if is_thick(i):
-                    for b in range(5, 9):
-                        if _blank(state, f"{p}{b}"):
-                            return pick(f"{p}{b}")
+                    continue
                 elif 5 <= i <= 8:
                     if _blank(state, f"{p}{i}"):
                         return pick(f"{p}{i}")

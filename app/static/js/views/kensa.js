@@ -525,6 +525,9 @@ function renderPhase(v) {
     el("span", { class: "kbar__names", textContent: ws.map((w) => w.replace(/^T\d:\s*/, "").replace(/\(.*\)$/, "")).join("・") }),
     chip(calibOk ? "lv--ok" : "lv--ng", calibOk ? "校正済" : "未校正"),
     el("b", { class: "kbar__lot", textContent: h.lot || "" }),
+    // 2026-11-09: 測定中も製品サイズ(厚 × 巾 × 丈)を見える所に
+    el("b", { class: "kbar__size", textContent: (v.tolerance && (v.tolerance.atu || v.tolerance.hab || v.tolerance.tak))
+      ? `${v.tolerance.atu || "-"} × ${v.tolerance.hab || "-"} × ${v.tolerance.tak || "-"}` : "" }),
     el("span", { textContent: [h.ken_no && `検査No ${h.ken_no}`, h.youto && `用途 ${h.youto}`, [h.zai, h.tyu].filter(Boolean).join(" ")].filter(Boolean).join("　") }),
   );
 }
