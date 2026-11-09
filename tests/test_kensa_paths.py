@@ -281,13 +281,19 @@ class PerLotTest(_Saved):
         paths.set_name("SIKALOTNOW", paths.FIRST, "")
         self.assertEqual(paths.first_name("SIKALOTNOW"), "SIKALOT.sqlite3")
 
-    def test_offline_reads_only_second(self) -> None:
+    def test_offline_reads_second_then_first(self) -> None:
+        # 2026-11-09(ご依頼): オフラインは第2を読み、第2に無いもの(ロット・ファイル)は第1を見に行く
         self.use(paths.OFFLINE)
-        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
         self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
-        self.assertIsNone(r.value)                                    # 第1にあっても見ない
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertIsNotNone(r.value)
+        self.assertIn("first", r.file_path)
         (self.d2 / "SIKAHIKI.sqlite3").unlink()
+        r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
+        self.assertIsNotNone(r.value)
+        (self.d1 / "SIKAHIKI.sqlite3").unlink()
         r = lot.arrbox("SIKAHIKINOW", "H2500K0", "Record", "", now=T_NORMAL)
         self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAHIKINOW")])
 

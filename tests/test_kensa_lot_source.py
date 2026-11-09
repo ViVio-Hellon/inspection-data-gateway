@@ -113,14 +113,13 @@ class MatrixTest(_TwoSlots):
         self.lot_source_on()
         self.assertEqual(self.ken_h(), KEN_SECOND)
 
-    def test_lot_only_in_first_on_says_missing(self) -> None:
+    def test_lot_only_in_first_on_reads_first(self) -> None:
         self.delete_lot(self.second)
         self.register()
         self.assertEqual(self.ken_h(), KEN_FIRST)
         self.s.set_lot_source(True, "", REG)
-        # 第2に無い = オフラインで無いときと同じ(AccReflec の「該当なし」: lot.CLEAR_ON_NOT_FOUND の欄を空にする)
-        self.assertNotEqual(self.ken_h(), KEN_FIRST)          # 第1では読まない
-        self.assertEqual(self.s.state.atu, "")
+        # 2026-11-09(ご依頼): 第2に無いものは第1を見に行く(オフライン・控えから読む でも)
+        self.assertEqual(self.ken_h(), KEN_FIRST)
         r = self.s.set_lot_source(False, "", REG)             # 外すと いつもの読み方(第1)で読み直す
         self.assertEqual(self.ken_h(), KEN_FIRST)
         self.assertFalse(r.view["lot_source"]["on"])
@@ -210,7 +209,7 @@ class OtherScreensTest(_TwoSlots):
         self.lot_source_on()
         self.delete_lot(self.second)
         out = quality_session.build("", store=self.store, kensa=self.s, facility="HVC")
-        self.assertFalse(out["found"])                        # 第1にあっても読まない
+        self.assertTrue(out["found"])                         # 2026-11-09: 第2に無ければ第1を見に行く
 
 
     def test_cask_and_zenkasho_follow_same_lot(self) -> None:
@@ -289,8 +288,8 @@ class ArrboxTest(_TwoSlots):
         self.assertIsNotNone(r.value)
         with paths.lot_source(True):
             r = lotmod.arrbox("SIKALOTNOW", LOT, "Record", now=self.clock.t)
-        self.assertIsNone(r.value)
-        self.assertIn("second", r.file_path)
+        self.assertIsNotNone(r.value)                          # 2026-11-09: 第2に無ければ第1を見に行く
+        self.assertIn("first", r.file_path)
 
 
 class RouteTest(_TwoSlots):

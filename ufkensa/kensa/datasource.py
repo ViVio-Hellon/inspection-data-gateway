@@ -23,6 +23,9 @@ from typing import Iterable, Optional, Union
 from urllib.parse import quote as _urlquote
 
 from . import ado_filter, paths, vbx
+from ..logging_utils import get_logger
+
+log = get_logger("kensa.datasource")
 
 BUSY_TIMEOUT_MS = 10_000
 
@@ -190,8 +193,72 @@ def _read(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]
     if lot:
         from . import lot_columns
         cols = lot_columns.canonical(cols)
+        n0 = len(cols)
         cols, rows = lot_columns.pad(cols, rows)
+        if len(cols) > n0:
+            rows = fill_from_first(db, cols, rows, cols[n0:])
     return cols, rows
+
+
+#: 第1の仕掛台帳の「ロットの鍵 → 行」(ファイルの場所と更新で覚える)
+_first_index: dict = {}
+
+
+def fill_from_first(db: Union[str, Path], cols: list[str], rows: list, added: list[str]) -> list:
+    """2026-11-09(ご依頼): 第2(控え)の仕掛台帳に無い列(公差・品質ｸﾞﾚｰﾄﾞなど)を、第1の同じロットの行で補う。
+
+    第2は列が少ない(SIKALOT の控えは 46 列)。無い列は空として足していたので、公差が 0・歪等級が空になっていた。
+    第1が読めない・第1にそのロットが無いときは空のまま。第1そのものを読んでいるときは何もしない。
+    鍵は ﾛｯﾄ番号 + 検査番号 + ｵｰﾀﾞｰ番号(合わなければ ﾛｯﾄ番号 だけ)。SIKALOT だけ。
+    """
+    from . import lot_columns
+    if lot_columns.which_db(cols) != "SIKALOTNOW" or not rows:
+        return rows
+    try:
+        base = paths.slot_value(paths.LOT, paths.FIRST)
+        first_text = paths.join(base, paths.first_name("SIKALOTNOW"))
+        if resolve(db).resolve() == resolve(first_text).resolve():
+            return rows
+        actual = _actual_file(first_text)                # 第1も手元へ写してから読む(共有を直接読まない)
+        if actual is None:
+            return rows
+        st = actual.stat()
+        stamp = (str(actual), st.st_size, st.st_mtime_ns)
+        hit = _first_index.get("SIKALOTNOW")
+        if hit is None or hit[0] != stamp:
+            fcols, frows = _read(first_text, "仕掛")    # 第1は列がそろっているので、ここで補う処理は走らない
+            idx = {c: i for i, c in enumerate(fcols)}
+            full, by_lot = {}, {}
+            for r in frows:
+                k = tuple(str(r[idx[c]] or "").strip() if c in idx and idx[c] < len(r) else ""
+                          for c in ("ﾛｯﾄ番号", "検査番号", "ｵｰﾀﾞｰ番号"))
+                full.setdefault(k, r)
+                by_lot.setdefault(k[0], r)
+            hit = (stamp, idx, full, by_lot)
+            _first_index["SIKALOTNOW"] = hit
+    except (OSError, sqlite3.Error, DbMissing, TableMissing) as e:
+        log.info("第1の仕掛台帳で補えませんでした: %s", e)
+        return rows
+    _stamp, idx, full, by_lot = hit
+    me = {c: i for i, c in enumerate(cols)}
+    take = [(me[c], idx[c]) for c in added if c in idx]
+    if not take:
+        return rows
+    out = []
+    n = 0
+    for r in rows:
+        k = tuple(str(r[me[c]] or "").strip() if c in me and me[c] < len(r) else ""
+                  for c in ("ﾛｯﾄ番号", "検査番号", "ｵｰﾀﾞｰ番号"))
+        src = full.get(k) or by_lot.get(k[0])
+        if src is not None:
+            r = list(r)
+            for i, j in take:
+                if j < len(src) and (r[i] is None or r[i] == ""):
+                    r[i] = "" if src[j] is None else as_text(src[j])
+            n += 1
+        out.append(r)
+    log.info("第2の仕掛台帳に無い列 %d 個を、第1の同じロットで補いました(%d 行)", len(take), n)
+    return out
 
 
 def get_records(db: Union[str, Path], table: str, sql_filter: str = "") -> Optional[list[list[str]]]:
