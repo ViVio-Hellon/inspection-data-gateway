@@ -808,8 +808,9 @@ function rxCards(cards, ports) {
 async function rxStartStop(c) {
   try {
     const on = c.running && c.where === "mnt";
-    await api.post(on ? "/api/maint/rx/stop" : "/api/maint/rx/start", { port: c.port });
+    const r = await api.post(on ? "/api/maint/rx/stop" : "/api/maint/rx/start", { port: c.port });
     if (!on) toast(`${c.port} の受信を始めました。測定器のボタンを押してください`, "ok");
+    if (r && r.warning) toast(r.warning, "warn");
   } catch (e) { toastError(e); }
   rxPoll();
 }
