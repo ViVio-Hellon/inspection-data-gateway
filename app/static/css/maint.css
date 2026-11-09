@@ -247,15 +247,17 @@
 .rx { display: flex; flex-direction: column; gap: 12px; }
 .rx__cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
 .rx__card { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; border-left: 6px solid var(--rxc); min-width: 0; }
+/* 2026-11-09: 値は 1 行で出す。カードの幅に合わせて字の大きさを決める(DT10001+0000025.05M の 20 字が収まる) */
+.rx__card { container-type: inline-size; }
 .rx--uw { --rxc: #2f7fd6; } .rx--ddm { --rxc: #d98a1c; } .rx--com { --rxc: #6b7f8c; }
 .rx__chead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rx__kname { font-size: var(--fs-md, 1rem); }
 .rx__port { color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
-/* 2026-11-09: 受けた値はネオン表示(all-tools 日報の集計・グラフと同じ色・ほのかな発光)。長い値は折り返して見切れさせない */
-.rx__big { font-family: var(--mono); font-size: 1.7rem; font-weight: 800; line-height: 1.2;
+/* 2026-11-09: 受けた値はネオン表示(all-tools 日報の集計・グラフと同じ色・ほのかな発光)。1 行で出す */
+.rx__big { font-family: var(--mono); font-size: clamp(0.9rem, 7.2cqi, 2rem); white-space: nowrap; font-weight: 800; line-height: 1.2;
   padding: 8px 12px; border-radius: 8px; background: #060a1e; color: #00ffcc;
   text-shadow: 0 0 6px currentColor; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
-  overflow-wrap: anywhere; word-break: break-all; min-width: 0; }
+  overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rx__meta { color: var(--muted); font-size: var(--fs-xs); }
 .rx__err { margin: 0; padding: 6px 8px; border-radius: 4px; background: var(--warn-bg); color: var(--state-error); font-weight: 700; font-size: var(--fs-sm); white-space: pre-line; }
 .rx__ops { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }

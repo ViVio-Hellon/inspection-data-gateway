@@ -48,7 +48,7 @@ from . import (calibration, checks, datasource, grid, input_router, judge, layou
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
 from . import lot_watch, nippou_export, shadow, worker_archive
 from . import reasons as reason_master
-from .model import Face, FormTag, Switch, bad_name, ken_h_name
+from .model import CellKey, Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
@@ -1920,7 +1920,15 @@ class Session:
                 return None
             # 2026-11-09(意図した差異。docs/06): 測定値が 1 つも無ければ、残すものが無いので履歴の保存を求めずに新規へ。
             # VBA は保存用・耳用にロットが無いと「該当LotNoが保存されていません」で止めていた(Lot登録だけで測っていなくても)
-            measured = any(c.value != "" for c in st.cells.values()) or any(z.value != "" for z in st.strain_z.values())
+            # 2026-11-09(続き): 数えるのは測定表の欄(S1〜F14)と歪の数値だけ。空白・見出しの文字・"0.00" だけの歪は数えない
+            def _num(v: str) -> bool:
+                t = str(v or "").strip()
+                return any(ch.isdigit() and ch != "0" for ch in t)
+            hits = [k for k, c in st.cells.items() if CellKey.parse(k) is not None and str(c.value or "").strip()]
+            hits += [f"歪{k}" for k, z in st.strain_z.items() if _num(z.value)]
+            measured = bool(hits)
+            if measured:
+                self._log("UFKen" + "*新規検査: 測定値あり " + ",".join(hits[:10]))
             found = not measured
             for sheet in (HOZON, MIMI) if measured else ():
                 rows = wiring.sheet_rows(self.store, sheet) or []
@@ -1928,7 +1936,8 @@ class Session:
                     found = True
                     break
             if not found:
-                wiring._msg_error(env, st, "該当LotNoが保存されていません", 2, "END")
+                wiring._msg_error(env, st, "該当LotNoが保存されていません"
+                                  + (f"\r\n(測定値があります: {'・'.join(hits[:5])})" if hits else ""), 2, "END")
         # line:
         self._log("UFKen" + "*新規検査実行")
         self.store.add_sheet(line_sheet(records.WORK_SAVE, lname))

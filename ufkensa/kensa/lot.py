@@ -47,7 +47,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import ado_filter, datasource, flow, paths, vbx
 from .model import UiValues
-from .flow import ERROR, INFO, Message
+from .flow import ERROR, INFO, WARN, Message
 
 TABLE = "仕掛"
 VC_TABLE = "VC厚"
@@ -572,6 +572,11 @@ class _Rs:
         return "" if v is None else v
 
 
+def _half(s: str) -> str:
+    """全角の英数記号を半角に(０．５ → 0.5、＋ → +)。"""
+    return "".join(chr(ord(c) - 0xFEE0) if 0xFF01 <= ord(c) <= 0xFF5E else c for c in (s or ""))
+
+
 def _select_lot(file_path: str, cb_text: str) -> tuple[list[str], Optional[tuple]]:
     """`SELECT * FROM 仕掛 WHERE ﾛｯﾄ番号 = '<CB>' AND ｵｰﾀﾞｰ板丈 <> '0'` の先頭行(SaveLoad:120-125)。
 
@@ -735,12 +740,17 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
     for key, p_key, m_key, line, pattern in (("板厚", "Ap", "Am", 227, "0.000"),
                                              ("板幅", "Hp", "Hm", 236, "0.0"),
                                              ("板丈", "Tp", "Tm", 245, "0.0")):
-        op = vbx.val(rs.text(f"{key}公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ", f"SaveLoad:{line}"))
-        om = vbx.val(rs.text(f"{key}公差_ｵｰﾀﾞｰ_ﾏｲﾅｽ", f"SaveLoad:{line + 1}"))
-        mp = vbx.val(rs.text(f"{key}公差_製造_ﾌﾟﾗｽ", f"SaveLoad:{line + 2}"))
-        mm = vbx.val(rs.text(f"{key}公差_製造_ﾏｲﾅｽ", f"SaveLoad:{line + 3}"))
+        raw = [rs.text(f"{key}公差_{k}", f"SaveLoad:{line + i}")
+               for i, k in enumerate(("ｵｰﾀﾞｰ_ﾌﾟﾗｽ", "ｵｰﾀﾞｰ_ﾏｲﾅｽ", "製造_ﾌﾟﾗｽ", "製造_ﾏｲﾅｽ"))]
+        # 2026-11-09: 全角の数字・記号(０．５・＋)も読む(VBA の Val は全角を 0 にする)
+        op, om, mp, mm = (vbx.val(_half(x)) for x in raw)
         if op == 0 or om == 0:
             op, om = mp, mm
+        if op == 0 and om == 0:
+            # 2026-11-09: 公差が 0(下限 = 上限)になるときは、台帳の値をそのまま知らせる(原因を見つけるため)
+            out.messages.append(Message(
+                f"{key}の公差が 0 になります(下限と上限が同じ)。仕掛台帳の値: "
+                f"ｵｰﾀﾞｰ +{raw[0]!r} -{raw[1]!r} / 製造 +{raw[2]!r} -{raw[3]!r}", WARN, source="SaveLoad:227"))
         f[p_key] = vbx.fmt(op, pattern)
         f[m_key] = vbx.fmt(om, pattern)
 
