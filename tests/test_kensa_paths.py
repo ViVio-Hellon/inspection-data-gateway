@@ -437,11 +437,13 @@ class SettingsApiTest(_Saved):
 class JudgeImagesTest(_Saved):
     """2026-11-09: 判定の画像(VBA の UFOK / UFNG / UF対角 の絵)。空・ファイルが無いときは出さない。"""
 
-    def test_unset_gives_nothing(self) -> None:
+    def test_unset_gives_bundled_vba_pictures(self) -> None:
+        # 2026-11-09: 空なら同梱の VBA の絵(UFOK / UFNG / UF対角 から取り出したもの)を出す
         from ufkensa.kensa import judge_images
         paths.set_path("judge_images", "")
-        self.assertEqual(judge_images.available(), {"ok": [], "ng": [], "diag": []})
-        self.assertIsNone(judge_images.find("ok", "OK.jpg"))
+        self.assertEqual(judge_images.available(), {"ok": ["OK.jpg"], "ng": ["NG.jpg"],
+                                                    "diag": [f"対角{i}.jpg" for i in range(1, 6)]})
+        self.assertIsNotNone(judge_images.find("ok", "OK.jpg"))
 
     def test_fixed_names_and_check(self) -> None:
         from ufkensa.kensa import judge_images
@@ -449,7 +451,8 @@ class JudgeImagesTest(_Saved):
         (self.d1 / "対角2.png").write_bytes(b"\x89PNG")
         (self.d1 / "other.jpg").write_bytes(b"\xff\xd8\xff")
         paths.set_path("judge_images", str(self.d1))
-        self.assertEqual(judge_images.available(), {"ok": ["ok.JPG"], "ng": [], "diag": ["対角2.png"]})
+        # 置いた画像を優先し、無い種類(NG)は同梱の絵
+        self.assertEqual(judge_images.available(), {"ok": ["ok.JPG"], "ng": ["NG.jpg"], "diag": ["対角2.png"]})
         self.assertIsNone(judge_images.find("ok", "other.jpg"))       # 決まった名前のものだけ配る
         self.assertIsNotNone(judge_images.find("diag", "対角2.png"))
         r = paths.check("judge_images")

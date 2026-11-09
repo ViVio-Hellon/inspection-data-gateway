@@ -62,7 +62,8 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
 
 #: 画像の種類 → (使用パスの項目, その下のフォルダ)。VC 画像は SaveLoad.VC_Picture(PackingPath\VC種類画像)。
 #: 包装仕様書は /api/kensa/pack_image(いま出している UF_PackNo の画像だけ。全ヵ所・キャスクと同じ packing.py)
-PICTURES: dict[str, tuple[str, str]] = {"vc": ("packing", "VC種類画像")}
+#: 画像の種類 → 使用パスの項目(2026-11-09: 設定の「VC種類画像」を見る。空なら 参照用ファイル\\VC種類画像)
+PICTURES: dict[str, str] = {"vc": "vc_images"}
 
 MSG_NOT_READY = "この操作はまだ結合中です(工程 8c)。いまは VBA の UF検査判定.xlsm を使ってください。"
 
@@ -83,10 +84,16 @@ def picture(kind: str, name: str):
     safe = Path(name).name
     if safe != name or not safe.lower().endswith((".jpg", ".jpeg")):
         return jsonify({"error": {"code": "bad_value", "message": "画像の名前が正しくありません"}}), 400
-    key, sub = PICTURES[kind]
-    f = paths.to_local(paths.join(paths.get(key), sub, safe))
+    folder = paths.to_local(paths.get(PICTURES[kind]))
+    f = folder / safe
     if not f.is_file():
-        return jsonify({"error": {"code": "not_found", "message": f"画像がありません: {safe}"}}), 404
+        # 2026-11-09: 名前の大文字・小文字(VE-20NF.JPG / VE-20NF.jpg)が違っても同じ画像として探す
+        try:
+            f = next((c for c in folder.iterdir() if c.name.casefold() == safe.casefold() and c.is_file()), f)
+        except OSError:
+            pass
+    if not f.is_file():
+        return jsonify({"error": {"code": "not_found", "message": f"画像がありません: {safe}(探した場所: {folder})"}}), 404
     return send_file(f, mimetype="image/jpeg", max_age=60)
 
 
