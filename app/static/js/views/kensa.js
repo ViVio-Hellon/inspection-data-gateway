@@ -360,8 +360,20 @@ function renderKenH(v) {
     items.push(t);
   }
   if (v.ken_count_visible) {
-    items.push(el("table", { class: "mgrid" }, el("tr", {}, el("th", { class: "rowh", textContent: "検査回数" }),
-      inputTd({ value: v.ken_count, visible: true }, "KenCount"), el("th", { textContent: "回" }))));
+    // 2026-11-10: 少枚数(厚板の検番 H)で枚数があるのに検査回数が無いと、測定はサーバで止まる
+    // (input_router.ken_count_missing「検査回数を入れてください」)。同じ決まりで、欄を「必須」に見せる
+    const thick = (v.header.works || []).find((w) => w.key === "厚板") || {};
+    const sheets = (v.ken_h.find((c) => c.no === 7) || {}).value || "";
+    const required = v.header.work === "少枚数" && thick.caption === "H" && sheets !== "" && !(Number(v.ken_count) >= 1);
+    const td = inputTd({ value: v.ken_count, visible: true }, "KenCount");
+    if (required) {
+      td.dataset.required = "1";
+      const inp = td.querySelector("input");
+      if (inp) { inp.required = true; inp.placeholder = "必須"; inp.setAttribute("aria-invalid", "true"); }
+    }
+    items.push(el("table", { class: "mgrid" }, el("tr", {},
+      el("th", { class: "rowh", textContent: required ? "検査回数(必須)" : "検査回数" }),
+      td, el("th", { textContent: "回" }))));
   }
   $("kenhBoxes").replaceChildren(...items);
   text($("kenFormula"), [v.ken_h_label && `検入 ${v.ken_h_label}`, v.ken_formula].filter(Boolean).join("  "));

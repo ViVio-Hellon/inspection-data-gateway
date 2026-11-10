@@ -244,6 +244,9 @@ class KensaState:
     line_option: str = ""         # ライン OptionButton(L1Work/LVC/HVC/Tott/Bala/Test/Maru のどれが True か)
     ken_no_caption: str = ""      # KenNo.Caption(検査番号の全体)
     reien: str = ""               # Reien.Caption(冷延表示 "H_2HI" など。LSelect でだけ設定)
+    #: 2026-11-10(第3段の続き 3): 検番の頭(Atu_OPselect の KenNo。FormRelat:6249-6273)。DB の検査番号の頭、
+    #: それが "0"/空なら最終圧延機から作った頭(補助.FindPriority)。薄板の次に入れる欄・厚2/4ヵ所・検入で使う
+    ken_head: str = ""
     comment: str = ""             # Comment.Caption
     youto: str = ""               # Youto(用途コード)
     zai: str = ""                 # Zai(材質)

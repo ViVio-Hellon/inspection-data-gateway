@@ -1100,7 +1100,7 @@ class RealHooks(Hooks):
         grid.fm_clear(state, "Click")
         state.auto = Switch.ON
         apply_judge(state, judge.looking_yellow(to_judge_form(state)), env)
-        input_router.next_blank(state, vbx.left(state.ken_no_caption, 1))     # 作業ごとの印(UF1:4367-4375)
+        input_router.next_blank(state, input_router.ken_no_for_input(state))     # 作業ごとの印(UF1:4367-4375)
         if state.is_work("薄板") and state.yama_visible and state.yama == "":
             env.messages.append(Message("山数の入力がありません" + "\r\n" + "選択してください", WARN, source="UF1:4385"))
             return

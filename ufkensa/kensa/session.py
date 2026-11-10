@@ -348,7 +348,7 @@ class Session:
             if st.lot != "" and st.work != "" and st.inp_tag == "" and st.auto == Switch.ON:
                 # 開き直した直後も「次に測る」を出す(VBA は InpTag を保存しないので空だった。値は続きの欄に入っていた)
                 try:
-                    input_router.next_blank(st, vbx.left(st.ken_no_caption, 1))
+                    input_router.next_blank(st, input_router.ken_no_for_input(st))
                 except Exception:                                       # noqa: BLE001 - 表示だけなので止めない
                     log.warning("次に測る欄を出せませんでした", exc_info=True)
             self._prune_workers()                 # 持ち越しの検査が無ければ、前の直の検査員は残さない
@@ -470,6 +470,7 @@ class Session:
         st.lot = ""
         st.yama = ""
         st.ken_no_caption = ""
+        st.ken_head = ""                     # 2026-11-10: 作った検番の頭も前のロットを残さない
         for n in ("HizCome", "QF", "LastHot", "dataLoding", "DebugTaikaku", "DebugLate"):
             st.v(n).value = ""
         st.v("HizCome").tag = ""
@@ -881,6 +882,9 @@ class Session:
             if i == 7:
                 v = value if vbx.is_numeric(value) else ""
                 st.ken_h[7].value = vbx.fmt(v, "0") if v != "" else ""
+                if input_router.ken_count_missing(st):
+                    # 2026-11-10: 枚数を入れたら、検査回数も入れるよう知らせる(入れるまで測定は止まる)
+                    env.messages.append(Message(input_router.KEN_COUNT_MISSING, WARN, source="KenHBox7_AfterUpdate"))
             else:
                 st.ken_h[i].value = vbx.fmt(value, "0.0")
                 hooks.calculate_sheets(st, vbx.val(st.atu))
@@ -1994,7 +1998,7 @@ class Session:
         self.packing_info = {"no": "", "form": "", "comment": ""}
         self.calibration_required = False
         st.amin = st.amax = st.hmin = st.hmax = st.tmin = st.tmax = ""
-        st.flatnes_text = st.conductiv_text = st.comment = st.reien = st.ken_no_caption = st.additional = ""
+        st.flatnes_text = st.conductiv_text = st.comment = st.reien = st.ken_no_caption = st.ken_head = st.additional = ""
         for n in ("flatnes", "QF", "LastHot", "dataLoding", "KenH", "HizCome"):
             st.v(n).value = ""
         st.v("HizCome").tag = ""

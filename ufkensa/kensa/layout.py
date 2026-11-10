@@ -130,6 +130,19 @@ def lookup_ken_no(state: KensaState, hooks: Hooks) -> str:
     return ""
 
 
+def thin_ken_no(state: KensaState, hooks: Hooks) -> str:
+    """薄板の 厚2/4ヵ所(AtCountSelect)・検入(InspectionSelect)の検番の頭。
+
+    2026-11-10(第3段の続き 3): VBA(FormRelat:1985 / 2219)は DB の検査番号の頭だけを見て、"0"/空のとき
+    FindPriority で作った頭(Atu_OPselect・LSelect が作る)を使わない。そのとき 厚4ヵ所 で 3・4 行目が出ない。
+    作った頭(state.ken_head)があればそれを使う(LSelect の非キャッシュ部 FormRelat:2700-2708 と同じ)。
+    """
+    ken_no = lookup_ken_no(state, hooks)
+    if ken_no in ("0", "") and state.ken_head not in ("0", ""):
+        return state.ken_head
+    return ken_no
+
+
 def clear_lselect_cache(state: KensaState) -> None:
     """FormRelat.ClearLSelectCache (FormRelat:2568-2577)。新規検査で呼ぶ。"""
     c = state.cache
@@ -309,7 +322,7 @@ def at_count_select(state: KensaState, n: int, hooks: Hooks) -> None:
     B59: 検番 T・山数 4 のとき F 列は Visible を 2 回設定し Enabled を設定しない(VBA。G1 §0-3-6)。
     直す: 2 回目の Visible を Enabled の意図とみなし、F3/F4 も Enabled にする。
     """
-    ken_no = lookup_ken_no(state, hooks)
+    ken_no = thin_ken_no(state, hooks)
     f = ken_flags(state, ken_no)
     if n == 2:
         state.at_count = "厚2ヵ所検査中"
@@ -361,7 +374,7 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
 
     "非表示" = 検入≦25(C 列を消す。InspeButt は "検入≧26" を表示)、"表示" = 検入≧26。
     """
-    ken_no = lookup_ken_no(state, hooks)
+    ken_no = thin_ken_no(state, hooks)
     f = ken_flags(state, ken_no)
     yama = state.yama
     if n == "非表示":
@@ -1103,6 +1116,7 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
     msgs = msgs if msgs is not None else []
     ken_no = ""
     new_atu = 0.0
+    state.ken_head = ""
     if atu != 0:
         hi_acc = hooks.arrbox(state, "SIKALOTNOW.accdb", "板", "Fields")
         ord_atu = _field_no(hi_acc, "ｵｰﾀﾞｰ板厚")
@@ -1143,6 +1157,10 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
                 msgs.append(Message("データ上にまだ検査番号がありません" + "\r\n" + "(一部動作しない機能があります)",
                                     INFO, source="FormRelat:6290"))
                 state.comment = ""
+        # 2026-11-10(第3段の続き 3): VBA はここで作った検番の頭(KenNo)を作業選択ボタンの Caption にしか使わず、
+        # 次に入れる欄(INP_Change は Reien、UserForm_Click は KenNo.Caption の頭)と 厚2/4ヵ所・検入(DB の頭)は
+        # "0"/空のまま見ていた。薄板はそれで「検番なし」や、どの位置にも当たらない(すぐ検査済)になった。覚えて使う
+        state.ken_head = ken_no
     # SkipA: ラベル・フレームの表示を戻す(For Each MyCtrl In UF1.Controls)
     for name, c in state.iter_cells():
         if len(name) == 2:
