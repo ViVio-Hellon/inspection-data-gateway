@@ -266,6 +266,31 @@ class EndToEndTest(SessionBase):
         self.assertIn("該当LotNoが保存されていません", r.stop.text)
 
 
+    def test_new_with_zero_only_cells_counts_as_unmeasured(self) -> None:
+        """F7(2026-11-10): 測定表の欄も歪と同じく数値だけを数える。"0.00"・空白・文字だけの欄は測ったうちに入れない。"""
+        self.register()
+        self.s.state.cells["S1"].value = "0.00"
+        self.s.state.cells["S2"].value = "  "
+        self.s.state.strain_z["S"].value = "0.00"
+        r = self.s.new_inspection({"new": True})
+        self.assertIsNone(r.stop, r.stop and r.stop.text)
+        self.assertEqual(self.s.state.lot, "")
+
+    def _needs_history(self, cell: str, strain: str) -> None:
+        self.register()
+        self.s.state.cells["S1"].value = cell
+        self.s.state.strain_z["S"].value = strain
+        r = self.s.new_inspection({"new": True})
+        self.assertIsNotNone(r.stop)
+        self.assertIn("該当LotNoが保存されていません", r.stop.text)
+
+    def test_new_with_nonzero_cell_needs_history(self) -> None:
+        self._needs_history("0.012", "")
+
+    def test_new_with_nonzero_strain_needs_history(self) -> None:
+        self._needs_history("", "1.50")
+
+
 class NgTest(SessionBase):
     def test_ng_value(self) -> None:
         s = self.s

@@ -50,7 +50,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import (calibration, checks, datasource, grid, input_router, instruments, judge, layout, legacy_log, lines,
                lot as lotmod, paths, quality, records, vbx, workers)
-from . import model, shadow
+from . import ado_filter, model, shadow
 from .model import CellKey, EXTREME, FormTag, NORMAL, Switch, Verdict, set_verdict, bad_name, diag_name, ken_h_name, kou_name, visual_under_name, visual_up_name
 from .. import trace
 from . import sound as snd
@@ -922,12 +922,16 @@ class RealHooks(Hooks):
             # D26 改: 時刻窓・PLEASE WAIT は見ない(ReadCheck = 手元へ写せたか だけ)
             if lotmod.read_check(file_path, 1) is False:
                 file_path = lotmod.db_path(nxt, target)
+                if lotmod.read_check(file_path, 1) is False and lotmod.other_base():
+                    # F2(2026-11-10): オフラインで第2にファイルが無ければ第1を見る(arrbox と同じ)
+                    file_path = lotmod.db_path(lotmod.other_base(), target)
                 if lotmod.read_check(file_path, 1) is False:
                     return False, None
-        flt = "[ﾛｯﾄ番号]='" + lot + "'"
+        flt = "[ﾛｯﾄ番号]='" + ado_filter.quote(lot) + "'"
         rows = datasource.get_records(file_path, lotmod.TABLE, flt)
         if rows is None and file_path == lotmod.db_path(main, target):
             # D26(ロットごとの第2): 第1の SIKAHIKI にロットが無ければ第2(控え)を見る
+            # (オフラインは第1。other_base。F2 2026-11-10)
             rows, _second = lotmod.lot_from_second(target, flt, file_path)
         elif file_path == lotmod.db_path(main, target):
             rows, _added = lotmod.merge_hiki_from_second(rows, flt, file_path)   # 2026-11-08: 足りない引当

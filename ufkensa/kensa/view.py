@@ -17,6 +17,24 @@ from . import grid
 from .model import Switch
 from .grid import KensaState
 
+#: 2026-11-10(リファクタリング 第1段 3): 検査画面に渡す view の一番上の名前の一覧(受け渡しの約束)。
+#: 画面(app/static/js/views/kensa.js)は足りない名前を黙って空にするので、名前のずれ(F6 の形)に気づきにくい。
+#: 名前を足す・変えるときは、ここも直す(tests/test_view_contract.py が build・session と kensa.js を照らす)
+#: BASE_KEYS は build が作る名前、EXTRA_KEYS は session(Session._extra / _extra_more)が足す名前
+BASE_KEYS = frozenset({
+    "header", "tolerance", "grid", "strain", "bh", "bad", "ken_h", "ken_count", "visual", "next", "minmax", "blind",
+})
+EXTRA_KEYS = frozenset({
+    # Session._extra
+    "lot_source", "workers", "worker_time", "checks", "print_ready", "confi", "calibration_required", "report",
+    "proofread", "range",
+    # Session._extra_more
+    "lists", "cb_choices", "yama_lb", "ken_hl", "ken_formula", "ken_h_label", "ken_count_visible", "visual_caps",
+    "order", "pack", "vc", "buttons", "worker_needed", "name_list", "bh_note", "strain_note", "inp_tag",
+    "strain_frame", "taik_text", "strain_tol",
+})
+VIEW_KEYS = BASE_KEYS | EXTRA_KEYS
+
 _ROW_LABEL = {**{r: f"AL{r}" for r in range(1, 5)}, **{r: f"L{r - 4}" for r in range(5, 11)},
               11: "L7", 12: "L8", 13: "L12", 14: "L13"}
 

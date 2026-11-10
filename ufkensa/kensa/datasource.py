@@ -270,6 +270,12 @@ def _read(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]
 #: 第1の仕掛台帳の「ロットの鍵 → 行」(ファイルの場所と更新で覚える)
 _first_index: dict = {}
 
+from . import cache_registry as _cr                       # noqa: E402 - F3: 覚えの一覧(2026-11-10)
+_cr.register_dict("datasource._table_cache", _table_cache)
+_cr.register_dict("datasource._lot_ready", _lot_ready)
+_cr.register_dict("datasource._first_index", _first_index)
+_cr.register_dict("datasource._eq_index", _eq_index)
+
 
 def fill_from_first(db: Union[str, Path], cols: list[str], rows: list, added: list[str]) -> list:
     """2026-11-09(ご依頼): 第2(控え)の仕掛台帳に無い列(公差・品質ｸﾞﾚｰﾄﾞなど)を、第1の同じロットの行で補う。

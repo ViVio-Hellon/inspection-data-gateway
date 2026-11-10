@@ -110,19 +110,34 @@ function renderForm(v) {
     b.addEventListener("click", () => op("form", { name: "YamaLB", value: y }));
     return b;
   }));
-  $("kenh").replaceChildren(...f.kenh.filter((k) => k.visible).map((k) => {
-    const lab = el("label", "", k.n === 7 ? "枚数" : `${k.caption || k.n}`);
-    const i = el("input", "input");
-    i.value = k.value; i.dataset.name = `KenHBox${k.n}`; i.autocomplete = "off";
-    i.addEventListener("change", () => op("form", { name: i.dataset.name, value: i.value }));
-    lab.append(i, el("small", "muted", k.n === 7 ? "枚" : "mm"));
-    return lab;
-  }));
+  renderKenh(f.kenh.filter((k) => k.visible));
   $("formula").textContent = f.takasa_formula ? `高さ計算式: ${f.takasa_formula}` : "";
   $("ainputLink").hidden = !v.ainput;
   if (v.ainput) {
     $("ainputLink").textContent = `Aインプットへ(${v.ainput.kind} ${v.ainput.method})`;
     $("ainputLink").href = `/ainput?from=${encodeURIComponent(v.ainput.kind)}&method=${encodeURIComponent(v.ainput.method)}`;
+  }
+}
+
+// F5(2026-11-10): 検入高さの欄は、並び(番号・見出し)が変わったときだけ作り直す。打っている途中の欄は値も触らない
+function renderKenh(list) {
+  const box = $("kenh");
+  const sig = JSON.stringify(list.map((k) => [k.n, k.caption]));
+  const typing = box.contains(document.activeElement);
+  if (box.dataset.sig !== sig && !typing) {
+    box.replaceChildren(...list.map((k) => {
+      const lab = el("label", "", k.n === 7 ? "枚数" : `${k.caption || k.n}`);
+      const i = el("input", "input");
+      i.dataset.name = `KenHBox${k.n}`; i.autocomplete = "off";
+      i.addEventListener("change", () => op("form", { name: i.dataset.name, value: i.value }));
+      lab.append(i, el("small", "muted", k.n === 7 ? "枚" : "mm"));
+      return lab;
+    }));
+    box.dataset.sig = sig;
+  }
+  for (const k of list) {
+    const i = box.querySelector(`input[data-name="KenHBox${k.n}"]`);
+    if (i && document.activeElement !== i) i.value = k.value ?? "";
   }
 }
 

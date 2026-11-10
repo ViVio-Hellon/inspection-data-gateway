@@ -323,6 +323,83 @@ class PerLotTest(_Saved):
         self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
         self.assertEqual(r.new_rows, base.new_rows)
 
+    def test_history_save_offline_reads_first(self) -> None:
+        """F1(2026-11-10): オフラインの履歴保存も arrbox と同じく、第2に無い引当・オーダーは第1を見に行く。"""
+        self.use(paths.OFFLINE)
+        ph = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T"), check_equipment=_ok).past_hiki
+        sheet = [list(lot.HISTORY_HEADER)]
+        base = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(base.completed)
+        self.assertEqual(base.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
+        # 第2の SIKAHIKI にロットが無い → 第1
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(r.messages, [])
+        self.assertTrue(r.completed)
+        self.assertEqual(r.file_path, str(self.d1) + "/SIKAHIKI.sqlite3")
+        self.assertEqual(r.new_rows, base.new_rows)
+        # 第2に SIKAHIKI のファイルが無い → 第1
+        (self.d2 / "SIKAHIKI.sqlite3").unlink()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(r.completed)
+        self.assertEqual(r.file_path, str(self.d1) + "/SIKAHIKI.sqlite3")
+        self.assertEqual(r.new_rows, base.new_rows)
+        # 第1にも無い → 「ありません」(今までどおり)
+        (self.d1 / "SIKAHIKI.sqlite3").unlink()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAHIKINOW")])
+        self.assertFalse(r.completed)
+
+    def test_history_save_offline_odr_from_first(self) -> None:
+        """F1: オフラインで第2の SIKAODR が空なら第1の SIKAODR(_odr_fallback)。"""
+        self.use(paths.OFFLINE)
+        ph = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T"), check_equipment=_ok).past_hiki
+        sheet = [list(lot.HISTORY_HEADER)]
+        base = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        with sqlite3.connect(self.d2 / "SIKAODR.sqlite3") as c:
+            c.execute('DELETE FROM "仕掛"')
+        c.close()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(r.messages, [])
+        self.assertTrue(r.completed)
+        self.assertEqual(r.new_rows, base.new_rows)
+        # 第1に SIKAODR が無い → 「ありません」
+        (self.d1 / "SIKAODR.sqlite3").unlink()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAODRNOW")])
+        self.assertFalse(r.completed)
+
+    def test_atu_hiki_records_offline_reads_first(self) -> None:
+        """F2(2026-11-10): 厚の作業選択の引当の読みも、オフラインは第2に無ければ第1。LotNo は quote を通す。"""
+        from types import SimpleNamespace
+        from ufkensa.kensa import wiring
+        st = SimpleNamespace(dbflag="")
+        self.use(paths.OFFLINE)
+        found, base = wiring.RealHooks.atu_hiki_records(None, st, "H2500K0")
+        self.assertTrue(found)
+        self.assertTrue(base)
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (True, base))
+        (self.d2 / "SIKAHIKI.sqlite3").unlink()
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (True, base))
+        (self.d1 / "SIKAHIKI.sqlite3").unlink()
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (False, None))
+
+    def test_atu_hiki_records_online_and_quote(self) -> None:
+        from types import SimpleNamespace
+        from ufkensa.kensa import wiring
+        st = SimpleNamespace(dbflag="")
+        self.use(paths.ONLINE)
+        found, base = wiring.RealHooks.atu_hiki_records(None, st, "H2500K0")
+        self.assertTrue(found and base)
+        # 絞り込みの値は arrbox と同じく ado_filter.quote を通す(quote は VBA どおり囲み直しはしない。
+        # ' を含む LotNo はロット登録 acc_reflec が先に断る SaveLoad:120)
+        with mock.patch.object(wiring.ado_filter, "quote", wraps=wiring.ado_filter.quote) as q:
+            wiring.RealHooks.atu_hiki_records(None, st, "H2500K0")
+        q.assert_called_with("H2500K0")
+        self.delete(self.d1, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (True, base))   # 今までどおり第2
+
     def test_sika_atu_create_from_second(self) -> None:
         self.use(paths.ONLINE)
         base = lot.sika_atu_create("H2500K0")
@@ -513,3 +590,61 @@ class JudgeImagesTest(_Saved):
         saved = user_settings.get(paths.KEY_PATHS)[paths.KEY_ITEMS]
         self.assertNotIn("judge_images", saved)                                  # 1 回だけ
         self.assertEqual(judge_images.available()["diag"], [f"judge_diag{i}" for i in range(1, 6)])
+
+
+# ------------------------------------------------------------------
+class SettingsCacheTest(_Saved):
+    """第1段 2(2026-11-10): パスを引くたびに設定ファイルを読み直さない。保存・外からの書き換えは次の呼び出しで効く。"""
+
+    def count_reads(self):
+        from ufkensa import safe_io
+        return mock.patch.object(safe_io, "read_json_or_absent", wraps=safe_io.read_json_or_absent)
+
+    def test_reads_once_until_changed(self) -> None:
+        self.use(paths.ONLINE)
+        first = paths.get("main")
+        with self.count_reads() as rd:
+            for _ in range(20):
+                self.assertEqual(paths.get("main"), first)
+                paths.get("quality")
+                paths.mode()
+        self.assertEqual(rd.call_count, 0)
+
+    def test_save_is_seen_next_call(self) -> None:
+        self.use(paths.ONLINE)
+        self.assertEqual(paths.get("main"), str(self.d1) + "/")
+        self.use(paths.OFFLINE)                                   # user_settings.save で捨てる
+        self.assertEqual(paths.mode(), paths.OFFLINE)
+        self.assertEqual(paths.get("main"), str(self.d2) + "/")
+        paths.set_path("quality", str(self.d2) + "/")
+        self.assertEqual(paths.get("quality"), str(self.d2) + "/")
+
+    def test_external_write_is_seen(self) -> None:
+        """ほかのプロセスが設定ファイルを書き換えても(印が変わるので)次の呼び出しで読み直す。"""
+        import json
+        from ufkensa import config
+        self.use(paths.ONLINE)
+        self.assertEqual(paths.mode(), paths.ONLINE)
+        data = json.loads(config.USER_CONFIG_PATH.read_text(encoding="utf-8"))
+        data[paths.KEY_MODE] = paths.OFFLINE
+        data["_pad"] = "x" * 7                                   # 大きさも変える(更新時刻の粗いファイルシステム向け)
+        config.USER_CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(paths.mode(), paths.OFFLINE)
+
+    def test_returned_values_are_copies(self) -> None:
+        self.use(paths.ONLINE)
+        d = paths._saved()                                      # noqa: SLF001
+        d[paths.KEY_LOT][paths.FIRST] = "壊す"
+        self.assertEqual(paths.get("main"), str(self.d1) + "/")
+
+    def test_unreadable_is_not_remembered(self) -> None:
+        from ufkensa import safe_io
+        self.use(paths.ONLINE)
+        paths._forget_settings()                                # noqa: SLF001
+        with mock.patch.object(safe_io, "read_json_or_absent", return_value=(safe_io.UNREADABLE, "x")):
+            self.assertEqual(paths.mode(), paths.ONLINE)        # 既定
+        self.use(paths.OFFLINE)
+        paths._forget_settings()                                # noqa: SLF001
+        with mock.patch.object(safe_io, "read_json_or_absent", return_value=(safe_io.UNREADABLE, "x")):
+            paths.mode()
+        self.assertEqual(paths.mode(), paths.OFFLINE)           # 読めなかった結果は覚えていない

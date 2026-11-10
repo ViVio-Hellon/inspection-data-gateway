@@ -29,6 +29,10 @@ _copies: dict[str, tuple[tuple[int, int, int], Path]] = {}
 _checked: dict[str, float] = {}      # 最後に共有フォルダの元を確かめた時刻
 RECHECK_SEC = 5.0
 
+from . import cache_registry as _cr                       # noqa: E402 - F3(2026-11-10)
+_cr.register_dict("lot_copy._copies", _copies, _lock)
+_cr.register_dict("lot_copy._checked", _checked, _lock)
+
 
 def copy_dir() -> Path:
     from .. import app_config

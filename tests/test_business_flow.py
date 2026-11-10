@@ -234,6 +234,61 @@ class ReceiverRoutingTest(FlowBase):
         self.assertEqual(d["results"][-1]["why"], "")
 
 
+    def test_start_returns_last_value_as_received(self) -> None:
+        """F6(2026-11-10): 開いた直後(recv/start)も、取りに来たとき(recv)と同じ名前 received で最後の値を返す。"""
+        from app.routes import kensa as rk
+        self.ready()
+        rk._recv_seen.clear()
+        self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h)
+        rk._to_kensa("DT10001+0000015.012M")
+        d = self.c.post("/api/kensa/recv/start", json={}, headers=self.h).get_json()
+        p = self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h).get_json()
+        self.assertEqual(d["received"]["text"], "DT10001+0000015.012M")
+        self.assertEqual(d["received"], p["received"])
+
+    def test_recv_records_written_under_lock(self) -> None:
+        """F8(2026-11-10): _recv_last・_recv_dropped は _recv_lock を取って書き換える。"""
+        import threading
+        from unittest import mock
+        from app.routes import kensa as rk
+
+        class Tracking:
+            def __init__(self) -> None:
+                self.lock, self.depth = threading.Lock(), 0
+
+            def __enter__(self):
+                self.lock.acquire()
+                self.depth += 1
+                return self
+
+            def __exit__(self, *a):
+                self.depth -= 1
+                self.lock.release()
+
+        lk = Tracking()
+        test = self
+
+        class CheckedDict(dict):
+            def update(self, *a, **k):
+                test.assertGreater(lk.depth, 0, "_recv_last.update を鍵なしで呼んだ")
+                super().update(*a, **k)
+
+        class CheckedInt(int):
+            def __add__(self, o):
+                test.assertGreater(lk.depth, 0, "_recv_dropped を鍵なしで足した")
+                return CheckedInt(int(self) + o)
+
+        self.ready()
+        with mock.patch.object(rk, "_recv_lock", lk), mock.patch.object(rk, "_recv_last", CheckedDict()), \
+                mock.patch.object(rk, "_recv_dropped", CheckedInt(0)):
+            rk._recv_seen.clear()
+            rk._to_kensa("DT10001+0000015.012M")                 # 開いている画面なし → 捨てる
+            self.assertEqual(rk._recv_dropped, 1)
+            self.c.get("/api/kensa/recv?since=0&screen=kensa", headers=self.h)
+            rk._to_kensa("DT10001+0000015.012M")
+            self.assertEqual(rk._recv_last["text"], "DT10001+0000015.012M")
+
+
 class ReceiverChoiceTest(FlowBase):
     def test_cards_used_when_none_checked(self) -> None:
         """2026-11-09: 「検査画面はこれだけ使う」に印が無ければ、保守で足した受信機を使う。保守の受信は止めてから開く。"""
