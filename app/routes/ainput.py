@@ -8,14 +8,13 @@
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template
 
-from ufkensa import trace
 from ufkensa.kensa import ainput_session
-from ufkensa.kensa.flow import Stop
 from ufkensa.logging_utils import get_logger
 
 from ..shell import shell_context
+from . import screen_common
 
 log = get_logger("app.routes.ainput")
 
@@ -48,13 +47,6 @@ def state():
 
 @bp.post("/api/ainput/<op>")
 def operate(op: str):
-    if op not in OPS:
-        return jsonify({"error": {"code": "not_found", "message": "その操作はありません"}}), 404
-    method, names, desc = OPS[op]
-    body = request.get_json(silent=True) or {}
-    kwargs = {n: body[n] for n in names if n in body}
-    s = ainput_session.get()
-    lot = s.form.lot if s.form is not None else None
-    with trace.timed(f"ainput.{op}", f"Aインプット: {desc}", expected=(Stop,), lot=lot or None):
-        result = getattr(s, method)(**kwargs)
-    return jsonify(result.to_dict())
+    return screen_common.operate(op, OPS, ainput_session.get, area="ainput", label="Aインプット",
+                                 trace_fields=lambda s: {"lot": (s.form.lot if s.form is not None else None) or None},
+                                 stop_view=lambda s: s.view())

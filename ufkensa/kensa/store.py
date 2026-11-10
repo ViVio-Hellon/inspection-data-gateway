@@ -201,6 +201,11 @@ class LocalStore:
                 pass
         self._create()
 
+    @property
+    def print_dir(self) -> Path:
+        """印刷した帳票(HTML)を置くフォルダ(手元DB の隣の print)。検査・キャスク・全ヵ所で同じ。"""
+        return self.path.parent / "print"
+
     def close(self) -> None:
         self.conn.close()
 

@@ -14,7 +14,9 @@
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { playMessage } from "../sound.js";
-import { confirmBox, promptBox } from "../askbox.js";
+import { promptBox } from "../askbox.js";
+import { LEVEL_KIND, screenOp } from "../screen_op.js";
+import { fromServer, startReceiver } from "../recv.js";
 import { alarmBox, isAbnormal, showJudgeImage } from "../judgebox.js";
 import { packDialog } from "./pack_dialog.js";
 
@@ -24,8 +26,6 @@ let V = null;
 const pack = packDialog({ imageUrl: "/api/kensa/pack_image", send: (name, body) => op(name, body) });
 const recent = [];
 
-const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
-
 /** サーバの知らせ 1 件。2026-11-09: 異常値は大きな赤い窓(確認を押すまで)、合格・不合格・対角線は判定の画像も出す */
 function showMessage(m) {
   playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
@@ -34,26 +34,12 @@ function showMessage(m) {
   if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");     // 音だけの知らせはトーストを出さない
 }
 
-async function op(name, body = {}, answers = {}) {
-  let res;
-  try {
-    res = await api.post(`/api/kensa/${name}`, { ...body, answers });
-  } catch (e) {
-    toastError(e);
-    return null;
-  }
-  for (const m of res.messages || []) showMessage(m);
-  if (res.view) render(res.view);
-  if (res.question) {
-    const q = res.question;
-    const yes = await confirmBox(q.text, { ok: q.buttons === "okcancel" ? "OK" : "はい",
-                                           cancel: q.buttons === "okcancel" ? "キャンセル" : "いいえ" });
-    return op(name, body, { ...answers, [q.key]: !!yes });
-  }
-  if (res.stop) toast(res.stop.text, "error");
-  if (name === "print-commit" || name === "print-check") announceReport(res.view);
-  return res;
-}
+/* 操作を送る(screen_op.js)。知らせは showMessage、印刷のあとは帳票の案内 */
+const op = screenOp("kensa", {
+  render,
+  showMessage,
+  after: (name, res) => { if (name === "print-commit" || name === "print-check") announceReport(res.view); },
+});
 
 /** 印刷のあと 1 回だけ「帳票を開く」を知らせる(キャスクと同じく /api/…/report/<名前> で開く。サーバのパスは出さない)。 */
 let lastReport = "";
@@ -960,61 +946,27 @@ function initReceiver() {
 }
 
 /* 受信機から直接受け取る(保守で「検査画面でこの受信機から受け取る」を入れたとき)。
-   値はサーバが受け取って検査に渡すので、ここは届いた結果を出すだけ */
-let recvLast = 0, recvOn = false;
-async function handleRecv(r) {
-  remember(`受信機 ${r.text}`);
-  showGridTab();
-  for (const m of r.messages || []) showMessage(m);
-  if (r.view) render(r.view);
-  if (r.question) {                              // 理由などを聞かれたら、答えを付けて同じ値を送り直す
-    const q = r.question;
-    const yes = await confirmBox(q.text, { ok: "はい", cancel: "いいえ" });
-    await op("receive", { text: r.text }, { [q.key]: !!yes });
-  }
-  if (r.stop) toast(r.stop.text, "error");
-  // 2026-11-09: 入らなかった理由を見える所に出す(知らせ・止めで出ていないときもトーストで出す)
-  else if (r.why && !(r.messages || []).some((m) => m.text === r.why)) toast(`受信した値 ${r.text} は入りませんでした: ${r.why}`, "warn");
-}
-async function recvPoll() {
-  try {
-    const vis = document.visibilityState === "visible" ? 1 : 0;
-    const d = await api.get(`/api/kensa/recv?since=${recvLast}&screen=kensa&visible=${vis}`);
-    for (const r of d.results) await handleRecv(r);
-    recvLast = d.last;
-    recvShow(d);
-  } catch (e) { /* 次の回で */ }
-  setTimeout(recvPoll, recvOn ? 400 : 3000);      // 止まっていても状態(理由)は見続ける
-}
-/* 2026-11-09: 受信機の状態・最後に届いた値と時刻・入らなかった理由を出す(「検査できない理由を表示して」) */
-function recvShow(d) {
-  const on = !!(d.running ?? d.on);
-  recvOn = on;
-  $("recvBox").dataset.direct = on ? "1" : "";
-  const why = d.why || "";
-  if (on) {
+   値はサーバが受け取って検査に渡すので、ここは届いた結果を出すだけ(recv.js の startReceiver・fromServer)。
+   2026-11-09: 受信機の状態・最後に届いた値と時刻・入らなかった理由を出す(「検査できない理由を表示して」) */
+function recvShow(st) {
+  $("recvBox").dataset.direct = st.on ? "1" : "";
+  if (st.on) {
     $("recvBox").dataset.on = "1";
-    text($("recvState"), `受信機から直接受信中(${d.port})— カーソルに関係なく入ります`);
-    text($("recvDev"), `受信機 ${d.port}: 受信中`);
+    text($("recvState"), `受信機から直接受信中(${st.port})— カーソルに関係なく入ります`);
+    text($("recvDev"), `受信機 ${st.port}: 受信中`);
   } else {
-    text($("recvDev"), `受信機: 止まっている — ${why || d.error || "理由不明"}(キー入力で受け取ります)`);
-    if ($("recvBox").dataset.direct !== "1") initReceiverShow();
+    text($("recvDev"), `受信機: 止まっている — ${st.why || st.error || "理由不明"}(キー入力で受け取ります)`);
+    initReceiverShow();
   }
-  const last = d.received || {};                  // F6(2026-11-10): サーバは recv / recv/start とも received
+  const last = st.received || {};                 // F6(2026-11-10): サーバは recv / recv/start とも received
   text($("recvLastText"), last.text ? `最後に届いた値 ${last.text}(${last.at})` + (last.screen && last.screen !== "kensa" ? ` → ${last.screen} 画面` : "") : "まだ値は届いていません");
   const rej = last.text && last.screen === "kensa" && last.why ? `入らなかった理由: ${last.why}` : "";
   $("recvWhy").hidden = !rej;
   text($("recvWhy"), rej);
 }
 let initReceiverShow = () => {};
-async function initDirect() {
-  try {
-    const d = await api.post("/api/kensa/recv/start", {});
-    recvShow(d);
-    const p = await api.get("/api/kensa/recv?since=999999999&screen=kensa");
-    recvLast = p.last;                              // 開く前に届いた分は流さない
-    recvPoll();
-  } catch (e) { /* キー入力のまま */ }
+function initDirect() {
+  startReceiver("kensa", fromServer(op, (r) => { remember(`受信機 ${r.text}`); showGridTab(); }), recvShow);
 }
 
 function init() {

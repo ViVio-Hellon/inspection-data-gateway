@@ -590,7 +590,7 @@ class ZenkashoSession(SubInspectionCommon):
         model = report_model.render_defect_sheet(self.store, job.sheet[len(DEFECT_PREFIX):])
         if model is None:
             raise sh.VbaError(9, "インデックスが有効範囲にありません。", f"Sheets({job.sheet})")
-        folder = self._print_dir()
+        folder = self.store.print_dir
         stem = _safe_name(job.sheet)
         with trace.timed("db.save", "不良要因票の HTML", path=str(folder), table=stem) as info:
             files = report_html.save_html_and_pdf(model, folder, stem, None)
@@ -825,9 +825,6 @@ class ZenkashoSession(SubInspectionCommon):
     # ------------------------------------------------------------------
     # 印刷・保存・履歴
     # ------------------------------------------------------------------
-    def _print_dir(self) -> Path:
-        return self.store.path.parent / "print"
-
     def _print_job(self, job: sh.PrintJob, msgs: list[Message]) -> None:
         """PrintJob → 帳票の HTML(D8: ブラウザで開いて印刷)。不良要因印刷_<Line> は手元DB のシートから作る。"""
         if not job.snapshot:
@@ -842,7 +839,7 @@ class ZenkashoSession(SubInspectionCommon):
             return
         lot = sh.cell_str(job.snapshot.get("D2") or "") if job.sheet != "転送済" else ""
         stem = _safe_name(f"{job.sheet}_{lot or self.book.mit.lot_box}")
-        folder = self._print_dir()
+        folder = self.store.print_dir
         with trace.timed("db.save", "帳票の HTML", path=str(folder), table=stem) as info:
             folder.mkdir(parents=True, exist_ok=True)
             p = folder / f"{stem}.html"

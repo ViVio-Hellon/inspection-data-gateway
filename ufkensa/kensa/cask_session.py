@@ -535,16 +535,13 @@ class CaskSession(SubInspectionCommon):
         return []
 
     # -- 印刷・保存 ---------------------------------------------------
-    def _print_folder(self) -> Path:
-        return self.store.path.parent / "print"
-
     def _print(self, job: sh.PrintJob) -> list[Message]:
         """PrintOut の代わり(D8): 帳票の HTML を書き、画面で開く。"""
         book = self.book
         assert book is not None
         ws = book.ws(sh.CASK)
         lot = sh.cell_str(ws.get(2, 4)) or "キャスク"
-        folder = self._print_folder()
+        folder = self.store.print_dir
         stem = "キャスク検査_" + re.sub(r'[\\/:*?"<>|]', "_", lot)
         with trace.timed("db.save", "キャスク検査の帳票(HTML)", path=str(folder), table=stem):
             folder.mkdir(parents=True, exist_ok=True)

@@ -10,48 +10,30 @@
 */
 
 import { api, tokenUrl } from "../api.js";
-import { toast, toastError } from "../toast.js";
-import { playMessage } from "../sound.js";
-import { confirmBox, promptBox } from "../askbox.js";
+import { toastError } from "../toast.js";
+import { promptBox } from "../askbox.js";
+import { screenOp } from "../screen_op.js";
 import { packDialog } from "./pack_dialog.js";
 import { startReceiver } from "../recv.js";
 
 const $ = (id) => document.getElementById(id);
-const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 const recent = [];
 let V = null;
 let lastActive = "";
 let flashTimer = 0;
 let pack = null;            // 包装仕様書の窓(UF_PackNo)
 
-async function op(name, body = {}, answers = {}) {
-  let res;
-  try {
-    res = await api.post(`/api/zenkasho/${name}`, { ...body, answers });
-  } catch (e) {
-    toastError(e);
-    return null;
-  }
-  for (const m of res.messages || []) {
-    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
-    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
-  }
-  if (res.view) render(res.view);
-  if (res.question) {
-    const q = res.question;
-    if (q.buttons === "input") {
-      // 作業選択は「一般」しか使わない(D21)ので、最初から入れておく(Enter だけで開ける。空のまま閉じると VBA どおり止まる)
-      const v = await promptBox(q.text, { value: q.key === "mit_choice" ? "一般" : "" });
-      return op(name, { ...body, choice_input: v ?? "" }, answers);
-    }
-    const yes = await confirmBox(q.text, { ok: q.buttons === "okcancel" ? "OK" : "はい",
-                                           cancel: q.buttons === "okcancel" ? "キャンセル" : "いいえ" });
-    return op(name, body, { ...answers, [q.key]: !!yes });
-  }
-  if (res.stop) toast(res.stop.text, "error");
-  focusMeas();
-  return res;
-}
+/* 操作を送る(screen_op.js)。終わったら測定の欄へ戻す */
+const op = screenOp("zenkasho", {
+  render,
+  // 作業選択は「一般」しか使わない(D21)ので、最初から入れておく(Enter だけで開ける。空のまま閉じると VBA どおり止まる)
+  askInput: async (q) => {
+    if (q.buttons !== "input") return undefined;
+    const v = await promptBox(q.text, { value: q.key === "mit_choice" ? "一般" : "" });
+    return { choice_input: v ?? "" };
+  },
+  after: () => focusMeas(),
+});
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);

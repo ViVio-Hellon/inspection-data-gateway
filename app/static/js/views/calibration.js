@@ -6,34 +6,21 @@
 
 import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
-import { playMessage } from "../sound.js";
+import { screenOp } from "../screen_op.js";
 import { renderRecvStatus, startReceiver } from "../recv.js";
 
 const $ = (id) => document.getElementById(id);
-const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 let V = null;
 // 2026-11-10: 検査員の登録から移ってきた(校正が済んでいない)ときの案内を出す
 const fromWorker = new URLSearchParams(location.search).get("from") === "worker";
 
 function text(el, t) { el.textContent = t ?? ""; }
 
-async function op(name, body = {}) {
-  let res;
-  try {
-    res = await api.post(`/api/calibration/${name}`, body);
-  } catch (e) {
-    toastError(e);
-    return null;
-  }
-  for (const m of res.messages || []) {
-    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
-    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
-  }
-  if (res.view) render(res.view);
-  if (res.stop) toast(res.stop.text, "error");
-  if (res.view && res.view.closed) backToKensa();
-  return res;
-}
+/* 操作を送る(screen_op.js)。合格して閉じたら検査画面へ戻る */
+const op = screenOp("calibration", {
+  render,
+  after: (name, res) => { if (res.view && res.view.closed) backToKensa(); },
+});
 
 /* 校正に合格(F1 = "end")したら、検査の判定をやり直して検査画面へ戻る(UF校正.INPG_Exit) */
 let leaving = false;

@@ -3,6 +3,8 @@
 画面(JS)の動きを本物のブラウザ(Playwright の Chromium)で確かめる。中身は tests/e2e/kensa.spec.js:
 受信機の状態・検査の通し(検査員・ロット・作業・受信機/受信 API の測定・Min/Max・印刷)・公差外の確認の窓・
 サイズ修正の窓・1366×768 のはみ出し・作業範囲の選び欄(F4)・全ヵ所の検入高さ(F5)。
+続けて tests/e2e/screens.spec.js(整理 6): キャスク・全ヵ所・Aインプット・校正を開き、問いのある操作を画面の
+確認窓で答え、受信機の値がその画面に届くこと。
 
 **ふだんは飛ばす。** `UFKENSA_E2E=1` のときだけ動く(node と Playwright・Chromium が要り、1 分ほどかかるため。
 ラインPC・CI に入っていないことがある)。動かし方:
@@ -26,6 +28,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 ENABLED = os.environ.get("UFKENSA_E2E") == "1"
+#: 動かす順(screens.spec.js は kensa.spec.js の後の状態を使う)
+SPECS = ("kensa.spec.js", "screens.spec.js")
 
 
 def _node() -> str:
@@ -76,12 +80,15 @@ class BrowserE2E(unittest.TestCase):
             nenv = dict(os.environ, E2E_BASE=f"http://127.0.0.1:{port}", E2E_PTY=pty_name)
             if os.environ.get("UFKENSA_E2E_SHOTS"):
                 nenv["E2E_SHOTS"] = os.environ["UFKENSA_E2E_SHOTS"]
-            r = subprocess.run([self.node, str(HERE / "kensa.spec.js")], cwd=HERE, env=nenv,
-                               capture_output=True, text=True, timeout=240)
-            out = r.stdout + r.stderr
-            self.assertIn("E2E_RESULT", out, out[-4000:])
-            self.assertEqual(r.returncode, 0, "\n".join(l for l in out.splitlines() if "FAIL" in l or "PAGEERROR" in l
-                                                      or "E2E_RESULT" in l) or out[-4000:])
+            # 順に動かす(screens は kensa で済ませた検査員・ロット・Min/Max・受信機を使う)
+            for spec in SPECS:
+                with self.subTest(spec=spec):
+                    r = subprocess.run([self.node, str(HERE / spec)], cwd=HERE, env=nenv,
+                                       capture_output=True, text=True, timeout=240)
+                    out = r.stdout + r.stderr
+                    self.assertIn("E2E_RESULT", out, out[-4000:])
+                    self.assertEqual(r.returncode, 0, "\n".join(l for l in out.splitlines() if "FAIL" in l or "PAGEERROR" in l
+                                                              or "E2E_RESULT" in l) or out[-4000:])
         finally:
             try:
                 srv.stdin.close()
