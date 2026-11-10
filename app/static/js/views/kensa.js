@@ -713,11 +713,19 @@ function renderRight(v) {
 function renderRange(v) {
   const r = v.range;
   if (!r) return;
+  // F4(2026-11-10): 描き直しのたびに作り直すと、開いた選び欄が閉じ・選んでいる途中で戻る。
+  // 選択肢が変わったときだけ作り直し、選んでいる最中(焦点がある)は触らない
+  const sig = JSON.stringify(r.labels);
   for (const [id, cur] of [["opsSel", r.ops], ["opeSel", r.ope]]) {
     const sel = $(id);
-    sel.replaceChildren(new Option("-", ""),
-      ...r.labels.map((l, i) => (l ? new Option(l, String(i + 1)) : null)).filter(Boolean));
-    sel.value = cur ? String(cur) : "";
+    if (document.activeElement === sel) continue;
+    if (sel.dataset.sig !== sig) {
+      sel.replaceChildren(new Option("-", ""),
+        ...r.labels.map((l, i) => (l ? new Option(l, String(i + 1)) : null)).filter(Boolean));
+      sel.dataset.sig = sig;
+    }
+    const want = cur ? String(cur) : "";
+    if (sel.value !== want) sel.value = want;
   }
 }
 
@@ -980,7 +988,7 @@ function recvShow(d) {
     text($("recvDev"), `受信機: 止まっている — ${why || d.error || "理由不明"}(キー入力で受け取ります)`);
     if ($("recvBox").dataset.direct !== "1") initReceiverShow();
   }
-  const last = d.received || d.last_received || {};
+  const last = d.received || {};                  // F6(2026-11-10): サーバは recv / recv/start とも received
   text($("recvLastText"), last.text ? `最後に届いた値 ${last.text}(${last.at})` + (last.screen && last.screen !== "kensa" ? ` → ${last.screen} 画面` : "") : "まだ値は届いていません");
   const rej = last.text && last.screen === "kensa" && last.why ? `入らなかった理由: ${last.why}` : "";
   $("recvWhy").hidden = !rej;
@@ -990,7 +998,7 @@ let initReceiverShow = () => {};
 async function initDirect() {
   try {
     const d = await api.post("/api/kensa/recv/start", {});
-    recvShow({ ...d, received: d.last });
+    recvShow(d);
     const p = await api.get("/api/kensa/recv?since=999999999&screen=kensa");
     recvLast = p.last;                              // 開く前に届いた分は流さない
     recvPoll();

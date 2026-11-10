@@ -225,8 +225,9 @@ def _to_kensa(text: str) -> None:
     global _recv_seq, _recv_dropped
     with _recv_lock:
         target = _recv_target()
+        if target == "":
+            _recv_dropped += 1                      # F8(2026-11-10): 鍵を取って書き換える
     if target == "":
-        _recv_dropped += 1
         from ufkensa.logging_utils import get_logger
         get_logger(__name__).warning("受信機の値を受け取る画面が開いていないので捨てました: %r", text)
         return
@@ -242,8 +243,8 @@ def _to_kensa(text: str) -> None:
         out = {}
     out["text"], out["screen"] = text, target
     import time as _t
-    _recv_last.update({"text": text, "at": _t.strftime("%H:%M:%S"), "screen": target, "why": why})
     with _recv_lock:
+        _recv_last.update({"text": text, "at": _t.strftime("%H:%M:%S"), "screen": target, "why": why})   # F8
         _recv_seq += 1
         out["seq"] = _recv_seq
         _recv_results.append(out)
@@ -285,6 +286,8 @@ def recv_start():
 def _recv_state(errors=None) -> dict:
     from ufkensa.kensa import comport
     rs = [r for r in comport.receivers() if r["slot"].startswith("kensa:")]
+    with _recv_lock:
+        last = dict(_recv_last)
     on = [r["port"] for r in rs if r["running"]]
     errs = list(errors or []) + [f"{r['port']}: {r['error']}" for r in rs if r["error"]]
     # 2026-11-09: 受け取れないときは「なぜ」を人の言葉で返す
@@ -298,7 +301,8 @@ def _recv_state(errors=None) -> dict:
             why = "受信機が止まっています(保守で受信中なら、保守の受信を止めてからこの画面を開き直してください)"
     return {"on": bool(on), "ports": on, "port": "・".join(on), "error": " / ".join(errs), "why": why,
             "receivers": [{"port": r["port"], "running": r["running"], "error": r["error"]} for r in rs],
-            "last": dict(_recv_last)}
+            # F6(2026-11-10): 最後に届いた値は received(/api/kensa/recv と同じ名前)。last は前の名前(残す)
+            "received": last, "last": last}
 
 
 @bp.get("/api/kensa/recv")
