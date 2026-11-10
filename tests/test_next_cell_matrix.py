@@ -80,9 +80,10 @@ def _thin(s: KensaState, h: MatrixHooks, yama: str, at: int, inspe: str) -> None
     s.yama = yama
     if yama != "":
         layout.yama_change(s, h)
-    if at == 2 and s.at_butt_caption == "厚2ヵ所":
+    # ボタンは出ているときだけ押せる(検番 T・2HI・6mm 超は 厚2/4ヵ所 が無い、山数 3・4 は 検入 が無い)
+    if at == 2 and s.at_butt_visible and s.at_butt_caption == "厚2ヵ所":
         layout.at_butt_click(s, h)                     # → 厚2ヵ所検査中(ボタンは「厚4ヵ所」)
-    if inspe == "le25" and s.inspe_butt_caption == "検入≦25":
+    if inspe == "le25" and s.inspe_butt_visible and s.inspe_butt_caption == "検入≦25":
         layout.inspe_butt_click(s, h)                  # → 検入≦25(ボタンは「検入≧26」)
 
 
