@@ -47,7 +47,7 @@
       <header><h3>公差</h3><span class="lv lv--warn" id="resizeLv" hidden>サイズ修正中</span></header>
       <div class="pad">
         <dl class="kv-grid" id="tolKv"></dl>
-        <div class="tol-edit" id="tolEdit" hidden></div>
+        <button class="btn btn--sm" type="button" id="resizeOpen" hidden>サイズ・公差の修正を開く</button>
         <p class="muted" id="tolNote"></p>
       </div>
     </section>
@@ -66,15 +66,16 @@
         <p class="muted" id="atCount"></p>
       </div>
     </section>
-    <section class="card kmeasure">
+    <section class="card kmeasure kgrid" id="gridCard">
       <header><h3>測定</h3><span class="lv lv--info" id="workLv"></span></header>
       <div class="pad mgrid-wrap" id="mgridWrap" style="overflow-x:auto">
         <table class="mgrid" id="mgrid" aria-label="測定値"></table>
       </div>
     </section>
-    <section class="card kmeasure">
+    <section class="card kmeasure ksub" id="subCard">
       <header class="subtabs-head">
         <div class="subtabs" role="tablist" id="subtabs">
+          <button type="button" role="tab" data-tab="grid" class="subtab--grid" title="画面が低いときだけ出ます。測定表に戻ります">測定表</button>
           <button type="button" role="tab" data-tab="strain" aria-selected="true">歪</button>
           <button type="button" role="tab" data-tab="visual">外観</button>
           <button type="button" role="tab" data-tab="bad">不良</button>
@@ -126,8 +127,6 @@
   <!-- 右(作業を選んだら): 次に測る・チェック・操作 -->
   <div class="kensa__col krail" id="krail">
     <div class="next" id="nextBox"><small>次に測る</small><b id="nextName">-</b><small id="nextHint"></small></div>
-    <button class="btn btn--sm who-toggle" type="button" id="whoToggle" aria-pressed="false"
-            title="測定値の下に、測った検査員と時刻を出します(VBA の WorkerTime シート)。欄にマウスを置いても出ます">測定者と時刻を表示</button>
     <!-- 測定器の伝送を受ける欄。測定器はキーボードと同じく「カーソルのある欄」に打つので、見える所に置き、
          受け取れる状態か(カーソルがあるか)を色で出す。手入力(VBA の隠しモード)は出さない -->
     <label class="recv" id="recvBox" for="measIn"><span class="recv__state" id="recvState">受信待ち</span>
@@ -136,17 +135,33 @@
       <span class="recv__last" id="recvLastText"></span>
       <span class="recv__why" id="recvWhy" role="alert" hidden></span></label>
     <div class="notice" id="nameListBox" hidden></div>
-    <section class="card">
-      <header><h3>印刷前チェック</h3></header>
+    <!-- 2026-11-10: VC は公差と同じく、測定中ずっと見せる(現場の声「VC画像小さい。常時見せて確認させる」)。押すと大きく -->
+    <section class="card vcrail" id="vcRail" hidden>
+      <header><h3>VC</h3><span class="muted vcrail__hint" id="vcRailHint">画像を押すと大きく</span></header>
+      <div class="pad"><div class="vcrail__imgs" id="vcRailImgs"></div></div>
+    </section>
+    <!-- 右の列の残り(操作・公差・チェック・Min/Max)はタブ。縦に並べると 1366x768 で画面からはみ出す -->
+    <section class="card rtabs" id="rtabs">
+      <header class="subtabs-head">
+        <div class="subtabs" role="tablist" id="rtabBar">
+          <button type="button" role="tab" data-rtab="ops" aria-selected="true">操作</button>
+          <button type="button" role="tab" data-rtab="tol">公差</button>
+          <button type="button" role="tab" data-rtab="chk">チェック<span class="rtab__dot" id="chkDot" hidden></span></button>
+          <button type="button" role="tab" data-rtab="mm">Min/Max</button>
+        </div>
+      </header>
+    <div class="rpane" data-rpane="chk" hidden>
       <div class="pad"><ul class="checks-list" id="checks"><li data-ok="">まだ確かめていません</li></ul></div>
-    </section>
-    <section class="card">
-      <header><h3>Min / Max</h3></header>
+    </div>
+    <div class="rpane" data-rpane="mm" hidden>
       <div class="pad"><dl class="kv-grid" id="mmKv"></dl></div>
-    </section>
-    <section class="card">
-      <header><h3>操作</h3></header>
+    </div>
+    <div class="rpane" data-rpane="tol" id="rpaneTol" hidden></div>
+    <div class="rpane" data-rpane="ops">
       <div class="pad">
+        <button class="btn btn--sm who-toggle" type="button" id="whoToggle" aria-pressed="false"
+                title="測定値の下に、測った検査員と時刻を出します(VBA の WorkerTime シート)。欄にマウスを置いても出ます">測定者と時刻を表示</button>
+
         <div class="btn-row">
           <button class="btn" type="button" id="mmBtn">Min/Max</button>
           <a class="btn" href="/ainput" id="ainBtn">Aインプット</a>
@@ -162,7 +177,20 @@
         </div>
         <ul class="log-lines" id="recent"></ul>
       </div>
+    </div>
     </section>
+    <!-- ｻｲｽﾞ修正: 狭い右の列では欄が切れて入れられなかった(2026-11-10)。大きな窓で 厚・巾・丈 × 値/+/- -->
+    <dialog class="kpop kpop--resize" id="kResize" aria-labelledby="kResizeTitle">
+      <header><h3 id="kResizeTitle">サイズ・公差の修正 <span class="lv lv--warn">サイズ修正中</span></h3><button class="btn" type="button" id="kResizeClose">閉じる</button></header>
+      <div class="pad">
+        <div class="tol-edit" id="tolEdit"></div>
+        <p class="muted kpop__hint">値を入れて Enter で反映します(次の欄へ進みます)。閉じてもサイズ修正中のままです。もう一度開くときは「ｻｲｽﾞ修正」。</p>
+      </div>
+    </dialog>
+    <dialog class="kpop kpop--vc" id="kVc" aria-label="VC 画像">
+      <header><h3 id="kVcTitle">VC</h3><button class="btn" type="button" id="kVcClose">閉じる</button></header>
+      <div class="pad"><div class="vcbig" id="kVcBody"></div></div>
+    </dialog>
     <dialog class="kpop" id="kAdd" aria-labelledby="kAddTitle">
       <header><h3 id="kAddTitle">検査員の追加・ロットの読み直し</h3><button class="btn btn--sm" type="button" id="kAddClose">閉じる</button></header>
       <div class="pad" id="kAddPad"></div>

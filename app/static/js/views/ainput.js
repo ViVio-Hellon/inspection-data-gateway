@@ -76,14 +76,31 @@ function renderOpen(v) {
   const seg = $("kenSeg");
   seg.replaceChildren(...v.ken_methods.map((m) => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "seg__btn"; b.textContent = m;
+    b.type = "button"; b.className = "ain__method";
+    const name = document.createElement("b"); name.textContent = m;
+    const note = document.createElement("small"); note.textContent = KEN_NOTE[m] || "";
+    b.append(name, note);
+    if (v.ken_m === m) {
+      const last = document.createElement("span"); last.className = "ain__last"; last.textContent = "前回";
+      b.append(last);
+    }
     b.setAttribute("aria-pressed", String(v.ken_m === m));
     b.addEventListener("click", () => op("open", { ken_m: m, source: V ? V.source : FROM }));
     return b;
   }));
   const k = v.kensa;
-  kv($("openKv"), [["検査中のロット", k.lot || "(なし)"], ["ライン", k.line], ["Min/Max", k.minmax ? "済み" : "まだ"]]);
+  kv($("openKv"), [["検査中のロット", k.lot || "(なし)"], ["ライン", k.line || "-"], ["Min/Max", k.minmax ? "済み" : "まだ"]]);
+  const mm = $("openKv").querySelectorAll("dd")[2];
+  if (mm) mm.dataset.state = k.minmax ? "ok" : "ng";
 }
+
+/** 検査法ボタンの説明(画面の違いだけ。決まりは VBA の UF1 Inspection1〜4 のまま) */
+const KEN_NOTE = {
+  L1: "検査法 L1 で開く(風袋・総重量の欄なし)",
+  L2: "検査法 L2 で開く(風袋・総重量の欄なし)",
+  M6: "検査法 M6 で開く(風袋・総重量を入れる)",
+  M2: "検査法 M2 で開く(風袋・総重量を入れる)",
+};
 
 function renderLeft(v) {
   const l = v.lot;

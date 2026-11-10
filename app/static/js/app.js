@@ -39,10 +39,24 @@ running.start();
  * 差し替えのたびに呼ばれる。同じ要素へ二重に付かないよう、
  * 付けた要素に印を残す ── 押すたびに2回終了しようとしないため。
  */
+/** 配色(ダーク / ライト / 自動=OS)。この PC の好みとして localStorage に覚える。最初の反映は base.html の head */
+function wireTheme(sel) {
+  if (!sel) return;
+  const root = document.documentElement;
+  sel.value = root.dataset.theme || "";
+  sel.addEventListener("change", () => {
+    if (sel.value) root.dataset.theme = sel.value; else delete root.dataset.theme;
+    try {
+      if (sel.value) localStorage.setItem("ui.theme", sel.value); else localStorage.removeItem("ui.theme");
+    } catch { /* 覚えられなくても、いまは切り替わる */ }
+  });
+}
+
 export function wireShell() {
   errlog.resetCount();
   wireQuit(document.getElementById("quit"));
   wireLogout(document.getElementById("logout"));
+  wireTheme(document.getElementById("themeSel"));
   // 新しい帯は空で来る。**移った先で「何も動いていない」に見せない**
   running.paint();
 }

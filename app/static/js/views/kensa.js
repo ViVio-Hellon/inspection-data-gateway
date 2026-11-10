@@ -319,9 +319,50 @@ function renderOrder(v) {
   kv($("orderKv"), [["包装仕様No", o.no], ["梱包形態", o.form], ["タイトル", o.comment]]);
   const box = $("vcBox");
   const vc = v.vc;
+  renderVcRail(v);
   if (!vc) { box.replaceChildren(); return; }
-  const side = (s) => (s.visible ? el("figure", {}, s.image ? el("img", { src: tokenUrl(`/api/kensa/picture/vc/${encodeURIComponent(s.image)}`), alt: s.label }) : null, el("figcaption", { textContent: s.label })) : null);
+  const side = (s) => (s.visible ? el("figure", {}, s.image ? el("img", { src: vcUrl(s.image), alt: s.label }) : null, el("figcaption", { textContent: s.label })) : null);
   box.replaceChildren(...[side(vc.a), side(vc.b), vc.nothing ? el("p", { class: "muted", textContent: vc.nothing }) : null].filter(Boolean));
+}
+
+const vcUrl = (name) => tokenUrl(`/api/kensa/picture/vc/${encodeURIComponent(name)}`);
+
+// 2026-11-10: VC は測定中ずっと右の列に出す(公差と同じく、見て確かめる)。押すと大きく
+function renderVcRail(v) {
+  const box = $("vcRailImgs");
+  const vc = v.vc;
+  const hasLot = !!(v.header && v.header.lot);
+  $("vcRail").hidden = !hasLot;
+  if (!hasLot) { box.replaceChildren(); box.dataset.sig = ""; return; }
+  const sides = vc ? [vc.a, vc.b].filter((s) => s && (s.visible || s.label)) : [];
+  const sig = JSON.stringify([vc && vc.a, vc && vc.b, vc && vc.nothing]);
+  if (box.dataset.sig === sig) return;          // 毎回描き直すと画像がちらつく
+  box.dataset.sig = sig;
+  const none = !vc || (!sides.length && !vc.nothing);
+  $("vcRail").dataset.none = none ? "1" : "";
+  $("vcRailHint").hidden = none || !sides.some((s) => s.visible && s.image);
+  if (none) { box.replaceChildren(el("p", { class: "vcrail__none", textContent: "VC なし" })); return; }
+  const fig = (s) => {
+    const ok = s.visible && s.image;
+    const f = el("figure", { class: "vcrail__fig" + (ok ? "" : " is-missing") },
+      el("figcaption", { textContent: s.label || "VC" }),
+      ok ? el("img", { src: vcUrl(s.image), alt: s.label }) : el("small", { textContent: "画像なし" }));
+    if (ok) {
+      f.tabIndex = 0;
+      f.title = "押すと大きく表示";
+      f.addEventListener("click", () => openVc(vc));
+    }
+    return f;
+  };
+  box.replaceChildren(...sides.map(fig), ...(vc.nothing ? [el("p", { class: "vcrail__why", textContent: vc.nothing })] : []));
+  box.dataset.count = String(sides.length);
+}
+
+function openVc(vc) {
+  const items = [vc.a, vc.b].filter((s) => s && s.visible && s.image);
+  $("kVcBody").replaceChildren(...items.map((s) => el("figure", {}, el("figcaption", { textContent: s.label }), el("img", { src: vcUrl(s.image), alt: s.label }))));
+  $("kVcBody").dataset.count = String(items.length);
+  if (!$("kVc").open) $("kVc").showModal();
 }
 
 // 包装仕様書(UF_PackNo)。全ヵ所・キャスクと同じ窓(pack_dialog.js)。閉じたら測定値の欄へ戻る
@@ -364,21 +405,7 @@ function renderLeft(v) {
                   ["丈", t.tak && `${t.tak}  +${t.tp}/-${t.tm}  (${t.tmk}〜${t.tpk})`],
                   ["対角", [t.taik, v.taik_text].filter(Boolean).join(" / ")], ["ラテラル", t.lateral_text || t.lateral_grade], ["フリーソリ", t.flatnes_text]]);
   text($("tolNote"), [t.additional, t.conductiv_text].filter(Boolean).join(" / "));
-  const rs = v.buttons.resize;
-  $("resizeLv").hidden = !rs;
-  $("tolEdit").hidden = !rs;
-  if (rs) {
-    const f = [["ATU", "厚", t.atu], ["Ap", "厚+", t.ap], ["Am", "厚-", t.am], ["Hab", "巾", t.hab], ["Hp", "巾+", t.hp], ["Hm", "巾-", t.hm],
-               ["Tak", "丈", t.tak], ["Tp", "丈+", t.tp], ["Tm", "丈-", t.tm], ["TAIK", "対角等級", t.taik], ["TaikText", "対角公差", v.taik_text],
-               ["Lateral", "ラテ等級", t.lateral_grade], ["LateralText", "ラテ公差", t.lateral_text]];
-    $("tolEdit").replaceChildren(...f.map(([name, label, val]) => {
-      const lab = el("label", { textContent: label });
-      const inp = el("input", { class: "input", value: val ?? "", dataset: { name }, autocomplete: "off" });
-      inp.addEventListener("keydown", async (e) => { if (e.key === "Enter") { e.preventDefault(); await op("value", { name, value: inp.value }); refocus(); } });
-      lab.append(inp);
-      return lab;
-    }));
-  }
+  renderResize(v);
   const works = $("works");
   works.replaceChildren(...h.works.filter((w) => w.visible).map((w) => {
     const b = el("button", { type: "button", class: "btn", textContent: w.caption });
@@ -413,6 +440,52 @@ function renderLeft(v) {
   $("workerOk").hidden = !ws.length || !!v.worker_needed;
   $("workerOk").textContent = ws.length ? `登録済 ${ws.length}名` : "";
   $("cardIn").placeholder = ws.length ? "もう1人追加するとき(社員カード)" : "社員カード(13桁)";
+}
+
+// ｻｲｽﾞ修正(2026-11-10): 右の列では欄が切れて入れられなかったので、大きな窓に 厚・巾・丈 × 値/+/- の表で出す。
+// 欄は一度だけ作り、描き直しでは値だけ入れ替える(打っている欄の焦点と文字を消さない)
+let resizeWas = null;            // 最初の描画(読み直し)では開かない。「はい」で入った時だけ開く
+function renderResize(v) {
+  const t = v.tolerance, rs = !!v.buttons.resize;
+  $("resizeLv").hidden = !rs;
+  $("resizeOpen").hidden = !rs;
+  const vals = { ATU: t.atu, Ap: t.ap, Am: t.am, Hab: t.hab, Hp: t.hp, Hm: t.hm, Tak: t.tak, Tp: t.tp, Tm: t.tm,
+                 TAIK: t.taik, TaikText: v.taik_text, Lateral: t.lateral_grade, LateralText: t.lateral_text };
+  const box = $("tolEdit");
+  if (rs && !box.dataset.built) {
+    box.dataset.built = "1";
+    const cell = (name, label) => {
+      const inp = el("input", { class: "input", dataset: { name }, autocomplete: "off", "aria-label": label });
+      inp.addEventListener("keydown", async (e) => {
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        await op("value", { name, value: inp.value });
+        const all = [...box.querySelectorAll("input")];
+        const nx = all[all.indexOf(inp) + 1];
+        if (nx && $("kResize").open) { nx.focus(); nx.select(); } else if (!$("kResize").open) refocus();
+      });
+      return inp;
+    };
+    const head = ["", "値", "＋(上)", "－(下)"].map((x) => el("b", { class: "tol-edit__h", textContent: x }));
+    const rows = [["厚", "ATU", "Ap", "Am"], ["巾", "Hab", "Hp", "Hm"], ["丈", "Tak", "Tp", "Tm"]].flatMap(([lab, a, p, m]) =>
+      [el("b", { class: "tol-edit__k", textContent: lab }), cell(a, lab), cell(p, lab + "+"), cell(m, lab + "-")]);
+    const extra = [["対角", "TAIK", "TaikText"], ["ラテラル", "Lateral", "LateralText"]].map(([lab, g, txt]) =>
+      el("div", { class: "tol-edit__row" }, el("b", { class: "tol-edit__k", textContent: lab }),
+        el("label", { textContent: "等級" }, cell(g, lab + "等級")), el("label", { textContent: "公差" }, cell(txt, lab + "公差"))));
+    box.replaceChildren(el("div", { class: "tol-edit__grid" }, ...head, ...rows), ...extra);
+  }
+  for (const inp of box.querySelectorAll("input")) {
+    if (inp !== document.activeElement) inp.value = vals[inp.dataset.name] ?? "";
+  }
+  if (rs && resizeWas === false && !$("kResize").open) openResize();   // 「はい」で入ったら開く
+  if (!rs && $("kResize").open) $("kResize").close();
+  resizeWas = rs;
+}
+function openResize() {
+  const d = $("kResize");
+  if (!d.open) d.showModal();
+  const first = $("tolEdit").querySelector("input");
+  if (first) { first.focus(); first.select(); }
 }
 
 /* ---------- ロット情報の読み直し・見張り(2026-11-07) ---------- */
@@ -454,9 +527,9 @@ function setPhase(p) {
   // 作業の選択肢: 選ぶまでは中央の大きな枠、測定中は上の行
   (measure ? $("kbarWorks") : $("chooser")).append($("workPad"));
   // 公差の詳しい欄(対角・ラテラル・サイズ修正)は測定中は右の列へ。測定表の行にも出す
-  (measure ? $("krail") : $("kside")).append($("tolCard"));
+  (measure ? $("rpaneTol") : $("kside")).append($("tolCard"));
   // 2026-11-09: 受信機の状態(入らない理由)は選ぶまでも見えるように左の列へ。測定中は右の列(次に測るの下)
-  if (measure) $("whoToggle").after($("recvBox")); else $("kside").prepend($("recvBox"));
+  if (measure) $("nextBox").after($("recvBox")); else $("kside").prepend($("recvBox"));
   // カードの追加・別のロットの入力は、測定中は右の列の下へ
   const add = $("kAddPad");
   if (measure) add.append($("cardBox"), $("lotBox"), $("lotSrcRow"));
@@ -545,6 +618,7 @@ function renderRight(v) {
   kv($("mmKv"), [["厚", m.amin && `${m.amin} 〜 ${m.amax}`], ["巾", m.hmin && `${m.hmin} 〜 ${m.hmax}`], ["丈", m.tmin && `${m.tmin} 〜 ${m.tmax}`]]);
   if (v.checks) {
     $("checks").replaceChildren(...v.checks.map((c) => el("li", { textContent: c.label, dataset: { ok: c.ok === null ? "" : (c.ok ? "1" : "0") } })));
+    $("chkDot").hidden = !v.checks.some((c) => c.ok === false);
   }
   $("blind").hidden = !v.blind;
   text($("blind"), v.blind);
@@ -664,7 +738,7 @@ function buildExtras() {
   }
   mm.append(rg);
   const confi = el("div", { id: "confiBox", class: "pad", hidden: true });
-  $("checks").parentElement.before(confi);
+  $("rtabs").before(confi);          // 確かめ(公差外の許容など)はタブに隠さない
 }
 
 function remember(line) {
@@ -704,7 +778,47 @@ function initTabs() {
     try { localStorage.setItem("kensa.subtab", name); } catch (e) { /* 同上 */ }
   };
   for (const t of tabs) t.addEventListener("click", () => { show(t.dataset.tab); refocus(); });
+  if (cur === "grid") cur = "strain";
   show(tabs.some((t) => t.dataset.tab === cur) ? cur : "strain");
+  // 画面が低い(1366x768 など)ときは、測定表と 歪・外観… を1つのタブにまとめてスクロールをなくす。
+  // 「測定表」タブは そのときだけ出る。測定器から値が来たら測定表へ戻す
+  const mq = window.matchMedia("(max-height: 900px)");
+  const kensa = $("kensa");
+  const apply = () => {
+    kensa.classList.toggle("kensa--compact", mq.matches);
+    if (!mq.matches) { kensa.dataset.ctab = ""; return; }
+    const sel = tabs.find((t) => t.getAttribute("aria-selected") === "true");
+    kensa.dataset.ctab = kensa.dataset.ctab || "grid";
+    if (kensa.dataset.ctab === "grid") for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.tab === "grid"));
+    else if (sel && sel.dataset.tab === "grid") kensa.dataset.ctab = "grid";
+  };
+  for (const t of tabs) t.addEventListener("click", () => {
+    if (!mq.matches) return;
+    kensa.dataset.ctab = t.dataset.tab === "grid" ? "grid" : "sub";
+    if (t.dataset.tab === "grid") for (const x of tabs) x.setAttribute("aria-selected", String(x === t));
+  });
+  showGridTab = () => {
+    if (!mq.matches || kensa.dataset.ctab === "grid") return;
+    kensa.dataset.ctab = "grid";
+    for (const x of tabs) x.setAttribute("aria-selected", String(x.dataset.tab === "grid"));
+  };
+  mq.addEventListener("change", apply);
+  apply();
+}
+let showGridTab = () => {};
+
+// 右の列のタブ(操作・公差・チェック・Min/Max)
+function initRailTabs() {
+  const tabs = [...document.querySelectorAll("#rtabBar [data-rtab]")];
+  const show = (name) => {
+    for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.rtab === name));
+    for (const p of document.querySelectorAll(".rpane")) p.hidden = p.dataset.rpane !== name;
+    try { localStorage.setItem("kensa.railtab", name); } catch (e) { /* 保存できなくても動く */ }
+  };
+  for (const t of tabs) t.addEventListener("click", () => { show(t.dataset.rtab); refocus(); });
+  let cur = "ops";
+  try { cur = localStorage.getItem("kensa.railtab") || cur; } catch (e) { /* 同上 */ }
+  show(tabs.some((t) => t.dataset.rtab === cur) ? cur : "ops");
 }
 
 /* 測定器はキーボードと同じで「カーソルのある欄」に打つ。入力欄・選択欄の外を押したあとでも
@@ -734,6 +848,7 @@ function initReceiver() {
 let recvLast = 0, recvOn = false;
 async function handleRecv(r) {
   remember(`受信機 ${r.text}`);
+  showGridTab();
   for (const m of r.messages || []) showMessage(m);
   if (r.view) render(r.view);
   if (r.question) {                              // 理由などを聞かれたら、答えを付けて同じ値を送り直す
@@ -798,6 +913,7 @@ function init() {
   });
   $("whoToggle").setAttribute("aria-pressed", String(showWho()));
   initTabs();
+  initRailTabs();
   const closeAdd = () => { if ($("kAdd").open) $("kAdd").close(); };
   onEnter("cardIn", async (card) => { closeAdd(); await op("worker", { card }); refocus(); }, 13);
   onEnter("lotIn", async (lot) => { closeAdd(); await op("lot", { lot }); refocus(); }, 7);
@@ -808,7 +924,7 @@ function init() {
     const on = !(V && V.lot_source && V.lot_source.on);
     op("lot-source", { on, lot: $("lotIn").value });
   });
-  onEnter("measIn", async (t) => { remember(t); await op("receive", { text: t }); refocus(); });
+  onEnter("measIn", async (t) => { remember(t); showGridTab(); await op("receive", { text: t }); refocus(); });
   $("yamaSel").addEventListener("change", () => op("yama", { yama: $("yamaSel").value }));
   $("atBtn").addEventListener("click", () => op("at"));
   $("inspeBtn").addEventListener("click", () => op("inspe"));
@@ -829,7 +945,11 @@ function init() {
   $("holdBtn").addEventListener("click", async () => { await op("hold"); refocus(); });
   $("abnoBtn").addEventListener("click", async () => { await op("value", { name: "Abno", value: "" }); refocus(); });
   $("izyouBtn").addEventListener("click", () => op("izyou"));
-  $("resizeBtn").addEventListener("click", () => op("resize"));
+  $("resizeBtn").addEventListener("click", () => (V && V.buttons && V.buttons.resize ? openResize() : op("resize")));
+  $("resizeOpen").addEventListener("click", openResize);
+  $("kResizeClose").addEventListener("click", () => { $("kResize").close(); refocus(); });
+  $("kVcClose").addEventListener("click", () => { $("kVc").close(); refocus(); });
+  $("kVc").addEventListener("click", (e) => { if (e.target === $("kVc")) { $("kVc").close(); refocus(); } });
   $("aorbBtn").addEventListener("click", async () => { await op("value", { name: "AorB", value: "" }); refocus(); });
   // クリックはダブルクリックか分かるまで少し待つ。すぐ送ると描き直しで表が入れ替わり、
   // 2 回目のクリックが別の要素に当たってダブルクリック(消去)が効かないことがあった
