@@ -58,3 +58,8 @@
 .cal__records tr[data-ng="1"] td { color: var(--state-error); }
 
 @media (max-width: 1280px) { .cal__body { grid-template-columns: minmax(0, 1fr); } }
+
+/* 2026-11-10: 検査員の登録から移ってきたときの案内 */
+.cal__from { margin: 0; padding: 10px 14px; border-radius: var(--radius); border-left: 6px solid var(--state-warn, var(--state-error));
+             background: var(--warn-bg); font-size: var(--fs-md, 1rem); }
+.cal__from b { color: var(--state-error); }

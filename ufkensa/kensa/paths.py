@@ -112,8 +112,10 @@ ITEMS: tuple[PathItem, ...] = (
              "印刷のたびに Lot情報履歴 を CSV で写す共有フォルダ。空なら 検査履歴\\<ライン>\\<ライン>_履歴",
              need="write"),
     PathItem("app_log", "Access.log などの置き場所", "ThisWorkbook.Path(VBA は xlsm と同じフォルダ)", "",
-             "Access.log・ライン別ログの既定の置き場所(書き先を指定しないもの)と、hostsend.txt の予備の場所。"
-             "空ならこの PC の手元(ローカル領域の logs)。共有フォルダにすると全 PC のログが 1 か所に集まる",
+             "アプリの Access.log(Lot登録・測定値 *UFKen など。書き先を指定しないログ)を書くフォルダと、"
+             "hostsend.txt の予備の場所。空ならこの PC の手元(ローカル領域の logs)。共有フォルダにすると全 PC のログが"
+             " 1 か所に集まる。再測定・その他・消去の理由と測定値のライン別ログ(Access.log・Measured.log)は"
+             "ここではなく 検査履歴\\<ライン>\\<ライン>_Log\\ に書く(履歴 →「理由の履歴」で読める)",
              need="write"),
     PathItem("nippou_out", "日報の受け渡し先", "(新規。all-tools の日報モードへ)", "",
              "印刷のたびに、その直の日報を all-tools の日報モードが読める CSV(集計明細_<日付>_<ライン>_<直>.csv)で"
@@ -806,6 +808,13 @@ def overview(m: Optional[str] = None) -> list[dict[str, Any]]:
             })
         else:
             row.update({"path": slot_value(i.key), "default": slot_default(i.key), "changed": changed(i.key)})
+            if i.key == "app_log":
+                # 2026-11-10: 実際に書くファイル(フォルダ+ファイル名)を見せる。「どこにあるか分からない」の声
+                from . import reason_log
+                try:
+                    row["targets"] = reason_log.describe_targets()
+                except Exception:                                   # noqa: BLE001 - 一覧は止めない
+                    row["targets"] = None
             if i.key.startswith("judge_"):
                 from . import judge_images          # 2026-11-09: 見本(小さな画像)と「ファイルがありません」
                 if i.key in judge_images.SLOTS:

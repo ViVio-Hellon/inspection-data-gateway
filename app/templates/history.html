@@ -7,6 +7,17 @@
   <h2>履歴</h2>
   <p class="muted">この端末で保存した検査(VBA の「保存用」・耳付は「耳用」)を見ます。左で選ぶと右に中身が出ます。</p>
 </section>
+<div class="tabs" data-tabs="history" id="historyTabs">
+  <div class="tabs__bar" role="tablist" aria-label="履歴の面">
+    <button class="tab" type="button" role="tab" data-key="saved" data-default="1" id="tab-saved" aria-controls="panel-saved" aria-selected="false">
+      <span class="tab__label">保存した検査</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-key="reasons" id="tab-reasons" aria-controls="panel-reasons" aria-selected="false">
+      <span class="tab__label">理由の履歴</span><span class="tab__badge" id="rsBadge" hidden></span>
+    </button>
+  </div>
+  <div class="tabs__panels">
+  <section class="tabpanel" id="panel-saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
 <div style="display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:10px;align-items:start">
   <section class="card">
     <header><h3>保存した検査</h3><span class="lv lv--info" id="histCount"></span></header>
@@ -31,6 +42,36 @@
       <dl class="kv" id="histOthers"></dl>
     </div>
   </section>
+</div>
+  </section>
+
+  <!-- 2026-11-10: 再測定・その他・消去の理由(ライン別の Access.log の「理由選択」の行)。読むだけ -->
+  <section class="tabpanel" id="panel-reasons" role="tabpanel" aria-labelledby="tab-reasons" hidden>
+    <section class="card">
+      <header><h3>理由の履歴</h3><span class="lv lv--info" id="rsCount"></span></header>
+      <div class="pad">
+        <p class="muted">公差外の確認で選んだ理由(再測定・その他 など)と、測定値を消したときの理由です。
+          VBA と同じく、ライン別の <b>Access.log</b> に 1 行ずつ書いてあるものを読んで並べます(新しいものが上)。</p>
+        <dl class="kv-grid rs-files" id="rsFiles"></dl>
+        <div class="field rs-filter">
+          <label for="rsLine">ライン</label><select class="input" id="rsLine"></select>
+          <label for="rsFrom">日付</label><input class="input" type="date" id="rsFrom">
+          <span>〜</span><input class="input" type="date" id="rsTo">
+          <label for="rsLot">LotNo</label><input class="input" id="rsLot" placeholder="LotNo・位置・理由で絞る" style="flex:1;min-width:10em">
+          <button class="btn btn--primary" type="button" id="rsLoad">読む</button>
+        </div>
+        <p class="rs-error" id="rsError" role="alert" hidden></p>
+        <div class="tablewrap" style="max-height:60vh;overflow:auto">
+          <table class="table rs-table" id="rsTable">
+            <thead><tr><th>日時</th><th>PC</th><th>LotNo(推定)</th><th>種類</th><th>位置</th><th>値</th><th>理由</th><th>検査員</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="muted" id="rsNote"></p>
+      </div>
+    </section>
+  </section>
+  </div>
 </div>
 {% endblock %}
 

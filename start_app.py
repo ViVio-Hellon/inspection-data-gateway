@@ -294,6 +294,18 @@ def start(mode: str, *, open_browser: bool = True) -> int:
     try:
         # --- デスクトップ版が動いていれば止まる(同時に動かさない)---
         if launch_guard.hold_app_lock(launch_guard.KIND_BROWSER) is None:
+            # 2026-11-10: 錠を握っているのが**ブラウザ版**なら、それは動いている1つ目。
+            # ロックが消えていた・判定が外れたときでも、2つ目を立てずに1つ目を開く
+            joined = _join_running_browser(mode)
+            if joined is not None:
+                launch_guard.remove_lock(mode, only_pid=os.getpid())
+                adopted = launch_guard.adopt_running(mode, joined)
+                url = adopted.url if adopted else f"http://{app_config.host()}:{joined.get('port')}/"
+                log().info("既存のインスタンスに合流します(同時起動の錠から): %s", url)
+                print(f"すでに起動しています。ブラウザを開きます: {url}")
+                if open_browser:
+                    webbrowser.open(url)
+                return 0
             message, hint = launch_guard.other_running_message(launch_guard.KIND_BROWSER)
             raise StartupError(message, hint, CODE_OTHER_RUNNING)
 
@@ -316,7 +328,7 @@ def start(mode: str, *, open_browser: bool = True) -> int:
                 "サーバを起動できませんでした",
                 f"{check.hint}\n\nログ: {app_config.local_dir('logs')}")
     except BaseException:
-        launch_guard.remove_lock(mode)
+        launch_guard.remove_lock(mode, only_pid=os.getpid())
         raise
     if not check.ok:
         log().warning("起動確認の応答を取れませんでしたが、待ち受けは"
@@ -364,7 +376,8 @@ def start(mode: str, *, open_browser: bool = True) -> int:
     finally:
         tidy_children()
         _remote_stop().leave()
-        launch_guard.remove_lock(mode)
+        # 自分のロックだけ消す(終わりかけのあいだに起動した2つ目のロックを消さない。2026-11-10)
+        launch_guard.remove_lock(mode, only_pid=os.getpid())
         launch_guard.release_app_lock()
         log().info("終了しました: mode=%s", mode)
         try:
@@ -372,6 +385,29 @@ def start(mode: str, *, open_browser: bool = True) -> int:
             trace.event("app.stop", f"終了しました(版 {app_config.version()})", data={"mode": mode})
         except Exception:                         # noqa: BLE001 - 記録のせいで終了を止めない
             pass
+
+
+# 錠を握っているブラウザ版が待ち受けを始めるのを待つ上限(秒)
+JOIN_WAIT_SEC = 30.0
+
+
+def _join_running_browser(mode: str):
+    """同時起動の錠を**ブラウザ版**が握っている。動いているそれを探す(2026-11-10)。
+
+    戻り値: 見つけた health(dict)。見つからない・握っているのがブラウザ版でなければ `None`。
+    """
+    import launch_guard
+    owner = launch_guard.app_owner() or {}
+    if owner.get("kind") != launch_guard.KIND_BROWSER:
+        return None
+    deadline = time.monotonic() + JOIN_WAIT_SEC
+    while True:
+        health = launch_guard.find_running(mode)
+        if health is not None:
+            return health
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(0.5)
 
 
 # 本体を組み立てられなかったとき、画面からの問い合わせがこの秒数来なければ終わる。

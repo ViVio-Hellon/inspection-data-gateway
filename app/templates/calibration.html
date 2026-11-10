@@ -20,6 +20,11 @@
     <dl class="cal__kv" id="calStatusKv"></dl>
     <a class="btn btn--nav" href="/kensa" id="calBack">検査へ戻る</a>
   </section>
+  <!-- 2026-11-10: 検査員を登録したら校正が済んでいなかったので、検査画面から移ってきた -->
+  <p class="cal__from" id="calFrom" role="alert" hidden>
+    検査員を登録しました。<b>この直の校正が済んでいません。</b>先に校正をしてください
+    (記録すると検査画面へ戻ります。あとで校正するときは「検査へ戻る」)。
+  </p>
   <!-- 2026-11-09: 受信機の状態・最後に届いた値・入らなかった理由 -->
   <div class="recv-status" id="calRecv" role="status"></div>
 

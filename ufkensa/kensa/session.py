@@ -1167,6 +1167,9 @@ class Session:
             "strain_frame": {p: {"lz": st.v("LZ" + p).value, "lg": st.v("LG" + p).value,
                                  "visible": st.v("FM" + p).visible} for p in grid.POSITIONS},
             "taik_text": st.v("TaikText").value,
+            # 2026-11-10: 歪の公差(VBA の UF1 の HaHiz / TaHiz / Naka / Mimi / MG のラベル)を画面の「公差」と歪の見出しに出す
+            "strain_tol": {"ha": st.v("HaHiz").value, "ta": st.v("TaHiz").value, "naka": st.v("Naka").value,
+                           "mimi": st.v("Mimi").value, "mg": st.v("MG").value, "flatnes": st.v("flatnes").value},
         }
 
     def _strain_note(self) -> str:

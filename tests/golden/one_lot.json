@@ -3487,6 +3487,14 @@
 }
 },
 "strain_note": "",
+"strain_tol": {
+"flatnes": "4",
+"ha": "2.0",
+"mg": "",
+"mimi": "",
+"naka": "",
+"ta": "3.0"
+},
 "taik_text": "2.0",
 "tolerance": {
 "additional": "対角追記公差あり",
@@ -7285,6 +7293,14 @@
 }
 },
 "strain_note": "ゲージによる測定必要",
+"strain_tol": {
+"flatnes": "4",
+"ha": "2.0",
+"mg": "",
+"mimi": "",
+"naka": "",
+"ta": "3.0"
+},
 "taik_text": "2.0",
 "tolerance": {
 "additional": "対角追記公差あり",
@@ -11259,6 +11275,14 @@
 }
 },
 "strain_note": "ゲージによる測定必要",
+"strain_tol": {
+"flatnes": "4",
+"ha": "2.0",
+"mg": "",
+"mimi": "",
+"naka": "",
+"ta": "3.0"
+},
 "taik_text": "2.0",
 "tolerance": {
 "additional": "対角追記公差あり",
@@ -15365,6 +15389,14 @@
 }
 },
 "strain_note": "",
+"strain_tol": {
+"flatnes": "4",
+"ha": "2.0",
+"mg": "",
+"mimi": "",
+"naka": "",
+"ta": "3.0"
+},
 "taik_text": "2.0",
 "tolerance": {
 "additional": "対角追記公差あり",
@@ -19708,6 +19740,14 @@
 }
 },
 "strain_note": "",
+"strain_tol": {
+"flatnes": "4",
+"ha": "2.0",
+"mg": "",
+"mimi": "",
+"naka": "",
+"ta": "3.0"
+},
 "taik_text": "2.0",
 "tolerance": {
 "additional": "対角追記公差あり",
@@ -23954,6 +23994,14 @@
 }
 },
 "strain_note": "",
+"strain_tol": {
+"flatnes": "4",
+"ha": "2.0",
+"mg": "",
+"mimi": "",
+"naka": "",
+"ta": "3.0"
+},
 "taik_text": "2.0",
 "tolerance": {
 "additional": "対角追記公差あり",

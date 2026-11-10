@@ -12,6 +12,8 @@ import { renderRecvStatus, startReceiver } from "../recv.js";
 const $ = (id) => document.getElementById(id);
 const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 let V = null;
+// 2026-11-10: 検査員の登録から移ってきた(校正が済んでいない)ときの案内を出す
+const fromWorker = new URLSearchParams(location.search).get("from") === "worker";
 
 function text(el, t) { el.textContent = t ?? ""; }
 
@@ -55,6 +57,7 @@ function renderStatus(v) {
     return;
   }
   box.dataset.ok = s.calibrated ? "1" : "0";
+  $("calFrom").hidden = !(fromWorker && !s.calibrated);
   text($("calBadge"), s.calibrated ? "済" : "未");
   text($("calStatusText"), s.calibrated ? `${s.date} ${s.shift} の校正は済んでいます` : `${s.date} ${s.shift} の校正が済んでいません`);
   text($("calStatusSub"), s.skip_text || (s.calibrated ? "検査画面で測定できます" : "校正を記録するまで、検査画面の測定値は受け付けません"));

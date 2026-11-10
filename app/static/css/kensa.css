@@ -298,3 +298,27 @@ li.is-stale { opacity: .6; }
 .kensa[data-phase="measure"] .vcrail__imgs[data-count="2"] { grid-template-columns: 1fr; }
 .kensa[data-phase="measure"] .vcrail__fig img { max-height: 36vh; }
 .kensa--compact[data-phase="measure"] .vcrail__fig img { max-height: 30vh; }
+
+/* 2026-11-10: 位置ごとの判定の印(NG? ラベル: NG / 許容 / 保留)。色だけでなく文字でも */
+.ngflag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: var(--fs-sm);
+          line-height: 1.5; letter-spacing: .05em; border: 2px solid transparent; white-space: nowrap; }
+.ngflag--ng    { background: var(--state-error); color: #fff; }
+.ngflag--allow { background: #f5b301; color: #1a1300; border-color: #a77800; }
+.ngflag--hold  { background: #7c4dff; color: #fff; border-color: #4b2bb3; }
+.ngflag--sm { padding: 0 6px; font-size: 11px; vertical-align: middle; }
+.mgrid tr.ngrow td.ng { padding: 4px 2px; text-align: center; }
+.mgrid tr.ngrow td.ng[data-flag] { background: transparent; }
+.mmflags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
+.mmflag { display: inline-flex; align-items: center; gap: 4px; }
+
+/* 2026-11-10: 公差を 寸法 / 歪 / 対角・ラテラル・フリー反り に分けて出す */
+.tol-groups { display: grid; gap: 6px; }
+.tol-group h4 { margin: 0 0 2px; font-size: var(--fs-sm); color: var(--muted); border-bottom: 1px solid var(--rule); }
+.tol-group[data-group="歪"] h4 { color: var(--accent); }
+.tol-group dd.muted { color: var(--muted); }
+.strain-tol { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 2px 10px;
+              border-radius: var(--radius-xs, 4px); background: var(--accent-soft); font-size: var(--fs-sm); }
+.strain-tol:empty { display: none; }
+.strain-tol b { color: var(--accent); }
+.strain-tol__item { font-family: var(--mono); font-weight: 600; }
+.strain-tol__item.is-empty { color: var(--muted); font-weight: 400; }

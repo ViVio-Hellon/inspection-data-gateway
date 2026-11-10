@@ -108,7 +108,18 @@ def read_lock(mode: str) -> Optional[LockInfo]:
         return None
 
 
-def remove_lock(mode: str) -> None:
+def remove_lock(mode: str, *, only_pid: Optional[int] = None) -> None:
+    """ロックを消す。`only_pid` を渡すと、**そのPIDが書いたロックのときだけ**消す。
+
+    2026-11-10: 終わるときに無条件で消していたので、終わりかけの1つ目が、
+    そのあいだに起動した2つ目のロックを消すことがあった(ロックの無い
+    サーバが残り、次の起動が「ロックなし」を見て立ち上がる入口になる)。
+    """
+    if only_pid is not None:
+        info = read_lock(mode)
+        if info is not None and info.pid != only_pid:
+            log.info("ロックはほかの起動(pid=%s)のものなので消しません", info.pid)
+            return
     try:
         lock_path(mode).unlink()
         log.info("ロックを消しました: %s", mode)
@@ -415,7 +426,7 @@ def check_existing(mode: str) -> GuardResult:
     if info is None:
         return GuardResult(True, reason="ロックなし")
 
-    if not is_lock_owner_alive(info):
+    if not is_lock_owner_alive(info) and not _answers_as(info, mode):
         log.info("死んだロックを掃除します (pid=%s は不在か別のプログラム)", info.pid)
         remove_lock(mode)
         return GuardResult(True, reason=f"ロックは残っていたがpid {info.pid} は不在")
@@ -428,6 +439,17 @@ def check_existing(mode: str) -> GuardResult:
     while not is_our_app(health, mode) and time.monotonic() < deadline:
         time.sleep(0.5)                              # 2026-11-08: 前回の本人なら 5 秒まで応答を待つ
         health = probe_health(info.port)
+    if not is_our_app(health, mode) and health is None and is_port_accepting(info.port):
+        # 2026-11-10: **待ち受けてはいる = 動いている(忙しいだけ)。** 検査の途中(外部プログラムの
+        # 待ち・共有の遅さ)で `/api/health` が数秒返らないことがある。以前はここで「応答なし」として
+        # 終わらせるか、確かめられなければロックを消して**2つ目のサーバを立てていた**(多重起動)
+        health = _wait_busy(info, mode)
+        if (not is_our_app(health, mode) and is_port_accepting(info.port)
+                and not _kill_if_ours(info)):
+            # 確かめられない・終わらせられない。2つ目は立てずに、動いているほうを開く
+            log.warning("pid=%s は待ち受けているが応答しません。2つ目は立てずに合流します", info.pid)
+            return GuardResult(False, url=info.url or _url(info.port), existing=info,
+                               reason="応答が遅いが動いているので合流します")
     if not is_our_app(health, mode):
         # 本人(起動時刻も合う)なのに応答しない → 終わらせてから起動し直す。コマンドラインで確かめられなければ触らない
         if _kill_if_ours(info):
@@ -482,6 +504,78 @@ def _wait_for_starting(mode: str, info: "LockInfo") -> GuardResult:
 
 #: 前回のツールが応答しないとき待つ秒数(過ぎたら終わらせて起動し直す)
 HUNG_WAIT_SEC = 5.0
+
+#: 待ち受けてはいるが応答が遅いとき、さらに待つ秒数(2026-11-10)。忙しいだけのものを終わらせない
+BUSY_WAIT_SEC = 30.0
+
+
+def _url(port: int) -> str:
+    return f"http://{app_config.host()}:{port}/"
+
+
+def _answers_as(info: "LockInfo", mode: str) -> bool:
+    """ロックのポートで、**ロックと同じ PID の**このアプリが答えるか(2026-11-10)。
+
+    起動時刻の比べ(`is_lock_owner_alive`)は Windows で外れることがある(時計の合わせ直し・
+    起動時刻の取り違え)。外れると「死んだロック」として消し、**2つ目のサーバを立てていた**。
+    本人が答えるなら、それがいちばん確かな「生きている」。
+    """
+    if not info.port or info.port == STARTING_PORT:
+        return False
+    health = probe_health(info.port)
+    if not is_our_app(health, mode):
+        return False
+    try:
+        same = int((health or {}).get("pid") or 0) == int(info.pid)
+    except (TypeError, ValueError):
+        same = False
+    if same:
+        log.info("pid=%s は起動時刻では別物に見えますが、本人が答えました。合流します", info.pid)
+    return same
+
+
+def _wait_busy(info: "LockInfo", mode: str) -> Optional[dict]:
+    """待ち受けている(TCP はつながる)あいだ、`/api/health` が返るのを待つ。"""
+    deadline = time.monotonic() + BUSY_WAIT_SEC
+    health = None
+    while time.monotonic() < deadline:
+        health = probe_health(info.port, timeout=3.0)
+        if is_our_app(health, mode) or not is_port_accepting(info.port):
+            return health
+        time.sleep(0.5)
+    return health
+
+
+def find_running(mode: str) -> Optional[dict]:
+    """ロックが無くても、このアプリの同じ mode が候補のポートで動いていれば、その health(2026-11-10)。
+
+    ロックが消えていた(終わりかけの1つ目が消した・手で消した)ときの最後の砦。
+    """
+    for port in app_config.port_candidates(mode):
+        if not is_port_accepting(port, timeout=0.3):
+            continue
+        health = probe_health(port)
+        if is_our_app(health, mode):
+            return health
+    return None
+
+
+def adopt_running(mode: str, health: dict) -> Optional[LockInfo]:
+    """見つけた動いているほうのロックを書き直す(次の起動がすぐ合流できるように)。トークンは分からないので空。"""
+    try:
+        port = int(health.get("port") or 0)
+        pid = int(health.get("pid") or 0)
+    except (TypeError, ValueError):
+        return None
+    if not port or not pid:
+        return None
+    info = LockInfo(app_id=app_config.app_id(), mode=mode, pid=pid, port=port, url=_url(port),
+                    started_at=time.time(), python="", app_root=str(health.get("app_root") or ""))
+    try:
+        write_lock(info)
+    except OSError as exc:                        # noqa: BLE001
+        log.warning("ロックを書き直せませんでした: %s", exc)
+    return info
 
 
 def looks_like_our_process(info: "LockInfo") -> bool:

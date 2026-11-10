@@ -112,3 +112,16 @@ def restore():
     with trace.timed("history.restore", "履歴を検査画面へ戻す", expected=(Exception,), row=row):
         res = s.history_restore(row, bool(body.get("mimi")))
     return jsonify(res.to_dict())
+
+
+@bp.get("/api/history/reasons")
+def reasons():
+    """理由の履歴(2026-11-10)。ライン別の Access.log の「理由選択」の行を新しい順に(読むだけ)。"""
+    from ufkensa.kensa import reason_log
+    a = request.args
+    with trace.timed("history.reasons", "理由の履歴を読む", line=a.get("line", "")) as info:
+        out = reason_log.read_reasons(a.get("line") or None, date_from=a.get("from", ""),
+                                      date_to=a.get("to", ""), lot=a.get("lot", ""))
+        info["rows"] = out["total"]
+    out["lines"] = reason_log.line_choices()
+    return jsonify(out)
