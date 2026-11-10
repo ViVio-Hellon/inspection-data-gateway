@@ -73,9 +73,6 @@
 .vc img { max-height: 160px; max-width: 360px; display: block; border-radius: var(--radius-xs); }
 .vc figcaption { font-size: var(--fs-sm); color: var(--muted); }
 
-.tol-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; font-size: var(--fs-sm); }
-.tol-edit label { display: flex; flex-direction: column; color: var(--muted); }
-.tol-edit .input { font-family: var(--mono); padding: 2px 4px; }
 .chk { display: inline-flex; gap: 6px; align-items: center; font-size: var(--fs-sm); }
 #izyouBtn[data-on="1"] { background: var(--warn-bg); color: var(--state-error); border-color: var(--state-error); }
 #printBtn[data-printed="1"] { background: var(--warn-bg); color: var(--warn-fg); }
@@ -145,7 +142,7 @@ li.is-stale { opacity: .6; }
 .chooser .works .btn { min-width: 9em; min-height: 64px; font-size: var(--fs-lg); font-weight: 800; }
 
 /* 測定: 上 = 状態の1行と作業の切り替え / 中央 = 公差付きの測定表 / 右 = 次に測る・チェック・操作 */
-.kensa[data-phase="measure"] .kbody { grid-template-columns: minmax(0, 1fr) 280px; }
+.kensa[data-phase="measure"] .kbody { grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 440px); }
 .kensa[data-phase="measure"] .kside,
 .kensa[data-phase="measure"] .kwait,
 .kensa[data-phase="measure"] .chooser { display: none !important; }
@@ -206,3 +203,70 @@ li.is-stale { opacity: .6; }
   padding: 2px 6px; border-radius: 4px; }
 .reg-lot__size { font-size: 1.2rem; font-weight: 800; letter-spacing: .02em; margin: 4px 0; font-variant-numeric: tabular-nums; }
 .reg-lot__size:empty { display: none; }
+
+/* ---- 2026-11-10: スクロールを減らす・VC を常時・ｻｲｽﾞ修正は大きな窓 ---- */
+/* 右の列は画面の高さに収め、はみ出す分だけ列の中でスクロール(ページは動かさない) */
+.kensa[data-phase="measure"] .krail { position: sticky; top: 0; max-height: calc(100vh - 215px); overflow-y: auto; }
+.kensa[data-phase="measure"] .krail > * { flex-shrink: 0; }
+.kensa[data-phase="measure"] .next { padding: 6px 10px; }
+.kensa[data-phase="measure"] .next b { font-size: 1.8rem; line-height: 1.15; }
+/* タブは押しやすく大きめに */
+.subtabs button { padding: 7px 14px; font-size: var(--fs-md, 1rem); min-height: 38px; }
+.rtabs .subtabs button { padding: 6px 10px; }
+.rtabs > .subtabs-head { padding: 6px 8px; }
+.rpane .pad { padding: 10px 12px; }
+.rpane > .card { border: 0; box-shadow: none; background: transparent; }
+.rtab__dot { display: inline-block; width: 8px; height: 8px; margin-left: 4px; border-radius: 50%; background: var(--state-error); vertical-align: middle; }
+.rtab__dot[hidden] { display: none; }
+#rpaneTol .kv-grid { font-size: var(--fs-md, 1rem); }
+
+/* 低い画面(1366x768 など): 測定表と 歪・外観… を1つのタブ列にまとめる。「測定表」タブはこのときだけ */
+.subtab--grid { display: none; }
+.kensa--compact[data-phase="measure"] .subtab--grid { display: inline-block; }
+.kensa--compact[data-phase="measure"][data-ctab="grid"] .ksub .subpane { display: none !important; }
+.kensa--compact[data-phase="measure"][data-ctab="grid"] .ksub #faceLv { display: none; }
+.kensa--compact[data-phase="measure"][data-ctab="sub"] .kgrid { display: none !important; }
+.kensa--compact[data-phase="measure"] .ksub { order: -1; }
+.kensa--compact[data-phase="measure"] .kensa__center { gap: 6px; }
+.kensa--compact[data-phase="measure"] .mgrid-wrap { max-height: calc(100vh - 355px); }
+.kensa--compact[data-phase="measure"] .ksub .subpane { max-height: calc(100vh - 300px); overflow: auto; }
+.kensa--compact[data-phase="measure"] .krail { max-height: calc(100vh - 215px); gap: 8px; }
+.kensa--compact[data-phase="measure"] .next { display: flex; align-items: baseline; justify-content: center; gap: 12px; padding: 4px 10px; }
+.kensa--compact[data-phase="measure"] .next b { display: inline; }
+.kensa--compact[data-phase="measure"] .vcrail__fig img { max-height: 19vh; }
+
+/* VC(右の列・常時) */
+.vcrail > header { padding-top: 6px; padding-bottom: 6px; }
+.vcrail__hint { font-size: var(--fs-xs); margin-left: auto; }
+.vcrail .pad { padding: 6px 8px 8px; }
+.vcrail__imgs { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.vcrail__imgs[data-count="2"] { grid-template-columns: 1fr 1fr; }
+.vcrail__fig { margin: 0; display: flex; flex-direction: column; gap: 3px; cursor: zoom-in; min-width: 0; }
+.vcrail__fig figcaption { font-weight: 800; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.vcrail__fig img { width: 100%; max-height: 24vh; object-fit: contain; background: var(--sunken); border: 2px solid var(--accent);
+                   border-radius: var(--radius-xs); display: block; }
+.vcrail__fig.is-missing { cursor: default; }
+.vcrail__fig.is-missing small { color: var(--state-error); font-weight: 700; font-size: var(--fs-xs); }
+.vcrail__why { grid-column: 1 / -1; margin: 0; font-size: var(--fs-xs); color: var(--muted); overflow-wrap: anywhere; }
+.vcrail__none { margin: 0; font-weight: 700; color: var(--muted); }
+.vcrail[data-none="1"] > header { display: none; }
+.vcrail[data-none="1"] .pad { display: flex; align-items: center; gap: 8px; padding: 6px 12px; }
+.vcrail[data-none="1"] .pad::before { content: "VC"; font-weight: 800; }
+.kpop--vc { width: min(1400px, 96vw); max-height: 94vh; }
+.vcbig { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.vcbig[data-count="2"] { grid-template-columns: 1fr 1fr; }
+.vcbig figure { margin: 0; }
+.vcbig figcaption { font-size: var(--fs-lg); font-weight: 800; margin-bottom: 6px; }
+.vcbig img { width: 100%; max-height: 74vh; object-fit: contain; display: block; background: var(--sunken); border-radius: var(--radius-xs); }
+
+/* ｻｲｽﾞ修正の窓: 厚・巾・丈 × 値/+/- と、対角・ラテラル */
+.kpop--resize { width: min(860px, 96vw); }
+.kpop--resize h3 { display: flex; align-items: center; gap: 10px; margin: 0; }
+.tol-edit { display: flex; flex-direction: column; gap: 14px; }
+.tol-edit__grid { display: grid; grid-template-columns: 5.5em repeat(3, minmax(0, 1fr)); gap: 8px 10px; align-items: center; }
+.tol-edit__h { color: var(--muted); font-size: var(--fs-sm); text-align: center; }
+.tol-edit__k { font-size: 1.3rem; font-weight: 800; white-space: nowrap; }
+.tol-edit .input { font-family: var(--mono); font-size: 1.4rem; min-height: 52px; padding: 4px 10px; width: 100%; min-width: 0; text-align: right; }
+.tol-edit__row { display: grid; grid-template-columns: 5.5em 1fr 2fr; gap: 10px; align-items: end; }
+.tol-edit__row label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: var(--fs-sm); min-width: 0; }
+.tol-edit__row .input { text-align: left; }

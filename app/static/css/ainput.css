@@ -1,6 +1,27 @@
 /* Aインプット画面(VBA の UFAinput)。左=ロットと送る値、中央=山ごとの高さと判定、右=送信の状態と結果 */
 .ain { position: relative; }
-.ain__open { max-width: 560px; }
+.ain__open { max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 110px); display: flex; flex-direction: column; }
+.ain__open > header h3 { font-size: var(--fs-lg); }
+.ain__open .pad { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 24px 32px; }
+.ain__lead { margin: 0; font-size: var(--fs-lg); line-height: 1.6; }
+.ain__openkv { display: grid; grid-template-rows: auto auto; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px 16px; margin: 0; padding: 16px 20px; border-radius: var(--radius); background: var(--sunken); }
+.ain__openkv dt { color: var(--muted); font-size: var(--fs-sm); }
+.ain__openkv dd { margin: 0; font-family: var(--mono); font-size: 2rem; font-weight: 800; }
+.ain__openkv dd[data-state="ok"] { color: var(--state-ok); }
+.ain__openkv dd[data-state="ng"] { color: var(--state-error); }
+.ain__openkv > * { min-width: 0; }
+.ain__methods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.ain__method { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  min-height: clamp(170px, 28vh, 300px); padding: 16px; border: 2px solid var(--rule); border-radius: var(--radius); background: var(--surface);
+  color: var(--ink); font: inherit; cursor: pointer; }
+.ain__method:hover, .ain__method:focus-visible { border-color: var(--focus); background: var(--accent-soft); }
+.ain__method b { font-family: var(--mono); font-size: clamp(3rem, 6vh, 4.5rem); line-height: 1; }
+.ain__method small { font-size: var(--fs-md, 1rem) !important; }
+.ain__method small { color: var(--muted); font-size: var(--fs-sm); text-align: center; }
+.ain__method[aria-pressed="true"] { border-color: var(--accent); }
+.ain__last { position: absolute; top: 8px; right: 10px; font-size: var(--fs-xs); font-weight: 700; color: var(--accent); }
+.ain__back { justify-content: flex-start; }
+.ain__back .btn { min-height: 44px; font-size: var(--fs-md); }
 .ain__body { display: grid; grid-template-columns: 320px minmax(0, 1fr) 320px; gap: 10px; align-items: start; }
 .ain__body[hidden] { display: none; }
 .ain__col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }

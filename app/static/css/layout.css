@@ -391,3 +391,7 @@ a.role-chip .gl { font-size: var(--fs-sm); opacity: 0.8; }
                          font-size: var(--fs-sm); color: var(--ink); }
 .dbmenu--inline button:hover, .dbmenu--inline button:focus-visible { background: var(--accent-soft); }
 .dbmenu--inline small { display: block; color: var(--muted); font-size: var(--fs-xs); }
+
+/* 配色の切り替え(ダーク / ライト / 自動) */
+.theme-pick { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); opacity: .85; white-space: nowrap; }
+.theme-pick .input { min-height: 30px; padding: 2px 6px; font-size: var(--fs-sm); width: auto; }

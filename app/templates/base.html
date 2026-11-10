@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ display_name }}{% endblock %}</title>
 <link rel="icon" href="data:image/svg+xml,{{ favicon | urlencode }}">
+<script>
+  // 配色(ダーク / ライト / 自動=OS)。この PC の好み(localStorage)。CSS を読む前に決めて、ちらつかせない
+  try { var t = localStorage.getItem("ui.theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) { /* 保存できない PC は OS に従う */ }
+</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
@@ -68,6 +72,10 @@
     <span class="running__track" aria-hidden="true"><i id="rb-run-fill"></i></span>
   </div>
   <div class="ribbon__end">
+    <label class="theme-pick" title="画面の配色。この PC に覚えます">配色
+      <select class="input" id="themeSel" aria-label="配色">
+        <option value="">自動(OS)</option><option value="dark">ダーク</option><option value="light">ライト</option>
+      </select></label>
     {% if ribbon.user %}<button class="btn" type="button" id="logout" title="アクセス権限を読み直して、この PC の権限を確かめる">権限を確認</button>{% endif %}
     <button class="btn btn--danger" type="button" id="quit"><span class="gl">■</span>終了</button>
   </div>
