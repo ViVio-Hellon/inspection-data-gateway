@@ -585,6 +585,24 @@ class ScreenGapTest(SessionBase):
         self.assertEqual(st.v("高さ計算式").value, "(150.0÷15)=10")       # CalculateSheets は KenHBox1〜6 の値で
         self.assertIsNotNone(s.yama_lb("8").stop)
 
+    def test_ken_count_required(self) -> None:
+        # 2026-11-10: 少枚数(厚板の検番 H)で枚数を入れたら検査回数も要る。入れるまで測定を止める
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        st.work = "少枚数"
+        st.work_caption["厚板"] = "H"
+        self.ok(s.yama_lb("枚数"))
+        r = self.ok(s.set_value("KenHBox7", "10"))
+        self.assertIn("検査回数を入れてください", [m.text for m in r.messages])
+        st.inp_tag = ""
+        r = s.receive("DT10001+0000015.012M")
+        self.assertEqual(r.stop.text, "検査回数を入れてください")
+        self.assertEqual(st.cells["S1"].value, "")
+        self.ok(s.set_value("KenCount", "2"))
+        r = self.ok(s.receive("DT10001+0000015.012M"))
+        self.assertEqual(st.cells["S1"].value, "15.012")
+        self.assertNotIn("検査回数を入れてください", [m.text for m in self.ok(s.set_value("KenHBox7", "12")).messages])
+
     # --- 保留(CommandButton18)・まとめて削除(NG?_DblClick)------------------
     def test_hold(self) -> None:
         self.lot_ready()

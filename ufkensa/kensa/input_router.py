@@ -101,9 +101,10 @@ THIN_TABLE: tuple[tuple[int, str, str], ...] = (
     (5, "SUCDE", "SUCDE"),       # 検番なし(入れる先。黄色の印は検番なしを冷延と同じに扱う: Look_S_Blank)
     (4, "SE", "SE"),             # 冷延で検入≦25(2 回)
     (1, "SCE", "SCE"),           # 冷延(3 回)
-    # 検番 H だけ(山数 1・2)は AllCheck のどれにも当たらず、DT・#L・#〆 はすぐ「検査済」(VBA どおり。G1 §11-8)。
-    # 黄色の印は出る(Look_S_Blank の H の枝)
-    (2, "", "SUCDE"),
+    # 検番 H だけ(山数 1・2)。VBA は AllCheck・PucketMove のどれにも当たらず、DT・#L・#〆 はすぐ「検査済」なのに、
+    # 黄色の印は出ていた(Look_S_Blank の H の枝。G1 §11-8)。2026-11-10(第3段の続き 1。intended I5): 印の欄で測れるよう、
+    # 入れる先・検査済も印と同じ位置にする(山数 1・2 は U・D が隠れているので S → C → E)
+    (2, "SUCDE", "SUCDE"),
 )
 
 
@@ -312,8 +313,31 @@ def next_blank(state: KensaState, ken_no: str) -> None:
 
 
 def ken_no_for_input(state: KensaState) -> str:
-    """INP_Change の検番(UF1:4585)。B3: VBA は冷延欄 `Reien` の頭 1 文字(UserForm_Click は `KenNo`)。"""
-    return vbx.left(state.ken_no_caption, 1)
+    """次に入れる欄の検番(INP_Change UF1:4585 / UserForm_Click UF1:4362)。
+
+    B3: VBA の INP_Change は冷延欄 `Reien` の頭 1 文字(UserForm_Click は `KenNo`)。ここはどちらも KenNo 欄の頭。
+    2026-11-10(第3段の続き 3。intended I7): 薄板で KenNo 欄の頭が "0"/空(DB にまだ検査番号が無い)なら、
+    Atu_OPselect が最終圧延機から作った頭(state.ken_head。補助.FindPriority)を使う。VBA は作った頭を作業選択ボタンの
+    Caption にしか使わず、薄板は「検番なし」(5 回)か、どの位置にも当たらない("0"。すぐ検査済)になっていた。
+    """
+    head = vbx.left(state.ken_no_caption, 1)
+    if head in ("0", "") and state.is_work("薄板") and state.ken_head not in ("0", ""):
+        return state.ken_head
+    return head
+
+
+def ken_count_missing(state: KensaState) -> bool:
+    """少枚数(厚板の検番 H)で、枚数(KenHBox7)があるのに検査回数(KenCount)が無い(または 0)。
+
+    2026-11-10(第3段の続き 2。intended I6): このとき AllCheck の th は 0 で、DT・#L・#〆 はすぐ「検査済」になり、
+    何も測れないまま進めた(VBA。KenCount は手入力で、KenHBox7 から作る決まりは無い: UF1:745-765 / 1696-1712)。
+    検査回数を入れるまで測定を止める(`inp_change`)。画面は検査回数の欄を「必須」にする(kensa.js)。
+    """
+    return (state.is_work("少枚数") and state.work_caption.get("厚板") == "H"
+            and state.ken_h[7].value != "" and vbx.val(state.ken_count) < 1)
+
+
+KEN_COUNT_MISSING = "検査回数を入れてください"
 
 
 # ------------------------------------------------------------------
@@ -340,6 +364,11 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
         raise Stop("山数の入力がありません" + "\r\n" + "選択してください", level=WARN, source="UF1:4569")
     if state.yama_tag == "別フォーム":
         raise Stop("別フォームで検査してください", level=ERROR, source="UF1:4574")
+    if ken_count_missing(state):
+        # 2026-11-10(第3段の続き 2): 枚数があって検査回数が無いと、すぐ「検査済」で何も入らなかった。入れるまで止める。
+        # 山数と違い INP を空に戻す(検査回数を入れた後、同じ値が届いても受ける)
+        state.inp = ""
+        raise Stop(KEN_COUNT_MISSING, level=WARN, source="input_router.ken_count_missing")
 
     state.flag_label = 0
     fm_clear(state, "All")

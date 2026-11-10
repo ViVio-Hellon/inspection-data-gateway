@@ -24,6 +24,8 @@
 .mgrid td[data-border="RED"] { border-color: var(--state-error); }
 .mgrid td[data-underline="1"] { text-decoration: underline; }
 .mgrid td[data-hidden="1"] { visibility: hidden; cursor: default; }
+/* 必須の欄(少枚数の検査回数。枚数があって検査回数が無いと測定を止める) */
+.mgrid td[data-required="1"] { background: var(--warn-bg); outline: 2px solid var(--state-error); }
 .mgrid td.sub { cursor: default; font-size: var(--fs-sm); }
 .mgrid tr.sep td, .mgrid tr.sep th { padding-top: 8px; }
 

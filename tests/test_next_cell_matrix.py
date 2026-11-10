@@ -3,7 +3,7 @@
 入れる先(`pucket_move`)・「〜検査済」(`all_check`)・黄色の印(`look_blank`・`look_s_blank`・`smallnumber_blank`)・
 振り分け(`next_blank`)を 1 つの表にまとめる前に、今の動きを書き留めた(`fixtures/next_cell_matrix.json`。作り直さない)。
 まとめた後の動きは、書き留めに `fixtures/next_cell_matrix_intended.json`(決めた決まりにそろえた所。直し。理由つき)を
-重ねたものと同じであること(直しの理由は intended の "_理由" の I1〜I4。並びは "from" 手目から先、調べは違う所だけ)。
+重ねたものと同じであること(直しの理由は intended の "_理由" の I1〜I7。並びは "from" 手目から先、調べは違う所だけ)。
 
 画面の状態は本物の作業選択(`layout.select_work`・`yama_change`・`at_butt_click`・`inspe_butt_click`・
 少枚数の `SmallNumberCount`)で作る。ロットは試験用の DB(検番・オーダー厚)を差し込む。

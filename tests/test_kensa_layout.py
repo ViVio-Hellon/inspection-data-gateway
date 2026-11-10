@@ -269,6 +269,23 @@ class CountSelectTest(QuirkCase):
         self.assertEqual(s.at_butt_caption, "厚2ヵ所")
         self.assertTrue(s.cells["S3"].visible and s.cells["E4"].enabled)
 
+    def test_at_count_select_generated_ken_head(self) -> None:
+        # 2026-11-10(第3段の続き 3): DB の検査番号が "0…" でも、作った頭(ken_head)で 厚4ヵ所 の 3・4 行目を出す。
+        # VBA(FormRelat:1985)は DB の頭だけを見るので、どの分岐にも当たらず 3・4 行目が出なかった
+        def hidden(**kw) -> KensaState:
+            s = KensaState(lot="LOT0001", work="薄板", **kw)
+            for p in "SUCDE":
+                for r in (3, 4):
+                    s.cells[f"{p}{r}"].visible = s.cells[f"{p}{r}"].enabled = False
+            return s
+        s = hidden(ken_head="L")
+        layout.at_count_select(s, 4, fake_db(ken="0000000000"))
+        self.assertTrue(s.cells["S3"].visible and s.cells["C4"].enabled and s.cells["E3"].visible)
+        self.assertFalse(s.cells["U3"].visible)              # 冷延 3 回は S・C・E
+        s = hidden()                                        # 作れなかったときは VBA のまま(どの分岐にも当たらない)
+        layout.at_count_select(s, 4, fake_db(ken="0000000000"))
+        self.assertFalse(s.cells["S3"].visible)
+
     def test_buttons_swallow_errors(self) -> None:
         s = KensaState(lot="LOT0001", work="薄板")
         h = FakeHooks(records={"SIKAHIKINOW.accdb": [["x"]]}, fields={"SIKAHIKINOW.accdb": ["a"]})
@@ -347,6 +364,17 @@ class AtuOpSelectTest(unittest.TestCase):
         h.records["SIKALOTNOW.accdb"][0][4] = "PSW"
         layout.atu_opselect(s, 3.0, h, 0.0, msgs)
         self.assertIn("データ上にまだ検査番号がありません", msgs[0].text)
+
+    def test_ken_head(self) -> None:
+        # 2026-11-10(第3段の続き 3): 作った検番の頭を覚える(薄板の次に入れる欄・厚2/4ヵ所・検入で使う)
+        s, _ = self.run_with("3", ken="0000000000")
+        self.assertEqual((s.ken_no_caption, s.ken_head, s.work_caption["薄板"]), ("0000000000", "L", "L"))
+        s, _ = self.run_with("3")
+        self.assertEqual(s.ken_head, "L")
+        s = KensaState(lot="LOT0001", ken_head="前")
+        h = fake_db(ken="0000000000", atu="3", c_course="PSW")
+        layout.atu_opselect(s, 3.0, h, 0.0, [])
+        self.assertEqual(s.ken_head, "0")                   # 作れなかった(前のロットの頭は残さない)
 
     def test_hiki_missing_exits_before_reset(self) -> None:
         # FormRelat:6233-6242: SIKAHIKINOW が MainPath・NextPath とも無い → MsgBox、Comment="" で Exit Sub。

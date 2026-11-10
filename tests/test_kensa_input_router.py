@@ -109,12 +109,26 @@ class PucketMoveTest(unittest.TestCase):
         ir.pucket_move(s, "DT", "L", "", FakeHooks())
         self.assertEqual(s.inp_tag, "F1")
 
-    def test_thin_h_only_counts_as_done(self) -> None:
-        # 薄板・検番 H・山数 1 は AllCheck の分岐に当たらず「検査済」(G1 §11-8)
+    def test_thin_h_only_goes_to_marker(self) -> None:
+        # 薄板・検番 H・山数 1。VBA は AllCheck の分岐に当たらず すぐ「検査済」なのに、黄色の印は S1 に出ていた(G1 §11-8)。
+        # 2026-11-10(intended I5): 入れる先・検査済を印と同じ位置にする(U・D は隠れているので S → C → E)
         s = ready("薄板", yama="1")
+        for p in "UD":
+            for r in range(1, 11):
+                s.cells[f"{p}{r}"].visible = s.cells[f"{p}{r}"].enabled = False
+        ir.pucket_move(s, "DT", "H", "", FakeHooks())
+        self.assertEqual(s.inp_tag, "S1")
+        s.auto = "on"
+        ir.look_s_blank(s, 1, 10, "H")
+        self.assertEqual(s.inp_tag, "S1")                   # 黄色の印と同じ欄
+        fill(s, cells("S", range(1, 5)))
+        ir.pucket_move(s, "DT", "H", "", FakeHooks())
+        self.assertEqual(s.inp_tag, "C1")
+        fill(s, cells("CE", range(1, 5)))
         msgs = []
         ir.pucket_move(s, "DT", "H", "", FakeHooks(), msgs)
         self.assertEqual(msgs[0].text, "DT検査済")
+        self.assertTrue(ir.next_cells(s, [1], "H") == ir.next_cells(s, [1], "H", marker=True) == ["S1", "U1", "C1", "D1", "E1"])
 
     def test_small_count_th_columns(self) -> None:
         # 厚板.Caption="H" で少枚数 → AllCheck は th で列を決める(th=2 → S,U)
@@ -276,6 +290,50 @@ class InpChangeTest(QuirkCase):
         s.proofread_flag = ""
         ir.receive(s, "#〆1.5", FakeHooks())
         self.assertEqual(s.cells["S1"].value, "1.5")
+
+    def test_ken_count_missing_blocks(self) -> None:
+        # 2026-11-10(intended I6): 少枚数(厚板の検番 H)で枚数があって検査回数が空 → すぐ「検査済」だった。入れるまで止める
+        s = ready("少枚数")
+        s.work_caption["厚板"] = "H"
+        s.ken_h[7].value = "10"
+        h = FakeHooks(sheets=3)
+        for text in ("DT10002+0000021.712M", "#L395.8", "#〆1.5"):
+            with self.assertRaises(Stop) as cm:
+                ir.receive(s, text, h)
+            self.assertEqual(cm.exception.text, "検査回数を入れてください")
+            self.assertEqual((s.inp, s.flag_label, s.cells["S1"].value, s.cells["S5"].value), ("", 1, "", ""))
+        s.ken_count = "0"                                   # 0 回も入れていないのと同じ
+        with self.assertRaises(Stop):
+            ir.receive(s, "#〆1.5", h)
+        s.ken_count = "2"                                   # 入れたら、同じ値でも受ける(INP は空に戻してある)
+        ir.receive(s, "#〆1.5", h)
+        self.assertEqual(s.cells["S1"].value, "1.5")
+
+    def test_ken_count_missing_only_small_h_with_sheets(self) -> None:
+        for work, ken, h7, kc in (("少枚数", "L", "10", ""), ("少枚数", "H", "", ""), ("少枚数", "H", "10", "3"),
+                                  ("厚板", "H", "10", "")):
+            s = ready(work)
+            s.work_caption["厚板"] = ken
+            s.ken_h[7].value = h7
+            s.ken_count = kc
+            self.assertFalse(ir.ken_count_missing(s), (work, ken, h7, kc))
+            ir.receive(s, "#〆1.5", FakeHooks(sheets=3))
+            self.assertEqual(s.cells["S1"].value, "1.5", (work, ken, h7, kc))
+
+    def test_thin_generated_ken_head(self) -> None:
+        # 2026-11-10(intended I7): 薄板で KenNo 欄が "0…"/空でも、最終圧延機から作った頭(ken_head)で次の欄を決める
+        for caption in ("", "0000000000"):
+            s = ready("薄板", ken_no_caption=caption, ken_head="L")
+            self.assertEqual(ir.ken_no_for_input(s), "L")
+            fill(s, cells("S", range(1, 5)))
+            ir.receive(s, "DT10002+0000021.712M", FakeHooks())
+            self.assertEqual(s.cells["C1"].value, "21.712")  # 冷延(3 回): S → C → E
+        s = ready("薄板", ken_no_caption="H6X0001", ken_head="L")
+        self.assertEqual(ir.ken_no_for_input(s), "H")       # DB に検査番号があればそれ
+        s = ready("厚板", ken_no_caption="", ken_head="L")
+        self.assertEqual(ir.ken_no_for_input(s), "")        # 薄板だけ
+        s = ready("薄板", ken_no_caption="0000000000")
+        self.assertEqual(ir.ken_no_for_input(s), "0")       # 作れなかったときは VBA のまま
 
     def test_yama_missing(self) -> None:
         s = ready("薄板", yama_visible=True)
