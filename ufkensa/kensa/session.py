@@ -163,7 +163,7 @@ class Session:
                 workers_list.append(f"{label}: {t}" + (f"({day})" if day else ""))
         return {**self._extra_more(), "lot_source": self._lot_source_view(), "workers": workers_list,
                 "worker_time": self._worker_time(), "checks": self.checks, "print_ready": self.print_ready,
-                "confi": self.confi, "calibration_required": self.calibration_required and not self._calibrated(),
+                "confi": self._confi_view(), "calibration_required": self.calibration_required and not self._calibrated(),
                 "report": self.report or None, "proofread": "ok" if self._calibrated() else "",
                 "range": {"ops": st.ops, "ope": st.ope,
                           "labels": [st.v(f"OPS{i}").value if st.v(f"OPS{i}").visible else "" for i in range(1, 7)]}}
@@ -251,6 +251,17 @@ class Session:
                                                 source="Posting"))
             shadow.check_verdicts(self.state, "kensa." + getattr(fn, "__name__", ""))
             return Result(self._view(), list(env.messages), question=q if isinstance(q, Question) else None)
+
+    def _confi_view(self) -> Optional[dict[str, Any]]:
+        """出している確認。理由の選択肢はマスタ(理由選択)をその都度読む(保守で直したらすぐ出る)。"""
+        c = self.confi
+        if c is None:
+            return None
+        if c.get("list2"):
+            c["choices"] = reason_master.choices(reason_master.KIND_REMEASURE) or c["choices"]
+        elif c.get("page") == 1:
+            c["choices"] = reason_master.choices(reason_master.KIND_DELETE)
+        return c
 
     def _open_confi(self, req: checks.ConfiRequest) -> None:
         """UFConfi を出す(vbModeless。最後の 1 件が残る)。page 0 = 公差外、1 = 理由選択。"""
@@ -721,9 +732,19 @@ class Session:
     def receive(self, text: str) -> Result:
         return self._run(self._receive, text, posting=False)
 
+    CONFI_WAIT = "理由を選んでから測ってください(確認の画面で理由を選ぶまで次の測定はできません)"
+
+    def _confi_block(self, what: str = "") -> None:
+        """2026-11-10: 確認(UFConfi)を出している間は測定を受け付けない(現場の声: 理由を選ぶまで次へ進めない)。
+        VBA は vbModeless だが、選ばずに測り続けられて理由が抜けるので、選ぶまで止める。"""
+        if self.confi is not None:
+            self.receive_why = self.CONFI_WAIT
+            raise Stop(self.CONFI_WAIT, source="UFConfi", level=WARN)
+
     def _receive(self, text: str) -> None:
         """StartTB → INP_Change。D11: 校正の要否をこの入力の時点で判定して ProofreadFlag に入れる。"""
         self._require_line()
+        self._confi_block()
         st = self.state
         st.work_button_tag = "jump" if self.calibration_skip() else ""
         st.proofread_flag = "ok" if self._calibrated() else ""
@@ -784,6 +805,7 @@ class Session:
 
     def _click(self, name: str) -> None:
         st = self.state
+        self._confi_block()
         if name in ("", "UserForm"):
             self.hooks.user_form_click(st)                                # UserForm_Click
             return
@@ -797,6 +819,7 @@ class Session:
     def _dblclick(self, name: str, reason: str) -> None:
         """LabelCls の ObjX_Click → ObjX_DblClick。値があれば消去理由(ConfiReason_Open)を出す。"""
         st = self.state
+        self._confi_block()
         if not st.has_ctl(name):
             raise Stop(f"UF1 にコントロール {name!r} がありません", source="LabelCls")
         input_router.text_tag(st, name, self.hooks)
@@ -818,6 +841,9 @@ class Session:
         if name.startswith("UFConfi."):
             self._confi_input(name[len("UFConfi."):], value)
             return
+        if (name == "Manual" or name.startswith("Lateral") or name in st.cells
+                or (len(name) == 2 and name[0] in "ZG" and name[1] in grid.POSITIONS)):
+            self._confi_block()                                          # 測定値の手入力は確認の後
         if name == "Manual":                                             # CommandButton3(手入力)
             env.messages.extend(input_router.manual_entry(st, value, hooks))
             return

@@ -653,14 +653,26 @@ function renderRange(v) {
 }
 
 // 公差外の確認(UFConfi)。page 0 = 公差外(TB1 に入れて送信)、1 = 消去理由(List1)
+// 2026-11-10: 選ぶまで次へ進めない大きな窓(showModal。Esc・外側では閉じない。サーバも測定を受け付けない)
+let confiSig = "";
 function renderConfi(v) {
+  const dlg = $("confiDlg");
   const box = $("confiBox");
   const c = v.confi;
-  box.hidden = !c;
-  if (!c) return;
-  const head = el("p", { textContent: c.page === 0 ? `検査ﾃﾞｰﾀに公差外有り！ 対象データ ${c.moto}(${c.posi}${c.n})`
-                                                   : `再測定及びその他の理由 対象データ ${c.moto}(${c.posi}${c.n})` });
-  const row = el("div", { class: "btn-row" });
+  if (!c) {
+    confiSig = "";
+    if (dlg.open) { dlg.close(); refocus(); }
+    return;
+  }
+  const sig = JSON.stringify(c);
+  if (sig === confiSig && dlg.open) return;            // 描き直しで選んだボタンが消えないように
+  confiSig = sig;
+  $("confiTitle").textContent = c.page === 0 ? "検査ﾃﾞｰﾀに公差外有り！" : (c.list2 ? "再測定の理由" : "再測定及びその他の理由");
+  const head = el("p", { class: "confi__target", textContent: `対象データ ${c.moto}(${c.posi}${c.n})` });
+  const lead = el("p", { class: "confi__lead", textContent: "理由を選ぶまで次の測定はできません" });
+  const row = el("div", { class: "confi__choices" });
+  const note = el("p", { class: "muted confi__note" });
+  note.append("選択肢は ", el("a", { href: "/maint?tab=master", target: "_blank", rel: "noopener", textContent: "保守 → マスタ管理 → 理由選択" }), " で増やせます");
   // 公差外のページ(TB1)は 1 つ押せば送る(理由の文字は要らない。VBA の page0)。
   // 理由のページ(List1)と再測定の理由(List2)は、VBA と同じく複数選んでから「決定」(2026-11-08 に直した)
   if (c.page === 0 && !c.list2) {
@@ -669,33 +681,36 @@ function renderConfi(v) {
       b.addEventListener("click", async () => { await op("value", { name: "UFConfi.TB1", value: ch }); refocus(); });
       return b;
     }));
-    box.replaceChildren(head, row);
-    return;
-  }
-  const name = c.list2 ? "UFConfi.List2" : "UFConfi.List1";
-  const picked = new Set();
-  row.append(...c.choices.map((ch) => {
-    const b = el("button", { type: "button", class: "btn", textContent: ch });
-    b.setAttribute("aria-pressed", "false");
-    b.addEventListener("click", () => {
-      if (picked.has(ch)) picked.delete(ch); else picked.add(ch);
-      b.setAttribute("aria-pressed", String(picked.has(ch)));
+    box.replaceChildren(head, lead, row);
+  } else {
+    const name = c.list2 ? "UFConfi.List2" : "UFConfi.List1";
+    const picked = new Set();
+    row.append(...c.choices.map((ch) => {
+      const b = el("button", { type: "button", class: "btn", textContent: ch });
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => {
+        if (picked.has(ch)) picked.delete(ch); else picked.add(ch);
+        b.setAttribute("aria-pressed", String(picked.has(ch)));
+      });
+      return b;
+    }));
+    const ok = el("button", { type: "button", class: "btn btn--commit confi__ok", textContent: "決定" });
+    ok.addEventListener("click", async () => {
+      const list = c.choices.filter((ch) => picked.has(ch));
+      // 「その他」(理由のページは「再測定」も)を選んだら、理由の文字を聞く(VBA: 理由を入力してください)
+      if (picked.has("その他") || (c.page === 1 && picked.has("再測定"))) {
+        const other = await promptBox("理由を入力してください", { value: "" });
+        if (other === null) return;
+        await op("value", { name: "UFConfi.その他", value: other });
+      }
+      await op("value", { name, value: list.join(",") });   // 何も選ばなければサーバが「選択してください」
+      refocus();
     });
-    return b;
-  }));
-  const ok = el("button", { type: "button", class: "btn btn--commit", textContent: "決定" });
-  ok.addEventListener("click", async () => {
-    const list = c.choices.filter((ch) => picked.has(ch));
-    // 「その他」(理由のページは「再測定」も)を選んだら、理由の文字を聞く(VBA: 理由を入力してください)
-    if (picked.has("その他") || (c.page === 1 && picked.has("再測定"))) {
-      const other = await promptBox("理由を入力してください", { value: "" });
-      if (other === null) return;
-      await op("value", { name: "UFConfi.その他", value: other });
-    }
-    await op("value", { name, value: list.join(",") });   // 何も選ばなければサーバが「選択してください」
-    refocus();
-  });
-  box.replaceChildren(head, row, el("div", { class: "btn-row" }, ok));
+    box.replaceChildren(head, lead, row, el("div", { class: "btn-row confi__foot" }, ok));
+  }
+  box.append(note);
+  if (!dlg.open) dlg.showModal();
+  dlg.focus();                                         // 最初のボタンに焦点を置かない(測定器の Enter で押されないように)
 }
 
 // 足した値が無い view(セッションの外で作ったもの)でも描けるように
@@ -737,8 +752,20 @@ function buildExtras() {
     rg.append(lab);
   }
   mm.append(rg);
-  const confi = el("div", { id: "confiBox", class: "pad", hidden: true });
-  $("rtabs").before(confi);          // 確かめ(公差外の許容など)はタブに隠さない
+  const dlg = el("dialog", { id: "confiDlg", class: "kpop kpop--confi" });
+  dlg.setAttribute("aria-labelledby", "confiTitle");
+  dlg.append(el("header", {}, el("h3", { id: "confiTitle", textContent: "確認" })),
+             el("div", { id: "confiBox", class: "pad" }));
+  dlg.tabIndex = -1;
+  dlg.addEventListener("cancel", (e) => e.preventDefault());   // Esc では閉じない(選ぶまで進めない)
+  // 測定器(キーボードと同じ)の Enter で、焦点のあるボタンが勝手に押されないように。選ぶのはマウス・タッチだけ
+  dlg.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (e.key === "Enter") toast("理由を選んでから測ってください(ボタンを押して選びます)", "warn");
+    }
+  });
+  document.body.append(dlg);
 }
 
 function remember(line) {

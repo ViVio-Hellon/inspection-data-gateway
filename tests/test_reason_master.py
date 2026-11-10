@@ -49,3 +49,20 @@ class ReasonMasterTest(SessionBase):
     def test_missing_db_falls_back(self) -> None:
         self.assertEqual(reasons.choices(reasons.KIND_DELETE, path=self.tmp / "無い.sqlite3"),
                          list(reasons.DEFAULTS["消去"]))
+
+    def test_master_admin_edits_show_in_open_dialog(self) -> None:
+        """保守 → マスタ管理 で 足す・直す・消す と、出ている確認の選択肢にすぐ出る(古いまま残らない)。"""
+        self.register()
+        self.fill("DT")
+        r = self.s.dblclick("S1")
+        self.assertEqual(r.view["confi"]["page"], 1)
+        master_admin.add_row("denso", "理由選択", {"区分": "消去", "順番": 99, "理由": "台車移動", "有効": 1})
+        rows = master_admin.page("denso", "理由選択", limit=100)["rows"]
+        rid = next(x["__rowid"] for x in rows if x["理由"] == "板廃棄")
+        master_admin.save_row("denso", "理由選択", rid, {"理由": "板廃棄(割れ)"})
+        rid2 = next(x["__rowid"] for x in rows if x["理由"] == "その他")
+        master_admin.delete_row("denso", "理由選択", rid2)
+        got = self.s._view()["confi"]["choices"]
+        self.assertIn("台車移動", got)
+        self.assertIn("板廃棄(割れ)", got)
+        self.assertNotIn("その他", got)

@@ -686,3 +686,40 @@ class ScreenGapTest(SessionBase):
         self.assertIn("Excelを閉じても解除はできません\r\n隠蔽工作Log出力", [m.text for m in r.messages])
         self.assertEqual(r.view["name_list"], 1)
         self.assertIsNone(self.ok(self.s.name_list_ack()).view["name_list"])
+
+
+class ConfiBlocksTest(SessionBase):
+    """2026-11-10: 確認(UFConfi)を出している間は、理由を選ぶまで次の測定を受け付けない。"""
+
+    def test_receive_refused_until_answered(self) -> None:
+        s = self.s
+        self.register()
+        st = s.state
+        self.ok(s.receive("DT10001+0000015.500M"))
+        for _ in range(3):
+            r = self.ok(s.receive("DT10001+0000015.012M"))
+        self.assertIsNotNone(r.view["confi"])
+        before = {k: c.value for k, c in st.cells.items()}
+        r = s.receive("DT10001+0000015.020M")
+        self.assertIsNotNone(r.stop)
+        self.assertIn("理由を選んでから測ってください", r.stop.text)
+        self.assertIn("理由を選んでから測ってください", s.receive_why)
+        self.assertEqual({k: c.value for k, c in st.cells.items()}, before)   # 何も入らない
+        for blocked in (lambda: s.dblclick("S1"), lambda: s.click("S2"), lambda: s.set_value("Manual", "15.0")):
+            self.assertIn("理由を選んでから", blocked().stop.text)
+        # 答えると進める
+        self.ok(s.set_value("UFConfi.TB1", "許容"))
+        self.assertIsNone(s._view()["confi"])
+        r = self.ok(s.receive("DT10001+0000015.020M"))
+        self.assertNotEqual({k: c.value for k, c in st.cells.items()}, before)
+
+    def test_erase_reason_blocks_then_proceeds(self) -> None:
+        s = self.s
+        self.register()
+        self.fill("DT")
+        r = self.ok(s.dblclick("S1"))
+        self.assertEqual(r.view["confi"]["page"], 1)
+        self.assertIn("理由を選んでから", s.receive("DT10001+0000015.020M").stop.text)
+        self.ok(s.set_value("UFConfi.List1", "板廃棄"))
+        self.assertIsNone(s._view()["confi"])
+        self.ok(s.receive("DT10001+0000015.020M"))

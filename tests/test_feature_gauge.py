@@ -59,6 +59,7 @@ class SurfacePlateLotTest(GaugeBase):
         self.assertEqual(st.strain_z["S"].color, "OK")
         self.ok(s.set_value("ZS", "2.1"))
         self.assertEqual(st.strain_z["S"].color, "NG")
+        self.ok(s.set_value("UFConfi.TB1", "許容"))                     # 確認(公差外)に答えてから次へ
         # G 欄(ｹﾞｰｼﾞ)は CB?3 があっても判定しない(白)
         self.ok(s.set_value("CBS3", "丈"))
         self.ok(s.set_value("GS", "9"))
@@ -88,6 +89,7 @@ class GaugeLotTest(GaugeBase):
         self.assertEqual(st.strain_z["S"].color, "OK")
         self.ok(s.set_value("ZS", "2.1"))
         self.assertEqual(st.strain_z["S"].color, "NG")
+        self.ok(s.set_value("UFConfi.TB1", "許容"))                     # 確認(公差外)に答えてから次へ
         self.ok(s.set_value("CBS3", "丈"))
         self.ok(s.set_value("GS", "3.0"))
         self.assertEqual(st.strain_g["S"].color, "OK")

@@ -270,3 +270,31 @@ li.is-stale { opacity: .6; }
 .tol-edit__row { display: grid; grid-template-columns: 5.5em 1fr 2fr; gap: 10px; align-items: end; }
 .tol-edit__row label { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: var(--fs-sm); min-width: 0; }
 .tol-edit__row .input { text-align: left; }
+
+/* ---- 2026-11-10b: 確認(UFConfi)は大きな窓・次に測る/受信欄は小さく・VC は大きく ---- */
+.kpop--confi { width: min(900px, 94vw); border: 3px solid var(--state-warn, #b26b00); }
+.kpop--confi::backdrop { background: rgba(0, 0, 0, .55); }
+.kpop--confi h3 { margin: 0; font-size: 1.5rem; color: var(--state-error); }
+.kpop--confi .pad { gap: 14px; padding: 18px 22px; }
+.confi__target { margin: 0; font-size: 1.25rem; font-weight: 800; }
+.confi__lead { margin: 0; font-weight: 700; color: var(--state-error); }
+.confi__choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.confi__choices .btn { min-height: 56px; font-size: 1.15rem; font-weight: 700; }
+.confi__foot { justify-content: flex-end; }
+.confi__ok { min-height: 52px; min-width: 180px; font-size: 1.2rem; }
+.confi__note { margin: 0; font-size: var(--fs-sm); }
+#confiBox .btn[aria-pressed="true"] { background: var(--state-warn, #b26b00); color: #fff; border-color: transparent; }
+/* 測定中: 次に測るは 1 行 */
+.kensa[data-phase="measure"] .next { display: flex; align-items: baseline; justify-content: center; gap: 10px; padding: 3px 10px; }
+.kensa[data-phase="measure"] .next b { display: inline; font-size: 1.35rem; line-height: 1.2; }
+.kensa[data-phase="measure"] .next small { font-size: var(--fs-xs); }
+/* 測定中: 受信欄は小さく(状態は 1 行・入力は低く) */
+.kensa[data-phase="measure"] .recv { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 4px 8px; border-width: 1px; }
+.kensa[data-phase="measure"] .recv__state { font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kensa[data-phase="measure"] .recv__in { min-height: 28px; height: 28px; padding: 2px 6px; font-size: var(--fs-sm); }
+.kensa[data-phase="measure"] .recv__dev, .kensa[data-phase="measure"] .recv__last { font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kensa[data-phase="measure"] .recv__why { font-size: var(--fs-xs); }
+/* VC は既定で大きく(列の幅いっぱい・高さ約 1.5 倍)。はみ出す分は右の列の中でスクロール */
+.kensa[data-phase="measure"] .vcrail__imgs[data-count="2"] { grid-template-columns: 1fr; }
+.kensa[data-phase="measure"] .vcrail__fig img { max-height: 36vh; }
+.kensa--compact[data-phase="measure"] .vcrail__fig img { max-height: 30vh; }

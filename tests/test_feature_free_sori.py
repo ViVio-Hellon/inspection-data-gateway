@@ -61,6 +61,7 @@ class FreeSoriTest(FreeSoriBase):
         r = self.ok(s.set_value("GS", "0.6"))
         self.assertEqual(st.strain_g["S"].color, "NG")
         self.assertIn("kensa_ng", [m.sound for m in r.messages])
+        self.ok(s.set_value("UFConfi.TB1", "許容"))                     # 確認(公差外)に答えてから次へ
         self.ok(s.set_value("GU", "0.5"))                                # 境界は合格(> で NG)
         self.assertEqual(st.strain_g["U"].color, "OK")
         self.ok(s.set_value("GS", "0.2"))
