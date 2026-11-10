@@ -1953,7 +1953,8 @@ class Session:
             def _num(v: str) -> bool:
                 t = str(v or "").strip()
                 return any(ch.isdigit() and ch != "0" for ch in t)
-            hits = [k for k, c in st.cells.items() if CellKey.parse(k) is not None and str(c.value or "").strip()]
+            # F7(2026-11-10): 測定表の欄も歪と同じ決まり(数値だけ。"0.00"・空白・文字だけは数えない)
+            hits = [k for k, c in st.cells.items() if CellKey.parse(k) is not None and _num(c.value)]
             hits += [f"歪{k}" for k, z in st.strain_z.items() if _num(z.value)]
             measured = bool(hits)
             if measured:
