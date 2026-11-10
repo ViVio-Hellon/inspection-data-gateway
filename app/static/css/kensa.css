@@ -324,3 +324,19 @@ li.is-stale { opacity: .6; }
 .strain-tol b { color: var(--accent); }
 .strain-tol__item { font-family: var(--mono); font-weight: 600; }
 .strain-tol__item.is-empty { color: var(--muted); font-weight: 400; }
+
+/* 2026-11-10: 低い画面(1366x768 など)では「操作」の札を列の中でスクロールせずに収める。
+   ボタンを 3 列の格子に詰め、札・余白・最近の操作の欄を小さくする(押す的は 32px を割らない)。
+   広い画面(1920x1080)は今までどおり */
+.kensa--compact[data-phase="measure"] .krail { max-height: calc(100vh - 205px); }
+.kensa--compact[data-phase="measure"] .rtabs > .subtabs-head { padding: 4px 6px; }
+.kensa--compact[data-phase="measure"] .rtabs .subtabs button { min-height: 30px; padding: 3px 10px; font-size: var(--fs-sm); }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .btn-row { display: contents; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .btn { min-height: 32px; min-width: 0; padding: 3px 4px; font-size: var(--fs-sm);
+  white-space: normal; line-height: var(--lh-tight); text-align: center; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .btn[hidden] { display: none; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .who-toggle { grid-column: 1 / -1; min-height: 28px; }
+/* 最近の操作は最新の 1 行だけ(広い画面では 8 行まで見える) */
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .log-lines { grid-column: 1 / -1; max-height: 1.3em; line-height: 1.3; overflow: hidden; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .log-lines li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
