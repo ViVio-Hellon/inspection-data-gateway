@@ -1044,9 +1044,24 @@ def hiki_arr_create(lot_no: str, main_db: Union[str, Path, None] = None,
     """QP.HikiArrCreate (QP:1867-1909)。引当の (受注_納入先名称, 受注_取引先名称) を行順に。
 
     Main(MainPath)で列・行が取れなければ Next(NextPath)。行が Next から来ても列番号は Main のもの(VBA どおり)。
+    `main_db` / `next_db` を渡さなければ、第1/第2の読み分けは検査画面の引当と同じ `lot_ledger`
+    (ファイル・ロットが無ければ次に見る側、次に見る側にだけある引当も足す。列は Main の並びに直してある)。
+    読めるファイルがどちらにも無ければ `datasource.DbMissing`(前と同じ)。
     """
     if lot_no == "":
         return None
+    if main_db is None and next_db is None:
+        from . import lot_ledger
+        f = lot_ledger.read_fields("SIKAHIKINOW")
+        if not f.found:
+            raise datasource.DbMissing(f"DB ファイルが見つかりません: {f.file_path}")
+        if f.cols is None:
+            return None
+        rows = lot_ledger.read_rows("SIKAHIKINOW", "[ﾛｯﾄ番号]='" + lot_no + "'").rows
+        if rows is None:
+            return None
+        c_nou, c_tori = col_of(f.cols, "受注_納入先名称"), col_of(f.cols, "受注_取引先名称")
+        return [(vstr(cell(r, c_nou)), vstr(cell(r, c_tori))) for r in rows]
     main_db = main_db or paths.db_file("SIKAHIKINOW")
     next_db = next_db or paths.db_file("SIKAHIKINOW", base_key="next")
     db: Union[str, Path] = main_db

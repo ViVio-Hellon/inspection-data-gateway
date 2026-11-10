@@ -609,43 +609,30 @@ class Hooks:
     def arrbox(self, state: KensaState, target: str, sql_filter: str = "", use: str = "Record") -> Optional[list[Any]]:
         """AccHIki.Arrbox(target, filter, use, DBflag)。"Fields" は列名の list、"Record" は行(list[list[str]])の list。
 
-        既定は datasource で直接読む簡易版(MainPath/NextPath の切替・TimeDesignation は lot.py の担当)。
+        既定は知らせを出さない Arrbox(第1/第2の読み分けは `lot_ledger`。知らせ・IsOver12Hours は wiring.RealHooks)。
+        DBflag で読んだ控えのファイルが無ければ None。
         """
-        from . import datasource, paths
-        db = target[:-6] if target.endswith(".accdb") else target
-        path = paths.db_file(db) if state.dbflag == "" else paths.db_file(db, base_key="next")
-        if not datasource.exists(path):
+        from . import datasource, lot_ledger
+        try:
+            return lot_ledger.arrbox_value(target, sql_filter, use, state.dbflag)
+        except datasource.DbMissing:
             return None
-        if sql_filter == "":
-            flt = ""
-        elif sql_filter == "板":
-            flt = "[ｵｰﾀﾞｰ板丈]<>0"
-        elif sql_filter == "コイル":
-            flt = "[ｵｰﾀﾞｰ板丈]=0  AND  [BOX設計_設備名] = 'KEN' "
-        else:
-            flt = "[ﾛｯﾄ番号]='" + sql_filter + "'"
-        if use == "Fields":
-            return datasource.get_fields(path, "仕掛", "")
-        return datasource.get_records(path, "仕掛", flt)
 
     def atu_hiki_records(self, state: KensaState, lot: str) -> tuple[bool, Optional[list[Any]]]:
         """Atu_OPselect の SIKAHIKINOW の読み (FormRelat:6227-6247)。Arrbox を通さず GetRecordsArr を直接呼ぶ。
 
-        DBflag が空なら MainPath、MainPath が読めなければ(ReadCheck・TimeDesignation・FileDesignation)NextPath。
-        NextPath も無いときは (False, None)(呼び手が「日稲:…がありません_ReadCheckAtu_OPselect」で抜ける)。
+        第1/第2の読み分けは `lot_ledger`。読めるファイルがどちらにも無いときは (False, None)
+        (呼び手が「日稲:…がありません_ReadCheckAtu_OPselect」で抜ける)。DBflag で読んだ控えのファイルが無ければ (True, None)。
         Filter は Lot が空でも `[ﾛｯﾄ番号]=''`(Arrbox の「空なら絞り込み無し」とは違う)。
-        既定は ReadCheck だけを見る簡易版(時刻窓・PLEASE WAIT は wiring.RealHooks)。
         """
-        from . import ado_filter, datasource, paths
-        main, nxt = paths.db_file("SIKAHIKINOW"), paths.db_file("SIKAHIKINOW", base_key="next")
-        path = main if state.dbflag == "" else nxt
-        if state.dbflag == "" and not datasource.exists(main):
-            path = nxt
-            if not datasource.exists(nxt):
-                return False, None
-        if not datasource.exists(path):
+        from . import ado_filter, datasource, lot_ledger
+        try:
+            r = lot_ledger.read_rows("SIKAHIKINOW", "[ﾛｯﾄ番号]='" + ado_filter.quote(lot) + "'", state.dbflag)
+        except datasource.DbMissing:
             return True, None
-        return True, datasource.get_records(path, "仕掛", "[ﾛｯﾄ番号]='" + ado_filter.quote(lot) + "'")
+        if not r.found:
+            return False, None
+        return True, r.rows
 
     # --- 値を返さないもの ---------------------------------------------
     def loop_text(self, state: KensaState, st: str) -> None:

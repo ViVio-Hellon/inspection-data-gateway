@@ -1,0 +1,9949 @@
+{
+ "both|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "both|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "both|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "both|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "both|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "both|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "both|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "both|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "both|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "both|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "both|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "both|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "both|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "both|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|lot_source|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "both|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "both|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "both|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "both|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "both|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "both|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "both|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "both|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "both|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "both|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|offline|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "both|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "both|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "both|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "both|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "both|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "both|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "both|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "both|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "both|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "both|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "both|online|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "both|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "both|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "both|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "both|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "both|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "both|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "first_file_missing|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "first_file_missing|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "first_file_missing|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "first_file_missing|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "first_file_missing|dbflag|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "first_file_missing|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "first_file_missing|dbflag|sika_atu_create": {
+  "raises": "DbMissing"
+ },
+ "first_file_missing|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "first_file_missing|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|lot_source|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "first_file_missing|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "first_file_missing|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "first_file_missing|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "first_file_missing|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "first_file_missing|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "first_file_missing|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "first_file_missing|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|offline|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "first_file_missing|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "first_file_missing|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "first_file_missing|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "first_file_missing|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "first_file_missing|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "first_file_missing|online|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "first_file_missing|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "first_file_missing|online|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "first_file_missing|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "first_file_missing|online|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "first_file_missing|online|lot_watch.signature": {
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "first_file_missing|online|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "first_file_missing|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "first_file_missing|online|sika_atu_create": {
+  "raises": "DbMissing"
+ },
+ "hiki_extra_first|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_first|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_extra_first|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_first|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "hiki_extra_first|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_first|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_first|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_extra_first|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_first|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "第2パスに無い引当を第1パスから足しました: 引当NO 69999999"
+  ],
+  "rows": {
+   "digest": "78281bf3d0",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "78281bf3d0",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|lot_source|history_save": {
+  "completed": true,
+  "digest": "d7b4cf4801",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "第2パスに無い引当を第1パスから足しました: 引当NO 69999999"
+  ],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "4",
+    "ﾀﾞｲ2",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_first|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_first|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "859481a61ff54b22d1cac68b484c3ef1a72191a6"
+ },
+ "hiki_extra_first|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_first|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_first|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_extra_first|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_first|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "第2パスに無い引当を第1パスから足しました: 引当NO 69999999"
+  ],
+  "rows": {
+   "digest": "78281bf3d0",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "78281bf3d0",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|offline|history_save": {
+  "completed": true,
+  "digest": "d7b4cf4801",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "第2パスに無い引当を第1パスから足しました: 引当NO 69999999"
+  ],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "4",
+    "ﾀﾞｲ2",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_first|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_first|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "859481a61ff54b22d1cac68b484c3ef1a72191a6"
+ },
+ "hiki_extra_first|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_first|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_first|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_extra_first|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_first|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "ee4b744b88",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "ee4b744b88",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "ee4b744b88",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "4",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_first|online|history_save": {
+  "completed": true,
+  "digest": "4cb0ee0a78",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_first|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_first|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_first|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "e6ca5e86d965385090f1a7c952b07dda25333d96"
+ },
+ "hiki_extra_first|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_first|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_first|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_extra_second|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_second|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|dbflag|history_save": {
+  "completed": true,
+  "digest": "29434ca80a",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_second|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_second|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "325039d5c1540672a62ad7f4e602f2e6cc575237"
+ },
+ "hiki_extra_second|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_second|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_second|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_extra_second|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_second|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|lot_source|history_save": {
+  "completed": true,
+  "digest": "29434ca80a",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_second|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_second|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "325039d5c1540672a62ad7f4e602f2e6cc575237"
+ },
+ "hiki_extra_second|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_second|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_second|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_extra_second|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_second|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "7874d01bf2",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|offline|history_save": {
+  "completed": true,
+  "digest": "29434ca80a",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_second|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_second|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "325039d5c1540672a62ad7f4e602f2e6cc575237"
+ },
+ "hiki_extra_second|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_second|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_second|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_extra_second|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_extra_second|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "第1パスに無い引当を第2パスから足しました: 引当NO 69999999"
+  ],
+  "rows": {
+   "digest": "31ee1aaeeb",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "31ee1aaeeb",
+   "n": 4,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ],
+    [
+     "69999999",
+     "999",
+     "06017610"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_extra_second|online|history_save": {
+  "completed": true,
+  "digest": "3616849543",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "第1パスに無い引当を第2パスから足しました: 引当NO 69999999"
+  ],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ],
+   [
+    "69999999",
+    "999",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ]
+  ]
+ },
+ "hiki_extra_second|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_extra_second|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_extra_second|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "0efd936aafd7b2a7a95b4d62cf83fcdbf341b2f1"
+ },
+ "hiki_extra_second|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_extra_second|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_extra_second|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_lot_only_first|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_first|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "hiki_lot_only_first|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "hiki_lot_only_first|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "hiki_lot_only_first|dbflag|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "SIKAHIKINOW.accdbにH2500K0ﾃﾞｰﾀがありません_HistorySave"
+  ],
+  "rows": []
+ },
+ "hiki_lot_only_first|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_first|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|dbflag|lot_watch.signature": {
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52"
+ },
+ "hiki_lot_only_first|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_first|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_lot_only_first|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_lot_only_first|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_first|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "hiki_lot_only_first|lot_source|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_first|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "hiki_lot_only_first|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_first|lot_source|quality.hiki_arr_create": null,
+ "hiki_lot_only_first|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_lot_only_first|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_first|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "hiki_lot_only_first|offline|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_first|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "hiki_lot_only_first|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_first|offline|quality.hiki_arr_create": null,
+ "hiki_lot_only_first|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_lot_only_first|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_first|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_first|online|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_first|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_first|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "hiki_lot_only_first|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_first|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_lot_only_first|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_lot_only_second|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_second|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_second|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "hiki_lot_only_second|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_second|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_lot_only_second|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "hiki_lot_only_second|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_second|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|lot_source|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_second|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "hiki_lot_only_second|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_second|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_lot_only_second|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_lot_only_second|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_second|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|offline|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_second|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "hiki_lot_only_second|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_second|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_lot_only_second|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "hiki_lot_only_second|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "hiki_lot_only_second|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "hiki_lot_only_second|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "hiki_lot_only_second|online|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "hiki_lot_only_second|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "hiki_lot_only_second|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "hiki_lot_only_second|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "hiki_lot_only_second|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "hiki_lot_only_second|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "lot_absent_both|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "d77ba66d4f",
+  "pick": [
+   null,
+   null,
+   null,
+   null
+  ],
+  "status": "not_found"
+ },
+ "lot_absent_both|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|dbflag|grid.arrbox.SIKALOTNOW": null,
+ "lot_absent_both|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|dbflag|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "SIKAHIKINOW.accdbにH2500K0ﾃﾞｰﾀがありません_HistorySave"
+  ],
+  "rows": []
+ },
+ "lot_absent_both|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_absent_both|dbflag|judge.simple_arrbox": null,
+ "lot_absent_both|dbflag|lot_watch.signature": {},
+ "lot_absent_both|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "lot_absent_both|dbflag|quality.hiki_arr_create": null,
+ "lot_absent_both|dbflag|sika_atu_create": null,
+ "lot_absent_both|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "d77ba66d4f",
+  "pick": [
+   null,
+   null,
+   null,
+   null
+  ],
+  "status": "not_found"
+ },
+ "lot_absent_both|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|lot_source|grid.arrbox.SIKALOTNOW": null,
+ "lot_absent_both|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|lot_source|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "SIKAHIKINOW.accdbにH2500K0ﾃﾞｰﾀがありません_HistorySave"
+  ],
+  "rows": []
+ },
+ "lot_absent_both|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_absent_both|lot_source|judge.simple_arrbox": null,
+ "lot_absent_both|lot_source|lot_watch.signature": {},
+ "lot_absent_both|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "lot_absent_both|lot_source|quality.hiki_arr_create": null,
+ "lot_absent_both|lot_source|sika_atu_create": null,
+ "lot_absent_both|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "d77ba66d4f",
+  "pick": [
+   null,
+   null,
+   null,
+   null
+  ],
+  "status": "not_found"
+ },
+ "lot_absent_both|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|offline|atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|offline|grid.arrbox.SIKALOTNOW": null,
+ "lot_absent_both|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|offline|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "SIKAHIKINOW.accdbにH2500K0ﾃﾞｰﾀがありません_HistorySave"
+  ],
+  "rows": []
+ },
+ "lot_absent_both|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_absent_both|offline|judge.simple_arrbox": null,
+ "lot_absent_both|offline|lot_watch.signature": {},
+ "lot_absent_both|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "lot_absent_both|offline|quality.hiki_arr_create": null,
+ "lot_absent_both|offline|sika_atu_create": null,
+ "lot_absent_both|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "d77ba66d4f",
+  "pick": [
+   null,
+   null,
+   null,
+   null
+  ],
+  "status": "not_found"
+ },
+ "lot_absent_both|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_absent_both|online|atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|online|grid.arrbox.SIKALOTNOW": null,
+ "lot_absent_both|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_absent_both|online|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "LOT一覧：LOTNO有_HIKIDB：LOTNO無_HistorySave"
+  ],
+  "rows": []
+ },
+ "lot_absent_both|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_absent_both|online|judge.simple_arrbox": null,
+ "lot_absent_both|online|lot_watch.signature": {},
+ "lot_absent_both|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "lot_absent_both|online|quality.hiki_arr_create": null,
+ "lot_absent_both|online|sika_atu_create": null,
+ "lot_only_first|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "d77ba66d4f",
+  "pick": [
+   null,
+   null,
+   null,
+   null
+  ],
+  "status": "not_found"
+ },
+ "lot_only_first|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_only_first|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": null
+ },
+ "lot_only_first|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_only_first|dbflag|grid.arrbox.SIKALOTNOW": null,
+ "lot_only_first|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_only_first|dbflag|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "SIKAHIKINOW.accdbにH2500K0ﾃﾞｰﾀがありません_HistorySave"
+  ],
+  "rows": []
+ },
+ "lot_only_first|dbflag|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "lot_only_first|dbflag|judge.simple_arrbox": null,
+ "lot_only_first|dbflag|lot_watch.signature": {},
+ "lot_only_first|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "lot_only_first|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "lot_only_first|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "lot_only_first|lot_source|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_first|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|lot_source|grid.arrbox.SIKALOTNOW": null,
+ "lot_only_first|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_only_first|lot_source|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_first|lot_source|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "lot_only_first|lot_source|judge.simple_arrbox": null,
+ "lot_only_first|lot_source|lot_watch.signature": {
+  "オーダー": "97d170e1550eee4afc0af065b78cda302a97674c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "lot_only_first|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "lot_only_first|lot_source|quality.hiki_arr_create": null,
+ "lot_only_first|lot_source|sika_atu_create": null,
+ "lot_only_first|offline|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_first|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|offline|grid.arrbox.SIKALOTNOW": null,
+ "lot_only_first|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_only_first|offline|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_first|offline|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "lot_only_first|offline|judge.simple_arrbox": null,
+ "lot_only_first|offline|lot_watch.signature": {
+  "オーダー": "97d170e1550eee4afc0af065b78cda302a97674c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "lot_only_first|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "lot_only_first|offline|quality.hiki_arr_create": null,
+ "lot_only_first|offline|sika_atu_create": null,
+ "lot_only_first|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_first|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_first|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_first|online|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_first|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_only_first|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_first|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "lot_only_first|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "lot_only_first|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "lot_only_first|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "lot_only_second|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_second|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_second|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_second|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_only_second|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_second|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "lot_only_second|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "lot_only_second|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "lot_only_second|dbflag|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "lot_only_second|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_second|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_second|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|lot_source|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_second|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_only_second|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_second|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "lot_only_second|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "lot_only_second|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "lot_only_second|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "lot_only_second|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_second|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_second|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|offline|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_second|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "lot_only_second|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "lot_only_second|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "lot_only_second|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "lot_only_second|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "lot_only_second|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "lot_only_second|online|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "lot_only_second|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "lot_only_second|online|grid.arrbox.SIKALOTNOW": null,
+ "lot_only_second|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "lot_only_second|online|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "lot_only_second|online|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "lot_only_second|online|judge.simple_arrbox": null,
+ "lot_only_second|online|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "lot_only_second|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "lot_only_second|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "lot_only_second|online|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "odr_missing_first|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_first|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_first|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "odr_missing_first|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "odr_missing_first|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_first|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_first|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "odr_missing_first|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_first|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|lot_source|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_first|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "odr_missing_first|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "odr_missing_first|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_first|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_first|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "odr_missing_first|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_first|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|offline|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_first|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "odr_missing_first|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "odr_missing_first|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_first|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_first|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "odr_missing_first|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_first|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_first|online|history_save": {
+  "completed": true,
+  "digest": "88199aaaf3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_first|online|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "odr_missing_first|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_first|online|lot_watch.signature": {
+  "オーダー": "173b3c102b2f79ee95cbab9929b376ca331d94cc",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "odr_missing_first|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_first|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_first|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "odr_missing_second|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_second|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|dbflag|history_save": {
+  "completed": true,
+  "digest": "b1523788bc",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_second|dbflag|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "odr_missing_second|dbflag|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|dbflag|lot_watch.signature": {
+  "オーダー": "95986c0f292ce61cc1d814c21721c82ec9a22cd2",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "odr_missing_second|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_second|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_second|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "odr_missing_second|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_second|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|lot_source|history_save": {
+  "completed": true,
+  "digest": "b1523788bc",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_second|lot_source|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "odr_missing_second|lot_source|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|lot_source|lot_watch.signature": {
+  "オーダー": "95986c0f292ce61cc1d814c21721c82ec9a22cd2",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "odr_missing_second|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_second|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_second|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "odr_missing_second|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "6fe1e61a33",
+  "pick": [
+   "H2500K0",
+   "999",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_second|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|offline|history_save": {
+  "completed": true,
+  "digest": "b1523788bc",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_second|offline|judge.materials_msgbox": {
+  "args": [],
+  "msgs": []
+ },
+ "odr_missing_second|offline|judge.simple_arrbox": {
+  "digest": "6b95ef9036",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "999",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|offline|lot_watch.signature": {
+  "オーダー": "95986c0f292ce61cc1d814c21721c82ec9a22cd2",
+  "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "odr_missing_second|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_second|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_second|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "odr_missing_second|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "odr_missing_second|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "odr_missing_second|online|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "odr_missing_second|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "odr_missing_second|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "odr_missing_second|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "odr_missing_second|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "odr_missing_second|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "odr_missing_second|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "second_file_missing|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [
+   "DBファイルが見つかりません:\r\n<2>/SIKALOT.sqlite3"
+  ],
+  "past_hiki": "d77ba66d4f",
+  "pick": [
+   null,
+   null,
+   null,
+   null
+  ],
+  "status": "db_missing"
+ },
+ "second_file_missing|dbflag|arrbox.SIKAHIKINOW": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|dbflag|arrbox.SIKALOTNOW": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|dbflag|atu_hiki_records": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|dbflag|grid.arrbox.SIKALOTNOW": null,
+ "second_file_missing|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": null
+ },
+ "second_file_missing|dbflag|history_save": {
+  "completed": false,
+  "digest": "97d170e155",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [
+   "仕掛台帳(引当) のファイルが見つからないか、手元へ写せません: SIKAHIKI.sqlite3(フォルダ <1>) / SIKAHIKI.sqlite3(フォルダ <2>)。設定 → 使用パス の「確認」で場所と名前を確かめてください。"
+  ],
+  "rows": []
+ },
+ "second_file_missing|dbflag|judge.materials_msgbox": {
+  "args": [],
+  "msgs": [
+   "仕掛台帳(受注) のファイルが見つからないか、手元へ写せません: SIKAODR.sqlite3(フォルダ <1>) / SIKAODR.sqlite3(フォルダ <2>)。設定 → 使用パス の「確認」で場所と名前を確かめてください。"
+  ]
+ },
+ "second_file_missing|dbflag|judge.simple_arrbox": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|dbflag|lot_watch.signature": {},
+ "second_file_missing|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "second_file_missing|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "second_file_missing|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "second_file_missing|lot_source|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_file_missing|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|lot_source|grid.arrbox.SIKALOTNOW": null,
+ "second_file_missing|lot_source|grid.atu_hiki_records": {
+  "found": false,
+  "rows": null
+ },
+ "second_file_missing|lot_source|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "second_file_missing|lot_source|judge.materials_msgbox": {
+  "args": [],
+  "msgs": [
+   "仕掛台帳(受注) のファイルが見つからないか、手元へ写せません: SIKAODR.sqlite3(フォルダ <2>)。オフラインなので第2パス(控え)を先に見て、無かったので第1パス(台帳)も見ました。第2パスの名前、または第1パスに届くかを確かめてください。設定 → 使用パス の「確認」で場所と名前を確かめてください。"
+  ]
+ },
+ "second_file_missing|lot_source|judge.simple_arrbox": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|lot_source|lot_watch.signature": {
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "second_file_missing|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "second_file_missing|lot_source|quality.hiki_arr_create": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|lot_source|sika_atu_create": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|offline|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_file_missing|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|offline|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|offline|grid.arrbox.SIKALOTNOW": null,
+ "second_file_missing|offline|grid.atu_hiki_records": {
+  "found": false,
+  "rows": null
+ },
+ "second_file_missing|offline|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "second_file_missing|offline|judge.materials_msgbox": {
+  "args": [],
+  "msgs": [
+   "仕掛台帳(受注) のファイルが見つからないか、手元へ写せません: SIKAODR.sqlite3(フォルダ <2>)。オフラインなので第2パス(控え)を先に見て、無かったので第1パス(台帳)も見ました。第2パスの名前、または第1パスに届くかを確かめてください。設定 → 使用パス の「確認」で場所と名前を確かめてください。"
+  ]
+ },
+ "second_file_missing|offline|judge.simple_arrbox": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|offline|lot_watch.signature": {
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "second_file_missing|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "second_file_missing|offline|quality.hiki_arr_create": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|offline|sika_atu_create": {
+  "raises": "DbMissing"
+ },
+ "second_file_missing|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_file_missing|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "second_file_missing|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_file_missing|online|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "second_file_missing|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "second_file_missing|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "second_file_missing|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "second_file_missing|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "second_file_missing|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "second_file_missing|online|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "second_missing_columns|dbflag|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_missing_columns|dbflag|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|dbflag|arrbox.SIKALOTNOW": {
+  "fields": "0b7ecd2e54",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "135d9f035b",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|dbflag|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|dbflag|grid.arrbox.SIKALOTNOW": {
+  "digest": "135d9f035b",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|dbflag|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|dbflag|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "second_missing_columns|dbflag|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "second_missing_columns|dbflag|judge.simple_arrbox": {
+  "digest": "135d9f035b",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|dbflag|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "57e434697e31984d613b6cb275106b5b816cc091",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "second_missing_columns|dbflag|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "second_missing_columns|dbflag|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "second_missing_columns|dbflag|sika_atu_create": [
+  "50",
+  "50"
+ ],
+ "second_missing_columns|lot_source|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_missing_columns|lot_source|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|lot_source|arrbox.SIKALOTNOW": {
+  "fields": "0b7ecd2e54",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "135d9f035b",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|lot_source|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|lot_source|grid.arrbox.SIKALOTNOW": {
+  "digest": "135d9f035b",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|lot_source|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|lot_source|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "second_missing_columns|lot_source|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "second_missing_columns|lot_source|judge.simple_arrbox": {
+  "digest": "135d9f035b",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|lot_source|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "57e434697e31984d613b6cb275106b5b816cc091",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "second_missing_columns|lot_source|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "second_missing_columns|lot_source|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "second_missing_columns|lot_source|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "second_missing_columns|offline|acc_reflec": {
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "9.5",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_missing_columns|offline|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<2>/SIKAHIKI.sqlite3",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|offline|arrbox.SIKALOTNOW": {
+  "fields": "0b7ecd2e54",
+  "fields_file": "<2>/SIKALOT.sqlite3",
+  "file": "<2>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "135d9f035b",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "9.5",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|offline|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|offline|grid.arrbox.SIKALOTNOW": {
+  "digest": "135d9f035b",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|offline|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "9d9ce87ed9",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "999",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|offline|history_save": {
+  "completed": true,
+  "digest": "f43c5166e9",
+  "file": "<2>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "999",
+    "ﾀﾞｲ2",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "999",
+    "ﾀﾞｲ2",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "999",
+    "ﾀﾞｲ2",
+    "06019756"
+   ]
+  ]
+ },
+ "second_missing_columns|offline|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ﾀﾞｲ2",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "second_missing_columns|offline|judge.simple_arrbox": {
+  "digest": "135d9f035b",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "9.5",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|offline|lot_watch.signature": {
+  "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+  "仕掛": "57e434697e31984d613b6cb275106b5b816cc091",
+  "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+ },
+ "second_missing_columns|offline|paths.db_file": [
+  "<2>/SIKALOT.sqlite3",
+  "<2>/SIKAHIKI.sqlite3",
+  "<2>/SIKAODR.sqlite3"
+ ],
+ "second_missing_columns|offline|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "second_missing_columns|offline|sika_atu_create": [
+  "9.5",
+  "9.5"
+ ],
+ "second_missing_columns|online|acc_reflec": {
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "past_hiki": "80b1e03e7f",
+  "pick": [
+   "H2500K0",
+   "8",
+   "50",
+   "3"
+  ],
+  "status": "ok"
+ },
+ "second_missing_columns|online|arrbox.SIKAHIKINOW": {
+  "fields": "8c737e988f",
+  "fields_file": "<1>/SIKAHIKI.sqlite3",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|online|arrbox.SIKALOTNOW": {
+  "fields": "c24b666231",
+  "fields_file": "<1>/SIKALOT.sqlite3",
+  "file": "<1>/SIKALOT.sqlite3",
+  "msgs": [],
+  "rows": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|online|atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|online|grid.arrbox.SIKALOTNOW": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|online|grid.atu_hiki_records": {
+  "found": true,
+  "rows": {
+   "digest": "4885d0a500",
+   "n": 3,
+   "pick": [
+    [
+     "61026068",
+     "2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "06019756"
+    ]
+   ]
+  }
+ },
+ "second_missing_columns|online|history_save": {
+  "completed": true,
+  "digest": "fcd81e055c",
+  "file": "<1>/SIKAHIKI.sqlite3",
+  "msgs": [],
+  "rows": [
+   [
+    "61026068",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06017503"
+   ],
+   [
+    "61026069",
+    "4",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "06017610"
+   ],
+   [
+    "61026070",
+    "2",
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "06019756"
+   ]
+  ]
+ },
+ "second_missing_columns|online|judge.materials_msgbox": {
+  "args": [
+   [
+    "1P1125",
+    "H197",
+    1.0,
+    1.0,
+    1.0,
+    "17S",
+    "T351",
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "msgs": []
+ },
+ "second_missing_columns|online|judge.simple_arrbox": {
+  "digest": "132826a439",
+  "n": 2,
+  "pick": [
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ]
+  ]
+ },
+ "second_missing_columns|online|lot_watch.signature": {
+  "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+  "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+  "引当": "65379877c15b54adad59dd35b1c112963edee872"
+ },
+ "second_missing_columns|online|paths.db_file": [
+  "<1>/SIKALOT.sqlite3",
+  "<1>/SIKAHIKI.sqlite3",
+  "<1>/SIKAODR.sqlite3"
+ ],
+ "second_missing_columns|online|quality.hiki_arr_create": [
+  [
+   "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ],
+  [
+   "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+   "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+  ]
+ ],
+ "second_missing_columns|online|sika_atu_create": [
+  "50",
+  "50"
+ ]
+}
