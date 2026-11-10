@@ -7,15 +7,18 @@ VBA の `初期設定.Setting_Path` の 7 本と、コードに直書きされ�
 - **仕掛台帳だけ** 第1パス / 第2パス を持つ(python-web-tools と同じ)。第1 = 台帳(VBA の MainPath)、
   第2 = 控え(NextPath)。2つ目(第2)は SIKALOT / SIKAHIKI / SIKAODR の**ファイル名を変えて**置ける
   (設定「2つ目の名前」。任意)。SIKACOMP / SIKATWOYEAR は VBA が NextPath から読むので第2。
-- モード(オンライン / オフライン。VBA のレジストリ「モード」)は**仕掛台帳にだけ効く**:
-    オンライン … 第1を読み、第1に無いもの(ファイルごと・ロットごと)だけ第2
-    オフライン … 第2だけ。無ければ「…がありません」(呼び手が VBA の文言で出す)
-- 仕掛 DB は手元へ写してから読む(`lot_copy`)。写せないファイルは「無い」とみなす
+- モード(オンライン / オフライン。VBA のレジストリ「モード」)は**仕掛台帳にだけ効く**。
+  読み分けの決まりは **`lot_ledger` 1 か所**(2026-11-10 リファクタリング 第2段。読み手はみな通す):
+    オンライン … 第1を読み、第1に無いもの(ファイルごと・ロットごと)は第2。第2にだけある引当・受注は足す
+    オフライン … 第2を読み、第2に無いもの(ファイルごと・ロットごと)は第1。第1にだけある引当・受注は足す。
+                 第2の台帳に無い列(公差など)は第1の同じロットで補う(`datasource.fill_from_first`)
+    どちらにも無ければ「…がありません」(呼び手が VBA の文言で出す)。DBflag(VBA)は NextPath だけ
+- 仕掛 DB は手元へ写してから読む(`lot_copy`)。写せないファイルは「無い」とみなす(`readable` が 1 つの確かめ)
 - 上流の作り直しの決まり(PLEASE WAIT.txt・毎時 59:46〜00:45)は使わない(11-03 のご指示で外した)
 - ほかの項目(品証やり取り・参照用ファイル・検査履歴・工場共有・測定データ電子化・手元の検査履歴・音声・
   NPS・アクセス権限マスタ・Edge)は**パス 1 つ**。モードによらない
 
-【D28】ロットごとの「控え(第2)から読む」(`lot_source`)の中は、モードによらずオフラインと同じ読み方(第2だけ)。
+【D28】ロットごとの「控え(第2)から読む」(`lot_source`)の中は、モードによらずオフラインと同じ読み方(第2 → 第1)。
 
 `get("main")` / `get("next")` は残す(呼び手が多く、VBA の `FPath = MainPath` の比べ方をそのまま使うため):
     main … オンラインは第1、オフラインは第2      next … いつも第2
@@ -583,6 +586,21 @@ def is_copied(path: Any) -> bool:
     return name.lower() in copied_names()
 
 
+def readable(path: Union[str, Path]) -> bool:
+    """ファイルを読めるか(仕掛台帳の読み分け・ReadCheck・datasource.exists が使う 1 つの確かめ)。
+
+    仕掛 DB(手元へ写して読むファイル)は手元へ写せたときだけ真(写せなければ読まない。D26)。
+    文字列は Windows のパス(`to_local` で読み替える)、Path はこの OS のパス。
+    """
+    try:
+        p = path if isinstance(path, Path) else to_local(path)
+        if is_copied(p):
+            return p.is_file() and lot_usable(str(path))
+        return p.is_file()
+    except (OSError, ValueError):
+        return False
+
+
 def lot_usable(path_text: str) -> bool:
     """仕掛 DB を読めるか = 手元へ写せたか(写せなければ読まない。D26)。"""
     from . import lot_copy
@@ -605,11 +623,10 @@ def join(base: str, *parts: str) -> str:
 def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = None, write: bool = False) -> str:
     """DB の場所。`base_key` で別の場所(例 仕掛の控え "next"・"packing")から引ける。
 
-    仕掛の 3 ファイル(main): オンラインは第1(写せれば)→ 第2(写せれば)、どちらも駄目なら第1の場所
-    (呼び手が VBA どおり「…がありません」と出す)。オフラインは第2だけ。
+    仕掛の 3 ファイル(main): `lot_ledger.lot_file`(オンラインは第1 → 第2、オフラインは第2 → 第1。
+    どちらも読めなければまず読む側の場所。呼び手が VBA どおり「…がありません」と出す)。
     SIKACOMP / SIKATWOYEAR(next)はいつも第2。ほかの DB はその項目のパス 1 つ。`write` は前の呼び方の名残。
     """
-    m = lot_mode(m)
     where, file = DB_FILES[name]
     key = base_key or where
     if key == "next":
@@ -617,13 +634,8 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
     k = _key(key)
     if k != LOT:
         return join(slot_value(k), file)
-    if m == OFFLINE:
-        return join(slot_value(LOT, SECOND), second_name(name))
-    p1 = join(slot_value(LOT, FIRST), first_name(name))
-    p2 = join(slot_value(LOT, SECOND), second_name(name))
-    if p1 == p2 or lot_usable(p1):
-        return p1
-    return p2 if lot_usable(p2) else p1
+    from . import lot_ledger                     # 第2段(2026-11-10): 仕掛台帳のファイルの決まりは lot_ledger 1 か所
+    return lot_ledger.lot_file(name, m)
 
 
 #: 「…がありません」で言う DB の呼び名(現場の言い方)

@@ -347,6 +347,11 @@ def get_fields(db: Union[str, Path], table: str, sql_filter: str = "") -> Option
     return list(cols) if _filtered(cols, rows, sql_filter) else None
 
 
+def columns(db: Union[str, Path], table: str) -> list[str]:
+    """表の列名(0 件でも返す)。覚えた表から取る(読み直さない)。"""
+    return list(_read_shared(db, table)[0])
+
+
 def get_table(db: Union[str, Path], table: str, sql_filter: str = "") -> tuple[list[str], list[list[str]]]:
     """列名と行を一度に(列名は 0 件でも返す。呼び手が VBA の Empty を再現するときは上の2つを使う)。"""
     cols, rows = _read_shared(db, table)
@@ -365,11 +370,8 @@ def column_index(fields: Iterable[str], name: str) -> int:
 
 
 def exists(db: Union[str, Path]) -> bool:
-    """ファイルがあるか。仕掛 DB は手元へ写せたか(写せなければ読まないので「無い」。D26)。"""
+    """ファイルがあるか(`paths.readable`)。仕掛 DB は手元へ写せたか(写せなければ読まないので「無い」。D26)。"""
     try:
-        p = resolve(db)
-        if paths.is_copied(p):
-            return p.is_file() and paths.lot_usable(str(p))
-        return p.is_file()
-    except OSError:
+        return paths.readable(resolve(db))
+    except (OSError, ValueError):
         return False

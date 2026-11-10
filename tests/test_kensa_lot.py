@@ -284,11 +284,18 @@ class AccReflecTest(_Base):
         # SQL に値をそのまま埋めるので ' があると構文エラー → ErrHandler (SaveLoad:120, 564-572)
         r = self.reflect("A'B")
         self.assertEqual((r.status, r.messages[0].text), ("error", "DB読み込みエラー:\r\nクエリ式の構文エラー"))
-        # HistorySave の SIKAODRNOW が無い → VBA は End(DbMissing のまま上へ)
+        # HistorySave の SIKAODRNOW が第1に無い → 第2を読む(第2段 2026-11-10: 前は VBA の End = DbMissing のまま上へ。
+        # 仕掛台帳の読み分けを lot_ledger 1 か所にして、ファイルが無いときの決まりにそろえた)
         self.d.remove(self.d.main, "SIKAODRNOW")
-        with self.assertRaises(datasource.DbMissing):
-            lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0"), check_equipment=_ok,
+        r = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0"), check_equipment=_ok,
                            history_rows=_sheet(), history_env=lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(len(r.history.new_rows), 3)
+        # 第2にも無い → 「…がありません」(止めない)
+        self.d.remove(self.d.next, "SIKAODRNOW")
+        r = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0"), check_equipment=_ok,
+                           history_rows=_sheet(), history_env=lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in r.history.messages], [paths.missing_text("SIKAODRNOW")])
+        self.assertEqual(r.history.new_rows, [])
 
     def test_dedupe_and_materials_order(self) -> None:
         self.assertEqual(lot.dedupe_message("a,b,a,c,b"), "a,b,c")
@@ -396,8 +403,11 @@ class LotInfoTest(_Base):
         self.assertEqual(lot.sika_atu_create("H2500K0"), ["50", "50"])      # NextPath (SaveLoad:40-45)
         self.d.delete_lot(self.d.next, "SIKALOTNOW", "H2500K0")
         self.assertIsNone(lot.sika_atu_create("H2500K0"))
+        # 第2段(2026-11-10): 第1のファイルが無ければ第2を読む(前は確かめずに読んで VBA の End = DbMissing)
         self.d.remove(self.d.main, "SIKALOTNOW")
-        with self.assertRaises(datasource.DbMissing):                        # VBA は End
+        self.assertIsNone(lot.sika_atu_create("H2500K0"))                   # 第2にもロットが無い
+        self.d.remove(self.d.next, "SIKALOTNOW")
+        with self.assertRaises(datasource.DbMissing):                        # どちらにも無い → VBA は End
             lot.sika_atu_create("H2500K0")
 
 

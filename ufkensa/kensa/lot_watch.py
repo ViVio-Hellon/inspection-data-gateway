@@ -16,7 +16,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
-from . import datasource, lot as lotmod, paths
+from . import datasource, lot_ledger, paths
 
 KINDS = ("仕掛", "引当", "オーダー", "品質基準")
 
@@ -48,49 +48,37 @@ def _digest(rows: Any) -> str:
     return hashlib.sha1(repr(rows).encode("utf-8")).hexdigest()
 
 
-def _base(dbflag: str) -> str:
-    return paths.get("main") if dbflag == "" else paths.get("next")
-
-
 def signature(lot: str, dbflag: str = "") -> Signature:
-    """いまのロット情報の指紋。読めない種類は入れない(比べない)。"""
+    """いまのロット情報の指紋。読めない種類は入れない(比べない)。
+
+    第1/第2の読み分けは検査画面と同じ `lot_ledger`(ファイル・ロットが無ければ次に見る側、足りない引当・受注は
+    次に見る側から足す)。
+    """
     sig = Signature(lot)
     if lot == "":
         return sig
-    # 2026-11-08: 検査画面と同じ読み方(Arrbox: 第1に無いファイル・ロットは第2、足りない引当は第2から足す)
-    def read(target: str) -> tuple[Optional[list], str]:
-        try:
-            r = lotmod.arrbox(target, lot, "Record", dbflag, over12=True)
-        except (datasource.DbMissing, datasource.TableMissing, OSError):
-            return None, ""
-        return r.value, r.file_path
 
-    lot_rows, _ = read("SIKALOTNOW")
-    if lot_rows is not None:
-        sig.parts["仕掛"] = _digest(lot_rows)
-    hiki, hiki_path = read("SIKAHIKINOW")
-    if hiki is not None:
-        sig.parts["引当"] = _digest(hiki)
+    def read(target: str) -> Optional[lot_ledger.LotRead]:
         try:
-            cols = datasource.get_fields(hiki_path, lotmod.TABLE, "") or []
-            i = datasource.column_index(cols, "受注番号")
-            orders = sorted({r[i] for r in hiki}) if i >= 0 else []
-            orows: list = []
-            bases = [_base(dbflag)]
-            if dbflag == "" and paths.get("next") != bases[0]:
-                bases.append(paths.get("next"))          # 第1に無い受注は第2から(検査画面と同じ)
-            for base in bases:
-                odr_path = lotmod.db_path(base, "SIKAODRNOW")
-                ocols = datasource.get_fields(odr_path, lotmod.TABLE, "") or []
-                j = datasource.column_index(ocols, "受注番号")
-                if j < 0:
-                    continue
-                have = {r[j] for r in orows}
-                orows += [r for r in (datasource.get_records(odr_path, lotmod.TABLE, "") or [])
-                          if r[j] in orders and r[j] not in have]
-                if {r[j] for r in orows} >= set(orders):
-                    break
-            sig.parts["オーダー"] = _digest(sorted(orows))
+            r = lot_ledger.read_rows(target, lot_ledger.arrbox_filter(lot), dbflag)
+        except (datasource.DbMissing, datasource.TableMissing, OSError):
+            return None
+        return r if r.found else None
+
+    lot_rows = read("SIKALOTNOW")
+    if lot_rows is not None and lot_rows.rows is not None:
+        sig.parts["仕掛"] = _digest(lot_rows.rows)
+    hiki = read("SIKAHIKINOW")
+    if hiki is not None and hiki.rows is not None:
+        sig.parts["引当"] = _digest(hiki.rows)
+        try:
+            i = datasource.column_index(hiki.columns() or [], "受注番号")
+            orders = {r[i] for r in hiki.rows} if i >= 0 else set()
+            odr = lot_ledger.read_orders(orders, dbflag)
+            if odr.found:
+                j = datasource.column_index(odr.columns() or [], "受注番号")
+                orows = [r for r in (odr.rows or []) if j >= 0 and r[j] in orders]
+                sig.parts["オーダー"] = _digest(sorted(orows))
         except (datasource.DbMissing, datasource.TableMissing, OSError):
             pass
     try:

@@ -15,18 +15,19 @@ VBA の対応(行番号は vba_src の各ファイル):
 | SaveLoad.VC_Picture (SaveLoad:1554-1758)  | `vc_picture`             |
 | Input.VcConv (Input:753-800)            | `vc_conv`(VC厚 品名ｺｰﾄﾞ → 厚-係数) |
 
-【仕掛 DB の切替は 3 系統あり、条件が違う(G3 §3.1.1)。まとめずにそれぞれ書く】
-1. Arrbox: DBflag が空なら MainPath。MainPath のときは ReadCheck 失敗で NextPath へ
-2. AccReflec: DBflag → NextPath、それ以外 MainPath
-3. HistorySave: 全ヵ所/キャスク検査の表示中 → MainPath、DBflag → NextPath、それ以外 MainPath。
-   そのあと ReadCheck で切替(NextPath を選んでいたら「ありません」で抜ける。B49)
+【仕掛 DB の第1/第2の読み分け】(リファクタリング 第2段 2026-11-10)
+前は Arrbox・AccReflec・HistorySave・SikaAtuCreate がそれぞれ切替を手で書いていた(G3 §3.1.1 の 3 系統 +
+D26 の継ぎ足し)。いまは全部 `lot_ledger` の 1 つの決まりで読む(オンライン: 第1 → 第2、オフライン・控えから読む:
+第2 → 第1、DBflag: NextPath だけ)。ここに残るのは、VBA の文言の出し分けと、画面に出す値の作り方だけ。
+- AccReflec・HistorySave は DBflag で NextPath を選んだときもファイルを確かめ、無ければ VBA の文言で抜ける
+- HistorySave は全ヵ所/キャスク検査の表示中なら DBflag を見ない(MainPath。SaveLoad:1299-1314)
 【D26 改(2026-11-03 のご指示)】VBA の上流の作り直しの決まり(TimeDesignation = 毎時 59:46〜00:45、
 FileDesignation / AccReflec / HistorySave の PLEASE WAIT.txt)は**外した**。ReadCheck は仕掛 DB を
-手元へ写せたか(`paths.lot_usable`。写せなければ読まない)。第1にロットが無いときの第2は `lot_from_second`。
-4. SikaAtuCreate: MainPath で列名も行も取れなければ NextPath(ReadCheck・時刻窓は見ない)
+手元へ写せたか(`paths.readable`。写せなければ読まない)。
 
 【パスの比べ方】VBA は `FPath = MainPath` を文字列で比べる。オフラインでは MainPath と NextPath が
-同じ文字列になるので、その場合の分岐の順もそのまま再現する。
+同じ文字列になる。HistorySave の文言の出し分けはこれに合わせる(`lot_ledger.Sides.vba_main`: MainPath から
+読み始めて控えが別の場所のときだけ MainPath の分岐の文言、ほかは NextPath の分岐の文言)。
 
 【時刻】`now` を引数で受け取る(None なら現在時刻)。
 
@@ -45,7 +46,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Sequence
 
-from . import ado_filter, datasource, flow, paths, vbx
+from . import ado_filter, datasource, flow, lot_ledger, paths, vbx
 from .model import UiValues
 from .flow import ERROR, INFO, WARN, Message
 
@@ -98,111 +99,17 @@ def vba_target(name: str) -> str:
 
 
 def db_path(base: str, name: str) -> str:
-    """VBA の `FPath & "SIKA….accdb"`(D4 でファイルは .sqlite3)。
-
-    D26: 仕掛の 3 ファイルは、第2(控え)のフォルダなら設定「2つ目の名前」で探す(`paths.lot_file_name`)。
-    """
-    if name in paths.LOT_DBS:
-        return paths.join(base, paths.lot_file_name(name, base))
-    return paths.join(base, paths.DB_FILES[name][1] if name in paths.DB_FILES else name + ".sqlite3")
+    """VBA の `FPath & "SIKA….accdb"`(`lot_ledger.db_path`)。"""
+    return lot_ledger.db_path(base, name)
 
 
-def _remap(rows: list, src: Optional[list], dst: Optional[list]) -> list:
-    """第2の行を第1の列の並びに直す(2つ目は列の数・並びが違うことがある。無い列は "")。"""
-    if not src or not dst or list(src) == list(dst):
-        return rows
-    idx = [list(src).index(c) if c in src else -1 for c in dst]
-    return [[r[i] if 0 <= i < len(r) else "" for i in idx] for r in rows]
+hiki_added_message = lot_ledger.hiki_added_message
+arrbox_filter = lot_ledger.arrbox_filter
 
 
 def other_base() -> str:
-    """いま読んでいる側(main)と反対の仕掛台帳のフォルダ。同じ場所なら ""。
-
-    オンライン(main = 第1)→ 第2。2026-11-09(ご依頼): オフライン(main = 第2)→ 第1(第2に無いものは第1を見に行く)。
-    """
-    main = paths.get("main")
-    other = paths.get("next") if paths.lot_mode() == paths.ONLINE else paths.slot_value(paths.LOT, paths.FIRST)
-    return "" if (not other or other == main) else other
-
-
-def offline_first(fpath: str) -> str:
-    """F1/F2(2026-11-10): オフライン(main = next = 第2)で第2を読んでいるとき、第2に無いもの(ファイル・ロット)を
-    見に行く第1のフォルダ。arrbox と同じ決まり(`other_base`)。オンライン・第1を読んでいるときは ""
-    (オンラインの第2への切り替えは、今までどおり呼び手の VBA の分岐が受け持つ)。"""
-    main, nxt = paths.get("main"), paths.get("next")
-    if fpath != main or main != nxt:
-        return ""
-    return other_base()
-
-
-def lot_from_second(target: str, flt: str, first_file: str) -> tuple[Optional[list], str]:
-    """D26(ロットごとの第2): 第1の仕掛にロット(条件の行)が無いとき、第2(控え)から同じ条件で読む。
-
-    VBA には無い(VBA は第1にファイルがあればそこで「該当なし」)。第1と第2が同じフォルダ
-    (オフライン・1 か所に置いたとき)は何もしない。行は第1の列の並びに直して返す。
-    戻り値は (行 / None, 読んだ第2のファイル)。
-    """
-    nxt = other_base()
-    if not nxt:
-        return None, ""
-    second_file = db_path(nxt, target)
-    if not read_check(second_file, 1):
-        return None, ""
-    try:
-        rows = datasource.get_records(second_file, TABLE, flt)
-        if rows is None:
-            return None, second_file
-        src = datasource.get_fields(second_file, TABLE, "")
-        dst = datasource.get_fields(first_file, TABLE, "") if read_check(first_file, 1) else None
-    except (datasource.DbMissing, datasource.TableMissing, sqlite3.Error):
-        return None, ""
-    return _remap(rows, src, dst), second_file
-
-
-def merge_hiki_from_second(rows: Optional[list], flt: str, first_file: str) -> tuple[Optional[list], list[str]]:
-    """2026-11-08(ご依頼): 第1の SIKAHIKI にロットの行があっても、引当が足りないことがある。
-
-    第2(控え)にだけある引当番号の行を、第1の行の後ろに足す(第1の行はそのまま使う。第2の方が古いこともあるので
-    第2を丸ごとは使わない)。オンラインで第1と第2が別の場所のときだけ。戻り値は (行, 足した引当番号)。
-    """
-    main = paths.get("main")
-    if not rows or not other_base() or first_file != db_path(main, "SIKAHIKINOW"):
-        return rows, []
-    try:
-        cols = datasource.get_fields(first_file, TABLE, "") or []
-    except (datasource.DbMissing, datasource.TableMissing, sqlite3.Error):
-        return rows, []
-    i = datasource.column_index(cols, "引当番号")
-    if i < 0:
-        return rows, []
-    extra, _second = lot_from_second("SIKAHIKINOW", flt, first_file)
-    have = {vbx.cstr(r[i]) for r in rows if i < len(r)}
-    add = [r for r in (extra or []) if i < len(r) and vbx.cstr(r[i]) not in have]
-    if not add:
-        return rows, []
-    nos = sorted({vbx.cstr(r[i]) for r in add})
-    from ..logging_utils import get_logger
-    get_logger("kensa.lot").info("第1パスに無い引当を第2パスから足しました: %s (%s)", ", ".join(nos), flt)
-    return list(rows) + add, nos
-
-
-def hiki_added_message(nos: Sequence[str], source: str) -> Message:
-    here, there = ("第1パス", "第2パス") if paths.lot_mode() == paths.ONLINE else ("第2パス", "第1パス")
-    return Message(f"{here}に無い引当を{there}から足しました: 引当NO " + ", ".join(nos), INFO, source=source)
-
-
-def fields_from_second(target: str) -> tuple[Optional[list], str]:
-    """D26: 第1の仕掛の表が空(列名が取れない)とき、第2の列名(オフラインは第1。other_base)。"""
-    nxt = other_base()
-    if not nxt:
-        return None, ""
-    second_file = db_path(nxt, target)
-    if not read_check(second_file, 1):
-        return None, ""
-    try:
-        return datasource.get_fields(second_file, TABLE, ""), second_file
-    except (datasource.DbMissing, datasource.TableMissing, sqlite3.Error):
-        return None, ""
+    """次に見る側の仕掛台帳のフォルダ(オンライン → 第2、オフライン → 第1)。同じ場所なら ""(`lot_ledger.sides`)。"""
+    return lot_ledger.other_base()
 
 
 def subpath(base: str, *parts: str) -> str:
@@ -257,15 +164,11 @@ def _cell_ne_empty(v: Any) -> bool:
 # ------------------------------------------------------------------
 def read_check(target: str, n: int = 1) -> bool:
     """補助.ReadCheck (補助:454-464)。n=1 ファイル、n=2 フォルダがあれば真。エラーは偽(On Error Resume Next)。"""
+    if n == 1:
+        return paths.readable(target)          # D26: 仕掛 DB は手元へ写せたときだけ「ある」(写せなければ読まない)
     try:
-        p = paths.to_local(target)
-        if n == 1:
-            if paths.is_copied(target):
-                # D26: 仕掛 DB は手元へ写せたときだけ「ある」(写せなければ読まない)
-                return p.is_file() and paths.lot_usable(target)
-            return p.is_file()
         if n == 2:
-            return p.is_dir()
+            return paths.to_local(target).is_dir()
     except (OSError, ValueError):
         return False
     return False
@@ -328,22 +231,12 @@ class ArrboxResult:
     logs: list[LogLine] = field(default_factory=list)
 
 
-#: Arrbox の SQLfilter のキーワード → ADO Filter (AccHIki:42-47)
-def arrbox_filter(sql_filter: str) -> str:
-    if sql_filter == "":
-        return ""
-    if sql_filter == "板":
-        return "[ｵｰﾀﾞｰ板丈]<>0"
-    if sql_filter == "コイル":
-        return "[ｵｰﾀﾞｰ板丈]=0  AND  [BOX設計_設備名] = 'KEN' "
-    return "[ﾛｯﾄ番号]='" + ado_filter.quote(sql_filter) + "'"
-
-
 def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "", *,
            now: Optional[_dt.datetime] = None, over12: bool = False) -> ArrboxResult:
     """AccHIki.Arrbox (AccHIki:14-92)。仕掛 DB(`target` = "SIKAHIKINOW" など)の表「仕掛」を読む。
 
-    - `path` は VBA と同じく UF1.DBflag.Text を渡す(空なら MainPath、それ以外は NextPath)
+    - `path` は VBA と同じく UF1.DBflag.Text を渡す(空ならいまのモードの読み方、それ以外は NextPath だけ)
+    - 第1/第2の読み分け(ファイル・ロット・列名・足りない引当)は `lot_ledger`
     - `over12` は IsOver12Hours の結果(真なら「ありません」を出さない)
     - use="Fields" は Filter を掛けずに列名(AccHIki:54)。0 件なら None
     - L60 以降(空のとき NextPath を見直す処理)は到達しないので移さない
@@ -351,41 +244,18 @@ def arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "
     if use not in ("Record", "Fields"):
         raise ValueError(f"Arrbox の Use={use!r} は VBA でも使われていない")
     res = ArrboxResult()
-    main, nxt = paths.get("main"), paths.get("next")
-    fpath = main if path == "" else nxt
-    file_path = db_path(fpath, target)
-    if fpath == main:
-        # D26 改: 時刻窓・PLEASE WAIT は見ない(ReadCheck = 手元へ写せたか だけ)
-        if read_check(file_path, 1) is False:
-            fpath = nxt
-            file_path = db_path(fpath, target)
-            if read_check(db_path(nxt, target), 1) is False and other_base():
-                # 2026-11-09: オフラインで第2にファイルが無ければ第1を見る
-                fpath = other_base()
-                file_path = db_path(fpath, target)
-            if read_check(file_path, 1) is False:
-                if not over12:
-                    res.messages.append(Message(paths.missing_text(target),
-                                                ERROR, source="AccHIki:33"))
-                res.file_path = file_path
-                return res
-    res.file_path = file_path
     if use == "Record":
-        res.value = datasource.get_records(file_path, TABLE, arrbox_filter(sql_filter))
+        r = lot_ledger.read_rows(target, arrbox_filter(sql_filter), path)
     else:
-        res.value = datasource.get_fields(file_path, TABLE, "")
-    if use == "Record" and target == "SIKAHIKINOW" and fpath == main and res.value is not None:
-        res.value, added = merge_hiki_from_second(res.value, arrbox_filter(sql_filter), file_path)
-        if added:
-            res.messages.append(hiki_added_message(added, "Arrbox"))
-    if res.value is None and fpath == main:
-        # D26: 第1にロット(行・列名)が無ければ第2を見る(VBA の L60 以降は到達しないので VBA には無い動き)
-        if use == "Record":
-            rows, second = lot_from_second(target, arrbox_filter(sql_filter), file_path)
-        else:
-            rows, second = fields_from_second(target)
-        if rows is not None:
-            res.value, res.file_path = rows, second
+        r = lot_ledger.read_fields(target, path)
+    res.file_path = r.file_path
+    if not r.found:
+        if not over12:
+            res.messages.append(Message(paths.missing_text(target), ERROR, source="AccHIki:33"))
+        return res
+    res.value = r.rows if use == "Record" else r.cols
+    if r.added:
+        res.messages.append(hiki_added_message(r.added, "Arrbox"))
     return res
 
 
@@ -434,28 +304,21 @@ def get_lot_info(sheet_rows: Optional[Sequence[Sequence[Any]]], lot: str) -> Opt
 def sika_atu_create(lot: str) -> Optional[list[str]]:
     """SaveLoad.SikaAtuCreate。SIKALOTNOW のロットの全行の `ｵｰﾀﾞｰ板厚`(文字列)。無ければ None。
 
-    MainPath で列名(表が空なら None)も行も取れなければ NextPath を見る。ReadCheck は見ない。
-    ファイルが無いときは VBA の End に当たる `datasource.DbMissing`。
+    列名(表が空なら None)・行とも `lot_ledger` の決まりで読む(VBA は MainPath で取れなければ NextPath)。
+    読めるファイルがどちらにも無いときは VBA の End に当たる `datasource.DbMissing`。
     """
     if lot == "":
         return None
-    file_path = db_path(paths.get("main"), "SIKALOTNOW")
-    fields = datasource.get_fields(file_path, TABLE, "")
+    f = lot_ledger.read_fields("SIKALOTNOW")
+    if not f.found:
+        raise datasource.DbMissing(f"DB ファイルが見つかりません: {f.file_path}")
+    fields = f.cols
     if fields is None:
-        file_path = db_path(paths.get("next"), "SIKALOTNOW")
-        fields = datasource.get_fields(file_path, TABLE, "")
-        if fields is None:
-            return None
+        return None
     col = datasource.column_index(fields, "ｵｰﾀﾞｰ板厚")
-    flt = "[ﾛｯﾄ番号]='" + ado_filter.quote(lot) + "'"
-    rows = datasource.get_records(file_path, TABLE, flt)
+    rows = lot_ledger.read_rows("SIKALOTNOW", "[ﾛｯﾄ番号]='" + ado_filter.quote(lot) + "'", merge=False).rows
     if rows is None:
-        file_path = db_path(paths.get("next"), "SIKALOTNOW")
-        rows = datasource.get_records(file_path, TABLE, flt)
-        if rows is None:
-            return None
-        # D26: 第2は列の並びが違うことがある(2つ目の名前の圧縮版など)。第1の列の並びに直す(同じなら VBA と同じ)
-        rows = _remap(rows, datasource.get_fields(file_path, TABLE, ""), fields)
+        return None
     if col < 0:
         raise SubscriptOutOfRange("SikaAtuCreate: ｵｰﾀﾞｰ板厚 の列が無い (SaveLoad:51)")
     return [r[col] for r in rows]
@@ -657,20 +520,15 @@ def acc_reflec(screen: LotScreen, *,
     if screen.lot == "":
         out.status = "no_lot"
         return out
-    base = acc_reflec_path(screen.dbflag)
-    out.db_path = file_path = db_path(base, "SIKALOTNOW")
-    if not read_check(file_path, 1) and base == paths.get("main") and other_base():
-        # 2026-11-09: オフラインで第2に台帳が無ければ第1を見る(オンラインは今までどおり)
-        base = other_base()
-        out.db_path = file_path = db_path(base, "SIKALOTNOW")
-    if not read_check(file_path, 1):
+    # 第1/第2の読み分けは lot_ledger(DBflag で NextPath を選んだときもファイルを確かめる SaveLoad:113-117)
+    p = lot_ledger.pick("SIKALOTNOW", screen.dbflag, check_explicit=True)
+    out.db_path = file_path = p.file
+    if not p.found:
         out.status = "db_missing"
         out.messages.append(Message("DBファイルが見つかりません:" + "\r\n" + file_path, ERROR, source="SaveLoad:116"))
         return out
-    # D26: 第1(MainPath)で読むときは、ロットが無ければ第2(控え)の SIKALOT も見る
-    second = ""
-    if base == paths.get("main") and other_base() and base != other_base():
-        second = db_path(other_base(), "SIKALOTNOW")       # オフラインは第1(2026-11-09)
+    # まず読む側にロットが無ければ、次に見る側の SIKALOT も見る(オンラインは第2、オフラインは第1)
+    second = lot_ledger.other_file("SIKALOTNOW", screen.dbflag) if p.on_primary else ""
     try:
         _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env, second)
     except flow.Stop:
@@ -928,56 +786,17 @@ def history_delete_rows(sheet_rows: Sequence[Sequence[Any]], lot: Any) -> list[i
     return hits
 
 
-def _history_path(env: HistoryEnv) -> str:
-    """HistorySave の参照先 (SaveLoad:1299-1314)。"""
-    if env.zenkasho_visible:
-        return paths.get("main")
-    if env.cask_visible:
-        return paths.get("main")
-    if env.dbflag != "":
-        return paths.get("next")
-    return paths.get("main")
+def _history_dbflag(env: HistoryEnv) -> str:
+    """HistorySave の参照先 (SaveLoad:1299-1314)。全ヵ所/キャスク検査の表示中は MainPath(DBflag を見ない)。"""
+    if env.zenkasho_visible or env.cask_visible:
+        return ""
+    return env.dbflag
 
 
 def _need(idx: int, what: str) -> int:
     if idx < 0:
         raise SubscriptOutOfRange(f"{what} の列が無い (HistorySave)")
     return idx
-
-
-def _odr_fallback(fpath: str, odr_path: str, what: str, res: HistorySaveResult,
-                  over12: bool) -> tuple[str, str, bool]:
-    """B51 を直した場合の SIKAODRNOW の控えへの切替(SaveLoad:1391-1401・1409-1423)。
-
-    控え側を選んでいたら「…がありません」で抜ける。MainPath なら NextPath へ切り替え、ファイルが無ければ抜ける。
-    戻り値は (FPath, ファイル, 続けるか)。
-    """
-    main, nxt = paths.get("main"), paths.get("next")
-    target = vba_target("SIKAODRNOW")
-    first = offline_first(fpath)
-    if first:
-        # F1(2026-11-10): オフラインは第2に無ければ第1(arrbox と同じ)
-        fpath = first
-        odr_path = db_path(fpath, "SIKAODRNOW")
-        if not read_check(odr_path, 1):
-            if not over12:
-                res.messages.append(Message(paths.missing_text("SIKAODRNOW"), ERROR,
-                                            source="SaveLoad:1399"))
-            return fpath, odr_path, False
-        return fpath, odr_path, True
-    if fpath == nxt:
-        if not over12:
-            res.messages.append(Message(target + "に" + what + "_HistorySave", ERROR, source="SaveLoad:1393"))
-        return fpath, odr_path, False
-    if fpath == main:
-        fpath = nxt
-        odr_path = db_path(fpath, "SIKAODRNOW")
-        if not read_check(odr_path, 1):
-            if not over12:
-                res.messages.append(Message(paths.missing_text("SIKAODRNOW"), ERROR,
-                                            source="SaveLoad:1399"))
-            return fpath, odr_path, False
-    return fpath, odr_path, True
 
 
 def history_save(past_hiki: Sequence[Any], sheet_rows: Sequence[Sequence[Any]], env: HistoryEnv) -> HistorySaveResult:
@@ -1006,81 +825,43 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
     lot = past_hiki[1]
     lot_no = "" if lot is None else str(lot)
 
-    main, nxt = paths.get("main"), paths.get("next")
     target = "SIKAHIKINOW"
-    fpath = _history_path(env)
-    file_path = db_path(fpath, target)
-    c1 = read_check(file_path, 1) is False          # D26 改: 時刻窓・PLEASE WAIT は見ない
+    flag = _history_dbflag(env)
+    side = lot_ledger.sides(flag)
     missing = Message(paths.missing_text(target), ERROR,
                       source="SaveLoad:1322")
-    if c1:
-        if fpath == nxt:
-            # 再現: 控え側を選んでいたら、控えのファイルがあっても抜ける(VBA どおり)
-            # B49 を直す: 控えのファイルがあればそのまま控えを読む(無いときだけ抜ける)
-            first = offline_first(fpath)
-            if first:
-                # F1(2026-11-10): オフラインで第2にファイルが無ければ第1を見る(arrbox と同じ)
-                fpath = first
-                file_path = db_path(fpath, target)
-            if not read_check(file_path, 1):
-                if not over12:
-                    res.messages.append(missing)
-                res.file_path = file_path
-                return res
-        elif fpath == main:
-            fpath = nxt
-            file_path = db_path(fpath, target)
-            if not read_check(file_path, 1):
-                if not over12:
-                    res.messages.append(missing)
-                res.file_path = file_path
-                return res
-
     flt = "[ﾛｯﾄ番号]='" + ado_filter.quote(lot_no) + "'"
-    temp_hiki = datasource.get_records(file_path, TABLE, flt)
-    first = offline_first(fpath) if temp_hiki is None else ""
-    if first and read_check(db_path(first, target), 1):
-        # F1(2026-11-10): オフラインで第2にロットが無ければ第1を見る(arrbox の lot_from_second と同じ)
-        rows = datasource.get_records(db_path(first, target), TABLE, flt)
-        if rows is not None:
-            fpath, file_path, temp_hiki = first, db_path(first, target), rows
+    # 第1/第2の読み分け(ファイル・ロット・足りない引当)は lot_ledger。DBflag でもファイルを確かめる(B49 を直す)
+    hiki = lot_ledger.read_rows(target, flt, flag, check_explicit=True)
+    res.file_path = hiki.file_path
+    if not hiki.found:
+        if not over12:
+            res.messages.append(missing)
+        return res
+    temp_hiki = hiki.rows
     if temp_hiki is None:
         if env.zenkasho_visible and env.mitsubishi_line == "Test":
-            res.file_path = file_path
             return res
         if env.cask_visible and env.cask_line == "Test":
-            res.file_path = file_path
             return res
         if not env.cask_visible and env.uf1_test:
-            res.file_path = file_path
             return res
-        if fpath == nxt:
-            if not over12:
-                res.messages.append(Message(vba_target(target) + "に" + lot_no + "ﾃﾞｰﾀがありません" + "_HistorySave",
-                                            ERROR, source="SaveLoad:1341"))
-            res.file_path = file_path
-            return res
-        if fpath == main:
-            fpath = nxt
-            file_path = db_path(fpath, target)
-            if not read_check(file_path, 1):
-                if not over12:
-                    res.messages.append(missing)
-                res.file_path = file_path
-                return res
-        temp_hiki = datasource.get_records(file_path, TABLE, flt)
-        if temp_hiki is None:
+        # VBA の文言の出し分け: MainPath(第1)から読み始めて控えも見た → SaveLoad:1355、控えが読めない → 1322、
+        # それ以外(NextPath・オフライン・控えへ移ってから)→ 1341
+        if side.vba_main and hiki.on_primary and hiki.other == "tried":
             res.messages.append(Message("LOT一覧：LOTNO有_" + "HIKIDB：LOTNO無" + "_HistorySave", ERROR,
                                         source="SaveLoad:1355"))
-            res.file_path = file_path
-            return res
-    res.file_path = file_path
-    if fpath == main:
-        temp_hiki, added = merge_hiki_from_second(temp_hiki, flt, file_path)     # 2026-11-08
-        if added:
-            res.messages.append(hiki_added_message(added, "HistorySave"))
+        elif side.vba_main and hiki.on_primary and hiki.other == "unusable":
+            if not over12:
+                res.messages.append(missing)
+        elif not over12:
+            res.messages.append(Message(vba_target(target) + "に" + lot_no + "ﾃﾞｰﾀがありません" + "_HistorySave",
+                                        ERROR, source="SaveLoad:1341"))
+        return res
+    if hiki.added:
+        res.messages.append(hiki_added_message(hiki.added, "HistorySave"))      # 2026-11-08
 
-    hiki_fields = datasource.get_fields(file_path, TABLE, "")
+    hiki_fields = hiki.columns()
     if hiki_fields is None:
         if not over12:
             res.messages.append(Message("Hikifieldなし" + "_HistorySave", ERROR, source="SaveLoad:1364"))
@@ -1089,38 +870,28 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
          for n in ("受注番号", "引当番号", "ﾛｯﾄ番号", "検査番号", "引当数量", "引当調整NO", "引当ﾌｧｲﾙ登録年月日時分秒")}
 
     # SIKAODRNOW。`Dim VC(): VC = GetFieldsArr(…)` は Empty を代入すると型エラー 13
-    # (SaveLoad:1390。そのため L1391-1406 の控えへの切替は到達しない)。B51 を直すと切替まで進む
-    odr_path = db_path(fpath, "SIKAODRNOW")
-    vc = datasource.get_fields(odr_path, TABLE, "")
-    if vc is None:
-        fpath, odr_path, ok = _odr_fallback(fpath, odr_path, "VCFieldﾃﾞｰﾀがありません", res, over12)
-        if not ok:
-            return res
-        # VBA の L1402 は GetRecordsArr だが、列名を引く所なので GetFieldsArr(作者の意図)
-        vc = datasource.get_fields(odr_path, TABLE, "")
-        if vc is None:
-            if not over12:
-                res.messages.append(Message("VCFieldData無" + "_HistorySave", ERROR, source="SaveLoad:1404"))
-            return res
-    vcr = datasource.get_records(odr_path, TABLE, "")
+    # (SaveLoad:1390。そのため L1391-1406 の控えへの切替は到達しない)。B51 を直すと切替まで進む。
+    # 読み分け(ファイル・表が空・引当の受注が無い)は lot_ledger(引当をどちらから読んだかによらない)
+    orders = {x[h["受注番号"]] for x in temp_hiki if h["受注番号"] < len(x)} if h["受注番号"] >= 0 else set()
+    odr = lot_ledger.read_orders(orders, flag, check_explicit=True)
+    if not odr.found:
+        if not over12:
+            res.messages.append(Message(paths.missing_text("SIKAODRNOW"), ERROR, source="SaveLoad:1399"))
+        return res
+    vcr = odr.rows
     if vcr is None:
-        fpath, odr_path, ok = _odr_fallback(fpath, odr_path, "VCRecordﾃﾞｰﾀがありません", res, over12)
-        if not ok:
-            return res
-        vcr = datasource.get_records(odr_path, TABLE, "")
-        if vcr is None:
-            if not over12:
-                res.messages.append(Message("VCRecordData無" + "_HistorySave", ERROR, source="SaveLoad:1426"))
-            return res
+        if not over12:
+            if odr.on_primary and odr.other == "tried":
+                res.messages.append(Message("VCFieldData無" + "_HistorySave", ERROR, source="SaveLoad:1404"))
+            elif odr.on_primary and odr.other == "unusable":
+                res.messages.append(Message(paths.missing_text("SIKAODRNOW"), ERROR, source="SaveLoad:1399"))
+            else:
+                res.messages.append(Message(vba_target("SIKAODRNOW") + "に" + "VCFieldﾃﾞｰﾀがありません" + "_HistorySave",
+                                            ERROR, source="SaveLoad:1393"))
+        return res
+    vc = odr.columns() or []
     r = {n: datasource.column_index(vc, n)
          for n in ("受注番号", "VC_表", "VC_裏", "製品単重", "合紙", "取引先名称", "納入先名称", "送り先名称", "包装仕様NO")}
-    if fpath == main and main != nxt and r["受注番号"] >= 0 and h["受注番号"] >= 0:
-        # D26(ロットごとの第2): 引当の受注が第1の SIKAODR に無ければ、第2の SIKAODR の行を後ろに足す
-        have = {v[r["受注番号"]] for v in vcr}
-        want = {x[h["受注番号"]] for x in temp_hiki} - have
-        if want:
-            extra, _second = lot_from_second("SIKAODRNOW", "", odr_path)
-            vcr = list(vcr) + [v for v in (extra or []) if v[r["受注番号"]] in want]
 
     now = _now(env.now)
     base = list(past_hiki) + [None] * max(0, 19 - len(past_hiki))

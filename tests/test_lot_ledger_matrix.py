@@ -2,7 +2,8 @@
 
 読み手ごとに手で書いていた第1/第2の読み分けを 1 か所(`lot_ledger`)にまとめる前に、今の動きを
 モード × 台帳の状態 × 読み手 の組み合わせで書き留めた(`fixtures/lot_ledger_matrix.json`。作り直さない)。
-まとめた後の動きは、書き留めに `INTENDED`(決めた決まりにそろえた所。直し)を重ねたものと同じであること。
+まとめた後の動きは、書き留めに `fixtures/lot_ledger_matrix_intended.json`(決めた決まりにそろえた所。直し。
+理由つき)を重ねたものと同じであること。
 
 - モード: online / offline / lot_source(オンラインの設定で「控えから読む」)/ dbflag(オンラインで DBflag あり)
 - 台帳の状態(ロット H2500K0。第2は値を変えて見分ける: 枚本数 999・ｵｰﾀﾞｰ板厚 9.5・引当数量 999・納入先 ﾀﾞｲ2):
@@ -259,12 +260,19 @@ def run_matrix() -> dict[str, Any]:
     return out
 
 
-#: 決めた決まりにそろえた所(書き留めとの差。キー → 新しい値)。理由は INTENDED_WHY
-INTENDED: dict[str, Any] = {}
-INTENDED_WHY: dict[str, str] = {}
+#: 決めた決まりにそろえた所(書き留めとの差。直し)。キー → {"value": 新しい値, "why": 理由}
+INTENDED_FILE = Path(__file__).parent / "fixtures" / "lot_ledger_matrix_intended.json"
 
 
-class LotLedgerMatrixTest(unittest.TestCase):
+def intended() -> dict[str, Any]:
+    if not INTENDED_FILE.exists():
+        return {}
+    return {k: v["value"] for k, v in json.loads(INTENDED_FILE.read_text(encoding="utf-8")).items()}
+
+
+class _Restore(unittest.TestCase):
+    """使用パスとモードを試験の前後で戻す。"""
+
     def setUp(self) -> None:
         self._paths = user_settings.get(paths.KEY_PATHS, None)
         self._mode = user_settings.get(paths.KEY_MODE, None)
@@ -277,6 +285,8 @@ class LotLedgerMatrixTest(unittest.TestCase):
                 user_settings.save(k, v)
         cache_registry.clear_all()
 
+
+class LotLedgerMatrixTest(_Restore):
     def test_matrix(self) -> None:
         got = run_matrix()
         if os.environ.get("UFKENSA_RECORD_LEDGER") == "1":
@@ -284,10 +294,86 @@ class LotLedgerMatrixTest(unittest.TestCase):
             self.skipTest("書き留めました")
         base = json.loads(BASELINE.read_text(encoding="utf-8"))
         want = dict(base)
-        want.update(INTENDED)
+        want.update(intended())
         self.assertEqual(sorted(got), sorted(want))
         diffs = [k for k in sorted(want) if json.loads(json.dumps(got[k], ensure_ascii=False)) != want[k]]
         self.assertEqual(diffs, [], "\n".join(f"{k}\n  want {want[k]}\n  got  {got[k]}" for k in diffs[:20]))
+
+    def test_intended_are_real_changes(self) -> None:
+        """直しの一覧は、書き留めにあるキーで、書き留めと違う値であること(古い直しを残さない)。"""
+        base = json.loads(BASELINE.read_text(encoding="utf-8"))
+        raw = json.loads(INTENDED_FILE.read_text(encoding="utf-8"))
+        for k, v in raw.items():
+            self.assertIn(k, base)
+            self.assertNotEqual(v["value"], base[k], k)
+            self.assertTrue(v["why"], k)
+
+
+
+class LedgerRulesTest(_Restore):
+    """表に出ない所(VBA の文言の出し分け・Test のロット・覚えた表の使い回し)。"""
+
+    def case(self, scenario: str, mode: str) -> _Case:
+        c = _Case(scenario, mode)
+        self.addCleanup(c.close)
+        return c
+
+    def hist(self, **env: Any) -> lot.HistorySaveResult:
+        ph = [None] * 19
+        ph[0], ph[1], ph[9] = "'06017610", LOT, "KEN"
+        return lot.history_save(ph, [list(lot.HISTORY_HEADER)], lot.HistoryEnv(**env))
+
+    def test_sides(self) -> None:
+        from ufkensa.kensa import lot_ledger
+        c = self.case("both", "online")
+        d1, d2 = str(c.d1) + "/", str(c.d2) + "/"
+        self.assertEqual(lot_ledger.sides(), lot_ledger.Sides(d1, d2, vba_main=True))
+        self.assertEqual(lot_ledger.sides("1"), lot_ledger.Sides(d2, "", explicit=True))
+        with paths.lot_source(True):
+            self.assertEqual(lot_ledger.sides(), lot_ledger.Sides(d2, d1))
+        paths.set_mode(paths.OFFLINE)
+        self.assertEqual(lot_ledger.sides(), lot_ledger.Sides(d2, d1))
+        self.assertEqual(lot_ledger.sides("1"), lot_ledger.Sides(d2, d1))      # オフラインの DBflag は同じ読み方
+
+    def test_history_test_lot_reads_other_side(self) -> None:
+        """直し: Test のロットでも、第1に無ければ第2を見る(前は第2を見る前に黙って抜けていた)。"""
+        self.case("lot_only_second", "online")
+        r = self.hist(uf1_test=True)
+        self.assertTrue(r.completed)
+        self.assertEqual(len(r.new_rows), 3)
+
+    def test_history_messages(self) -> None:
+        hiki = kensa_fixture.file_name("SIKAHIKINOW")
+        nodata = "SIKAHIKINOW.accdbにH2500K0ﾃﾞｰﾀがありません_HistorySave"
+        # オンライン: 第1にロットが無く、第2が読めない → 「…がありません」(SaveLoad:1322。前と同じ)
+        c = self.case("lot_only_second", "online")
+        (c.d2 / hiki).unlink()
+        self.assertEqual([m.text for m in self.hist().messages], [paths.missing_text("SIKAHIKINOW")])
+        # オフライン: 第2のファイルが無く第1へ移って、ロットが無い → NextPath の文言(直し。前は LOT一覧…)
+        c = self.case("lot_absent_both", "offline")
+        (c.d2 / hiki).unlink()
+        self.assertEqual([m.text for m in self.hist().messages], [nodata])
+        # オフライン: 両方にロットが無い → NextPath の文言(前と同じ)
+        self.case("lot_absent_both", "offline")
+        self.assertEqual([m.text for m in self.hist().messages], [nodata])
+        # IsOver12Hours が真なら出さない(LOT一覧… は VBA どおり出す)
+        self.case("lot_absent_both", "online")
+        self.assertEqual([m.text for m in self.hist(over12=True).messages],
+                         ["LOT一覧：LOTNO有_HIKIDB：LOTNO無_HistorySave"])
+
+    def test_tables_read_once(self) -> None:
+        """読み分けで表を読み直さない(2 回目からは覚えた表と索引だけ)。"""
+        c = self.case("lot_only_second", "online")
+        calls: list = []
+        real = datasource._read_uncached
+        with mock.patch.object(datasource, "_read_uncached", lambda *a: calls.append(a) or real(*a)):
+            for _ in range(5):
+                lot.arrbox("SIKAHIKINOW", LOT, "Record")
+                lot.arrbox("SIKALOTNOW", LOT, "Record")
+                lot.history_save([None, LOT] + [None] * 17, [list(lot.HISTORY_HEADER)], lot.HistoryEnv())
+        files = sorted({Path(str(a[0])).name for a in calls})
+        self.assertLessEqual(len(calls), 6, files)                    # 3 つの台帳 × 第1・第2 を 1 回ずつまで
+        self.assertTrue(c.d1.exists())
 
 
 if __name__ == "__main__":

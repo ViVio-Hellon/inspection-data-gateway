@@ -1105,23 +1105,9 @@ Arrbox = Callable[[str, str, str, str], Optional[list]]
 
 
 def simple_arrbox(target: str, sql_filter: str = "", use: str = "Record", path: str = "") -> Optional[list]:
-    """`AccHIki.Arrbox` の最小限(担当外)。path が "" なら MainPath、そうでなければ NextPath の「仕掛」。
-
-    本物の Arrbox は ReadCheck・TimeDesignation・FileDesignation で控えに切り替える。それは AccHIki の担当が作る。
-    """
-    name = target.rsplit(".", 1)[0]
-    db = paths.db_file(name) if path == "" else paths.db_file(name, base_key="next")
-    if sql_filter == "":
-        flt = ""
-    elif sql_filter == "板":
-        flt = "[ｵｰﾀﾞｰ板丈]<>0"
-    elif sql_filter == "コイル":
-        flt = "[ｵｰﾀﾞｰ板丈]=0  AND  [BOX設計_設備名] = 'KEN' "
-    else:
-        flt = "[ﾛｯﾄ番号]='" + sql_filter + "'"
-    if use == "Fields":
-        return datasource.get_fields(db, "仕掛", "")
-    return datasource.get_records(db, "仕掛", flt)
+    """`AccHIki.Arrbox` の知らせを出さない版(既定)。第1/第2の読み分けは `lot_ledger`(path は DBflag)。"""
+    from . import lot_ledger
+    return lot_ledger.arrbox_value(target, sql_filter, use, path)
 
 
 def advance_check(lot: str, db_flag: str = "", *, arrbox: Optional[Arrbox] = None) -> bool:
@@ -1312,40 +1298,28 @@ def materials_msgbox(form: Form, ord_no: str, *,
     厚・巾・丈は画面の製造寸法(ATU/Hab/Tak)。PackagingSpecificationNo の結果を "_" で分け、
     コイルなら何も出さない。注意文は MsgError(…, 4) で出す。
     B11: 結果が "板_"(コメントなし)のとき、先行データ票の案内も出さずに終わる。
-    `read_check` は担当外(既定: ファイルがある = 仕掛 DB は手元へ写せた)。
+    `read_check` は担当外(既定: `paths.readable` = 仕掛 DB は手元へ写せた)。
     D26 改: VBA の TimeDesignation / FileDesignation(上流の作り直しの決まり)は外した。
     """
     out = Outcome()
     if form.Lot == "":
         return out
     lname = form.lname
-    main, nxt = paths.get("main"), paths.get("next")
-    fpath = main if form.DBflag == "" else nxt
-    rc = read_check or (lambda p: datasource.exists(p))
-
-    def file_of(base: str) -> str:
-        return paths.join(base, paths.lot_file_name("SIKAODRNOW", base))   # D26: 第2は 2つ目の名前
-
-    file_path = file_of(fpath)
-    if not rc(file_path):
-        missing = paths.missing_text("SIKAODRNOW")
-        if fpath == nxt:
-            out.messages.append(flow.Message(missing, flow.ERROR, source="Judg:2004"))
-            return out
-        if fpath == main:
-            fpath = nxt
-            file_path = file_of(fpath)
-            if not rc(file_path):
-                out.messages.append(flow.Message(missing, flow.ERROR, source="Judg:2010"))
-                return out
-
-    fields = datasource.get_fields(file_path, "仕掛", "")
+    # 第1/第2の読み分け(ファイル・受注が無ければ次に見る側)は lot_ledger。DBflag でもファイルを確かめる
+    from . import lot_ledger
+    odr = lot_ledger.read_rows("SIKAODRNOW", "[受注番号]='" + ord_no + "'", form.DBflag, merge=False,
+                               check_explicit=True, check=read_check)
+    if not odr.found:
+        src = "Judg:2010" if not odr.on_primary else "Judg:2004"
+        out.messages.append(flow.Message(paths.missing_text("SIKAODRNOW"), flow.ERROR, source=src))
+        return out
+    rows = odr.rows
+    if rows is None:
+        return out
+    fields = odr.columns()
     names = ("受注番号", "包装仕様NO", "受注板厚", "受注板幅", "受注板丈", "受注材質", "受注調質",
              "用途ｺｰﾄﾞ", "合紙", "納入先名称", "取引先名称")
     col = {n: (_last_index(fields, n) if fields is not None else -1) for n in names}
-    rows = datasource.get_records(file_path, "仕掛", "[受注番号]='" + ord_no + "'")
-    if rows is None:
-        return out
     r = rows[0]
     packing_no = _at(r, col["包装仕様NO"])
     youto = _at(r, col["用途ｺｰﾄﾞ"])

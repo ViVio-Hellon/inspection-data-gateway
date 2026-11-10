@@ -1,0 +1,1133 @@
+{
+ "first_file_missing|dbflag|sika_atu_create": {
+  "value": [
+   "9.5",
+   "9.5"
+  ],
+  "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "first_file_missing|online|lot_watch.signature": {
+  "value": {
+   "オーダー": "65b9e48e59efc747ad57d65e238df45d9dc691d5",
+   "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+   "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "first_file_missing|online|sika_atu_create": {
+  "value": [
+   "9.5",
+   "9.5"
+  ],
+  "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "hiki_extra_first|lot_source|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "78281bf3d0",
+    "n": 4,
+    "pick": [
+     [
+      "61026068",
+      "999",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "999",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "999",
+      "06019756"
+     ],
+     [
+      "69999999",
+      "4",
+      "06017610"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "hiki_extra_first|lot_source|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_extra_first|offline|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "78281bf3d0",
+    "n": 4,
+    "pick": [
+     [
+      "61026068",
+      "999",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "999",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "999",
+      "06019756"
+     ],
+     [
+      "69999999",
+      "4",
+      "06017610"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "hiki_extra_first|offline|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_extra_second|dbflag|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "HikiArrCreate は DBflag を見ない(前と同じ)。オンラインの決まり 4(第2にだけある引当を足す)にそろえた"
+ },
+ "hiki_extra_second|online|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "31ee1aaeeb",
+    "n": 4,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ],
+     [
+      "69999999",
+      "999",
+      "06017610"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "hiki_extra_second|online|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_lot_only_first|lot_source|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "4885d0a500",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "hiki_lot_only_first|lot_source|history_save": {
+  "value": {
+   "completed": true,
+   "digest": "75abcac89a",
+   "file": "<1>/SIKAHIKI.sqlite3",
+   "msgs": [],
+   "rows": [
+    [
+     "61026068",
+     "2",
+     "ﾀﾞｲ2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "ﾀﾞｲ2",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "ﾀﾞｲ2",
+     "06019756"
+    ]
+   ]
+  },
+  "why": "Lot情報履歴の SIKAODR は『引当を読んだ側』から読んでいた(第2の引当なら第2の SIKAODR だけ・オフラインで足りない受注を足さない)。決まり 1・5 にそろえ、引当をどちらから読んだかによらない"
+ },
+ "hiki_lot_only_first|lot_source|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_lot_only_first|offline|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "4885d0a500",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "hiki_lot_only_first|offline|history_save": {
+  "value": {
+   "completed": true,
+   "digest": "75abcac89a",
+   "file": "<1>/SIKAHIKI.sqlite3",
+   "msgs": [],
+   "rows": [
+    [
+     "61026068",
+     "2",
+     "ﾀﾞｲ2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "4",
+     "ﾀﾞｲ2",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "2",
+     "ﾀﾞｲ2",
+     "06019756"
+    ]
+   ]
+  },
+  "why": "Lot情報履歴の SIKAODR は『引当を読んだ側』から読んでいた(第2の引当なら第2の SIKAODR だけ・オフラインで足りない受注を足さない)。決まり 1・5 にそろえ、引当をどちらから読んだかによらない"
+ },
+ "hiki_lot_only_first|offline|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_lot_only_second|online|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "9d9ce87ed9",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "999",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "999",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "999",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "hiki_lot_only_second|online|history_save": {
+  "value": {
+   "completed": true,
+   "digest": "06b9c73c39",
+   "file": "<2>/SIKAHIKI.sqlite3",
+   "msgs": [],
+   "rows": [
+    [
+     "61026068",
+     "999",
+     "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+     "06019756"
+    ]
+   ]
+  },
+  "why": "Lot情報履歴の SIKAODR は『引当を読んだ側』から読んでいた(第2の引当なら第2の SIKAODR だけ・オフラインで足りない受注を足さない)。決まり 1・5 にそろえ、引当をどちらから読んだかによらない"
+ },
+ "lot_absent_both|online|history_save": {
+  "value": {
+   "completed": false,
+   "digest": "97d170e155",
+   "file": "<1>/SIKAHIKI.sqlite3",
+   "msgs": [
+    "LOT一覧：LOTNO有_HIKIDB：LOTNO無_HistorySave"
+   ],
+   "rows": []
+  },
+  "why": "ロットがどちらにも無いときの file_path は、まず読む側のファイル(arrbox と同じ)。知らせは同じ"
+ },
+ "lot_only_first|lot_source|grid.arrbox.SIKALOTNOW": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "grid の既定(簡易版)は paths.db_file のファイルだけで、ロットの切替・オフラインの第1が無かった。lot_ledger を通す"
+ },
+ "lot_only_first|lot_source|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "4885d0a500",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "lot_only_first|lot_source|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "lot_only_first|lot_source|judge.simple_arrbox": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
+ },
+ "lot_only_first|lot_source|lot_watch.signature": {
+  "value": {
+   "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+   "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+   "引当": "65379877c15b54adad59dd35b1c112963edee872"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "lot_only_first|lot_source|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "lot_only_first|lot_source|sika_atu_create": {
+  "value": [
+   "50",
+   "50"
+  ],
+  "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "lot_only_first|offline|grid.arrbox.SIKALOTNOW": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "grid の既定(簡易版)は paths.db_file のファイルだけで、ロットの切替・オフラインの第1が無かった。lot_ledger を通す"
+ },
+ "lot_only_first|offline|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "4885d0a500",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "lot_only_first|offline|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "lot_only_first|offline|judge.simple_arrbox": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
+ },
+ "lot_only_first|offline|lot_watch.signature": {
+  "value": {
+   "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+   "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+   "引当": "65379877c15b54adad59dd35b1c112963edee872"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "lot_only_first|offline|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "lot_only_first|offline|sika_atu_create": {
+  "value": [
+   "50",
+   "50"
+  ],
+  "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "lot_only_second|online|grid.arrbox.SIKALOTNOW": {
+  "value": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  },
+  "why": "grid の既定(簡易版)は paths.db_file のファイルだけで、ロットの切替・オフラインの第1が無かった。lot_ledger を通す"
+ },
+ "lot_only_second|online|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "9d9ce87ed9",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "999",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "999",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "999",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "lot_only_second|online|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ﾀﾞｲ2",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "lot_only_second|online|judge.simple_arrbox": {
+  "value": {
+   "digest": "6b95ef9036",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "999",
+     "9.5",
+     "3"
+    ]
+   ]
+  },
+  "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
+ },
+ "odr_missing_first|online|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ﾀﾞｲ2",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "odr_missing_second|lot_source|history_save": {
+  "value": {
+   "completed": true,
+   "digest": "37cdb01361",
+   "file": "<2>/SIKAHIKI.sqlite3",
+   "msgs": [],
+   "rows": [
+    [
+     "61026068",
+     "999",
+     "ﾀﾞｲ2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "ﾀﾞｲ2",
+     "06019756"
+    ]
+   ]
+  },
+  "why": "Lot情報履歴の SIKAODR は『引当を読んだ側』から読んでいた(第2の引当なら第2の SIKAODR だけ・オフラインで足りない受注を足さない)。決まり 1・5 にそろえ、引当をどちらから読んだかによらない"
+ },
+ "odr_missing_second|lot_source|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "odr_missing_second|lot_source|lot_watch.signature": {
+  "value": {
+   "オーダー": "49004e5a5795d2f5c030bd219e117cc00a7ae1a5",
+   "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+   "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "odr_missing_second|offline|history_save": {
+  "value": {
+   "completed": true,
+   "digest": "37cdb01361",
+   "file": "<2>/SIKAHIKI.sqlite3",
+   "msgs": [],
+   "rows": [
+    [
+     "61026068",
+     "999",
+     "ﾀﾞｲ2",
+     "06017503"
+    ],
+    [
+     "61026069",
+     "999",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "06017610"
+    ],
+    [
+     "61026070",
+     "999",
+     "ﾀﾞｲ2",
+     "06019756"
+    ]
+   ]
+  },
+  "why": "Lot情報履歴の SIKAODR は『引当を読んだ側』から読んでいた(第2の引当なら第2の SIKAODR だけ・オフラインで足りない受注を足さない)。決まり 1・5 にそろえ、引当をどちらから読んだかによらない"
+ },
+ "odr_missing_second|offline|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "odr_missing_second|offline|lot_watch.signature": {
+  "value": {
+   "オーダー": "49004e5a5795d2f5c030bd219e117cc00a7ae1a5",
+   "仕掛": "6ab53a10637446a6e65ededadeab494b9d79ee52",
+   "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "second_file_missing|lot_source|grid.arrbox.SIKALOTNOW": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "grid の既定(簡易版)は paths.db_file のファイルだけで、ロットの切替・オフラインの第1が無かった。lot_ledger を通す"
+ },
+ "second_file_missing|lot_source|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "4885d0a500",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "second_file_missing|lot_source|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "second_file_missing|lot_source|judge.simple_arrbox": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
+ },
+ "second_file_missing|lot_source|lot_watch.signature": {
+  "value": {
+   "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+   "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+   "引当": "65379877c15b54adad59dd35b1c112963edee872"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "second_file_missing|lot_source|paths.db_file": {
+  "value": [
+   "<1>/SIKALOT.sqlite3",
+   "<1>/SIKAHIKI.sqlite3",
+   "<1>/SIKAODR.sqlite3"
+  ],
+  "why": "名前で引く仕掛台帳の場所(全ヵ所・キャスク・保存の確かめなど)は、オフラインで第2のファイルが無いとき第1を見なかった。決まり 1"
+ },
+ "second_file_missing|lot_source|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "second_file_missing|lot_source|sika_atu_create": {
+  "value": [
+   "50",
+   "50"
+  ],
+  "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "second_file_missing|offline|grid.arrbox.SIKALOTNOW": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "grid の既定(簡易版)は paths.db_file のファイルだけで、ロットの切替・オフラインの第1が無かった。lot_ledger を通す"
+ },
+ "second_file_missing|offline|grid.atu_hiki_records": {
+  "value": {
+   "found": true,
+   "rows": {
+    "digest": "4885d0a500",
+    "n": 3,
+    "pick": [
+     [
+      "61026068",
+      "2",
+      "06017503"
+     ],
+     [
+      "61026069",
+      "4",
+      "06017610"
+     ],
+     [
+      "61026070",
+      "2",
+      "06019756"
+     ]
+    ]
+   }
+  },
+  "why": "grid の既定の引当の読みは、ロットの切替・足りない引当・オフラインの第1が無かった。wiring と同じ lot_ledger"
+ },
+ "second_file_missing|offline|judge.materials_msgbox": {
+  "value": {
+   "args": [
+    [
+     "1P1125",
+     "H197",
+     1.0,
+     1.0,
+     1.0,
+     "17S",
+     "T351",
+     "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+     "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+    ]
+   ],
+   "msgs": []
+  },
+  "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "second_file_missing|offline|judge.simple_arrbox": {
+  "value": {
+   "digest": "132826a439",
+   "n": 2,
+   "pick": [
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ],
+    [
+     "H2500K0",
+     "8",
+     "50",
+     "3"
+    ]
+   ]
+  },
+  "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
+ },
+ "second_file_missing|offline|lot_watch.signature": {
+  "value": {
+   "オーダー": "c53d9b7e42faaedf3e31cd3aedb272830c8e1a0c",
+   "仕掛": "a103ab60652519f10797826185d5b9894f16a667",
+   "引当": "65379877c15b54adad59dd35b1c112963edee872"
+  },
+  "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "second_file_missing|offline|paths.db_file": {
+  "value": [
+   "<1>/SIKALOT.sqlite3",
+   "<1>/SIKAHIKI.sqlite3",
+   "<1>/SIKAODR.sqlite3"
+  ],
+  "why": "名前で引く仕掛台帳の場所(全ヵ所・キャスク・保存の確かめなど)は、オフラインで第2のファイルが無いとき第1を見なかった。決まり 1"
+ },
+ "second_file_missing|offline|quality.hiki_arr_create": {
+  "value": [
+   [
+    "ｶ)ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ ｶﾝｻｲｺｳｼﾞﾖｳ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ],
+   [
+    "ｶ) ｼﾝｸｽｺ-ﾎﾟﾚ-ｼﾖﾝ",
+    "ﾆﾂﾃﾂﾌﾞﾂｻﾝ(ｶ)ｷﾉｳﾏﾃﾘｱﾙﾌﾞ"
+   ]
+  ],
+  "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "second_file_missing|offline|sika_atu_create": {
+  "value": [
+   "50",
+   "50"
+  ],
+  "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ }
+}

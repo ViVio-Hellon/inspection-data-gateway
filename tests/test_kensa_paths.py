@@ -351,7 +351,7 @@ class PerLotTest(_Saved):
         self.assertFalse(r.completed)
 
     def test_history_save_offline_odr_from_first(self) -> None:
-        """F1: オフラインで第2の SIKAODR が空なら第1の SIKAODR(_odr_fallback)。"""
+        """F1: オフラインで第2の SIKAODR が空なら第1の SIKAODR(lot_ledger の決まり 2)。"""
         self.use(paths.OFFLINE)
         ph = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T"), check_equipment=_ok).past_hiki
         sheet = [list(lot.HISTORY_HEADER)]
