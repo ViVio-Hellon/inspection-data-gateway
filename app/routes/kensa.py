@@ -5,16 +5,16 @@
 """
 from __future__ import annotations
 
-import re
+import mimetypes
 from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request, send_file
 
-from ufkensa.kensa import session, view
-from ufkensa.kensa.flow import Stop
+from ufkensa.kensa import paths, session, view
 from ufkensa.logging_utils import get_logger
 
 from ..shell import shell_context
+from . import screen_common
 
 log = get_logger("app.routes.kensa")
 
@@ -65,8 +65,6 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
 #: 画像の種類 → 使用パスの項目(2026-11-09: 設定の「VC種類画像」を見る。空なら 参照用ファイル\\VC種類画像)
 PICTURES: dict[str, str] = {"vc": "vc_images"}
 
-MSG_NOT_READY = "この操作はまだ結合中です(工程 8c)。いまは VBA の UF検査判定.xlsm を使ってください。"
-
 
 @bp.get("/kensa")
 def page():
@@ -76,9 +74,6 @@ def page():
 @bp.get("/api/kensa/picture/<kind>/<path:name>")
 def picture(kind: str, name: str):
     """VC 画像・包装仕様書の画像(使用パスの下のフォルダの <名前>.JPG)。無ければ 404(VBA は出さないだけ)。"""
-    from pathlib import Path
-    from flask import send_file
-    from ufkensa.kensa import paths
     if kind not in PICTURES:
         return jsonify({"error": {"code": "not_found", "message": "その画像の種類はありません"}}), 404
     safe = Path(name).name
@@ -110,8 +105,6 @@ def judge_images_list():
 @bp.get("/api/kensa/judge_image/<slot>")
 def judge_image_slot(slot: str):
     """2026-11-09: 枠ごとの画像(設定の見本と判定のとき)。その枠に決めたファイル(空・無ければ同梱の絵)だけ配る。"""
-    import mimetypes
-    from flask import send_file
     from ufkensa.kensa import judge_images
     if slot not in judge_images.SLOTS:
         return jsonify({"error": {"code": "not_found", "message": f"画像の枠がありません: {slot}"}}), 404
@@ -124,8 +117,6 @@ def judge_image_slot(slot: str):
 @bp.get("/api/kensa/judge_image/<kind>/<path:name>")
 def judge_image(kind: str, name: str):
     """判定の画像 1 枚(VBA の UFOK / UFNG / UF対角 の絵)。前の形(種類/枠)。その種類で出す枠だけ配る。"""
-    import mimetypes
-    from flask import send_file
     from ufkensa.kensa import judge_images
     f = judge_images.find(kind, name)
     if f is None:
@@ -136,23 +127,13 @@ def judge_image(kind: str, name: str):
 @bp.get("/api/kensa/pack_image")
 def pack_image():
     """いま出している包装仕様書の画像(UF_PackNo.PacIM。使用パス QualityPath\\包装仕様書)。"""
-    from flask import send_file
-    f = session.get().pack_image()
-    if f is None or not f.is_file():
-        return jsonify({"error": {"code": "not_found", "message": "包装仕様書の画像がありません"}}), 404
-    return send_file(f, mimetype="image/jpeg", max_age=0)
+    return screen_common.pack_image(session.get().pack_image())
 
 
 @bp.get("/api/kensa/report/<path:name>")
 def report(name: str):
     """印刷した帳票(D8: ブラウザで開いて印刷する HTML)。手元のデータフォルダの print にあるものだけ(キャスクと同じ)。"""
-    safe = Path(name).name
-    if not re.fullmatch(r"[^\\/]+\.html", safe):
-        return jsonify({"error": {"code": "bad_value", "message": "帳票の名前が正しくありません"}}), 400
-    f = session.get().store.path.parent / "print" / safe
-    if not f.is_file():
-        return jsonify({"error": {"code": "not_found", "message": f"帳票がありません: {safe}"}}), 404
-    return send_file(f, mimetype="text/html", max_age=0)
+    return screen_common.report_file(session.get().store.print_dir, name)
 
 
 @bp.get("/api/kensa/lot-watch")
@@ -169,23 +150,9 @@ def state():
 
 @bp.post("/api/kensa/<op>")
 def operate(op: str):
-    if op not in OPS:
-        return jsonify({"error": {"code": "not_found", "message": "その操作はありません"}}), 404
-    method, names = OPS[op]
-    body = request.get_json(silent=True) or {}
-    kwargs = {n: body[n] for n in names if n in body}
-    s = session.get()
-    from ufkensa import trace
-    try:
-        with trace.timed(f"kensa.{op}", f"検査画面: {op}", expected=(Stop, NotImplementedError),
-                         lot=s.state.lot or None):
-            result = getattr(s, method)(**kwargs)
-    except NotImplementedError:
-        return jsonify({"error": {"code": "not_ready", "message": MSG_NOT_READY}}), 501
-    except Stop as e:                                   # 念のため: セッションが Result に包まずに投げたとき
-        return jsonify({"view": view.build(s.state), "messages": [m.to_dict() for m in e.messages],
-                        "question": None, "stop": e.to_dict()["stop"]})
-    return jsonify(result.to_dict())
+    return screen_common.operate(op, OPS, session.get, area="kensa", label="検査画面",
+                                 stop_view=lambda s: view.build(s.state),
+                                 trace_fields=lambda s: {"lot": s.state.lot or None})
 
 
 # ------------------------------------------------------------------

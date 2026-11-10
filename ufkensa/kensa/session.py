@@ -1806,7 +1806,7 @@ class Session:
     def _report_files(self, report: Optional[report_model.ReportModel], defect: Optional[report_model.ReportModel],
                       reprint: bool = False) -> dict[str, Any]:
         """印刷(D8: ブラウザで開く HTML)。手元のデータフォルダの print に書く。"""
-        folder = self.store.path.parent / "print"
+        folder = self.store.print_dir
         out: dict[str, Any] = {"reprint": reprint}
         edge = None
         for key, model, stem in (("report", report, f"印刷用_{self.state.lname}"),

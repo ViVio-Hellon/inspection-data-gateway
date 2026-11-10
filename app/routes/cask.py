@@ -5,17 +5,13 @@
 """
 from __future__ import annotations
 
-import re
-from pathlib import Path
+from flask import Blueprint, jsonify, render_template
 
-from flask import Blueprint, jsonify, render_template, request, send_file
-
-from ufkensa import trace
 from ufkensa.kensa import cask_session
-from ufkensa.kensa.flow import Stop
 from ufkensa.logging_utils import get_logger
 
 from ..shell import shell_context
+from . import screen_common
 
 log = get_logger("app.routes.cask")
 
@@ -42,11 +38,6 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "pack-close": ("pack_close", ("confirmed",)),
 }
 
-#: 包装仕様書の画像の種類(拡張子 → MIME)。VBA は LoadPicture で .JPG を読む
-_IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif",
-                ".bmp": "image/bmp"}
-
-
 @bp.get("/cask")
 def page():
     return render_template("cask.html", **shell_context("cask"))
@@ -60,39 +51,21 @@ def state():
 @bp.get("/api/cask/report/<path:name>")
 def report(name: str):
     """印刷した帳票(D8: ブラウザで開いて印刷する HTML)。手元のデータフォルダの print にあるものだけ。"""
-    s = cask_session.get()
-    safe = Path(name).name
-    if not re.fullmatch(r"[^\\/]+\.html", safe):
-        return jsonify({"error": {"code": "bad_value", "message": "帳票の名前が正しくありません"}}), 400
-    f = s.store.path.parent / "print" / safe
-    if not f.is_file():
-        return jsonify({"error": {"code": "not_found", "message": f"帳票がありません: {safe}"}}), 404
-    return send_file(f, mimetype="text/html", max_age=0)
+    return screen_common.report_file(cask_session.get().store.print_dir, name)
 
 
 @bp.get("/api/cask/pack_image")
 def pack_image():
-    """いま出している包装仕様書の画像(UF_PackNo.PacIM)。使用パス(QualityPath\\包装仕様書)のファイルだけを返す。"""
-    f = cask_session.get().pack_image()
-    if f is None or not f.is_file():
-        return jsonify({"error": {"code": "not_found", "message": "包装仕様書の画像がありません"}}), 404
-    return send_file(f, mimetype=_IMAGE_TYPES.get(f.suffix.lower(), "application/octet-stream"), max_age=0)
+    """いま出している包装仕様書の画像(UF_PackNo.PacIM)。"""
+    return screen_common.pack_image(cask_session.get().pack_image())
+
+
+def _lot(s) -> dict:
+    return {"lot": (s.book.cask.lot_box if s.book is not None else "") or None}
 
 
 @bp.post("/api/cask/<op>")
 def operate(op: str):
-    if op not in OPS:
-        return jsonify({"error": {"code": "not_found", "message": "その操作はありません"}}), 404
-    method, names = OPS[op]
-    body = request.get_json(silent=True) or {}
-    kwargs = {n: body[n] for n in names if n in body}
-    s = cask_session.get()
-    lot = ""
-    if s.book is not None:
-        lot = s.book.cask.lot_box or None
-    missing = [n for n in names if n != "answers" and n not in kwargs]
-    if missing:
-        return jsonify({"error": {"code": "bad_value", "message": "足りない値があります: " + ", ".join(missing)}}), 400
-    with trace.timed(f"cask.{op}", f"キャスク検査: {op}", expected=(Stop,), lot=lot or None):
-        result = getattr(s, method)(**kwargs)
-    return jsonify(result.to_dict())
+    return screen_common.operate(op, OPS, cask_session.get, area="cask", label="キャスク検査",
+                                 required=lambda n: n != "answers", trace_fields=_lot,
+                                 stop_view=lambda s: s.state().to_dict()["view"])

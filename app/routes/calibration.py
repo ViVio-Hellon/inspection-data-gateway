@@ -6,14 +6,13 @@
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template
 
-from ufkensa import trace
 from ufkensa.kensa import calibration_session
-from ufkensa.kensa.flow import Stop
 from ufkensa.logging_utils import get_logger
 
 from ..shell import shell_context
+from . import screen_common
 
 log = get_logger("app.routes.calibration")
 
@@ -36,21 +35,15 @@ def page():
 
 @bp.get("/api/calibration/state")
 def state():
-    s = calibration_session.get()
+    return jsonify({"view": _view(calibration_session.get()), "messages": [], "question": None, "stop": None})
+
+
+def _view(s):
     with s._lock:
-        return jsonify({"view": s.view(), "messages": [], "question": None, "stop": None})
+        return s.view()
 
 
 @bp.post("/api/calibration/<op>")
 def operate(op: str):
-    if op not in OPS:
-        return jsonify({"error": {"code": "not_found", "message": "その操作はありません"}}), 404
-    method, names, what = OPS[op]
-    body = request.get_json(silent=True) or {}
-    kwargs = {n: str(body[n]) for n in names if n in body}
-    if any(n not in kwargs for n in names):
-        return jsonify({"error": {"code": "bad_value", "message": "値が足りません"}}), 400
-    s = calibration_session.get()
-    with trace.timed(f"calibration.{op}", f"校正画面: {what}", expected=(Stop,)):
-        result = getattr(s, method)(**kwargs)
-    return jsonify(result.to_dict())
+    return screen_common.operate(op, OPS, calibration_session.get, area="calibration", label="校正画面",
+                                 required=lambda n: True, as_text=True, stop_view=_view)
