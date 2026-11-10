@@ -356,6 +356,7 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
     B55: VBA は入力先が決まらず抜けるとき(INP.Tag="")に FlagLabel を 0 のまま残す。
     """
     msgs: list[Message] = []
+    state.last_landed = ""
     if state.flag_label != 1:
         return msgs
     if state.inp == "":
@@ -414,6 +415,7 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
             state.flag_label = 1
             return msgs
 
+    state.last_landed = st          # ここから先は入力先に入った(LoopText の異常値で消されても入った後)
     hooks.loop_text(state, st)
     hooks.posting(state)
     hooks.out_tolerance(state)
@@ -431,8 +433,10 @@ def receive(state: KensaState, text: str, hooks: Hooks) -> list[Message]:
     """UF1.StartTB_KeyDown (UF1:3295-3306)。`INP = StartTB`。値が変わったときだけ INP_Change が走る(MSForms の Change)。
 
     FlagLabel が 1 でないとき・StartTB が空のときは INP に入れずに抜ける(UF1:3297-3298)。
+    値が入った欄は `state.last_landed` に残る(入らなければ "")。
     INP は前の値のまま残るので、その後に同じ文字列が来ても Change は起きない(VBA どおり)。
     """
+    state.last_landed = ""
     if state.flag_label != 1:
         return []
     if text == "":

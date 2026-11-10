@@ -757,11 +757,6 @@ class Session:
         # 2026-11-09: 「検査できない理由を表示して」(現場の声)。入らなかったとき、その理由を残す。
         # VBA は黙って捨てる道(ロット未登録・入力先が無い・同じ値の続き)があるので、ここで言葉にする(動きは変えない)
         self.receive_why = ""
-        landed: list[int] = []
-        hooks = self.hooks
-        had_own = "posting" in vars(hooks)
-        orig = hooks.posting
-        hooks.posting = lambda s: (landed.append(s.inp_tag), orig(s))[1]  # 入力先に入ると Posting が呼ばれる
         pre = ("ロット未登録(LotNo を入れてください)" if st.lot == "" else
                "同じ値が続けて届いたので受け付けませんでした" if st.inp == text and text != "" else "")
         n0 = len(self.env.messages)
@@ -770,14 +765,10 @@ class Session:
         except Stop as e:
             self.receive_why = e.text
             raise
-        finally:
-            if had_own:
-                hooks.posting = orig
-            else:
-                del hooks.posting
+        landed = st.last_landed            # 値が入った欄(入らなければ "")。input_router.inp_change が残す
         if self.env.proofread is not None:
             self.calibration_required = True
-        if landed and landed[0] and st.has_ctl(landed[0]) and st.ctl(landed[0]).value == "":
+        if landed and st.has_ctl(landed) and st.ctl(landed).value == "":
             # 入力先には入ったが、異常値・2度押しなどで消された
             texts = [" ".join(m.text.split()) for m in self.env.messages[n0:] if m.text.strip()]
             try:

@@ -258,6 +258,51 @@ class EndToEndTest(SessionBase):
         s.receive("DT10001+0000015.012M")
         self.assertEqual((s.receive_why, s.state.cells["S1"].value), ("", "15.012"))
 
+    def test_receive_landed_without_patching_hooks(self) -> None:
+        """整理 9: 値が入った欄は state.last_landed で受け取る(hooks.posting を差し替えない)。"""
+        s = self.s
+        self.register()
+        posting = s.hooks.posting
+        s.receive("DT10001+0000015.012M")
+        self.assertEqual((s.state.last_landed, s.receive_why, s.state.cells["S1"].value), ("S1", "", "15.012"))
+        self.assertNotIn("posting", vars(s.hooks))
+        self.assertEqual(s.hooks.posting, posting)
+
+    def test_receive_blocked_has_no_landed(self) -> None:
+        """入らなかった(ロット未登録・パケット不一致)ときは last_landed が空で、理由の文言は前と同じ。"""
+        s = self.s
+        self.ok(s.start())
+        s.receive("DT10001+0000015.012M")
+        self.assertEqual((s.state.last_landed, s.receive_why), ("", "ロット未登録(LotNo を入れてください)"))
+        self.register()
+        s.receive("XX123")
+        self.assertEqual((s.state.last_landed, s.receive_why), ("", "パケット不一致(DT・#L・#〆 で始まらない値)"))
+
+    def test_receive_erased_after_landing_double_press(self) -> None:
+        """入った後に 2度押しで消された: last_landed は入った欄、理由は「入れた値…を消しました: 2度押し」。"""
+        s = self.s
+        self.register()
+        s.receive("DT10001+0000015.012M")
+        self.ok(s.click("S1"))
+        self.clock.t = datetime.strptime(s.state.each_time, "%Y/%m/%d %H:%M:%S") + timedelta(seconds=2)
+        with mock.patch.object(Clock, "__call__", lambda c: c.t):        # 4 秒以内に同じ値
+            s.receive("DT10001+0000015.012M")
+        self.assertEqual((s.state.last_landed, s.state.cells["S1"].value), ("S1", ""))
+        self.assertEqual(s.receive_why, "入れた値(値 15.012)を消しました: 2度押し")
+
+    def test_receive_exception_leaves_hooks_untouched(self) -> None:
+        """受信の途中で例外が出ても hooks は変わらない(前は差し替えた posting が戻らないことがあった)。"""
+        s = self.s
+        self.register()
+        before = dict(vars(s.hooks))
+        with mock.patch.object(type(s.hooks), "loop_text", side_effect=RuntimeError("boom")):
+            r = s.receive("DT10001+0000015.012M")
+        self.assertIsNotNone(r.stop)
+        self.assertEqual(vars(s.hooks).keys(), before.keys())
+        self.assertNotIn("posting", vars(s.hooks))
+        s.receive("DT10001+0000015.013M")
+        self.assertEqual(s.receive_why, "")
+
     def test_new_with_measurement_still_needs_history(self) -> None:
         self.register()
         self.s.state.cells["S1"].value = "15.012"

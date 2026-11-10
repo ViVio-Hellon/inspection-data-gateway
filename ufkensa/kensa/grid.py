@@ -310,6 +310,9 @@ class KensaState:
     auto: str = "on"              # Auto("on" = 次の入力欄を自動で決める。ラベルを手で選ぶと "off")
     inp: str = ""                 # INP(受信した伝送文字列)
     inp_tag: str = ""             # INP.Tag(いまの入力先のコントロール名 "S1" など)
+    #: 直前の受信(INP_Change)で値が入った欄(LoopText・Posting まで進んだ入力先)。入らなければ ""。
+    #: VBA には無い。session._receive が「入らなかった理由」を言うために読む(hooks を差し替えずに済むように)
+    last_landed: str = ""
     tagtext: str = ""             # Tagtext.Caption(入力先の表示)
     paked: str = ""               # PakeD(伝送の種別 "DT" / "#L" / "#〆")
     machin: str = ""              # Machin(測定機器名)
