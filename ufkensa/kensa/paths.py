@@ -675,7 +675,7 @@ def missing_text(name: str, files: Optional[list[str]] = None, m: Optional[str] 
         parts.append(f"{fname}(フォルダ {folder or '(空)'})")
     mode_note = ""
     if name in LOT_DBS:
-        mode_note = "オフラインなので第2パス(控え)だけを見ました。第1パス(台帳)を読むには 設定 → この端末 のモードを「オンライン」にするか、第2パスの名前を合わせてください。" if lot_mode(m) == OFFLINE else ""
+        mode_note = "オフラインなので第2パス(控え)を先に見て、無かったので第1パス(台帳)も見ました。第2パスの名前、または第1パスに届くかを確かめてください。" if lot_mode(m) == OFFLINE else ""
     what = "見つからないか、手元へ写せません" if name in COPIED_DBS else "見つかりません"
     return (f"{label} のファイルが{what}: " + " / ".join(parts) + "。"
             + mode_note + "設定 → 使用パス の「確認」で場所と名前を確かめてください。")
