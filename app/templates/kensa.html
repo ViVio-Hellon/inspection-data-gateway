@@ -46,7 +46,7 @@
     <section class="card" id="tolCard">
       <header><h3>公差</h3><span class="lv lv--warn" id="resizeLv" hidden>サイズ修正中</span></header>
       <div class="pad">
-        <dl class="kv-grid" id="tolKv"></dl>
+        <div class="tol-groups" id="tolKv"></div>
         <button class="btn btn--sm" type="button" id="resizeOpen" hidden>サイズ・公差の修正を開く</button>
         <p class="muted" id="tolNote"></p>
       </div>
@@ -86,7 +86,7 @@
         <span class="lv lv--info" id="faceLv"></span>
       </header>
       <div class="pad subpane" data-pane="strain">
-        <div class="btn-row"><button class="btn" type="button" id="aorbBtn">A/B 面</button><span class="muted" id="strainNote"></span></div>
+        <div class="btn-row"><button class="btn" type="button" id="aorbBtn">A/B 面</button><span class="strain-tol" id="strainTol" aria-label="歪の公差"></span><span class="muted" id="strainNote"></span></div>
         <div style="overflow-x:auto"><table class="mgrid strain" id="strainGrid" aria-label="歪"></table></div>
       </div>
       <div class="pad subpane" data-pane="visual" hidden>
@@ -154,7 +154,7 @@
       <div class="pad"><ul class="checks-list" id="checks"><li data-ok="">まだ確かめていません</li></ul></div>
     </div>
     <div class="rpane" data-rpane="mm" hidden>
-      <div class="pad"><dl class="kv-grid" id="mmKv"></dl></div>
+      <div class="pad"><dl class="kv-grid" id="mmKv"></dl><div class="mmflags" id="mmFlags" aria-label="位置の判定"></div></div>
     </div>
     <div class="rpane" data-rpane="tol" id="rpaneTol" hidden></div>
     <div class="rpane" data-rpane="ops">

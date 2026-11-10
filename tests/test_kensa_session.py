@@ -340,6 +340,18 @@ class CalibrationTest(SessionBase):
         self.ok(s.receive("DT10001+0000015.013M"))
         self.assertEqual(s.state.cells["S1"].value, "15.013")
 
+    def test_worker_registration_asks_for_calibration(self) -> None:
+        """2026-11-10: 検査員を登録した時点で calibration_required が立つ(画面はこれを見て校正画面へ移る)。"""
+        self.ok(self.s.start())
+        r = self.ok(self.s.register_worker(CARD, {"worker_register": True}))
+        self.assertTrue(r.view["calibration_required"])
+
+    def test_worker_registration_with_skip_right_does_not_ask(self) -> None:
+        self.s = self.new_session(skip=True)
+        self.ok(self.s.start())
+        r = self.ok(self.s.register_worker(CARD, {"worker_register": True}))
+        self.assertFalse(r.view["calibration_required"])
+
     def test_calibration_skip_right(self) -> None:
         # 権限 ufkensa:calibration_skip = WorkButton.Tag="jump"(UF1:4617)
         self.s = self.new_session(skip=True)

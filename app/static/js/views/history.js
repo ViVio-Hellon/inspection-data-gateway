@@ -4,6 +4,7 @@
 
 import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
+import * as tabs from "../tabs.js";
 
 const $ = (id) => document.getElementById(id);
 let rows = [];
@@ -97,3 +98,58 @@ $("histRestore").addEventListener("click", async () => {
   }
 });
 load().catch(toastError);
+
+/* ---- 理由の履歴(2026-11-10): ライン別の Access.log の「理由選択」の行を読むだけ ---- */
+let rsLoaded = false;
+function kvRow(k, v) { return [td(k, "dt"), td(v, "dd")]; }
+
+async function loadReasons() {
+  rsLoaded = true;
+  const q = new URLSearchParams({ line: $("rsLine").value || "", from: $("rsFrom").value || "",
+                                  to: $("rsTo").value || "", lot: $("rsLot").value.trim() });
+  let r;
+  try {
+    r = await api.get(`/api/history/reasons?${q}`);
+  } catch (e) {
+    toastError(e);
+    return;
+  }
+  if (!$("rsLine").options.length) {
+    $("rsLine").append(...(r.lines || []).map((l) => new Option(l.label, l.key)));
+  }
+  $("rsLine").value = r.folder;
+  $("rsFiles").replaceChildren(
+    ...kvRow("理由の置き場所(ライン別 Access.log)", r.access),
+    ...kvRow("測定値のログ(ライン別 Measured.log)", r.measured),
+    ...kvRow("アプリの Access.log(Lot登録・測定値)", r.app_access));
+  $("rsError").hidden = !r.error;
+  $("rsError").textContent = r.error ? `${r.error}\n${r.access}` : "";
+  $("rsError").style.whiteSpace = "pre-wrap";
+  $("rsCount").textContent = r.error ? "読めません" : `${r.total} 件`;
+  $("rsBadge").hidden = !!r.error || !r.total;
+  $("rsBadge").textContent = r.total ? String(r.total) : "";
+  $("rsTable").tBodies[0].replaceChildren(...(r.entries || []).map((e) => {
+    const tr = document.createElement("tr");
+    tr.dataset.kind = e.kind;
+    const kind = td(e.kind); kind.className = "rs-kind";
+    const why = td(e.reasons); why.className = "rs-reasons";
+    tr.append(td(e.at), td(e.pc), td(e.lot || "-"), kind, td(e.position), td(e.value), why, td(e.worker));
+    tr.title = e.raw;
+    return tr;
+  }));
+  $("rsNote").textContent = [
+    r.truncated ? `新しいものから ${r.entries.length} 件だけ出しています(日付で絞ってください)。` : "",
+    !r.error && r.total === 0 ? "条件に合う理由はありません。" : "",
+    "LotNo は、アプリの Access.log の「Lot登録」から、その時刻より前に同じ PC で登録したロットを推して出しています。",
+  ].filter(Boolean).join(" ");
+}
+
+const histTabs = $("historyTabs");
+tabs.attach(histTabs);
+const maybeLoad = () => { if (tabs.current(histTabs) === "reasons" && !rsLoaded) loadReasons(); };
+histTabs.addEventListener("click", maybeLoad);
+histTabs.addEventListener("keyup", maybeLoad);
+if (tabs.current(histTabs) === "reasons") loadReasons();
+$("rsLoad").addEventListener("click", loadReasons);
+$("rsLine").addEventListener("change", loadReasons);
+$("rsLot").addEventListener("keydown", (e) => { if (e.key === "Enter") loadReasons(); });

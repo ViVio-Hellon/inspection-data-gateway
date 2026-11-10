@@ -196,6 +196,22 @@ function renderPaths() {
     small.className = "muted";
     small.textContent = ` ${p.vba} — ${p.use}`;
     name.append(b, document.createElement("br"), small);
+    if (p.targets) {                                 // 2026-11-10: 実際に書くファイル(フォルダ+ファイル名)
+      const t = p.targets;
+      const box = document.createElement("div");
+      box.className = "path-targets";
+      box.style.cssText = "margin-top:4px;font-size:var(--fs-sm)";
+      for (const [k, v] of [["いま書くファイル", t.app_access],
+                            [`理由・ライン別ログ(${t.folder})`, t.line_access],
+                            ["測定値のライン別ログ", t.line_measured]]) {
+        const d = document.createElement("div");
+        const kk = document.createElement("small"); kk.className = "muted"; kk.textContent = k + ": ";
+        const vv = document.createElement("code"); vv.textContent = v; vv.style.overflowWrap = "anywhere";
+        d.append(kk, vv);
+        box.append(d);
+      }
+      name.append(box);
+    }
     const pathTd = document.createElement("td");
     const inputs = [];
     const names = [];

@@ -75,6 +75,20 @@ function announceReport(v) {
 
 const refocus = () => $("measIn")?.focus();   // 画面を移ったあと(入れ替え式)でも落ちない
 
+/**
+ * 2026-11-10(現場の声): 検査員を登録して、この直の校正が済んでいなければ、そのまま校正画面へ移る。
+ * VBA は 校正_Open で UF校正 を開いていた。`calibration_required` はサーバが決める
+ * (校正をとばせる端末 = ufkensa:calibration_skip では立たない)。移ったら true。
+ */
+const CALIB_FROM_WORKER = "worker";
+function toCalibrationAfterWorker(res) {
+  const v = res && res.view;
+  if (!v || !v.calibration_required || res.stop || res.question) return false;
+  toast("この直の校正が済んでいません。校正画面へ移ります", "warn");
+  setTimeout(() => { location.href = `/calibration?from=${CALIB_FROM_WORKER}`; }, 900);
+  return true;
+}
+
 function text(el, t) { el.textContent = t ?? ""; }
 
 function el(tag, props = {}, ...kids) {
@@ -206,18 +220,70 @@ function renderGrid(g, v) {
   if (g.lateral.some((c) => c.visible !== false)) {
     rows.push(rowOf(g.lateral_label, g.lateral.map((c) => inputTd(c, `Lateral${c.pos}`)), "sep", t.lateral_text || t.lateral_grade || ""));
   }
-  if (g.ng.some((c) => c.visible !== false)) {
+  if (g.ng.some((c) => c.visible !== false || NG_BADGE[String(c.value || "").trim()])) {
     const tr = rowOf("判定", g.ng.map((c) => {
       const td = cellTd({ ...c, name: "" }, "sub ng");
       if (c.visible !== false) { td.dataset.pos = c.pos; td.title = "ダブルクリックでまとめて削除"; }
+      const badge = ngBadge(c.value);
+      if (badge && c.visible !== false) {
+        td.replaceChildren(badge);
+        td.dataset.flag = NG_BADGE[String(c.value).trim()];
+        td.title = `${c.pos}: ${String(c.value).trim()}(ダブルクリックでまとめて削除)`;
+      }
       return td;
-    }), "sep", "");
+    }), "sep ngrow", "");
     rows.push(tr);
   }
+  // 見出し(S・U・C…)にも同じ印を付ける。表の下まで目を移さなくても分かるように
+  const flags = Object.fromEntries(g.ng.filter((c) => c.visible !== false).map((c) => [c.pos, String(c.value || "").trim()]));
+  const ths = rows[0].querySelectorAll("th");
+  g.positions.forEach((p, i) => {
+    const b = p.visible ? ngBadge(flags[p.key]) : null;
+    if (b) { b.classList.add("ngflag--sm"); ths[i + 1].append(" ", b); }
+  });
   $("mgrid").replaceChildren(...rows);
 }
 
+/* 2026-11-10: 公差を 寸法 / 歪 / 対角・ラテラル・フリー反り にまとめて出す(現場の声「歪の公差が見えない」)。表示だけ */
+const STRAIN_TOL = [["巾", "ha"], ["丈", "ta"], ["中", "naka"], ["耳", "mimi"], ["MG", "mg"]];
+function tolGroups(v) {
+  const t = v.tolerance || {};
+  const s = v.strain_tol || {};
+  return [
+    ["寸法", [["厚", t.atu && `${t.atu}  +${t.ap}/-${t.am}  (${t.amk}〜${t.apk})`],
+              ["巾", t.hab && `${t.hab}  +${t.hp}/-${t.hm}  (${t.hmk}〜${t.hpk})`],
+              ["丈", t.tak && `${t.tak}  +${t.tp}/-${t.tm}  (${t.tmk}〜${t.tpk})`]]],
+    ["歪", STRAIN_TOL.map(([k, key]) => [k, s[key] || ""])],
+    ["対角・ラテラル・フリー反り", [["対角", [t.taik, v.taik_text].filter(Boolean).join(" / ")],
+                                  ["ラテラル", t.lateral_text || t.lateral_grade],
+                                  ["フリー反り", t.flatnes_text || s.flatnes || ""]]],
+  ];
+}
+function renderTolGroups(v) {
+  $("tolKv").replaceChildren(...tolGroups(v).map(([title, pairs]) => {
+    const dl = el("dl", { class: "kv-grid" });
+    kv(dl, pairs.map(([k, x]) => [k, x || "-"]));
+    for (const dd of dl.querySelectorAll("dd")) if (dd.textContent === "-") dd.classList.add("muted");
+    return el("section", { class: "tol-group", dataset: { group: title } }, el("h4", { textContent: title }), dl);
+  }));
+}
+function renderStrainTol(v) {
+  const s = v.strain_tol || {};
+  const has = STRAIN_TOL.some(([, key]) => s[key]);
+  $("strainTol").replaceChildren(...(has ? [el("b", { textContent: "歪の公差" }),
+    ...STRAIN_TOL.map(([k, key]) => el("span", { class: "strain-tol__item" + (s[key] ? "" : " is-empty"),
+                                                 textContent: `${k} ${s[key] || "-"}` }))] : []));
+}
+
+/* 2026-11-10: NG? ラベル(NG / 許容 / 保留)をはっきり見せる(現場の声「保留・許容のフラグが見えない」) */
+const NG_BADGE = { NG: "ng", 許容: "allow", 保留: "hold" };
+function ngBadge(value) {
+  const kind = NG_BADGE[String(value || "").trim()];
+  return kind ? el("span", { class: `ngflag ngflag--${kind}`, textContent: String(value).trim() }) : null;
+}
+
 function renderStrain(v) {
+  renderStrainTol(v);
   const pos = v.grid.positions;
   const fr = v.strain_frame || {};
   const cb = v.cb_choices || {};
@@ -400,10 +466,7 @@ function renderLeft(v) {
   text($("lotSize"), hasLot && (t.atu || t.hab || t.tak) ? `${t.atu || "-"} × ${t.hab || "-"} × ${t.tak || "-"}` : "");
   kv($("lotRegKv"), [["検査No", h.ken_no], ["用途", h.youto], ["材質/調質", [h.zai, h.tyu].filter(Boolean).join(" ")]]);
   kv($("lotKv"), [["ライン", h.line + (h.line_no || "")], ["コメント", h.comment]]);
-  kv($("tolKv"), [["厚", t.atu && `${t.atu}  +${t.ap}/-${t.am}  (${t.amk}〜${t.apk})`],
-                  ["巾", t.hab && `${t.hab}  +${t.hp}/-${t.hm}  (${t.hmk}〜${t.hpk})`],
-                  ["丈", t.tak && `${t.tak}  +${t.tp}/-${t.tm}  (${t.tmk}〜${t.tpk})`],
-                  ["対角", [t.taik, v.taik_text].filter(Boolean).join(" / ")], ["ラテラル", t.lateral_text || t.lateral_grade], ["フリーソリ", t.flatnes_text]]);
+  renderTolGroups(v);
   text($("tolNote"), [t.additional, t.conductiv_text].filter(Boolean).join(" / "));
   renderResize(v);
   const works = $("works");
@@ -616,6 +679,12 @@ function renderRight(v) {
   text($("nextHint"), [v.next.machin, v.next.auto ? "" : "手で選んだ欄"].filter(Boolean).join(" / "));
   const m = v.minmax;
   kv($("mmKv"), [["厚", m.amin && `${m.amin} 〜 ${m.amax}`], ["巾", m.hmin && `${m.hmin} 〜 ${m.hmax}`], ["丈", m.tmin && `${m.tmin} 〜 ${m.tmax}`]]);
+  // 2026-11-10: 位置ごとの判定の印(許容・保留の位置は Min/Max に入らない = VBA の BackColor_Check)
+  const flagged = (v.grid.ng || []).filter((c) => c.visible !== false && NG_BADGE[String(c.value || "").trim()]);
+  $("mmFlags").replaceChildren(...(flagged.length
+    ? [el("small", { class: "muted", textContent: "位置の判定: " }),
+       ...flagged.map((c) => el("span", { class: "mmflag" }, el("b", { textContent: c.pos }), ngBadge(c.value)))]
+    : [el("small", { class: "muted", textContent: "位置の判定: 印なし(NG・許容・保留はありません)" })]));
   if (v.checks) {
     $("checks").replaceChildren(...v.checks.map((c) => el("li", { textContent: c.label, dataset: { ok: c.ok === null ? "" : (c.ok ? "1" : "0") } })));
     $("chkDot").hidden = !v.checks.some((c) => c.ok === false);
@@ -942,7 +1011,12 @@ function init() {
   initTabs();
   initRailTabs();
   const closeAdd = () => { if ($("kAdd").open) $("kAdd").close(); };
-  onEnter("cardIn", async (card) => { closeAdd(); await op("worker", { card }); refocus(); }, 13);
+  onEnter("cardIn", async (card) => {
+    closeAdd();
+    const res = await op("worker", { card });
+    if (toCalibrationAfterWorker(res)) return;
+    refocus();
+  }, 13);
   onEnter("lotIn", async (lot) => { closeAdd(); await op("lot", { lot }); refocus(); }, 7);
   $("lotReloadBtn").addEventListener("click", async () => { await reloadLot(); refocus(); });
   $("lotWatchGo").addEventListener("click", async () => { await reloadLot(); refocus(); });
