@@ -9,13 +9,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import Optional
 
 from . import vbx
-from .model import NORMAL, Switch, bad_name, diag_name, is_thick
+from .model import NORMAL, THICK_ROWS, Switch, bad_name, diag_name, is_thick
 from .flow import ERROR, INFO, WARN, Message, Stop
 from .grid import (BORDER_BLACK, BORDER_RED, COLOR_DEFAULT, COLOR_WHITE, COLOR_YELLOW, Hooks, KensaState,
-                   fm_clear, ken_flags, small_count_th, yama_is)
+                   fm_clear, ken_flags, small_count_th)
 
 PACKETS = ("DT", "#L", "#〆")
 
@@ -61,34 +61,131 @@ def conv(trm: str) -> str:
     return trm
 
 
-def _blank(state: KensaState, name: str) -> bool:
-    """`UF1(name) = ""`(Label の既定プロパティ Caption)。無い名前は KeyError(VBA の実行時エラー)。"""
-    return state.ctl(name).value == ""
+# ------------------------------------------------------------------
+# 次に入れる欄の表(リファクタリング 第3段。docs/測定値のつなぎ方_DT_L.md 3〜5 章)
+# ------------------------------------------------------------------
+# VBA は「入れる先」(PucketMove)・「〜検査済」(AllCheck)・黄色の印(Look_Blank / Look_S_Blank / Smallnumber_Blank)を
+# 作業ごとに別々に書いていて、1 つだけ直すと食い違った(B60・B90・B91・B93)。ここではどれも次の 1 つの表から決める。
+#
+#   1. 作業(と薄板の検番・山数、少枚数の検査回数)ごとに、行の種類 → その行で値を入れる位置(下の表)
+#   2. 行の範囲: DT = 厚の行、#L = 幅・丈・対角の行、#〆 と黄色の印 = 両方
+#   3. 欄の順: 位置ごとに(S の行を上から、次に U の行を上から …)。表に無い位置・行は飛ばす
+#   4. 使える欄 = 空で、出ていて(Visible)使える(Enabled)欄
+#   入れる先 = 範囲の中で最初に使える欄 / 「〜検査済」= 範囲に使える欄が 1 つも無い / 黄色の印 = 全部の範囲で最初に使える欄
+
+ORDER = "SUCDEF"
+#: 行の種類 → その行で値を入れる位置。厚 = 1〜4 行、幅丈 = 5〜8 行(極厚は 5〜14 行)、対角 = 9〜10 行
+NEXT_CELL_TABLE: dict[str, dict[str, str]] = {
+    # 行 5〜10 の U・D は無い(厚だけの位置 S1・E1)
+    "厚板": {"厚": "SUCDE", "幅丈": "SCE", "対角": "SCE"},
+    # 厚は 1-上(S)・1-下(C)。U・D は幅丈の 5〜8 行だけ(B90・B91)。E は無い
+    "スラブ": {"厚": "SC", "幅丈": "SUCD", "対角": "SC"},
+    # 行 5〜14(幅1〜6・丈1〜4)。F は無い(B63)
+    "極厚": {"厚": "SUCDE", "幅丈": "SUCDE"},
+    # 厚板の検番が H でない少枚数(検査回数で絞らない)
+    "少枚数": {"厚": "SUCDE", "幅丈": "SUCDE", "対角": "SUCDE"},
+}
+#: 少枚数(厚板の検番 H)は検査回数 th(AllCheck の th)で位置を絞る。表に無い th(0)は入れる欄が無い(すぐ「検査済」)
+SMALL_COUNT_TABLE: dict[int, dict[str, str]] = {
+    5: {"厚": "SUCDE", "幅丈": "SCE", "対角": "SCE"},     # 2026-11-08: 行 5〜10 は U・D を隠す(SmallNumberCount)
+    4: {"厚": "SUCD", "幅丈": "SCD", "対角": "SCD"},
+    3: {"厚": "SUC", "幅丈": "SUC", "対角": "SUC"},
+    2: {"厚": "SU", "幅丈": "SU", "対角": "SU"},
+    1: {"厚": "S", "幅丈": "S", "対角": "S"},
+}
+#: 薄板は検番・山数・検入で位置が決まる(どの行も同じ)。上から順に、最初に当たった旗(grid.ken_flags)の位置
+#: (旗, 入れる先・検査済 の位置, 黄色の印 の位置)
+THIN_TABLE: tuple[tuple[int, str, str], ...] = (
+    (6, "SUCDEF", "SUCDEF"),     # 山数 4(6 回検査)
+    (3, "SUCDE", "SUCDE"),       # 山数 3(5 回)
+    (5, "SUCDE", "SUCDE"),       # 検番なし(入れる先。黄色の印は検番なしを冷延と同じに扱う: Look_S_Blank)
+    (4, "SE", "SE"),             # 冷延で検入≦25(2 回)
+    (1, "SCE", "SCE"),           # 冷延(3 回)
+    # 検番 H だけ(山数 1・2)は AllCheck のどれにも当たらず、DT・#L・#〆 はすぐ「検査済」(VBA どおり。G1 §11-8)。
+    # 黄色の印は出る(Look_S_Blank の H の枝)
+    (2, "", "SUCDE"),
+)
 
 
-def _blank_vis(state: KensaState, name: str) -> bool:
-    """`UF1(name) = "" And UF1(name).Visible`(And は両方とも評価する)。"""
+def _row_kind(state: KensaState, row: int) -> str:
+    if is_thick(row):
+        return "厚"
+    if state.is_work("極厚") or row <= 8:
+        return "幅丈"
+    return "対角"
+
+
+def _thick_rows(state: KensaState) -> range:
+    """厚の行。薄板だけ「厚2ヵ所/厚4ヵ所」のボタンで決まる(ボタンが「厚4ヵ所」= いま 2 ヵ所検査 → 1〜2 行)。
+
+    2026-11-09(B93)ほか: ボタンは薄板のもの。厚板・スラブ・極厚・少枚数は、前の薄板の表示が残っていても 1〜4 行。
+    """
+    if not state.is_work("薄板"):
+        return THICK_ROWS
+    if state.at_butt_caption == "厚2ヵ所":       # ボタン表示が2ヵ所 = いま 4 回検査
+        return THICK_ROWS
+    if state.at_butt_caption == "厚4ヵ所":
+        return range(1, 3)
+    return range(0)
+
+
+def _size_rows(state: KensaState) -> range:
+    return range(5, 15) if state.is_work("極厚") else NORMAL.size_rows
+
+
+def _packet_rows(state: KensaState, pucket: str) -> list[int]:
+    """伝送の種別ごとの行の範囲(PucketMove の a〜n)。DT = 厚、#L = 幅・丈・対角、#〆 = 両方。"""
+    if pucket == "DT":
+        return list(_thick_rows(state))
+    if pucket == "#L":
+        return list(_size_rows(state))
+    return list(_thick_rows(state)) + list(_size_rows(state))
+
+
+def _rows_in(state: KensaState, a: int, n: int) -> list[int]:
+    """行 a〜n のうち、作業の厚の行と幅・丈・対角の行(薄板の厚2ヵ所検査中は 3・4 行目を見ない)。"""
+    return [r for r in list(_thick_rows(state)) + list(_size_rows(state)) if a <= r <= n]
+
+
+def _columns(state: KensaState, ken_no: str, hooks: Optional[Hooks], *, marker: bool) -> Optional[dict[str, str]]:
+    """いまの作業の、行の種類 → 位置(表を引く)。None は作業が無い。
+
+    hooks は少枚数(厚板の検番 H)の検査回数を出すときだけ使う(AllCheck の th。印は検査回数で絞らない)。
+    """
+    if state.is_work("薄板"):
+        f = ken_flags(state, ken_no, blank_in_flag1=marker)
+        for flag, cols, mark in THIN_TABLE:
+            if f[flag]:
+                p = mark if marker else cols
+                return {"厚": p, "幅丈": p, "対角": p}
+        return {"厚": "", "幅丈": "", "対角": ""}
+    if state.is_work("少枚数") and state.work_caption["厚板"] == "H" and not marker:
+        th = small_count_th(state, hooks.calculate_sheets, start_from_ken_count=True) if hooks else 0
+        return SMALL_COUNT_TABLE.get(th, {})
+    for work, table in NEXT_CELL_TABLE.items():
+        if state.is_work(work):
+            return table
+    return None
+
+
+def next_cells(state: KensaState, rows: list[int], ken_no: str, hooks: Optional[Hooks] = None, *,
+               marker: bool = False) -> list[str]:
+    """表から、行 rows の欄を見る順に並べる(位置ごとに行を上から)。使えるかどうかは見ない。"""
+    cols = _columns(state, ken_no, hooks, marker=marker)
+    if not cols:
+        return []
+    return [f"{p}{r}" for p in ORDER for r in rows
+            if p in cols.get(_row_kind(state, r), "") and (p != "F" or r <= 10)]
+
+
+def _usable(state: KensaState, name: str) -> bool:
+    """値を入れられる欄: 空で、出ていて、使える。"""
     c = state.ctl(name)
-    return c.value == "" and c.visible
+    return c.value == "" and c.visible and c.enabled
 
 
-def _thick_off(state: KensaState, name: str) -> bool:
-    """厚板の厚の欄(行 1〜4)が隠れているか使えない(B93: そこへは DT を入れず、黄色にもしない)。"""
-    if not state.is_work("厚板"):
-        return False
-    row = name.lstrip("SUCDEF")
-    if not (row.isdigit() and is_thick(int(row))):
-        return False
-    c = state.ctl(name)
-    return not (c.visible and c.enabled)
-
-
-def _open(state: KensaState, name: str) -> bool:
-    return _blank(state, name) and not _thick_off(state, name)
-
-
-def _open_vis(state: KensaState, name: str) -> bool:
-    return _blank_vis(state, name) and not _thick_off(state, name)
+def _first_usable(state: KensaState, names: list[str]) -> Optional[str]:
+    return next((n for n in names if _usable(state, n)), None)
 
 
 def _set_target(state: KensaState, name: str) -> None:
@@ -100,58 +197,15 @@ def _set_target(state: KensaState, name: str) -> None:
 # AllCheck / PucketMove
 # ------------------------------------------------------------------
 def all_check(state: KensaState, a: int, n: int, ken_no: str, temp: str, hooks: Hooks) -> bool:
-    """FormRelat.AllCheck (FormRelat:429-715)。行 a〜n の対象列に空きがあれば真。
+    """FormRelat.AllCheck (FormRelat:429-715)。行 a〜n に、表の使える欄が残っていれば真。
 
-    temp: "厚板"(行5〜10 は S/C/E、ほかは S/U/C/D/E)/ "少枚数"(枚数 th で列が変わる)/ ""(薄板・少枚数・極厚・スラブ)
+    temp(VBA の "厚板" / "少枚数" / "")は表の引き分けと同じ(作業と厚板の検番から決まる)ので見ない。
+    AllCheck は ATU があれば作業に関係なく CalculateSheets を呼ぶ(FormRelat:436。VBA どおり)。
     """
     if a == 0 or n == 0:
         return False
-    th = small_count_th(state, hooks.calculate_sheets, start_from_ken_count=True)
-
-    def scan(cols_for_row) -> bool:
-        for i in range(a, n + 1):
-            for p in cols_for_row(i):
-                if _blank(state, f"{p}{i}") and not _thick_off(state, f"{p}{i}"):
-                    return True
-        return False
-
-    five = ("S", "U", "C", "D", "E")
-    if temp == "厚板":
-        return scan(lambda i: ("S", "C", "E") if 5 <= i <= 10 else five)
-    if temp == "少枚数":
-        if th == 5:
-            # 2026-11-08 に直した: 少枚数 5 回は行 5〜10 の U・D を隠す(SmallNumberCount)ので、そこは S・C・E だけを見る。
-            # VBA(FormRelat:476-494)は全列を見るため、隠れた空の U・D で #L が終わらなかった
-            return scan(lambda i: ("S", "C", "E") if 5 <= i <= 10 else five)
-        if th == 4:
-            return scan(lambda i: ("S", "C", "D") if 5 <= i <= 10 else ("S", "U", "C", "D"))
-        if th == 3:
-            return scan(lambda i: ("S", "U", "C"))
-        if th == 2:
-            return scan(lambda i: ("S", "U"))
-        if th == 1:
-            return scan(lambda i: ("S",))
-        return False
-    if temp == "":
-        if state.is_work("薄板"):
-            f = ken_flags(state, ken_no)
-            if f[6]:
-                return scan(lambda i: five + ("F",))
-            if f[3] or f[5]:
-                return scan(lambda i: five)
-            if f[4]:
-                return scan(lambda i: ("S", "E"))
-            if f[1]:
-                return scan(lambda i: ("S", "C", "E"))
-            return False          # 検番 H だけ(flag2)はどれにも当たらない(G1 §11-8)
-        if state.is_work("少枚数") or state.is_work("極厚"):
-            return scan(lambda i: five)
-        if state.is_work("スラブ"):
-            # 2026-11-08 に直した(B91): スラブの画面は U・D が 5〜8 行だけ(9・10 は隠れている)なので、そこは S・C だけを見る。
-            # VBA(FormRelat:697-708)は U9・U10・D9・D10 まで見るため、隠れた空欄で「#L検査済」が出なかった
-            return scan(lambda i: ("S", "C") if is_thick(i) or i in (9, 10)
-                        else (("S", "U", "C", "D") if 5 <= i <= 8 else ()))
-    return False
+    small_count_th(state, hooks.calculate_sheets, start_from_ken_count=True)
+    return _first_usable(state, next_cells(state, _rows_in(state, a, n), ken_no, hooks)) is not None
 
 
 def _no_work(state: KensaState) -> bool:
@@ -160,146 +214,33 @@ def _no_work(state: KensaState) -> bool:
 
 def pucket_move(state: KensaState, pucket: str, ken_no: str, youto: str, hooks: Hooks,
                 msgs: Optional[list[Message]] = None) -> None:
-    """FormRelat.PucketMove (FormRelat:716-1016)。伝送の種別から行範囲を決め、空いた欄を INP.Tag に入れる。
+    """FormRelat.PucketMove (FormRelat:716-1016)。伝送の種別の行の範囲で、表の最初に使える欄を INP.Tag に入れる。
 
-    見つからないときは INP.Tag を変えない(前回の入力先のまま。VBA どおり)。
+    使える欄が無ければ「〜検査済」と知らせ、Auto="off"・INP と INP.Tag を空・FlagLabel=1。
     """
     msgs = msgs if msgs is not None else []
     if _no_work(state):
         return
-    f = ken_flags(state, ken_no)
-    a = n = 0
-    if pucket == "DT":
-        if state.is_work("厚板"):
-            # 2026-11-09: 直した(B93)。厚板は AtButt を隠し、厚 1〜4 行を全部の位置で出す(LSelect)。
-            # VBA(FormRelat:748-754)は薄板用の AtButt.Caption を見るため、前の薄板・作業保存の読込で「厚4ヵ所」が
-            # 残ると 1〜2 行しか見ず、S厚2 の次が S1厚1 になり S厚3 へ行かない(黄色の印は S厚3 に出る)。
-            # 直すと、厚板は 1〜4 行の、出ていて使える厚の欄を全部埋める
-            a, n = 1, 4
-        elif state.at_butt_caption == "厚2ヵ所":       # ボタン表示が2ヵ所 = いま 4 回検査
-            a, n = 1, 4
-        elif state.at_butt_caption == "厚4ヵ所":
-            a, n = 1, 2
-    elif pucket == "#L":
-        a, n = (5, 14) if state.is_work("極厚") else (5, 10)
-    elif pucket == "#〆":
-        a, n = (1, 14) if state.is_work("極厚") else (1, 10)
-    else:
+    if pucket not in PACKETS:
         msgs.append(Message("ﾊﾟｹｯﾄ無し:Exit Sub" + "_PucketMove", WARN, source="FormRelat:774"))
         return
-
-    temp = "厚板" if state.is_work("厚板") else ""
-    if state.work_caption["厚板"] == "H" and state.is_work("少枚数"):
-        temp = "少枚数"
-
-    if not all_check(state, a, n, ken_no, temp, hooks):
+    rows = _packet_rows(state, pucket)
+    target = None
+    if rows:
+        small_count_th(state, hooks.calculate_sheets, start_from_ken_count=True)    # AllCheck(FormRelat:436)
+        target = _first_usable(state, next_cells(state, rows, ken_no, hooks))
+    if target is None:
         msgs.append(Message(pucket + "検査済", INFO, source="FormRelat:792"))   # 知らせ(警告ではない)
         state.auto = Switch.OFF
         state.inp = ""
         state.inp_tag = ""
         state.flag_label = 1
         return
-
-    rows = range(a, n + 1)
-    for i in rows:                                              # S
-        if _open(state, f"S{i}"):
-            return _set_target(state, f"S{i}")
-
-    # U
-    if state.is_work("厚板"):
-        for i in rows:
-            if is_thick(i):
-                if _open(state, f"U{i}"):
-                    return _set_target(state, f"U{i}")
-            elif 5 <= i <= 10:
-                for b in NORMAL.size_rows:
-                    if _open(state, f"C{b}"):
-                        return _set_target(state, f"C{b}")
-    elif state.is_work("スラブ"):
-        # 2026-11-08 に直した(B90): 厚 1〜4 行(DT)は U を飛ばし、次の厚欄(S のあと C1〜C4)へ進む。
-        # VBA(FormRelat:831-847 ほか `Case 1 To 4: For b = 5 To 8`)は厚の読みを巾丈の U5〜U8 へ入れていた
-        for i in rows:
-            if 5 <= i <= 8:
-                if _open(state, f"U{i}"):
-                    return _set_target(state, f"U{i}")
-    elif state.is_work("薄板"):
-        if f[2] or f[5] or f[3] or f[6]:
-            for i in rows:
-                if _open(state, f"U{i}"):
-                    return _set_target(state, f"U{i}")
-        elif f[4]:
-            for i in rows:
-                if 1 <= i <= 10 and _open(state, f"E{i}"):
-                    return _set_target(state, f"E{i}")
-        elif f[1]:
-            for i in rows:
-                if 1 <= i <= 10 and _open(state, f"C{i}"):
-                    return _set_target(state, f"C{i}")
-    else:
-        for i in rows:
-            if _open_vis(state, f"U{i}"):
-                return _set_target(state, f"U{i}")
-
-    # C
-    if not state.is_work("薄板"):
-        for i in rows:
-            if _open_vis(state, f"C{i}"):
-                return _set_target(state, f"C{i}")
-    elif f[1] or f[2] or f[3] or f[5] or f[6]:
-        for i in rows:
-            if _open(state, f"C{i}"):
-                return _set_target(state, f"C{i}")
-    elif f[4]:
-        for i in rows:
-            if 1 <= i <= 10 and _open(state, f"E{i}"):
-                return _set_target(state, f"E{i}")
-
-    # D
-    if state.is_work("厚板"):
-        for i in rows:
-            if is_thick(i):
-                if _open(state, f"D{i}"):
-                    return _set_target(state, f"D{i}")
-            elif 5 <= i <= 10:
-                for b in NORMAL.size_rows:
-                    if _open(state, f"E{b}"):
-                        return _set_target(state, f"E{b}")
-    elif state.is_work("スラブ"):
-        # 2026-11-08 に直した(B90): 厚 1〜4 行(DT)は D を飛ばし、次の厚欄(S のあと C1〜C4)へ進む。
-        # VBA(FormRelat:831-847 ほか `Case 1 To 4: For b = 5 To 8`)は厚の読みを巾丈の D5〜D8 へ入れていた
-        for i in rows:
-            if 5 <= i <= 8:
-                if _open(state, f"D{i}"):
-                    return _set_target(state, f"D{i}")
-    elif state.is_work("薄板"):
-        if f[2] or f[5] or f[3] or f[6]:
-            for i in rows:
-                if _open(state, f"D{i}"):
-                    return _set_target(state, f"D{i}")
-        elif f[4] or f[1]:
-            for i in rows:
-                if 1 <= i <= 10 and _open(state, f"E{i}"):
-                    return _set_target(state, f"E{i}")
-    else:
-        for i in rows:
-            if _open_vis(state, f"D{i}"):
-                return _set_target(state, f"D{i}")
-
-    for i in rows:                                              # E
-        if _open_vis(state, f"E{i}"):
-            return _set_target(state, f"E{i}")
-
-    # F(F11 以降は無い → KeyError = VBA の実行時エラー)
-    # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見てエラー。直す: 極厚には F 列が無いので見ない
-    if f[6] and (not state.is_work("極厚")):
-        for i in rows:
-            if _open_vis(state, f"F{i}"):
-                return _set_target(state, f"F{i}")
-    return None
+    _set_target(state, target)
 
 
 # ------------------------------------------------------------------
-# 次の空き欄
+# 次の空き欄(黄色の印)
 # ------------------------------------------------------------------
 def lookblank_color(state: KensaState, a: str) -> None:
     """FormRelat.LookBlank_Color (FormRelat:1272-1282)。MPEX.Tag が空なら赤枠・黄色、そうでなければ黒枠・白。"""
@@ -313,168 +254,45 @@ def lookblank_color(state: KensaState, a: str) -> None:
         state.set_color(a, COLOR_WHITE)
 
 
-def _skip34_rows(a: int, n: int) -> Iterator[Optional[int]]:
-    """Look_S_Blank の厚4ヵ所の For ループ(FormRelat:1070-1085)。
-
-        For i = a To n
-          Case 1, 2, 5 To 10: 行 i を見る
-          Case 3: i = i + 2 → 行 5 を見る     Case 4: i = i + 1 → 行 5 を見る
-        Next i
-    ループ変数を書き換えるので、3 の次は 6(4 は通らない)。見ない回は None。
-    """
-    i = a
-    while i <= n:
-        if i in (1, 2, 5, 6, 7, 8, 9, 10):
-            yield i
-        elif i == 3:
-            i += 2
-            yield i
-        elif i == 4:
-            i += 1
-            yield i
-        else:
-            yield None
-        i += 1
+def _marker(state: KensaState, a: int, n: int, ken_no: str) -> Optional[str]:
+    """行 a〜n で、表の最初に使える欄。"""
+    return _first_usable(state, next_cells(state, _rows_in(state, a, n), ken_no, marker=True))
 
 
 def look_s_blank(state: KensaState, a: int, n: int, ken_no: str) -> None:
-    """FormRelat.Look_S_Blank (FormRelat:1018-1271)。薄板の次の空き欄。Auto が "on" のときだけ。"""
+    """FormRelat.Look_S_Blank (FormRelat:1018-1271)。薄板の次の空き欄。Auto が "on" のときだけ。色は LookBlank_Color。"""
     if state.auto != Switch.ON:
         return
-    f = ken_flags(state, ken_no, blank_in_flag1=True)
-    thin = state.is_work("薄板")
-
-    def pick(name: str) -> bool:
+    name = _marker(state, a, n, ken_no)
+    if name is not None:
         _set_target(state, name)
         lookblank_color(state, name)
-        return True
-
-    if thin and state.at_butt_caption == "厚4ヵ所":            # いま 2 ヵ所検査(行 3・4 を飛ばす)
-        def scan(p: str, vis: bool) -> bool:
-            for i in _skip34_rows(a, n):
-                if i is None:
-                    continue
-                if (_blank_vis if vis else _blank)(state, f"{p}{i}"):
-                    return pick(f"{p}{i}")
-            return False
-        if scan("S", False):
-            return
-        if f[4] and scan("E", False):
-            return
-        if (f[2] or f[3] or f[5] or f[6]) and scan("U", True):
-            return
-        if (f[1] or f[2] or f[3] or f[5] or f[6]) and scan("C", True):
-            return
-        if (f[2] or f[3] or f[5] or f[6]) and scan("D", True):
-            return
-        if scan("E", True):
-            return
-        if f[6] and scan("F", True):
-            return
-        return            # B60: 外の F ループは厚2ヵ所(4回検査)用。厚4ヵ所で隠れた F3/F4 を選ばない
-    elif thin and state.at_butt_caption == "厚2ヵ所":
-        def scan2(p: str) -> bool:
-            for i in range(a, n + 1):
-                if _blank(state, f"{p}{i}"):
-                    return pick(f"{p}{i}")
-            return False
-        if scan2("S"):
-            return
-        if f[4] and scan2("E"):
-            return
-        if (f[2] or f[3] or f[5] or f[6]) and scan2("U"):
-            return
-        if (f[1] or f[2] or f[3] or f[5] or f[6]) and scan2("C"):
-            return
-        if (f[2] or f[3] or f[5] or f[6]) and scan2("D"):
-            return
-        if scan2("E"):
-            return
-    if f[6]:                                                    # Select の外。表示を見ない(FormRelat:1260-1270。B60)
-        for i in range(a, n + 1):
-            if _blank(state, f"F{i}"):
-                pick(f"F{i}")
-                return
 
 
 def smallnumber_blank(state: KensaState, a: int, n: int, xa: int) -> None:
-    """FormRelat.Smallnumber_Blank (FormRelat:1283-1340)。少枚数(枚数 xa が 1〜5 のとき)の次の空き欄。"""
+    """FormRelat.Smallnumber_Blank (FormRelat:1283-1340)。少枚数(枚数 xa が 1〜5 のとき)の次の空き欄。色は LookBlank_Color。"""
     if state.auto != Switch.ON:
         return
     if xa not in (5, 4, 3, 2, 1):
         return
-    for p, vis in (("S", False), ("U", True), ("C", True), ("D", True), ("E", True), ("F", True)):
-        for i in range(a, n + 1):
-            if (_blank_vis if vis else _blank)(state, f"{p}{i}"):
-                _set_target(state, f"{p}{i}")
-                lookblank_color(state, f"{p}{i}")
-                return
+    name = _marker(state, a, n, "")
+    if name is not None:
+        _set_target(state, name)
+        lookblank_color(state, name)
 
 
 def look_blank(state: KensaState, a: int, n: int) -> None:
-    """FormRelat.Look_Blank (FormRelat:1341-1500)。厚板・極厚・スラブ・少枚数(枚数なし)の次の空き欄。
+    """FormRelat.Look_Blank (FormRelat:1341-1500)。次の空き欄を赤枠・黄色にする。Auto が "on" のときだけ。
 
-    表示(Visible)は見ない。2026-11-09(B93): 厚板の厚 1〜4 行だけは、隠れた・使えない欄を黄色にしない
-    (PucketMove の DT が入れない欄に印を出さない)。厚板の行5〜10 は C1〜C10・E1〜E10 から探す(PucketMove は 5〜10)。
+    厚板・極厚・スラブ・少枚数(KenCount なし)の印。再測定(NG_Back)は作業に関係なくこれを呼ぶ(薄板も表どおり)。
     """
     if state.auto != Switch.ON:
         return
-
-    def pick(name: str) -> bool:
+    name = _marker(state, a, n, ken_no_for_input(state))
+    if name is not None:
         _set_target(state, name)
         state.ctl(name).border = BORDER_RED
         state.set_color(name, COLOR_YELLOW)
-        return True
-
-    rows = range(a, n + 1)
-
-    def side(p: str, mid: str) -> bool:
-        if state.is_work("厚板"):
-            for i in rows:
-                if is_thick(i):
-                    if _open(state, f"{p}{i}"):
-                        return pick(f"{p}{i}")
-                elif 5 <= i <= 10:
-                    for b in range(1, 11):
-                        if _open(state, f"{mid}{b}"):
-                            return pick(f"{mid}{b}")
-        elif state.is_work("スラブ"):
-            # 2026-11-09(B90 の続き): U・D は厚の欄を持たない。厚の行(1〜4)では U5〜U8 / D5〜D8 を黄色にせず、
-            # 次の厚欄(C1〜C4)へ進む(VBA は厚 1-上 のあと幅の U5 を黄色にしていた。DT は B90 で C1 に入る)
-            for i in rows:
-                if is_thick(i):
-                    continue
-                elif 5 <= i <= 8:
-                    if _open(state, f"{p}{i}"):
-                        return pick(f"{p}{i}")
-        else:
-            for i in rows:
-                if _open(state, f"{p}{i}"):
-                    return pick(f"{p}{i}")
-        return False
-
-    for i in rows:
-        if _open(state, f"S{i}"):
-            pick(f"S{i}")
-            return
-    if side("U", "C"):
-        return
-    for i in rows:
-        if _open(state, f"C{i}"):
-            pick(f"C{i}")
-            return
-    if side("D", "E"):
-        return
-    for i in rows:
-        if _open(state, f"E{i}"):
-            pick(f"E{i}")
-            return
-    # B63: 極厚(行 1〜14)で山数 4 が残っていると F11 を見て実行時エラー。直す: 極厚には F 列が無いので見ない
-    if yama_is(state, 4) and (not state.is_work("極厚")):
-        for i in rows:
-            if _open(state, f"F{i}"):
-                pick(f"F{i}")
-                return
 
 
 def next_blank(state: KensaState, ken_no: str) -> None:
@@ -490,6 +308,7 @@ def next_blank(state: KensaState, ken_no: str) -> None:
         smallnumber_blank(state, 1, 10, vbx.clng(vbx.val(state.ken_count)))
     else:
         look_blank(state, 1, 10)
+
 
 
 def ken_no_for_input(state: KensaState) -> str:

@@ -1099,16 +1099,8 @@ class RealHooks(Hooks):
             self.check_labels_by_category(state, p)
         grid.fm_clear(state, "Click")
         state.auto = Switch.ON
-        ken_no = vbx.left(state.ken_no_caption, 1)
         apply_judge(state, judge.looking_yellow(to_judge_form(state)), env)
-        if state.is_work("薄板"):
-            input_router.look_s_blank(state, 1, 10, ken_no)
-        elif state.is_work("極厚"):
-            input_router.look_blank(state, 1, 14)
-        elif state.is_work("少枚数") and state.ken_count != "":
-            input_router.smallnumber_blank(state, 1, 10, vbx.clng(vbx.val(state.ken_count)))
-        else:
-            input_router.look_blank(state, 1, 10)
+        input_router.next_blank(state, vbx.left(state.ken_no_caption, 1))     # 作業ごとの印(UF1:4367-4375)
         if state.is_work("薄板") and state.yama_visible and state.yama == "":
             env.messages.append(Message("山数の入力がありません" + "\r\n" + "選択してください", WARN, source="UF1:4385"))
             return

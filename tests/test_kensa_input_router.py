@@ -65,11 +65,16 @@ class PucketMoveTest(unittest.TestCase):
         self.assertEqual(s.inp_tag, "E5")               # D の代わりに E
 
     def test_dt_rows_by_at_butt(self) -> None:
-        s = ready("少枚数", at_butt_caption="厚4ヵ所")   # いま 2 ヵ所検査 → 行1〜2(厚板は B93 で 1〜4 行)
+        s = ready("薄板", yama="3", at_butt_caption="厚4ヵ所")   # いま 2 ヵ所検査 → 行1〜2
+        fill(s, ["S1", "S2"])
+        ir.pucket_move(s, "DT", "L", "", FakeHooks())
+        self.assertEqual(s.inp_tag, "U1")
+        # 第3段(I1): ボタンは薄板のもの。少枚数などは「厚4ヵ所」が残っていても 1〜4 行(厚板の B93 と同じ)
+        s = ready("少枚数", at_butt_caption="厚4ヵ所")
         fill(s, ["S1", "S2"])
         ir.pucket_move(s, "DT", "", "", FakeHooks())
-        self.assertEqual(s.inp_tag, "U1")
-        s = ready("少枚数", at_butt_caption="")                   # どちらでもない → a=n=0 → 「DT検査済」(G1 §11-7)
+        self.assertEqual(s.inp_tag, "S3")
+        s = ready("薄板", yama="3", at_butt_caption="")          # どちらでもない → a=n=0 → 「DT検査済」(G1 §11-7)
         msgs = []
         ir.pucket_move(s, "DT", "", "", FakeHooks(), msgs)
         self.assertEqual(msgs[0].text, "DT検査済")

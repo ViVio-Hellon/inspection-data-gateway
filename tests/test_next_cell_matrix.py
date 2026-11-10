@@ -3,7 +3,7 @@
 入れる先(`pucket_move`)・「〜検査済」(`all_check`)・黄色の印(`look_blank`・`look_s_blank`・`smallnumber_blank`)・
 振り分け(`next_blank`)を 1 つの表にまとめる前に、今の動きを書き留めた(`fixtures/next_cell_matrix.json`。作り直さない)。
 まとめた後の動きは、書き留めに `fixtures/next_cell_matrix_intended.json`(決めた決まりにそろえた所。直し。理由つき)を
-重ねたものと同じであること。
+重ねたものと同じであること(直しの理由は intended の "_理由" の I1〜I4。並びは "from" 手目から先、調べは違う所だけ)。
 
 画面の状態は本物の作業選択(`layout.select_work`・`yama_change`・`at_butt_click`・`inspe_butt_click`・
 少枚数の `SmallNumberCount`)で作る。ロットは試験用の DB(検番・オーダー厚)を差し込む。
@@ -26,7 +26,7 @@ import os
 import random
 import unittest
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from tests.test_kensa_grid import FakeHooks
 from ufkensa.kensa import grid, layout, vbx, wiring
@@ -352,20 +352,21 @@ def record() -> dict[str, Any]:
 
 
 def expected() -> dict[str, Any]:
+    """書き留めに、決めた直し(intended)を重ねる。並びは "from" 手目から先を、調べは違う所だけを置き換える。"""
     base = json.loads(BASELINE.read_text(encoding="utf-8"))
     if INTENDED.exists():
         for path, item in json.loads(INTENDED.read_text(encoding="utf-8")).items():
             if path.startswith("_"):
                 continue
-            node = base
-            keys = path.split("/")
-            for k in keys[:-1]:
-                node = node[int(k)] if isinstance(node, list) else node[k]
-            last = keys[-1]
-            if isinstance(node, list):
-                node[int(last)] = item["value"]
+            key, part, name = path.split("/")
+            if part == "seq":
+                seq = base[key]["seq"][name]
+                assert seq[item["from"]:item["from"] + 1] == ([item["was"]] if item["was"] else []), path
+                base[key]["seq"][name] = seq[:item["from"]] + item["value"]
             else:
-                node[last] = item["value"]
+                probe = base[key]["probe"][int(name)][1]
+                assert {k: probe[k] for k in item["was"]} == item["was"], path
+                probe.update(item["value"])
     return base
 
 
