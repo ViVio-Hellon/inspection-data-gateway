@@ -323,6 +323,83 @@ class PerLotTest(_Saved):
         self.assertEqual(r.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
         self.assertEqual(r.new_rows, base.new_rows)
 
+    def test_history_save_offline_reads_first(self) -> None:
+        """F1(2026-11-10): オフラインの履歴保存も arrbox と同じく、第2に無い引当・オーダーは第1を見に行く。"""
+        self.use(paths.OFFLINE)
+        ph = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T"), check_equipment=_ok).past_hiki
+        sheet = [list(lot.HISTORY_HEADER)]
+        base = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(base.completed)
+        self.assertEqual(base.file_path, str(self.d2) + "/SIKAHIKI.sqlite3")
+        # 第2の SIKAHIKI にロットが無い → 第1
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(r.messages, [])
+        self.assertTrue(r.completed)
+        self.assertEqual(r.file_path, str(self.d1) + "/SIKAHIKI.sqlite3")
+        self.assertEqual(r.new_rows, base.new_rows)
+        # 第2に SIKAHIKI のファイルが無い → 第1
+        (self.d2 / "SIKAHIKI.sqlite3").unlink()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertTrue(r.completed)
+        self.assertEqual(r.file_path, str(self.d1) + "/SIKAHIKI.sqlite3")
+        self.assertEqual(r.new_rows, base.new_rows)
+        # 第1にも無い → 「ありません」(今までどおり)
+        (self.d1 / "SIKAHIKI.sqlite3").unlink()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAHIKINOW")])
+        self.assertFalse(r.completed)
+
+    def test_history_save_offline_odr_from_first(self) -> None:
+        """F1: オフラインで第2の SIKAODR が空なら第1の SIKAODR(_odr_fallback)。"""
+        self.use(paths.OFFLINE)
+        ph = lot.acc_reflec(lot.LotScreen(lot="H2500K0", cb_text="H2500K0", work_time="T"), check_equipment=_ok).past_hiki
+        sheet = [list(lot.HISTORY_HEADER)]
+        base = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        with sqlite3.connect(self.d2 / "SIKAODR.sqlite3") as c:
+            c.execute('DELETE FROM "仕掛"')
+        c.close()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual(r.messages, [])
+        self.assertTrue(r.completed)
+        self.assertEqual(r.new_rows, base.new_rows)
+        # 第1に SIKAODR が無い → 「ありません」
+        (self.d1 / "SIKAODR.sqlite3").unlink()
+        r = lot.history_save(ph, sheet, lot.HistoryEnv(now=T_NORMAL))
+        self.assertEqual([m.text for m in r.messages], [paths.missing_text("SIKAODRNOW")])
+        self.assertFalse(r.completed)
+
+    def test_atu_hiki_records_offline_reads_first(self) -> None:
+        """F2(2026-11-10): 厚の作業選択の引当の読みも、オフラインは第2に無ければ第1。LotNo は quote を通す。"""
+        from types import SimpleNamespace
+        from ufkensa.kensa import wiring
+        st = SimpleNamespace(dbflag="")
+        self.use(paths.OFFLINE)
+        found, base = wiring.RealHooks.atu_hiki_records(None, st, "H2500K0")
+        self.assertTrue(found)
+        self.assertTrue(base)
+        self.delete(self.d2, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (True, base))
+        (self.d2 / "SIKAHIKI.sqlite3").unlink()
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (True, base))
+        (self.d1 / "SIKAHIKI.sqlite3").unlink()
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (False, None))
+
+    def test_atu_hiki_records_online_and_quote(self) -> None:
+        from types import SimpleNamespace
+        from ufkensa.kensa import wiring
+        st = SimpleNamespace(dbflag="")
+        self.use(paths.ONLINE)
+        found, base = wiring.RealHooks.atu_hiki_records(None, st, "H2500K0")
+        self.assertTrue(found and base)
+        # 絞り込みの値は arrbox と同じく ado_filter.quote を通す(quote は VBA どおり囲み直しはしない。
+        # ' を含む LotNo はロット登録 acc_reflec が先に断る SaveLoad:120)
+        with mock.patch.object(wiring.ado_filter, "quote", wraps=wiring.ado_filter.quote) as q:
+            wiring.RealHooks.atu_hiki_records(None, st, "H2500K0")
+        q.assert_called_with("H2500K0")
+        self.delete(self.d1, "SIKAHIKINOW", "ﾛｯﾄ番号", ["H2500K0"])
+        self.assertEqual(wiring.RealHooks.atu_hiki_records(None, st, "H2500K0"), (True, base))   # 今までどおり第2
+
     def test_sika_atu_create_from_second(self) -> None:
         self.use(paths.ONLINE)
         base = lot.sika_atu_create("H2500K0")

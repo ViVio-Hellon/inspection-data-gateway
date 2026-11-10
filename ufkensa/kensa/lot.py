@@ -125,6 +125,16 @@ def other_base() -> str:
     return "" if (not other or other == main) else other
 
 
+def offline_first(fpath: str) -> str:
+    """F1/F2(2026-11-10): オフライン(main = next = 第2)で第2を読んでいるとき、第2に無いもの(ファイル・ロット)を
+    見に行く第1のフォルダ。arrbox と同じ決まり(`other_base`)。オンライン・第1を読んでいるときは ""
+    (オンラインの第2への切り替えは、今までどおり呼び手の VBA の分岐が受け持つ)。"""
+    main, nxt = paths.get("main"), paths.get("next")
+    if fpath != main or main != nxt:
+        return ""
+    return other_base()
+
+
 def lot_from_second(target: str, flt: str, first_file: str) -> tuple[Optional[list], str]:
     """D26(ロットごとの第2): 第1の仕掛にロット(条件の行)が無いとき、第2(控え)から同じ条件で読む。
 
@@ -944,6 +954,17 @@ def _odr_fallback(fpath: str, odr_path: str, what: str, res: HistorySaveResult,
     """
     main, nxt = paths.get("main"), paths.get("next")
     target = vba_target("SIKAODRNOW")
+    first = offline_first(fpath)
+    if first:
+        # F1(2026-11-10): オフラインは第2に無ければ第1(arrbox と同じ)
+        fpath = first
+        odr_path = db_path(fpath, "SIKAODRNOW")
+        if not read_check(odr_path, 1):
+            if not over12:
+                res.messages.append(Message(paths.missing_text("SIKAODRNOW"), ERROR,
+                                            source="SaveLoad:1399"))
+            return fpath, odr_path, False
+        return fpath, odr_path, True
     if fpath == nxt:
         if not over12:
             res.messages.append(Message(target + "に" + what + "_HistorySave", ERROR, source="SaveLoad:1393"))
@@ -996,6 +1017,11 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
         if fpath == nxt:
             # 再現: 控え側を選んでいたら、控えのファイルがあっても抜ける(VBA どおり)
             # B49 を直す: 控えのファイルがあればそのまま控えを読む(無いときだけ抜ける)
+            first = offline_first(fpath)
+            if first:
+                # F1(2026-11-10): オフラインで第2にファイルが無ければ第1を見る(arrbox と同じ)
+                fpath = first
+                file_path = db_path(fpath, target)
             if not read_check(file_path, 1):
                 if not over12:
                     res.messages.append(missing)
@@ -1012,6 +1038,12 @@ def _history_save_db(past_hiki: Sequence[Any], env: HistoryEnv, res: HistorySave
 
     flt = "[ﾛｯﾄ番号]='" + ado_filter.quote(lot_no) + "'"
     temp_hiki = datasource.get_records(file_path, TABLE, flt)
+    first = offline_first(fpath) if temp_hiki is None else ""
+    if first and read_check(db_path(first, target), 1):
+        # F1(2026-11-10): オフラインで第2にロットが無ければ第1を見る(arrbox の lot_from_second と同じ)
+        rows = datasource.get_records(db_path(first, target), TABLE, flt)
+        if rows is not None:
+            fpath, file_path, temp_hiki = first, db_path(first, target), rows
     if temp_hiki is None:
         if env.zenkasho_visible and env.mitsubishi_line == "Test":
             res.file_path = file_path
