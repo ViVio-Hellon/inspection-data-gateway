@@ -28,10 +28,21 @@ Access からの取り込みには Microsoft Access Database Engine(ACE OLE DB 1
 
     python -m pytest -q
 
-画面(JS)の動きは、ブラウザの通しの試験 `tests/e2e/`(node の Playwright と Chromium が要る。1 分ほど)。
-ふだんは飛ばすので、確かめるときだけ `UFKENSA_E2E=1` を付けて流します:
+画面(JS)の動きは、ブラウザの通しの試験 `tests/e2e/`(node の Playwright と Chromium が要る。1 分ちょっと)。
+`python -m pytest -q` では**飛ばします**(ラインPC・CI に node が無いことがあり、あっても全体の時間が 1 分以上延びるため)。
+画面・CSS・JS を変えたら、次のどちらかで流します:
 
+    python -m tests.e2e                       # 前提(node・Playwright・Chromium)を確かめてから流す。揃っていなければ理由を出して 2 で終わる
+    python -m tests.e2e --shots 写しのフォルダ  # 画面の写しも残す(1366×768/1920×1080 × 明暗の検査画面ほか)
+    python -m tests.e2e --check               # 前提が揃っているかだけ
     UFKENSA_E2E=1 python -m pytest -q tests/e2e
+
+試験のサーバ・node・Chromium は別のプロセスグループで起こし、終わったとき・時間切れ・Ctrl+C でもまとめて止めます
+(サーバは一時フォルダを消して終わる)。
+
+配色(`app/static/css/tokens.css`)の暗いテーマは `@media (prefers-color-scheme: dark)` の中が元です。
+直したら `python scripts/sync_theme_tokens.py` で `[data-theme="dark"]` へ写します(食い違うと `tests/test_theme_tokens.py` が落ちる)。
+部品の CSS に色の直値(`#rrggbb`)は書かず、tokens.css のトークンを使います。
 
 `tests/fixtures/kensa/` は受領した Access から作った基準データです(名簿は氏名・カード番号を伏せた。仕掛は108ロット分)。
 作り直すときは `scripts/dev_accdb_to_tsv.py`(開発用。mdbtools が要る)。

@@ -6,18 +6,23 @@
 続けて tests/e2e/screens.spec.js(整理 6): キャスク・全ヵ所・Aインプット・校正を開き、問いのある操作を画面の
 確認窓で答え、受信機の値がその画面に届くこと。
 
-**ふだんは飛ばす。** `UFKENSA_E2E=1` のときだけ動く(node と Playwright・Chromium が要り、1 分ほどかかるため。
-ラインPC・CI に入っていないことがある)。動かし方:
+**ふだんは飛ばす。** `UFKENSA_E2E=1` のときだけ動く(node と Playwright・Chromium が要り、1 分半ほどかかるため。
+ラインPC・CI に入っていないことがある)。動かし方(どちらも同じ):
 
+    python -m tests.e2e                      # 前提を確かめてから流す(画面の写しは --shots <フォルダ>)
     UFKENSA_E2E=1 python -m pytest -q tests/e2e
 
 Python の playwright は使わない(入っていない)。node の playwright を `require` できること
 (NODE_PATH など)。画面の写しが欲しいときは `UFKENSA_E2E_SHOTS=<フォルダ>`。
+
+後始末: 試験のサーバ・node(とその子の Chromium)はそれぞれ別のプロセスグループで起こし、終わったら・時間切れ・
+中断(Ctrl+C)のときもグループごと止める。サーバは一時フォルダ(台帳の写し)を消し、疑似端末を閉じて終わる。
 """
 from __future__ import annotations
 
 import os
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -41,10 +46,49 @@ def _playwright_ok(node: str) -> str:
     probe = ("const { chromium } = require('playwright');"
              "chromium.launch().then(b => b.close()).then(() => process.exit(0), e => { console.error(e.message); process.exit(3); });")
     try:
-        r = subprocess.run([node, "-e", probe], capture_output=True, text=True, timeout=60, cwd=HERE)
-    except (OSError, subprocess.TimeoutExpired) as e:
+        code, out = run_node(node, ["-e", probe], dict(os.environ), timeout=60)
+    except OSError as e:
         return str(e)
-    return "" if r.returncode == 0 else (r.stderr.strip().splitlines() or ["playwright を読めません"])[-1]
+    return "" if code == 0 else (out.strip().splitlines() or ["playwright を読めません"])[-1]
+
+
+def _killpg(proc: subprocess.Popen) -> None:
+    """``proc`` のプロセスグループ(node なら子の Chromium も)を止める。もう居なければ何もしない。"""
+    if proc.poll() is not None and os.name != "posix":
+        return
+    try:
+        if os.name == "posix":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError, OSError):
+        pass
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _group() -> dict:
+    """子プロセスを別のプロセスグループで起こす(まとめて止められるように)。"""
+    if os.name == "posix":
+        return {"start_new_session": True}
+    return {"creationflags": getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)}
+
+
+def run_node(node: str, args: list[str], env: dict, timeout: float = 240) -> tuple[int, str]:
+    """node を args で動かし (終了コード, 出力) を返す。時間切れ・中断ならグループごと止める。"""
+    proc = subprocess.Popen([node, *args], cwd=HERE, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, encoding="utf-8", errors="replace", **_group())
+    try:
+        out, _ = proc.communicate(timeout=timeout)
+        return proc.returncode, out
+    except subprocess.TimeoutExpired:
+        _killpg(proc)
+        out, _ = proc.communicate()
+        return -1, (out or "") + f"\n時間切れ({timeout:.0f} 秒)"
+    finally:
+        _killpg(proc)                      # 中断のとき・node が先に終わって Chromium が残ったときも
 
 
 def _free_port() -> int:
@@ -70,7 +114,7 @@ class BrowserE2E(unittest.TestCase):
         err = tempfile.TemporaryFile(mode="w+", encoding="utf-8")      # サーバの stderr(詰まらないようファイルへ)
         self.addCleanup(err.close)
         srv = subprocess.Popen([sys.executable, "-m", "tests.e2e.server", str(port)], cwd=ROOT, env=env,
-                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=err, text=True)
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=err, text=True, **_group())
         try:
             line = srv.stdout.readline()
             if not line.startswith("READY"):
@@ -83,18 +127,17 @@ class BrowserE2E(unittest.TestCase):
             # 順に動かす(screens は kensa で済ませた検査員・ロット・Min/Max・受信機を使う)
             for spec in SPECS:
                 with self.subTest(spec=spec):
-                    r = subprocess.run([self.node, str(HERE / spec)], cwd=HERE, env=nenv,
-                                       capture_output=True, text=True, timeout=240)
-                    out = r.stdout + r.stderr
+                    code, out = run_node(self.node, [str(HERE / spec)], nenv)
                     self.assertIn("E2E_RESULT", out, out[-4000:])
-                    self.assertEqual(r.returncode, 0, "\n".join(l for l in out.splitlines() if "FAIL" in l or "PAGEERROR" in l
+                    self.assertEqual(code, 0, "\n".join(l for l in out.splitlines() if "FAIL" in l or "PAGEERROR" in l
                                                               or "E2E_RESULT" in l) or out[-4000:])
         finally:
             try:
-                srv.stdin.close()
+                srv.stdin.close()                       # サーバは標準入力が閉じると後始末をして止まる
                 srv.wait(timeout=15)
             except (OSError, subprocess.TimeoutExpired):
-                srv.kill()
+                pass
+            _killpg(srv)                                # 止まらなければ・残った子があればグループごと
             srv.stdout.close()
 
 
