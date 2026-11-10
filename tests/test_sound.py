@@ -88,11 +88,17 @@ class CatalogTest(unittest.TestCase):
         self.assertEqual(hits, [])
 
     def test_every_screen_uses_the_shared_player(self):
+        # 整理 6: 知らせの音は共通の op()(screen_op.js)が鳴らす。検査は自分の showMessage で鳴らす
+        shared = (ROOT / "app/static/js/screen_op.js").read_text(encoding="utf-8")
+        self.assertIn('from "./sound.js"', shared)
+        self.assertIn("playMessage(m)", shared)
         for v in ("kensa", "cask", "zenkasho", "ainput", "calibration"):
             js = (ROOT / "app/static/js/views" / f"{v}.js").read_text(encoding="utf-8")
             with self.subTest(v):
-                self.assertIn('from "../sound.js"', js)
-                self.assertIn("playMessage(m)", js)
+                uses_shared = 'from "../screen_op.js"' in js and "showMessage" not in js
+                if not uses_shared:
+                    self.assertIn('from "../sound.js"', js)
+                    self.assertIn("playMessage(m)", js)
                 self.assertNotIn("/api/kensa/sound", js)
 
 

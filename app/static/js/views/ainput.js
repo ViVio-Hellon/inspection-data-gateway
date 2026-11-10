@@ -9,37 +9,15 @@
 */
 
 import { api } from "../api.js";
-import { toast, toastError } from "../toast.js";
-import { playMessage } from "../sound.js";
-import { confirmBox } from "../askbox.js";
+import { toastError } from "../toast.js";
+import { LEVEL_KIND, screenOp } from "../screen_op.js";
 import { startReceiver } from "../recv.js";
 
 const $ = (id) => document.getElementById(id);
-const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 let V = null;
 
-async function op(name, body = {}, answers = {}) {
-  let res;
-  try {
-    res = await api.post(`/api/ainput/${name}`, { ...body, answers });
-  } catch (e) {
-    toastError(e);
-    return null;
-  }
-  for (const m of res.messages || []) {
-    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
-    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
-  }
-  if (res.view) render(res.view);
-  if (res.question) {
-    const q = res.question;
-    const yes = await confirmBox(q.text, { ok: q.buttons === "okcancel" ? "OK" : "はい",
-                                           cancel: q.buttons === "okcancel" ? "キャンセル" : "いいえ" });
-    return op(name, body, { ...answers, [q.key]: !!yes });
-  }
-  if (res.stop) toast(res.stop.text, LEVEL_KIND[res.stop.level] || "error");
-  return res;
-}
+/* 操作を送る(screen_op.js)。止めは、その重さ(warn / error)で出す */
+const op = screenOp("ainput", { render, stopKind: (stop) => LEVEL_KIND[stop.level] || "error" });
 
 function text(el, t) { el.textContent = t ?? ""; }
 

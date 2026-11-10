@@ -3,8 +3,11 @@
    サーバは届いた値を「最後に取りに来た画面」にだけ渡す。開いていない画面には渡さない
    (前は通常検査にだけ入っていたので、校正などで測った値が見えないまま検査に入るおそれがあった)。
    画面が隠れている(別タブ・最小化)間は取りに行かないので、その画面には入らない。
-   使い方: startReceiver("calibration", (text) => op("receive", { text }), (st) => 表示を変える) */
+   使い方: startReceiver("calibration", (text) => op("receive", { text }), (st) => 表示を変える)
+   検査画面は、受信機の値をサーバが検査のセッションに渡している(カーソルに関係なく入る)。
+   画面には実行した結果が届くので、deliver に fromServer(op) を渡して、操作の結果と同じ手順で出す */
 import { api } from "./api.js";
+import { toast } from "./toast.js";
 
 /* 2026-11-09: 「検査できない理由を表示して」(現場の声)。受信機の状態・最後に届いた値と時刻・入らなかった理由。
    st = startReceiver の onState に来るもの。el に 1 行(と理由の行)を描く */
@@ -59,4 +62,19 @@ export async function startReceiver(screen, deliver, onState = () => {}) {
     setTimeout(tick, st.on ? 400 : 3000);               // 止まっていても状態(理由)は見続ける
   };
   tick();
+}
+
+/* サーバが受け取って実行した結果 r(view・messages・question・stop・why)を、画面の操作の結果として出す。
+   op = screen_op.js の screenOp(...)。問いを聞かれたら、答えを付けて同じ値を送り直す(op が okcancel も扱う)。
+   2026-11-09: 入らなかった理由を見える所に出す(知らせ・止めで出ていないときもトーストで出す)。
+   before(r) … 出す前に画面ごとにすること(最近の入力に残す など) */
+export function fromServer(op, before = () => {}) {
+  return async (text, r) => {
+    before(r);
+    const res = await op.handle(r, "receive", { text });
+    if (!r.stop && r.why && !(r.messages || []).some((m) => m.text === r.why)) {
+      toast(`受信した値 ${text} は入りませんでした: ${r.why}`, "warn");
+    }
+    return res;
+  };
 }

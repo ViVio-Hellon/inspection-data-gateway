@@ -7,15 +7,13 @@
 */
 
 import { api, tokenUrl } from "../api.js";
-import { toast, toastError } from "../toast.js";
-import { playMessage } from "../sound.js";
-import { confirmBox } from "../askbox.js";
+import { toastError } from "../toast.js";
+import { screenOp } from "../screen_op.js";
 import { packDialog } from "./pack_dialog.js";
 import { startReceiver } from "../recv.js";
 import { canSpeak, readOn, setReadOn, speak } from "../speak.js";
 
 const $ = (id) => document.getElementById(id);
-const LEVEL_KIND = { info: "info", warn: "warn", error: "error" };
 const recent = [];
 let V = null;
 let colSig = "";
@@ -23,29 +21,11 @@ const rowEls = new Map();      // 行番号 → { tr, sig }
 let lastReport = "";
 let pack = null;               // 包装仕様書の窓(UF_PackNo)
 
-async function op(name, body = {}, answers = {}, { refocus = true } = {}) {
-  let res;
-  try {
-    res = await api.post(`/api/cask/${name}`, { ...body, answers });
-  } catch (e) {
-    toastError(e);
-    return null;
-  }
-  for (const m of res.messages || []) {
-    playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
-    if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");
-  }
-  if (res.view) render(res.view);
-  if (res.question) {
-    const q = res.question;
-    const yes = await confirmBox(q.text, { ok: q.buttons === "okcancel" ? "OK" : "はい",
-                                           cancel: q.buttons === "okcancel" ? "キャンセル" : "いいえ" });
-    return op(name, body, { ...answers, [q.key]: !!yes }, { refocus });
-  }
-  if (res.stop) toast(res.stop.text, "error");
-  if (refocus) focusInput();
-  return res;
-}
+/* 操作を送る(screen_op.js)。終わったら測定の欄へ戻す({ refocus: false } で戻さない) */
+const op = screenOp("cask", {
+  render,
+  after: (name, res, { refocus = true } = {}) => { if (refocus) focusInput(); },
+});
 
 function focusInput() {
   if (!V || !V.visible) return;
