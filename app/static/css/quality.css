@@ -34,7 +34,7 @@
 
 /* 品質写真 */
 .qual__phtabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.qual__phtabs [aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.qual__phtabs [aria-selected="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .qual__photos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .qual__photos figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .qual__photos img { width: 100%; max-width: 1600px; cursor: zoom-in; height: auto; border: 1px solid var(--rule); border-radius: var(--radius-sm, 4px); background: var(--sunken); }

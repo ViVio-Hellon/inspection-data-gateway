@@ -36,7 +36,7 @@
               background: var(--sunken); border: 2px solid transparent; }
 .zk-head__i[data-r] { cursor: pointer; }
 .zk-head__i.edit { border-color: var(--accent-line); }
-.zk-head__i.cur { border-color: var(--focus); background: #fff3a6; }
+.zk-head__i.cur { border-color: var(--focus); background: var(--mark-bg); color: var(--mark-fg); }
 .zk-head__i dt { color: var(--muted); }
 .zk-head__i dd { margin: 0; font-family: var(--mono); }
 .zk-head__i dd.red { color: var(--state-error); font-weight: 700; }
@@ -62,11 +62,11 @@ body[data-zk-mode="5N"] .zk-table th.g--歪 small { color: var(--state-error); f
 .zk-table td.k-c { color: var(--muted); }
 .zk-table td.ok { background: var(--ok-bg); color: var(--state-ok); }
 .zk-table td.ng { background: var(--warn-bg); color: var(--state-error); }
-.zk-table td.warn { background: #fff3a6; }
+.zk-table td.warn { background: var(--mark-bg); color: var(--mark-fg); }
 .zk-table td.u { text-decoration: underline; }
 .zk-table tr.currow th.no { color: var(--ink); font-weight: 700; background: var(--info-bg); }
 .zk-table tr.currow td { background-color: color-mix(in srgb, var(--info-bg) 55%, transparent); }
-.zk-table td.cur { outline: 3px solid var(--focus); outline-offset: -3px; background: #fff3a6 !important; }
+.zk-table td.cur { outline: 3px solid var(--focus); outline-offset: -3px; background: var(--mark-bg) !important; color: var(--mark-fg); }
 
 .zk-flash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
             font-size: 180px; font-weight: 900; pointer-events: none; }

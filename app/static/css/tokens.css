@@ -222,6 +222,27 @@
   --pad-card:12px;      /* カードの内側 */
   --gap:10px;           /* 並べるものの間 */
   --gap-sm:6px;
+
+  /* ================================================================
+     画面ごとの部品に使う色 —— 部品の CSS に直値を書かないための置き場所
+     ================================================================ */
+  /* 黄色の印(VBA の YELLOW = いま入れる欄・選んでいる欄)。暗いテーマでは沈んだ黄の地に明るい字 */
+  --mark-bg:#fff3a6; --mark-fg:#5a4a00;
+  /* 状態の色(--state-*)を塗りに使うときの字。暗いテーマでは状態の色が明るくなるので暗い字 */
+  --on-state:#ffffff;
+  /* --scrim(暗い幕)の上の字。幕は明暗どちらでも暗いので変えない */
+  --on-scrim:#ffffff;
+  /* 測定表・受信機の「まとまり」の色(厚=青・幅=緑・丈=橙・対角=紫・A/B=灰、UW=青・DDM=橙・COM=灰)。
+     地の色と混ぜる(color-mix)か細い帯にしか使わない中間の濃さなので、明暗どちらでも同じ */
+  --hue-blue:#2f7fd6; --hue-green:#2e9d5b; --hue-orange:#d98a1c; --hue-purple:#8a5cc8;
+  --hue-slate:#6b7f8c; --hue-gray:#9aa9b3;
+  /* 位置ごとの判定の印(許容=黄 / 保留=紫)。濃い塗り+字の組なので明暗どちらでも同じ */
+  --flag-allow:#f5b301; --flag-allow-fg:#1a1300; --flag-allow-line:#a77800;
+  --flag-hold:#7c4dff;  --flag-hold-fg:#ffffff;  --flag-hold-line:#4b2bb3;
+  /* 画像の下地。図面・写真は白い紙の上で見るものなので、テーマで変えない */
+  --paper:#ffffff;
+  /* 受信機カードのネオン表示(all-tools 日報と同じ見た目)。**わざとテーマで変えない** */
+  --neon-bg:#060a1e; --neon-fg:#00ffcc;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -273,15 +294,20 @@
     --ok-bg:#16271e;
     --info-bg:#182634; --info-fg:#7faee9;
     --shared-bg:#241c33; --shared-fg:#c4a2f5;
+    --mark-bg:#5c4f12; --mark-fg:#fff1a8;
+    --on-state:#101720;
 
     --night-line:#517383;
-    --night-line:#517383;
-  --shadow-sm:0 5px 18px rgb(0 0 0 / 32%);
+    --shadow-sm:0 5px 18px rgb(0 0 0 / 32%);
     --shadow:0 2px 6px rgb(0 0 0 / 28%), 0 10px 30px -8px rgb(0 0 0 / 50%);
     --shadow-pop:0 25px 80px rgb(0 0 0 / 62%), 0 4px 12px rgb(0 0 0 / 32%);
     --scrim:rgb(6 16 22 / 68%);
   }
 }
+/* ↓ 利用者が「暗い」を選んだとき。**中身は上の @media の中と同じでなければならない**
+   (CSS だけでは「OS が暗い・明示なし」と「明示的に暗い」を1つの規則にまとめられない)。
+   手で書き換えず、上の @media の中を直してから `python scripts/sync_theme_tokens.py` で写す。
+   揃っているかは tests/test_theme_tokens.py が確かめる */
 :root[data-theme="dark"]{
   --ground:#101820; --surface:#182129; --sunken:#141c23; --raised:#1f2a33;
   --ink:#e2eaef; --muted:#95a7b2; --faint:#7a8d99;
@@ -309,7 +335,6 @@
   --angle-bar-1:#8fb4f5; --angle-bar-2:#6fc795; --angle-bar-3:#e0a961;
   --angle-bar-4:#c4a2f5; --angle-bar-5:#5fc9bb; --angle-bar-6:#f2909f;
   --angle-bar-fg:#101720;
-
   --map-idle:#2f3a49;   --map-idle-fg:#e6ecf3;
   --map-empty:#1e2632;  --map-empty-fg:#9aa6b4;
   --map-hit:#9cc4f7;    --map-hit-fg:#0b1220;
@@ -332,6 +357,8 @@
   --ok-bg:#16271e;
   --info-bg:#182634; --info-fg:#7faee9;
   --shared-bg:#241c33; --shared-fg:#c4a2f5;
+  --mark-bg:#5c4f12; --mark-fg:#fff1a8;
+  --on-state:#101720;
 
   --night-line:#517383;
   --shadow-sm:0 5px 18px rgb(0 0 0 / 32%);

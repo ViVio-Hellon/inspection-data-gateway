@@ -43,7 +43,7 @@
 .cgrid td.ng { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
 .cgrid td.off, .cgrid td.lock { background: var(--sunken); color: var(--muted); }
 .cgrid td.u { text-decoration: underline; }
-.cgrid td.sel { border-color: var(--focus); background: #fff3a6; color: #5a4a00; }
+.cgrid td.sel { border-color: var(--focus); background: var(--mark-bg); color: var(--mark-fg); }
 .cgrid tr.cur th.no { color: var(--focus); }
 .cgrid tr.cur td { border-bottom-color: var(--focus); }
 .cgrid col.hid, .cgrid .hid { display: none; }
