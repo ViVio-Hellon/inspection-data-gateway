@@ -111,6 +111,7 @@ class MultiAllocationLateralTest(Base):
         r = self.ok(s.set_value("LateralS", "9.0"))
         self.assertEqual(s.state.ctl("LateralS").color, "NG")
         self.assertIn("検査ﾃﾞｰﾀに公差外有り！", [m.text for m in r.messages])
+        self.ok(s.set_value("UFConfi.TB1", "許容"))                     # 確認(公差外)に答えてから次へ
         for p in lat:
             self.ok(s.set_value("Lateral" + p, "1.0"))
             self.assertEqual(s.state.ctl("Lateral" + p).color, "OK")
