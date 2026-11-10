@@ -134,10 +134,36 @@ def _db_path(conn: sqlite3.Connection) -> str:
         return ""
 
 
+_SIMPLE_EQ = None
+#: 2026-11-10: 「[列]='値'」の絞り込みを速くする索引。表の行の並び(id)ごと → {列: {値の小文字: [行]}}
+_eq_index: dict = {}
+
+
 def _filtered(cols: list[str], rows: list[list[str]], expr: str) -> list[list[str]]:
+    """絞り込み。`[列]='値'` だけの式は索引で候補を引いてから同じ式で確かめる(1 万行を毎回なめない)。"""
+    global _SIMPLE_EQ
     if not expr:
         return rows
     f = ado_filter.compile_filter(expr)
+    if _SIMPLE_EQ is None:
+        import re
+        _SIMPLE_EQ = re.compile(r"^\s*\[([^\]]+)\]\s*=\s*'((?:[^']|'')*)'\s*$")
+    m = _SIMPLE_EQ.match(expr)
+    if m and m.group(1) in cols and len(rows) > 200:
+        col = cols.index(m.group(1))
+        key = (id(rows), len(rows), col)
+        idx = _eq_index.get(key)
+        if idx is None or idx[0] is not rows:
+            if len(_eq_index) > 32:
+                _eq_index.clear()
+            d: dict = {}
+            for r in rows:
+                v = r[col] if col < len(r) else None
+                d.setdefault(str("" if v is None else v).strip().casefold(), []).append(r)
+            idx = (rows, d)
+            _eq_index[key] = idx
+        cand = idx[1].get(m.group(2).replace("''", "'").strip().casefold(), [])
+        return [r for r in cand if f(dict(zip(cols, r)))]
     return [r for r in rows if f(dict(zip(cols, r)))]
 
 
@@ -163,6 +189,47 @@ def _actual_file(db: Union[str, Path]) -> Optional[Path]:
 def _read_uncached(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]:
     with open_ro(db) as conn:
         return read_table(conn, table)
+
+
+#: 2026-11-10: 仕掛台帳は「列名を直す・足りない列を足す・第1で補う」まで済んだ形を覚える(開くたびに 1 万行を作り直さない)
+_lot_ready: dict = {}
+
+
+def _read_shared(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]:
+    """`_read` と同じ中身を、写さずに返す(呼び手は変えないこと)。仕掛台帳は手を入れた形を覚えて使い回す。"""
+    actual = _actual_file(db)
+    try:
+        lot = paths.is_copied(resolve(db))
+    except (OSError, ValueError):
+        lot = False
+    if not lot or actual is None:
+        return _read(db, table)
+    try:
+        st = actual.stat()
+        stamp = (st.st_size, st.st_mtime_ns)
+    except OSError:
+        return _read(db, table)
+    fstamp = _first_stamp()                     # 第1が変われば、補った形も作り直す
+    key = (str(actual), table, str(resolve(db)))
+    hit = _lot_ready.get(key)
+    if hit is not None and hit[0] == stamp and hit[1] == fstamp:
+        return hit[2], hit[3]
+    cols, rows = _read(db, table)
+    if len(_lot_ready) > 12:
+        _lot_ready.clear()
+    _lot_ready[key] = (stamp, fstamp, cols, rows)
+    return cols, rows
+
+
+def _first_stamp() -> Optional[tuple]:
+    try:
+        first = _actual_file(paths.join(paths.slot_value(paths.LOT, paths.FIRST), paths.first_name("SIKALOTNOW")))
+        if first is None:
+            return None
+        st = first.stat()
+        return (str(first), st.st_size, st.st_mtime_ns)
+    except (OSError, ValueError, KeyError):
+        return None
 
 
 def _read(db: Union[str, Path], table: str) -> tuple[list[str], list[list[str]]]:
@@ -263,21 +330,21 @@ def fill_from_first(db: Union[str, Path], cols: list[str], rows: list, added: li
 
 def get_records(db: Union[str, Path], table: str, sql_filter: str = "") -> Optional[list[list[str]]]:
     """VBA `GetRecordsArr`。0 件なら None。"""
-    cols, rows = _read(db, table)
-    out = _filtered(cols, rows, sql_filter)
+    cols, rows = _read_shared(db, table)
+    out = [list(r) for r in _filtered(cols, rows, sql_filter)]      # 当たった行だけ写す
     return out or None
 
 
 def get_fields(db: Union[str, Path], table: str, sql_filter: str = "") -> Optional[list[str]]:
     """VBA `GetFieldsArr`。**表が空・該当なしでも None**(VBA の EOF チェックがフィールド取得より先)。"""
-    cols, rows = _read(db, table)
-    return cols if _filtered(cols, rows, sql_filter) else None
+    cols, rows = _read_shared(db, table)
+    return list(cols) if _filtered(cols, rows, sql_filter) else None
 
 
 def get_table(db: Union[str, Path], table: str, sql_filter: str = "") -> tuple[list[str], list[list[str]]]:
     """列名と行を一度に(列名は 0 件でも返す。呼び手が VBA の Empty を再現するときは上の2つを使う)。"""
-    cols, rows = _read(db, table)
-    return cols, _filtered(cols, rows, sql_filter)
+    cols, rows = _read_shared(db, table)
+    return list(cols), [list(r) for r in _filtered(cols, rows, sql_filter)]
 
 
 def column_index(fields: Iterable[str], name: str) -> int:
