@@ -590,3 +590,61 @@ class JudgeImagesTest(_Saved):
         saved = user_settings.get(paths.KEY_PATHS)[paths.KEY_ITEMS]
         self.assertNotIn("judge_images", saved)                                  # 1 回だけ
         self.assertEqual(judge_images.available()["diag"], [f"judge_diag{i}" for i in range(1, 6)])
+
+
+# ------------------------------------------------------------------
+class SettingsCacheTest(_Saved):
+    """第1段 2(2026-11-10): パスを引くたびに設定ファイルを読み直さない。保存・外からの書き換えは次の呼び出しで効く。"""
+
+    def count_reads(self):
+        from ufkensa import safe_io
+        return mock.patch.object(safe_io, "read_json_or_absent", wraps=safe_io.read_json_or_absent)
+
+    def test_reads_once_until_changed(self) -> None:
+        self.use(paths.ONLINE)
+        first = paths.get("main")
+        with self.count_reads() as rd:
+            for _ in range(20):
+                self.assertEqual(paths.get("main"), first)
+                paths.get("quality")
+                paths.mode()
+        self.assertEqual(rd.call_count, 0)
+
+    def test_save_is_seen_next_call(self) -> None:
+        self.use(paths.ONLINE)
+        self.assertEqual(paths.get("main"), str(self.d1) + "/")
+        self.use(paths.OFFLINE)                                   # user_settings.save で捨てる
+        self.assertEqual(paths.mode(), paths.OFFLINE)
+        self.assertEqual(paths.get("main"), str(self.d2) + "/")
+        paths.set_path("quality", str(self.d2) + "/")
+        self.assertEqual(paths.get("quality"), str(self.d2) + "/")
+
+    def test_external_write_is_seen(self) -> None:
+        """ほかのプロセスが設定ファイルを書き換えても(印が変わるので)次の呼び出しで読み直す。"""
+        import json
+        from ufkensa import config
+        self.use(paths.ONLINE)
+        self.assertEqual(paths.mode(), paths.ONLINE)
+        data = json.loads(config.USER_CONFIG_PATH.read_text(encoding="utf-8"))
+        data[paths.KEY_MODE] = paths.OFFLINE
+        data["_pad"] = "x" * 7                                   # 大きさも変える(更新時刻の粗いファイルシステム向け)
+        config.USER_CONFIG_PATH.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        self.assertEqual(paths.mode(), paths.OFFLINE)
+
+    def test_returned_values_are_copies(self) -> None:
+        self.use(paths.ONLINE)
+        d = paths._saved()                                      # noqa: SLF001
+        d[paths.KEY_LOT][paths.FIRST] = "壊す"
+        self.assertEqual(paths.get("main"), str(self.d1) + "/")
+
+    def test_unreadable_is_not_remembered(self) -> None:
+        from ufkensa import safe_io
+        self.use(paths.ONLINE)
+        paths._forget_settings()                                # noqa: SLF001
+        with mock.patch.object(safe_io, "read_json_or_absent", return_value=(safe_io.UNREADABLE, "x")):
+            self.assertEqual(paths.mode(), paths.ONLINE)        # 既定
+        self.use(paths.OFFLINE)
+        paths._forget_settings()                                # noqa: SLF001
+        with mock.patch.object(safe_io, "read_json_or_absent", return_value=(safe_io.UNREADABLE, "x")):
+            paths.mode()
+        self.assertEqual(paths.mode(), paths.OFFLINE)           # 読めなかった結果は覚えていない

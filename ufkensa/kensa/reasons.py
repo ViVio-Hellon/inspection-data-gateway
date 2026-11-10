@@ -19,7 +19,7 @@ from typing import Optional
 
 from .. import safe_io
 from ..logging_utils import get_logger
-from . import datasource
+from . import cache_registry, datasource
 
 log = get_logger("kensa.reasons")
 
@@ -36,6 +36,7 @@ COLUMNS = ("区分", "順番", "理由", "有効")
 #: 2026-11-08: 最後に読めた選択肢((ファイル, 区分) → 選択肢)。読めないときは空や既定にせず、これを出す
 #: (保守で足した理由が、共有フォルダが一瞬切れただけで画面から消えないように)。読めたときだけ覚える
 _last_known: dict[tuple[str, str], list[str]] = {}
+cache_registry.register_dict("reasons._last_known", _last_known)            # F3(2026-11-10)
 
 
 def _db_path() -> Path:

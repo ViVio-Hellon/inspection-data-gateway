@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import datasource, flow, paths, vbx
+from . import cache_registry, datasource, flow, paths, vbx
 from .model import NORMAL, THICK_ROWS, UiValues, bh_name, diag_name, kou_name, lateral_name, row_layout
 from . import sound as snd
 
@@ -938,6 +938,7 @@ class _TolTables:
 
 _tol_lock = threading.Lock()
 _tol_cache: dict[str, _TolTables] = {}
+cache_registry.register_dict("judge._tol_cache", _tol_cache, _tol_lock)      # F3(2026-11-10)
 
 
 class _LoadError(Exception):

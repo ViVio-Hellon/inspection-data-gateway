@@ -17,16 +17,16 @@ from ..logging_utils import get_logger
 log = get_logger("kensa.reload_data")
 
 
-def clear_caches() -> None:
-    from . import datasource, judge, lot_copy, quality
-    datasource._table_cache.clear()                 # noqa: SLF001 - 表の読み込み
-    with judge._tol_lock:                           # noqa: SLF001 - 公差表(対角・ラテラル)
-        judge._tol_cache.clear()                    # noqa: SLF001
-    for c in (quality._gaichu_cache, quality._gauge_cache, quality._pack_cache):   # noqa: SLF001
-        c.clear()
-    with lot_copy._lock:                            # noqa: SLF001 - 仕掛の写し(次に読むとき元を確かめ直す)
-        lot_copy._checked.clear()                   # noqa: SLF001
-    trace.event("settings.reload", "読んだ DB・表・公差表の覚えを捨てました")
+def clear_caches() -> list[str]:
+    """登録された覚え(cache_registry)を全部捨てる。捨てた覚えの名前を返す。
+
+    F3(2026-11-10): 前は捨てる覚えをここに並べていて、あとから足した覚え(仕掛台帳の補った形・索引・
+    理由の選択肢・届かないパスの覚え)を捨て忘れていた。いまは各モジュールが登録する。
+    """
+    from . import cache_registry
+    cleared = cache_registry.clear_all()
+    trace.event("settings.reload", "読んだ DB・表・公差表の覚えを捨てました", data={"caches": cleared})
+    return cleared
 
 
 def reload_now() -> dict[str, Any]:

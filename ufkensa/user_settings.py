@@ -38,6 +38,28 @@ def _load() -> tuple[str, dict[str, Any]]:
     return state, data
 
 
+def load_with_state() -> tuple[str, dict[str, Any]]:
+    """(状態, 中身)。状態は safe_io.OK / ABSENT / UNREADABLE。覚えてよいかを呼び手が決める用(paths。2026-11-10)。"""
+    return _load()
+
+
+#: 保存・削除のあとに呼ぶ(覚えた設定を捨てる。paths が登録する。2026-11-10)
+_listeners: list = []
+
+
+def on_change(fn) -> None:
+    if fn not in _listeners:
+        _listeners.append(fn)
+
+
+def _changed() -> None:
+    for fn in list(_listeners):
+        try:
+            fn()
+        except Exception as exc:  # noqa: BLE001 - 捨てられなくても保存は済んでいる
+            log.warning("設定の覚えを捨てられませんでした: %s", exc)
+
+
 def load_all() -> dict[str, Any]:
     """設定ファイル全体を読む。読めなければ例外にせず空(既定値)で返す。**保存には使わない**(`save` は読めないとき書かない)。"""
     return _load()[1]
@@ -83,7 +105,9 @@ def save(key: str, value: Any) -> bool:
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except OSError as exc:
         log.warning("設定ファイルに書けませんでした: %s", exc)
+        _changed()
         return False
+    _changed()
     # **値を出さない鍵がある。** 管理者パスワードは撹拌済みだが、
     # ログに残す理由が無い(残せば持ち出せる)
     log.info("設定を保存しました: %s=%s", key,
@@ -108,6 +132,8 @@ def delete(key: str) -> bool:
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except OSError as exc:
         log.warning("設定ファイルに書けませんでした: %s", exc)
+        _changed()
         return False
+    _changed()
     log.info("設定を消しました: %s", key)
     return True

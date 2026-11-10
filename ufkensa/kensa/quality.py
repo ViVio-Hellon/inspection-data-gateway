@@ -27,7 +27,7 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import datasource, lines, paths, vbx
+from . import cache_registry, datasource, lines, paths, vbx
 from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
@@ -1490,6 +1490,8 @@ class _FileCache:
 _gaichu_cache = _FileCache()
 _gauge_cache = _FileCache()
 _pack_cache = _FileCache()
+for _n, _c in (("gaichu", _gaichu_cache), ("gauge", _gauge_cache), ("pack", _pack_cache)):   # F3(2026-11-10)
+    cache_registry.register(f"quality._{_n}_cache", _c.clear, lambda c=_c: 0 if c._key is None else 1)  # noqa: SLF001
 
 
 def clear_caches() -> None:

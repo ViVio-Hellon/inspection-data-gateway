@@ -27,14 +27,17 @@ VBA の `初期設定.Setting_Path` の 7 本と、コードに直書きされ�
 from __future__ import annotations
 
 import contextvars
+import copy
 import os
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Any, Callable, Iterator, Optional, Union
 
-from .. import config, user_settings
+from .. import config, safe_io, user_settings
+from . import cache_registry
 from ..logging_utils import get_logger
 
 log = get_logger("kensa.paths")
@@ -158,8 +161,52 @@ DB_FILES = {
 # ------------------------------------------------------------------
 # モード(仕掛台帳にだけ効く)
 # ------------------------------------------------------------------
+# ------------------------------------------------------------------
+# 設定ファイルの覚え(2026-11-10 第1段 2)
+# ------------------------------------------------------------------
+#: パスを 1 つ引くたびに設定ファイル(JSON)を読み直していた(重さの一因)。ファイルの印(場所・更新時刻・大きさ)が
+#: 同じ間は読んだ中身を使う。user_settings.save / delete で捨てる。読めなかった・無いときは覚えない
+_settings_lock = threading.Lock()
+_settings: dict[str, tuple[tuple[str, int, int], dict[str, Any]]] = {}
+
+
+def _settings_stamp() -> Optional[tuple[str, int, int]]:
+    p = config.USER_CONFIG_PATH
+    try:
+        st = os.stat(p)
+    except OSError:
+        return None
+    return (str(p), st.st_mtime_ns, st.st_size)
+
+
+def _forget_settings() -> None:
+    with _settings_lock:
+        _settings.clear()
+
+
+user_settings.on_change(_forget_settings)
+cache_registry.register("paths._settings", _forget_settings, lambda: len(_settings))
+
+
+def _setting(key: str, default: Any = None) -> Any:
+    """`user_settings.get` と同じ値(写し)。ファイルが変わっていなければ読み直さない。"""
+    stamp = _settings_stamp()
+    if stamp is None:
+        return user_settings.get(key, default)
+    with _settings_lock:
+        hit = _settings.get("all")
+    if hit is not None and hit[0] == stamp:
+        data = hit[1]
+    else:
+        state, data = user_settings.load_with_state()
+        if state == safe_io.OK and _settings_stamp() == stamp:      # 読む間に書き換わっていなければ覚える
+            with _settings_lock:
+                _settings["all"] = (stamp, data)
+    return copy.deepcopy(data.get(key, default))
+
+
 def mode() -> str:
-    m = str(user_settings.get(KEY_MODE, ONLINE) or ONLINE)
+    m = str(_setting(KEY_MODE, ONLINE) or ONLINE)
     return m if m in (ONLINE, OFFLINE) else ONLINE
 
 
@@ -257,7 +304,7 @@ def _norm(raw: dict, m: str) -> dict[str, Any]:
 
 
 def _saved() -> dict[str, Any]:
-    raw = _d(user_settings.get(KEY_PATHS, {}) or {})
+    raw = _d(_setting(KEY_PATHS, {}) or {})
     d = _norm(raw, mode())
     old = str(_d(raw.get(KEY_ITEMS)).get("judge_images") or "").strip()
     if "judge_images" in _d(raw.get(KEY_ITEMS)):
@@ -664,6 +711,7 @@ def to_local(path_text: str) -> Path:
 _SLOW_SEC = 0.5          # これより時間がかかった確認(届かない共有など)は
 _SLOW_KEEP_SEC = 30.0    # この間は覚えておき、毎回待たせない
 _slow: dict[tuple[str, str], tuple[bool, float]] = {}
+cache_registry.register_dict("paths._slow", _slow)                          # F3(2026-11-10)
 
 
 def exists(path_text: str, kind: str = "any") -> bool:
