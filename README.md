@@ -28,6 +28,11 @@ Access からの取り込みには Microsoft Access Database Engine(ACE OLE DB 1
 
     python -m pytest -q
 
+画面(JS)の動きは、ブラウザの通しの試験 `tests/e2e/`(node の Playwright と Chromium が要る。1 分ほど)。
+ふだんは飛ばすので、確かめるときだけ `UFKENSA_E2E=1` を付けて流します:
+
+    UFKENSA_E2E=1 python -m pytest -q tests/e2e
+
 `tests/fixtures/kensa/` は受領した Access から作った基準データです(名簿は氏名・カード番号を伏せた。仕掛は108ロット分)。
 作り直すときは `scripts/dev_accdb_to_tsv.py`(開発用。mdbtools が要る)。
 
