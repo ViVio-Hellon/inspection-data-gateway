@@ -4,7 +4,7 @@
 
 試験用の台帳(tests/kensa_fixture)を一時フォルダに写し、オフラインの使用パスにして、校正済みにしてから
 アプリを 127.0.0.1:<port> で動かす。トークンは `e2e-token`。準備ができたら標準出力に `READY <port> <pty>` を出す。
-標準入力が閉じたら(呼び手の試験が終わったら)止まる。
+標準入力が閉じたら(呼び手の試験が終わったら)止まり、一時フォルダを消して疑似端末を閉じる。
 
 受信機の代わりに疑似端末(pty。Linux・macOS)を 1 つ作る。`POST /__e2e/feed {"text": "..."}` で
 その端末へ 1 行書く(受信機から測定値が届いたのと同じ)。pty が作れない OS では `<pty>` は `-`。
@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import signal
 import sqlite3
 import sys
 import tempfile
@@ -54,21 +56,26 @@ def _prepare() -> Path:
     return tmp
 
 
-def _open_pty() -> tuple[int, str]:
+def _open_pty() -> tuple[int, int, str]:
+    """(親の fd, 子の fd, 子の名前)。作れなければ (-1, -1, "-")。"""
     try:
         import pty
         master, slave = pty.openpty()
-        return master, os.ttyname(slave)
+        return master, slave, os.ttyname(slave)
     except (ImportError, OSError):
-        return -1, "-"
+        return -1, -1, "-"
 
 
 def main(port: int) -> None:
     import logging
     logging.getLogger("werkzeug").setLevel(logging.ERROR)
     _isolation.ensure_isolated()
-    _prepare()
-    master, pty_name = _open_pty()
+    if hasattr(signal, "SIGHUP"):
+        # 呼び手は別のセッションで起こす(まとめて止めるため)。そのとき疑似端末がこのセッションの端末になり、
+        # 閉じると SIGHUP で落ちて後始末(一時フォルダを消す)が飛ぶ。無視する
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    tmp = _prepare()
+    master, slave, pty_name = _open_pty()
     from flask import jsonify, request
     from werkzeug.serving import make_server
     from app import create_app
@@ -85,8 +92,18 @@ def main(port: int) -> None:
     srv = make_server("127.0.0.1", port, app, threaded=True)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print(f"READY {port} {pty_name}", flush=True)
-    sys.stdin.read()                       # 呼び手が閉じるまで
-    srv.shutdown()
+    try:
+        sys.stdin.read()                   # 呼び手が閉じるまで
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        shutil.rmtree(tmp, ignore_errors=True)
+        for fd in (master, slave):
+            if fd >= 0:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
 
 
 if __name__ == "__main__":

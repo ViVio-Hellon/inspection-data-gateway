@@ -168,7 +168,7 @@
 
 /* 仮ロット */
 .maint__kari-chip { font-size: var(--fs-xs); }
-.maint tr.is-kari td:first-child { box-shadow: inset 3px 0 0 var(--accent, #2a6f97); }
+.maint tr.is-kari td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 /* 一覧の下に入力欄(横に並べると入力欄が潰れて見えなかった。2026-11-05) */
 .maint .maint__kgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
 .maint__klist { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -220,14 +220,14 @@
 .maint__trh { margin: 0 0 8px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .maint__tsteps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .maint__tstep { display: grid; grid-template-columns: 1.6em minmax(0, 1fr); gap: 6px; padding: 4px 8px; border-radius: 4px; font-size: var(--fs-sm); }
-.maint__tstep.is-ok .maint__mark { color: var(--ok, #1f7a4a); }
-.maint__tstep.is-ng { background: color-mix(in srgb, var(--ng, #b3261e) 14%, transparent); }
-.maint__tstep.is-ng .maint__mark, .maint__tstep.is-ng b { color: var(--ng, #b3261e); }
+.maint__tstep.is-ok .maint__mark { color: var(--state-ok); }
+.maint__tstep.is-ng { background: color-mix(in srgb, var(--state-error) 14%, transparent); }
+.maint__tstep.is-ng .maint__mark, .maint__tstep.is-ng b { color: var(--state-error); }
 .maint__tstep.is-info { color: var(--muted); }
 .maint__mark { font-weight: 700; text-align: center; }
-.maint__bar { height: 6px; background: var(--sunken, #e9eef0); border-radius: 3px; margin-top: 3px; max-width: 360px; }
-.maint__bar span { display: block; height: 100%; background: var(--accent, #1d5c86); border-radius: 3px; }
-.maint__tstep.is-ng .maint__bar span { background: var(--ng, #b3261e); }
+.maint__bar { height: 6px; background: var(--sunken); border-radius: 3px; margin-top: 3px; max-width: 360px; }
+.maint__bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.maint__tstep.is-ng .maint__bar span { background: var(--state-error); }
 .maint__miss { margin: 4px 0 0; padding-left: 1.2em; font-size: var(--fs-xs); }
 
 /* COM受信テスト */
@@ -249,13 +249,13 @@
 .rx__card { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; border-left: 6px solid var(--rxc); min-width: 0; }
 /* 2026-11-09: 値は 1 行で出す。カードの幅に合わせて字の大きさを決める(DT10001+0000025.05M の 20 字が収まる) */
 .rx__card { container-type: inline-size; }
-.rx--uw { --rxc: #2f7fd6; } .rx--ddm { --rxc: #d98a1c; } .rx--com { --rxc: #6b7f8c; }
+.rx--uw { --rxc: var(--hue-blue); } .rx--ddm { --rxc: var(--hue-orange); } .rx--com { --rxc: var(--hue-slate); }
 .rx__chead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rx__kname { font-size: var(--fs-md, 1rem); }
 .rx__port { color: var(--muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 /* 2026-11-09: 受けた値はネオン表示(all-tools 日報の集計・グラフと同じ色・ほのかな発光)。1 行で出す */
 .rx__big { font-family: var(--mono); font-size: clamp(0.9rem, 7.2cqi, 2rem); white-space: nowrap; font-weight: 800; line-height: 1.2;
-  padding: 8px 12px; border-radius: 8px; background: #060a1e; color: #00ffcc;
+  padding: 8px 12px; border-radius: 8px; background: var(--neon-bg); color: var(--neon-fg);
   text-shadow: 0 0 6px currentColor; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
   overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .rx__meta { color: var(--muted); font-size: var(--fs-xs); }
@@ -303,17 +303,17 @@
 .mgrid__row.is-expect td { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
 @media (max-width: 1100px) { .rx__mid { grid-template-columns: minmax(0, 1fr); } }
 /* 履歴出力: 書いたファイルの一覧 */
-.maint__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-family: var(--font-mono, monospace); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.maint__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-family: var(--mono); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .maint__ftitle { font-family: inherit; font-weight: 600; font-size: var(--fs-sm); }
-.maint__fwarn { color: var(--ng, #c0392b); }
+.maint__fwarn { color: var(--state-error); }
 
 /* 判定の画像(2026-11-09) */
 .jd { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 10px 0; }
-.jd__card { border: 1px solid var(--line, #ddd); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
+.jd__card { border: 1px solid var(--rule); border-radius: 10px; padding: 12px; display: grid; gap: 8px; }
 .jd__card h4 { margin: 0; font-size: 18px; }
 .jd__row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--fs-sm); }
 .jd__row .input { width: 6em; }
 .jd__thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
 .jd__thumbs figure { margin: 0; text-align: center; font-size: 11px; max-width: 84px; }
-.jd__thumbs img { width: 80px; height: 60px; object-fit: contain; background: #fff; border: 1px solid var(--line, #ddd); border-radius: 6px; }
-.jd__thumbs .is-warn { color: #b26a00; }
+.jd__thumbs img { width: 80px; height: 60px; object-fit: contain; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
+.jd__thumbs .is-warn { color: var(--state-warn); }

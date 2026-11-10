@@ -544,6 +544,14 @@ def _snapshot(resolved: Path, copy: Path) -> bool:
         src.execute("BEGIN")
         src.execute("SELECT COUNT(*) FROM sqlite_master").fetchone()   # 読む鍵を取る
         shutil.copyfile(resolved, copy)
+        # **WAL なら -wal も写す。** 確定した中身のうち、まだ本体へ書き戻されて
+        # いない分は -wal にしか無い。本体だけ写すと、書き手が開いたままの間は
+        # 直前に確定した行(表そのものさえ)が抜けた姿を読む(試験で踏んだ)。
+        # 読む鍵を持っている間は -wal が巻き戻らず、書きかけの末尾は sqlite3 が
+        # 検査値で捨てるので、本体 → -wal の順に写せば確定した姿だけが揃う
+        wal = Path(str(resolved) + "-wal")
+        if wal.exists():
+            shutil.copyfile(wal, Path(str(copy) + "-wal"))
         src.execute("COMMIT")
         return True
     except (sqlite3.Error, OSError) as exc:
@@ -847,6 +855,16 @@ class SourceConnection:
             self._conn.commit()
             return cursor.rowcount
         except sqlite3.Error as exc:
+            # **失敗した文の書き込みの鍵を持ったままにしない。** sqlite3 は DML の前に
+            # 暗黙に BEGIN するので、一意制約(= もう入っている。ふつうに起きる)で
+            # 落ちても取引は開いたまま残り、ほかの端末は閉じるまで書けず
+            # ("database is locked")、次の `transaction()` も
+            # "cannot start a transaction within a transaction" で落ちていた
+            if self._conn.in_transaction:
+                try:
+                    self._conn.rollback()
+                except sqlite3.Error:            # pragma: no cover - 戻し損ね
+                    pass
             raise SourceError(str(exc)) from exc
 
     def insert(self, table: str, values: dict[str, Any]) -> int:

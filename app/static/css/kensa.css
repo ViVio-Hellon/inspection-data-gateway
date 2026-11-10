@@ -20,7 +20,7 @@
             min-width: 4.5em; height: 1.9em; cursor: pointer; border: 2px solid transparent; }
 .mgrid td[data-color="OK"] { background: var(--ok-bg); color: var(--state-ok); }
 .mgrid td[data-color="NG"] { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
-.mgrid td[data-color="YELLOW"] { background: #fff3a6; color: #5a4a00; outline: 2px solid var(--focus); }
+.mgrid td[data-color="YELLOW"] { background: var(--mark-bg); color: var(--mark-fg); outline: 2px solid var(--focus); }
 .mgrid td[data-border="RED"] { border-color: var(--state-error); }
 .mgrid td[data-underline="1"] { text-decoration: underline; }
 .mgrid td[data-hidden="1"] { visibility: hidden; cursor: default; }
@@ -41,10 +41,10 @@
 
 .log-lines { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); max-height: 9em; overflow: auto; margin: 0; padding: 0; list-style: none; }
 .works { display: flex; flex-wrap: wrap; gap: 4px; }
-.works .btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.works .btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 .blind { position: absolute; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center;
-         color: #fff; font-size: var(--fs-lg); border-radius: var(--radius); }
+         color: var(--on-scrim); font-size: var(--fs-lg); border-radius: var(--radius); }
 .kensa__center { position: relative; }
 
 /* 手入力の欄(歪・直角度・ラテラル・外観・不良・検入高さ・BH)。セルの中の input / select */
@@ -53,7 +53,7 @@
                  border-radius: var(--radius-xs); background: var(--surface); color: var(--ink); width: 100%; min-width: 3.5em; }
 .mgrid td.in[data-color="OK"] .cellin { background: var(--ok-bg); color: var(--state-ok); }
 .mgrid td.in[data-color="NG"] .cellin { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
-.mgrid td.in[data-color="YELLOW"] .cellin { background: #fff3a6; color: #5a4a00; }
+.mgrid td.in[data-color="YELLOW"] .cellin { background: var(--mark-bg); color: var(--mark-fg); }
 /* TeColor / LcColor の水色 = 「反映」や外観の書く先として選んでいる欄 */
 .mgrid td[data-color="CYAN"], .mgrid td.in[data-color="CYAN"] .cellin { background: var(--accent-soft); outline: 2px solid var(--accent); }
 .mgrid td.ng { cursor: pointer; }
@@ -95,7 +95,7 @@
 .lot-src__note { margin: 6px 0 0; padding: 4px 8px; font-size: var(--fs-xs); background: var(--warn-bg); color: var(--state-warn); border-radius: 4px; }
 
 /* 登録済みの値(検査員・ロット)を主役に。入力欄は控えめ(ご依頼 2026-11-05: 入力欄のほうが大きく、登録されていないように見えた) */
-.reg-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--state-ok); color: #fff; font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
+.reg-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--state-ok); color: var(--on-state); font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
 .reg-workers { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
 .reg-workers li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 6px 10px; border-radius: 8px; background: var(--ok-bg); }
 .reg-workers__name { font-size: 1.5rem; line-height: 1.2; font-weight: 800; word-break: keep-all; overflow-wrap: anywhere; }
@@ -112,7 +112,7 @@
 .inbox--sub label { font-size: var(--fs-xs); }
 
 /* 前の直の登録(この直には検査員がいない) */
-.reg-badge--stale { background: var(--sunken, #e9eef0) !important; color: var(--muted) !important; }
+.reg-badge--stale { background: var(--sunken) !important; color: var(--muted) !important; }
 li.is-stale { opacity: .6; }
 
 /* 測定器の伝送を受ける欄(見せないがフォーカスは受ける) */
@@ -167,8 +167,8 @@ li.is-stale { opacity: .6; }
 /* まとまりごとに色を変える(厚 = 青・幅 = 緑・丈 = 橙・対角 = 紫)。見出しの左に太い色の帯、公差の欄も同じ色 */
 .mgrid tr.grp th.rowh { border-left: 6px solid var(--g); background: color-mix(in srgb, var(--g) 22%, transparent); font-weight: 800; color: var(--ink); }
 .mgrid tr.grp td.tol { background: color-mix(in srgb, var(--g) 22%, transparent); color: var(--ink); }
-.mgrid tr.grp--atu { --g: #2f7fd6; } .mgrid tr.grp--hab { --g: #2e9d5b; } .mgrid tr.grp--tak { --g: #d98a1c; }
-.mgrid tr.grp--taik { --g: #8a5cc8; } .mgrid tr.grp--a { --g: #6b7f8c; } .mgrid tr.grp--b { --g: #9aa9b3; }
+.mgrid tr.grp--atu { --g: var(--hue-blue); } .mgrid tr.grp--hab { --g: var(--hue-green); } .mgrid tr.grp--tak { --g: var(--hue-orange); }
+.mgrid tr.grp--taik { --g: var(--hue-purple); } .mgrid tr.grp--a { --g: var(--hue-slate); } .mgrid tr.grp--b { --g: var(--hue-gray); }
 .mgrid tr.grp--first > * { border-top: 3px solid var(--g) !important; }
 .mgrid tr.grp th.rowh { padding-left: 6px; border-radius: 0; }
 .mgrid td.tol { font-weight: 700; font-size: var(--fs-md, 1rem); }
@@ -190,18 +190,18 @@ li.is-stale { opacity: .6; }
 .kpop .pad { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .kpop .inbox .input { min-height: 40px; font-size: var(--fs-md, 1rem); }
 .kpop__hint { margin: 0; padding: 0 14px 14px; font-size: var(--fs-sm); }
-#confiBox .btn[aria-pressed="true"] { background: var(--state-warn, #b26b00); color: #fff; border-color: transparent; font-weight: 700; }
+#confiBox .btn[aria-pressed="true"] { background: var(--state-warn); color: var(--on-state); border-color: transparent; font-weight: 700; }
 /* 測定者と時刻(WorkerTime) */
 #mgrid td .who { display: block; font-size: 10px; line-height: 1.2; color: var(--muted); font-weight: 400; white-space: nowrap; }
 .who-toggle { align-self: flex-start; }
-.who-toggle[aria-pressed="true"] { background: var(--accent-soft, #e0eeea); font-weight: 700; }
+.who-toggle[aria-pressed="true"] { background: var(--accent-soft); font-weight: 700; }
 /* 1366x768 でも歪・外観のタブ見出しが折り返し内に入るように、測定表は画面の高さに合わせて中でスクロールする */
 .kensa[data-phase="measure"] .mgrid-wrap { max-height: max(220px, calc(100vh - 370px)); overflow-y: auto; }
 .chooser__ops { margin-left: auto; display: flex; gap: 6px; }
 
 /* 2026-11-09: 受信機の状態・最後に届いた値・入らなかった理由 / 製品サイズ */
-.recv__dev, .recv__last { font-size: var(--fs-sm); color: var(--text-2, inherit); }
-.recv__why { font-size: var(--fs-sm); font-weight: 700; color: var(--state-error); background: var(--error-bg, transparent);
+.recv__dev, .recv__last { font-size: var(--fs-sm); color: inherit; }
+.recv__why { font-size: var(--fs-sm); font-weight: 700; color: var(--state-error); background: var(--warn-bg);
   padding: 2px 6px; border-radius: 4px; }
 .reg-lot__size { font-size: 1.2rem; font-weight: 800; letter-spacing: .02em; margin: 4px 0; font-variant-numeric: tabular-nums; }
 .reg-lot__size:empty { display: none; }
@@ -274,7 +274,7 @@ li.is-stale { opacity: .6; }
 .tol-edit__row .input { text-align: left; }
 
 /* ---- 2026-11-10b: 確認(UFConfi)は大きな窓・次に測る/受信欄は小さく・VC は大きく ---- */
-.kpop--confi { width: min(900px, 94vw); border: 3px solid var(--state-warn, #b26b00); }
+.kpop--confi { width: min(900px, 94vw); border: 3px solid var(--state-warn); }
 .kpop--confi::backdrop { background: rgba(0, 0, 0, .55); }
 .kpop--confi h3 { margin: 0; font-size: 1.5rem; color: var(--state-error); }
 .kpop--confi .pad { gap: 14px; padding: 18px 22px; }
@@ -285,7 +285,7 @@ li.is-stale { opacity: .6; }
 .confi__foot { justify-content: flex-end; }
 .confi__ok { min-height: 52px; min-width: 180px; font-size: 1.2rem; }
 .confi__note { margin: 0; font-size: var(--fs-sm); }
-#confiBox .btn[aria-pressed="true"] { background: var(--state-warn, #b26b00); color: #fff; border-color: transparent; }
+#confiBox .btn[aria-pressed="true"] { background: var(--state-warn); color: var(--on-state); border-color: transparent; }
 /* 測定中: 次に測るは 1 行 */
 .kensa[data-phase="measure"] .next { display: flex; align-items: baseline; justify-content: center; gap: 10px; padding: 3px 10px; }
 .kensa[data-phase="measure"] .next b { display: inline; font-size: 1.35rem; line-height: 1.2; }
@@ -304,9 +304,9 @@ li.is-stale { opacity: .6; }
 /* 2026-11-10: 位置ごとの判定の印(NG? ラベル: NG / 許容 / 保留)。色だけでなく文字でも */
 .ngflag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: var(--fs-sm);
           line-height: 1.5; letter-spacing: .05em; border: 2px solid transparent; white-space: nowrap; }
-.ngflag--ng    { background: var(--state-error); color: #fff; }
-.ngflag--allow { background: #f5b301; color: #1a1300; border-color: #a77800; }
-.ngflag--hold  { background: #7c4dff; color: #fff; border-color: #4b2bb3; }
+.ngflag--ng    { background: var(--state-error); color: var(--on-state); }
+.ngflag--allow { background: var(--flag-allow); color: var(--flag-allow-fg); border-color: var(--flag-allow-line); }
+.ngflag--hold  { background: var(--flag-hold); color: var(--flag-hold-fg); border-color: var(--flag-hold-line); }
 .ngflag--sm { padding: 0 6px; font-size: 11px; vertical-align: middle; }
 .mgrid tr.ngrow td.ng { padding: 4px 2px; text-align: center; }
 .mgrid tr.ngrow td.ng[data-flag] { background: transparent; }
@@ -324,3 +324,19 @@ li.is-stale { opacity: .6; }
 .strain-tol b { color: var(--accent); }
 .strain-tol__item { font-family: var(--mono); font-weight: 600; }
 .strain-tol__item.is-empty { color: var(--muted); font-weight: 400; }
+
+/* 2026-11-10: 低い画面(1366x768 など)では「操作」の札を列の中でスクロールせずに収める。
+   ボタンを 3 列の格子に詰め、札・余白・最近の操作の欄を小さくする(押す的は 32px を割らない)。
+   広い画面(1920x1080)は今までどおり */
+.kensa--compact[data-phase="measure"] .krail { max-height: calc(100vh - 205px); }
+.kensa--compact[data-phase="measure"] .rtabs > .subtabs-head { padding: 4px 6px; }
+.kensa--compact[data-phase="measure"] .rtabs .subtabs button { min-height: 30px; padding: 3px 10px; font-size: var(--fs-sm); }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .pad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .btn-row { display: contents; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .btn { min-height: 32px; min-width: 0; padding: 3px 4px; font-size: var(--fs-sm);
+  white-space: normal; line-height: var(--lh-tight); text-align: center; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .btn[hidden] { display: none; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .who-toggle { grid-column: 1 / -1; min-height: 28px; }
+/* 最近の操作は最新の 1 行だけ(広い画面では 8 行まで見える) */
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .log-lines { grid-column: 1 / -1; max-height: 1.3em; line-height: 1.3; overflow: hidden; }
+.kensa--compact[data-phase="measure"] [data-rpane="ops"] .log-lines li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

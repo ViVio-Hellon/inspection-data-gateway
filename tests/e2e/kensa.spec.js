@@ -168,12 +168,36 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
 
     // ---- 1366×768 で画面がはみ出さない ------------------------------------------
     S.step = "layout";
+    // 右の列の「操作」の札は、列の中でもスクロールせずに収まる(印刷の後 = 印刷履歴クリア・最近の操作が出ている状態)
+    const opsFit = async (label) => {
+      await page.click('[data-rtab="ops"]'); await W(250);
+      const f = await page.evaluate(() => {
+        const k = document.querySelector("#krail"), kb = k.getBoundingClientRect();
+        const btns = [...document.querySelectorAll('[data-rpane="ops"] .btn')].filter((b) => b.offsetParent);
+        const low = Math.max(...btns.map((b) => b.getBoundingClientRect().bottom));
+        return { sh: k.scrollHeight, ch: k.clientHeight, low: Math.round(low), bottom: Math.round(Math.min(kb.bottom, innerHeight)),
+                 n: btns.length, page: document.documentElement.scrollHeight, ih: innerHeight };
+      });
+      check(f.sh <= f.ch + 1 && f.low <= f.bottom && f.page <= f.ih, S.step, `${label}: 操作の札が列の中でスクロールせずに収まる ${JSON.stringify(f)}`);
+    };
+    await opsFit("1366×768 印刷の後");
     await page.reload(); await W(1500); await closeDialogs();
     const sc = await page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight,
       sw: document.documentElement.scrollWidth, iw: innerWidth }));
     check(sc.sw <= sc.iw, S.step, `横にはみ出さない ${sc.sw}/${sc.iw}`);
     check(sc.sh <= sc.ih, S.step, `縦にはみ出さない ${sc.sh}/${sc.ih}`);
     await shot(page, "kensa_1366");
+    // 明暗の配色 × 1366×768 / 1920×1080 でも同じ(写しは kensa_ops_<幅>x<高さ>_<配色>.png)
+    for (const theme of ["light", "dark"]) {
+      for (const [w, h] of [[1366, 768], [1920, 1080]]) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.evaluate((t) => { document.documentElement.dataset.theme = t; }, theme); await W(400);
+        await opsFit(`${w}×${h} ${theme}`);
+        await shot(page, `kensa_ops_${w}x${h}_${theme}`);
+      }
+    }
+    await page.evaluate(() => { delete document.documentElement.dataset.theme; });
+    await page.setViewportSize({ width: 1366, height: 768 }); await W(400);
 
     // ---- 全ヵ所: 検入高さの欄(F5: 打っている途中の値を描き直しで消さない)-----------------
     S.step = "zenkasho";
