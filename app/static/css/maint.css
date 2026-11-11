@@ -317,3 +317,20 @@
 .jd__thumbs figure { margin: 0; text-align: center; font-size: 11px; max-width: 84px; }
 .jd__thumbs img { width: 80px; height: 60px; object-fit: contain; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
 .jd__thumbs .is-warn { color: var(--state-warn); }
+
+/* 歪公差チェック: 当たった行と表のプレビュー */
+.maint__hits { margin: 4px 0 0; padding-left: 1.2em; font-size: 12px; }
+.maint__hits li.is-chosen { font-weight: 700; color: var(--accent); }
+.maint__pv { margin-top: 4px; font-size: 12px; }
+.maint__pv summary { cursor: pointer; color: var(--muted); }
+.maint__pvwrap { max-width: 100%; overflow-x: auto; }
+.maint__pvt { border-collapse: collapse; margin-top: 4px; white-space: nowrap; }
+.maint__pvt th, .maint__pvt td { border: 1px solid var(--rule); padding: 1px 6px; }
+.maint__pvt th { background: var(--sunken); font-weight: 600; }
+.maint__pvt tr.is-hit td { background: var(--ok-bg); }
+.maint__pvt tr.is-chosen td { background: var(--mark-bg); color: var(--mark-fg); font-weight: 700; }
+.maint__pvt td.is-cell { outline: 2px solid var(--accent); outline-offset: -2px; }
+.maint__final { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 8px; padding: 6px 8px;
+  background: var(--sunken); border-radius: 4px; font-size: 12px; }
+.maint__final dt { font-weight: 700; }
+.maint__finalh { grid-column: 1 / -1; font-weight: 700; }
