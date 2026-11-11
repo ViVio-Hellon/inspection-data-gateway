@@ -1,7 +1,7 @@
 // 検査画面の通しの試験(2026-11-10 リファクタリング 第1段 5)。tests/e2e/test_e2e.py から node で動かす。
 // 受信機の状態 → 検査員・ロット・作業 → 公差外の確認の窓(選ぶまで閉じない)→ 受信機(疑似端末)と受信 API で測定
 // → 作業範囲の選び欄(F4)→ Min/Max → 印刷・保存 → サイズ修正の窓 → 1366×768 ではみ出さない → 全ヵ所の検入高さ(F5)
-const { BASE, setup, shot, askAll, api, note, check, finish } = require("./common");
+const { BASE, setup, close, shot, askAll, api, note, check, finish } = require("./common");
 
 const PTY = process.env.E2E_PTY || "-";
 const WORKER = "9000000000001";
@@ -304,5 +304,5 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     await shot(page, "fatal_" + S.step).catch(() => {});
   }
   finish(S);
-  await browser.close();
+  await close(browser);
 })();

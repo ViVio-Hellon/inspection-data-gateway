@@ -58,7 +58,11 @@ TOKEN_REQUIRED_PREFIXES = ("/api/", "/report/")
 # `/api/alive`(心拍)も素通しにします。返すのは「受け取った」だけで
 # 業務データを含みません。トークンを要求すると、**トークンが切れた
 # 画面が黙って死んだ扱いになり**、開いているのに終了してしまいます。
-TOKEN_EXEMPT_PATHS = frozenset({"/api/health", "/api/alive"})
+#
+# `/api/screen/raise`(2回目の起動が「開いている画面を前に出して」と頼む。2026-11-11)も
+# 素通し。返すのは「開いている画面があるか」だけで、できるのは画面に知らせを出すことだけ。
+# ロックを書き直した後はトークンが分からないことがある(`adopt_running`)
+TOKEN_EXEMPT_PATHS = frozenset({"/api/health", "/api/alive", "/api/screen/raise"})
 
 
 
@@ -100,6 +104,7 @@ def create_app(mode: str = modes.DEFAULT, *,
     _register_trace(app)          # 記録番号を振るので、いちばん先
     _register_security(app)
     _register_db(app)
+    _register_screens(app)
     _register_static_version(app)
     _register_routes(app)
 
@@ -502,6 +507,34 @@ def _register_db(app: Flask) -> None:
         conn = g.pop("db", None)
         if conn is not None:
             conn.close()
+
+
+#: いま使っている画面でなくても通すもの(画面の心拍・取り合い・閉じる・終了・記録)
+_SCREEN_FREE_PREFIXES = ("/api/screen", "/api/alive", "/api/shutdown", "/api/log/client")
+
+
+def _register_screens(app: Flask) -> None:
+    """**操作できる画面は1つだけ**(2026-11-11。`ufkensa/screens.py`)。
+
+    書く操作は、いま使っている画面(最後に「こちらで使う」を押した画面)からだけ受け付ける。
+    ほかの画面には `inactive_screen` を返し、画面は「この画面はほかのウィンドウで
+    開いています」の覆いを出す。画面番号の無い要求(試験・curl)は通す。
+    """
+    from ufkensa import screens
+
+    @app.before_request
+    def _one_screen():                          # noqa: ANN202 - Flaskのフック
+        sid = request.headers.get(SCREEN_HEADER, "")
+        if not sid:
+            return None
+        reg = screens.of(app)
+        reg.touch(sid, request.headers.get("X-Screen-Prev", ""))
+        if request.path.startswith(_SCREEN_FREE_PREFIXES) or not _is_write(request):
+            return None
+        if reg.may_write(sid):
+            return None
+        log.info("使っていない画面からの書く操作を断りました: %s", request.path)
+        return jsonify(_error(screens.INACTIVE_CODE, screens.INACTIVE_MESSAGE)), 409
 
 
 def _register_static_version(app: Flask) -> None:

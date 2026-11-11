@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from flask import current_app, request
 
-from ufkensa import app_config, idle_exit, modes
+from ufkensa import app_config, idle_exit, modes, screens
 
 
 @dataclass
@@ -135,6 +135,7 @@ def shell_context(active: str, *,
         "health_poll_ms": app_config.health_poll_seconds() * 1000,
         "log_poll_ms": max(500, app_config.job_poll_ms() * 3),
         "alive_poll_ms": idle_exit.HEARTBEAT_MS,
+        "screen_poll_ms": screens.POLL_MS,
     }
 
 

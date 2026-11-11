@@ -560,6 +560,24 @@ def find_running(mode: str) -> Optional[dict]:
     return None
 
 
+def raise_open_screen(port: int, token: str = "", *, timeout: float = 3.0) -> bool:
+    """2回目の起動(2026-11-11)。動いている1つ目に画面が開いていれば「前に出て」と頼む。
+
+    True … 見えている画面がある(その画面が次の心拍で前に出る)。**ブラウザを開かない**
+    False … 開いている画面が無い・古い版で口が無い・応答しない。今までどおりブラウザを開く
+    """
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["X-Tool-Token"] = token
+    try:
+        with local_request(f"http://127.0.0.1:{port}/api/screen/raise", timeout=timeout,
+                           data=b"{}", method="POST", headers=headers) as res:
+            return bool(json.loads(res.read().decode("utf-8")).get("raised"))
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        log.info("開いている画面を確かめられませんでした(ブラウザを開きます): %s", exc)
+        return False
+
+
 def adopt_running(mode: str, health: dict) -> Optional[LockInfo]:
     """見つけた動いているほうのロックを書き直す(次の起動がすぐ合流できるように)。トークンは分からないので空。"""
     try:

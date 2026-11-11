@@ -118,8 +118,16 @@
     screenId: {{ screen_id | tojson }},
     healthPollMs: {{ health_poll_ms }},
     logPollMs: {{ log_poll_ms }},
-    alivePollMs: {{ alive_poll_ms }}
+    alivePollMs: {{ alive_poll_ms }},
+    screenPollMs: {{ screen_poll_ms }},
+    screenPrev: ""
   };
+  // 同じタブで読み込み直す前の番号(`screen.js` が pagehide で残す)。
+  // 使っている画面だったならサーバが引き継ぐ。読んだら消す(タブの複製に引き継がせない)
+  try {
+    window.APP.screenPrev = sessionStorage.getItem("ufkensa.screen.handoff") || "";
+    sessionStorage.removeItem("ufkensa.screen.handoff");
+  } catch (e) { /* 使えない */ }
 </script>
 <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
 {# 管理者以外停止のお願いの帯(`remote_stop.py`。all-tools と同じ中身)と、この画面の打ちかけを言い添える部品 #}

@@ -13,7 +13,7 @@ from typing import Optional
 
 from flask import Blueprint, current_app, jsonify, redirect, request
 
-from ufkensa import app_config, trace
+from ufkensa import app_config, screens, trace
 from ufkensa.logging_utils import get_logger
 
 from .. import shell
@@ -181,10 +181,12 @@ def alive():
     body = request.get_json(silent=True) or {}
     watch = idle_exit.get()
     if watch is None:
+        _alive_to_registry(body)
         return jsonify({"ok": True, "watching": False})
 
     # **画面ごとに見る。** 2つ開いているうちの1つを閉じても、もう1つは生きている
     screen = str(body.get("screen_id") or "")
+    _alive_to_registry(body)
     if body.get("leaving"):
         watch.leaving(screen)
     elif body.get("resumed"):
@@ -197,6 +199,47 @@ def alive():
     else:
         watch.beat(screen, visible=True if body.get("visible") else None)
     return jsonify({"ok": True, "watching": True})
+
+
+def _alive_to_registry(body: dict) -> None:
+    """開いている画面の名簿(`ufkensa/screens.py`)にも伝える。閉じたら「使っている画面」を空ける。"""
+    screen = str(body.get("screen_id") or "")
+    reg = screens.of(current_app)
+    if body.get("leaving"):
+        reg.leaving(screen)
+    elif body.get("visible") is False:
+        reg.hidden(screen)
+
+
+# ------------------------------------------------------------------
+# 操作できる画面は1つだけ(2026-11-11。`ufkensa/screens.py`)
+# ------------------------------------------------------------------
+@bp.get("/api/screen")
+def screen_ping():
+    """画面の心拍(`POLL_MS` ごと)。この画面がいま使っている画面か、「前に出て」の番号を返す。"""
+    sid = request.headers.get("X-Screen-Id", "")
+    res = screens.of(current_app).ping(
+        sid, visible=request.args.get("visible", "1") != "0",
+        prev=request.headers.get("X-Screen-Prev", ""))
+    return jsonify(res)
+
+
+@bp.post("/api/screen/claim")
+def screen_claim():
+    """「こちらで使う」。この画面をいま使っている画面にする(ほかの画面は次の心拍で覆いを出す)。"""
+    sid = request.headers.get("X-Screen-Id", "")
+    screens.of(current_app).claim(sid)
+    log.info("画面を切り替えました(こちらで使う)")
+    return jsonify({"active": True})
+
+
+@bp.post("/api/screen/raise")
+def screen_raise():
+    """2回目の起動から。見えている画面があれば「前に出て」を出す(`raised: true`)。
+    無ければ `raised: false` ── 起動はブラウザを開く。"""
+    raised = screens.of(current_app).request_raise()
+    log.info("2回目の起動: %s", "開いている画面を前に出します" if raised else "開いている画面がありません")
+    return jsonify({"raised": raised})
 
 
 def _number(value) -> float:

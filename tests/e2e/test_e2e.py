@@ -33,8 +33,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 ENABLED = os.environ.get("UFKENSA_E2E") == "1"
-#: 動かす順(screens.spec.js は kensa.spec.js の後の状態を使う)
-SPECS = ("kensa.spec.js", "screens.spec.js")
+#: 動かす順(screens.spec.js は kensa.spec.js の後の状態を使う。single_screen.spec.js は画面の取り合い)
+SPECS = ("kensa.spec.js", "screens.spec.js", "single_screen.spec.js")
 
 
 def _node() -> str:

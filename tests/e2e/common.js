@@ -57,10 +57,21 @@ async function api(page, method, url, body) {
   }, [method, url, body, TOKEN]);
 }
 
+// 閉じる。**画面を1つずつ閉じてから**(閉じたこと = pagehide の知らせがサーバに届く)。
+// いきなりブラウザを落とすと、次の試験の画面が「ほかのウィンドウで開いています」になる(心拍が途絶えるまで)。
+// 閉じた画面は、読み込み直しが引き継ぐあいだ(ufkensa/screens.py の HANDOFF_SEC = 5 秒)使っている画面のままなので、それも待つ
+async function close(browser) {
+  for (const ctx of browser.contexts()) {
+    for (const p of ctx.pages()) await p.close({ runBeforeUnload: false }).catch(() => {});
+  }
+  await new Promise((r) => setTimeout(r, 5500));
+  await browser.close();
+}
+
 function finish(S) {
   for (const e of S.errors) failures.push("pageerror " + e);
   console.log("E2E_RESULT " + JSON.stringify({ failures, checks: notes.length }));
   process.exitCode = failures.length ? 1 : 0;
 }
 
-module.exports = { BASE, TOKEN, setup, shot, askAll, api, note, check, finish };
+module.exports = { BASE, TOKEN, setup, close, shot, askAll, api, note, check, finish };
