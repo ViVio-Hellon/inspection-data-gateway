@@ -199,6 +199,57 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     await page.evaluate(() => { delete document.documentElement.dataset.theme; });
     await page.setViewportSize({ width: 1366, height: 768 }); await W(400);
 
+    // ---- 2026-11-11 現場の声: 歪・不良・検入高さ・BH・包装の知らせ(1366×768 暗い配色)-----------------
+    S.step = "tabs";
+    await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; }); await W(300);
+    await page.click('[data-tab="strain"]'); await W(300);
+    const tol = await page.evaluate(() => [...document.querySelectorAll("#strainTol .strain-tol__item")].map((x) => ({
+      k: x.dataset.k, border: getComputedStyle(x).borderLeftWidth, fs: parseFloat(getComputedStyle(x).fontSize) })));
+    check(tol.length === 5 && tol.every((t) => t.border === "6px" && t.fs >= 18), S.step, "歪の公差を大きく色の枠で出す " + JSON.stringify(tol));
+    const zh = await page.evaluate(() => { const i = document.querySelector('#strainGrid input[data-name^="Z"]'); return i ? i.getBoundingClientRect().height : 0; });
+    check(zh >= 38, S.step, "歪の入力欄を大きく " + zh);
+    await shot(page, "kensa_strain_dark");
+    check(await page.locator('[data-tab="bh"]').isHidden(), S.step, "BH の札は隠す");
+    // 不良: 枚数を打って Enter を押さずに「反映」→「枚数入力がありません」にならない(バグ 3)
+    await page.click('[data-tab="bad"]'); await W(300);
+    const lab = await page.evaluate(() => [...document.querySelectorAll('#defectList [role="option"]')].slice(0, 3).map((o) => {
+      const n = o.querySelector(".deflist__name"), c = o.querySelector(".deflist__code"), r = o.getBoundingClientRect();
+      return { name: n.textContent, code: c.textContent, codeRight: Math.round(r.right - c.getBoundingClientRect().right) };
+    }));
+    check(lab[0].name === "フクレ" && lab[0].code === "01" && lab[1].name === "" && lab[1].code === "02" && lab[2].name === "ムシレ"
+      && lab.every((x) => x.codeRight === lab[0].codeRight), S.step, "不良要因は 名前 左・コード 右 " + JSON.stringify(lab));
+    await page.click('#badGrid input[data-name="SBad"]'); await W(400);
+    await page.locator('#badGrid input[data-name="SBad"]').fill("2");
+    await page.click('#defectList [data-value="0"]');
+    await shot(page, "kensa_bad_dark");
+    const respP = page.waitForResponse((r) => r.url().endsWith("/api/kensa/defect-reflect"));
+    await page.click("#reflectBtn");
+    const rj = await (await respP).json();
+    const texts = (rj.messages || []).map((m) => m.text);
+    check(!texts.includes("枚数入力がありません") && !rj.stop, S.step, "打った枚数で反映できる " + JSON.stringify(texts));
+    check(((rj.view.bad || []).find((c) => c.pos === "S") || {}).value === "", S.step, "反映のあと枚数を空に戻す");
+    // 検入高さ: 厚板(H)では検査回数を出さない(少枚数だけ)
+    await page.click('[data-tab="kenh"]'); await W(300);
+    check(v.header.work !== "少枚数" && (await page.locator('#kenhBoxes input[data-name="KenCount"]').count()) === 0,
+      S.step, "少枚数でなければ検査回数を出さない " + v.header.work);
+    await shot(page, "kensa_kenh_H_dark");
+    // 包装仕様の注意・梱包保護材: 1 つの大きな窓。確認を押すまで閉じない
+    await page.evaluate(async () => {
+      const jb = await import("/static/js/judgebox.js");
+      jb.collectPacking({ kind: "packing_spec", text: ",B,直角度の測定をすること,先行データ票が必要です。" });
+      jb.collectPacking({ kind: "packing_material", text: "アングル" });
+      jb.collectPacking({ kind: "packing_material", text: "上部保護材:発泡シート" });
+    });
+    await W(400);
+    const secs = await page.evaluate(() => [...document.querySelectorAll("#packingBox[open] .packbox__sec h3")].map((h) => h.textContent));
+    check(JSON.stringify(secs) === JSON.stringify(["包装仕様の注意", "梱包保護材"]), S.step, "包装の知らせを 1 つの窓に " + JSON.stringify(secs));
+    await shot(page, "kensa_packing_dark");
+    await page.keyboard.press("Escape"); await W(200);
+    check(await page.locator("#packingBox[open]").count() === 1, S.step, "Esc では閉じない");
+    await page.click("#packingBox .packbox__ok"); await W(200);
+    check(await page.locator("#packingBox[open]").count() === 0, S.step, "確認で閉じる");
+    await page.evaluate(() => { delete document.documentElement.dataset.theme; });
+
     // ---- 全ヵ所: 検入高さの欄(F5: 打っている途中の値を描き直しで消さない)-----------------
     S.step = "zenkasho";
     if (PTY !== "-") {
