@@ -55,6 +55,7 @@ function renderTerminal() {
   $("termOverrideText").textContent = t.override ? `${t.override.text}。戻すまで起動しても このままです。` : "";
   if (t.from_access && t.can_override) notes.push("管理者なので、試験などのために手で変えられます(戻すまで アクセス権限のラインは当てません)。");
   if (t.from_access) notes.push(`アクセス権限から読み込んでいます(この PC のラインは ${ln.text})。変えるときはアクセス権限マスタのライン名を直してください。`);
+  else if (ln.text && t.override) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です。いまは管理者が手で ${t.label} にしています。`);
   else if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタを読めないので、保存してある設定で動いています)。`);
   else if (ln.problem) notes.push("アクセス権限マスタではラインが決まりません: " + ln.problem);
   if (S.rights.applied) notes.push(S.rights.applied + "。");
