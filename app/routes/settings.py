@@ -41,6 +41,7 @@ def _state() -> dict:
     s = auth.ensure()
     d = s.rights
     m = paths.mode()
+    ov = access_rights.line_override()
     return {
         "admin": auth.can_edit(),
         "terminal": {
@@ -51,8 +52,11 @@ def _state() -> dict:
             "numbers": list(terminal.MARU_NUMBERS),
             "unset": terminal.line() is None,
             # アクセス権限で決まったライン(設備名は読むだけ。丸徳で号機が決まらなければ号機だけ選べる)
-            "from_access": access_rights.line_locked(d),
-            "number_free": access_rights.line_locked(d) and d.facility == "丸徳" and not d.line_no,
+            "from_access": access_rights.line_locked(d) and not ov,
+            "number_free": access_rights.line_locked(d) and not ov and d.facility == "丸徳" and not d.line_no,
+            # 管理者がアクセス権限のラインを手で上書きしている(試験の TEST など)。戻すボタンで消すまで続く
+            "override": ({**ov, "text": access_rights.override_text(ov)} if ov else None),
+            "can_override": access_rights.line_locked(d) and _can_override(),
         },
         "mode": m,
         "modes": [{"key": k, "label": v} for k, v in paths.MODE_LABELS.items()],
@@ -144,12 +148,17 @@ def save_terminal():
     """未設定なら誰でも(VBA の SF3)。決まったあとに変えるのは管理者パスワード(all-tools「パスワードがあれば現行の通り変更可」)。"""
     body = request.get_json(silent=True) or {}
     d = auth.ensure().rights
+    overriding = False
     if access_rights.line_locked(d):
         number_free = d.facility == "丸徳" and not d.line_no
-        if str(body.get("facility", "")) != d.facility or not number_free:
+        same = str(body.get("facility", "")) == d.facility and number_free
+        if not same and _can_override():
+            overriding = True          # 管理者パスワード + Administrator: アクセス権限のラインを手で上書きする
+        elif not same:
             return _err("from_access", f"この端末のラインはアクセス権限から読み込んでいます({d.line_text()})。"
-                        "変えるときはアクセス権限マスタのライン名を直してください", 409)
-    if terminal.line() is not None:
+                        "変えるときはアクセス権限マスタのライン名を直してください"
+                        "(試験などで一時的に変えるには、管理者パスワードを入れた Administrator が変えられます)", 409)
+    if terminal.line() is not None and not overriding:
         refused = _refuse_path_edit()
         if refused:
             return refused
@@ -159,8 +168,33 @@ def save_terminal():
     except ValueError as e:
         return _err("bad_value", str(e))
     log.info("この端末の設備名を %s(%s)にしました", terminal.facility(), terminal.line_no())
+    if overriding:
+        if (terminal.facility(), terminal.line_no()) == (d.facility, d.line_no):
+            access_rights.clear_line_override()          # アクセス権限と同じラインを選んだ = 戻した
+        else:
+            access_rights.set_line_override(d.line_text(), terminal.line_label(), auth.ensure().user_id)
+        trace.event("settings.terminal.override", access_rights.override_text() or "アクセス権限のラインに戻しました",
+                    data={"before": before, "after": terminal.line_label(), "access": d.line_text()})
     trace.event("settings.terminal", f"この端末のラインを {before or '(未設定)'} → {terminal.line_label()} にしました",
                 data={"before": before, "after": terminal.line_label()})
+    return jsonify(_state())
+
+
+def _can_override() -> bool:
+    """アクセス権限のラインを手で上書きしてよいか: 管理者パスワードを通した かつ アクセス権限の Administrator。"""
+    return auth.master_unlocked() and auth.can_edit()
+
+
+@bp.post("/api/settings/terminal/restore")
+def restore_terminal():
+    """「アクセス権限のラインに戻す」: 手の上書きをやめ、アクセス権限で決まったラインを当てる。"""
+    before = terminal.line_label()
+    had = access_rights.clear_line_override()
+    d = auth.ensure().rights
+    note = access_rights.apply_line(d) if d is not None else ""
+    if had or note:
+        trace.event("settings.terminal.override", f"アクセス権限のラインに戻しました({before} → {terminal.line_label()})",
+                    data={"before": before, "after": terminal.line_label()})
     return jsonify(_state())
 
 

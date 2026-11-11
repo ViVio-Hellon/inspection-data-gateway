@@ -519,6 +519,40 @@ def overview() -> dict[str, Any]:
 # この端末に当てる
 # ------------------------------------------------------------------
 KEY_LINE_APPLIED = "kensa_access_line_applied"
+#: 管理者がアクセス権限のラインを手で上書きしたとき(試験のため TEST に切り替えるなど)。
+#: {"access": アクセス権限のライン, "line": いまのライン, "by": 誰が, "at": いつ}。消すまで起動でも当て直さない
+KEY_LINE_OVERRIDE = "kensa_access_line_override"
+
+
+def line_override() -> dict[str, Any]:
+    """手で上書きしているライン(無ければ {})。"""
+    from . import user_settings
+    v = user_settings.get(KEY_LINE_OVERRIDE, None)
+    return dict(v) if isinstance(v, dict) and v.get("line") else {}
+
+
+def set_line_override(access_text: str, line_label: str, by: str = "") -> None:
+    import datetime
+    from . import user_settings
+    user_settings.save(KEY_LINE_OVERRIDE, {"access": access_text, "line": line_label, "by": by,
+                                           "at": datetime.datetime.now().isoformat(timespec="seconds")})
+    log.info("ラインを手で変えました(アクセス権限: %s → いま: %s、%s)", access_text, line_label, by or "-")
+
+
+def clear_line_override() -> bool:
+    from . import user_settings
+    if not line_override():
+        return False
+    user_settings.delete(KEY_LINE_OVERRIDE)
+    log.info("手で変えたラインをやめ、アクセス権限のラインに戻します")
+    return True
+
+
+def override_text(o: Optional[Mapping[str, Any]] = None) -> str:
+    o = line_override() if o is None else o
+    if not o:
+        return ""
+    return f"ラインを手で変えています(アクセス権限: {o.get('access') or '-'} → いま: {o.get('line')})"
 
 
 def line_locked(d: Optional[Decision]) -> bool:
@@ -542,6 +576,9 @@ def apply_line(d: Decision) -> str:
     from . import user_settings
     from .kensa import terminal
     if not line_locked(d):
+        return ""
+    if line_override():                # 管理者が手で変えている間は当て直さない(戻すボタンで消すまで)
+        log.info("%s。アクセス権限のラインは当てません", override_text())
         return ""
     number = d.line_no
     if not number and d.facility == "丸徳" and terminal.facility() == "丸徳":

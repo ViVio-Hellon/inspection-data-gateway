@@ -98,7 +98,7 @@ def home_url(mode: str = modes.DEFAULT) -> str:
 
 def ribbon_values() -> dict[str, str]:
     """帯に常時出す値。ライン(この端末の設備名)・モード(オンライン/オフライン)・利用者・権限。"""
-    from ufkensa import auth
+    from ufkensa import access_rights, auth
     from ufkensa.kensa import paths, terminal
 
     s = auth.ensure()
@@ -108,6 +108,8 @@ def ribbon_values() -> dict[str, str]:
         "user": s.user_id if s else "",
         "level": s.label if s else "",
         "developer": False,
+        # 管理者がアクセス権限のラインを手で変えているときの知らせ(帯に出す)
+        "line_override": access_rights.override_text(),
     }
 
 
