@@ -96,13 +96,20 @@
         </div>
       </div>
       <div class="pad subpane" data-pane="bad" hidden>
-        <div class="visual">
+        <div class="visual badpane">
           <div><span class="muted" id="defectListLab">不良要因選択</span><div class="input deflist" id="defectList" role="listbox" aria-multiselectable="true" aria-labelledby="defectListLab" tabindex="0"></div></div>
           <div>
             <table class="mgrid" id="badGrid" aria-label="不良枚数"></table>
             <p class="muted">単位(枚)。欄を押して枚数を入れ、不良要因を選んで「反映」。</p>
             <div class="btn-row"><button class="btn btn--primary" type="button" id="reflectBtn">反映</button><button class="btn" type="button" id="cleBtn">ｸﾘｱ</button></div>
           </div>
+          <figure class="defprev" aria-labelledby="defPrevLab">
+            <figcaption class="muted" id="defPrevLab">不良要因票(印刷・保存される内容。見るだけ)</figcaption>
+            <div class="defprev__box" id="defPrevBox">
+              <p class="muted defprev__empty" id="defPrevEmpty">まだ反映していません。反映すると、ここに不良要因票が出ます。</p>
+              <iframe id="defPrev" title="不良要因票の見本" tabindex="-1" hidden></iframe>
+            </div>
+          </figure>
         </div>
       </div>
       <div class="pad subpane" data-pane="kenh" hidden>

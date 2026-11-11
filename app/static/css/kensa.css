@@ -68,6 +68,15 @@
 .subtabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
 .visual { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 10px; align-items: start; }
 .visual select { width: 100%; font-size: var(--fs-sm); }
+/* 不良タブ: 入力の右に 不良要因票の見本(2026-11-11)。紙なので地は白のまま、箱の中で縮めて収める */
+.visual.badpane { grid-template-columns: 180px minmax(0, 1fr); }
+.visual.badpane > :first-child { grid-row: 1 / span 2; }
+.visual.badpane > .defprev { grid-column: 2; }
+.defprev { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.defprev figcaption { font-size: var(--fs-sm); }
+.defprev__box { border: 1px solid var(--rule); border-radius: var(--radius-xs); background: var(--paper); height: 280px; overflow: auto; position: relative; }
+.defprev__box iframe { border: 0; display: block; width: 100%; height: 100%; background: var(--paper); }
+.defprev__empty { margin: 0; padding: 12px; color: var(--hue-slate); }
 .kenh { display: flex; flex-wrap: wrap; gap: 6px; }
 .kenh table { width: auto; }
 .vc { display: flex; gap: 10px; flex-wrap: wrap; }

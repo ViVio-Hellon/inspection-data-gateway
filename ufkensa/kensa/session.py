@@ -1378,6 +1378,17 @@ class Session:
                 for c in range(c1, c2 + 1):
                     sh.set(r, c, None)
 
+    def defect_preview_html(self) -> Optional[str]:
+        """不良タブの見本(2026-11-11): 印刷するのと同じ 不良要因印刷_<L> を帳票 HTML にする。読むだけ(シートは作らない)。
+
+        まだシートが無い(一度も反映していない)ときは None。"""
+        with self._lock:
+            lname = self.state.lname
+            if not lname:
+                return None
+            model = report_model.render_defect_sheet(self.store, lname)
+            return None if model is None else report_html.render(model, title="不良要因票")
+
     # --- 検入高さの山数(YamaLB)-----------------------------------------
     def yama_lb(self, value: str) -> Result:
         return self._run(self._yama_lb, value)

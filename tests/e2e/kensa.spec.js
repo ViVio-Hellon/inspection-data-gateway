@@ -256,6 +256,21 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     const texts = (rj.messages || []).map((m) => m.text);
     check(!texts.includes("枚数入力がありません") && !rj.stop, S.step, "打った枚数で反映できる " + JSON.stringify(texts));
     check(((rj.view.bad || []).find((c) => c.pos === "S") || {}).value === "", S.step, "反映のあと枚数を空に戻す");
+    // 不良要因票の見本: 反映した枚数が入力の横の見本に出る(印刷と同じ帳票。2026-11-11)
+    await W(800);
+    const pv = await page.evaluate(() => {
+      const f = document.getElementById("defPrev"), b = document.getElementById("defPrevBox").getBoundingClientRect();
+      const d = f && !f.hidden && f.contentDocument;
+      const tds = d ? [...d.querySelectorAll("td")].map((t) => t.textContent.trim()) : [];
+      return { shown: !!d, has2: tds.includes("2"), right: Math.round(b.right), bottom: Math.round(b.bottom),
+               sw: d ? d.documentElement.scrollWidth : 0, fw: f ? f.clientWidth : 0 };
+    });
+    check(pv.shown && pv.has2, S.step, "反映すると不良要因票の見本に枚数が出る " + JSON.stringify(pv));
+    check(pv.right <= 1366 && pv.bottom <= 768 && pv.sw <= pv.fw + 2, S.step, "見本は画面と箱に収まる " + JSON.stringify(pv));
+    await shot(page, "kensa_bad_preview_dark");
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light")); await W(200);
+    await shot(page, "kensa_bad_preview_light");
+    await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark")); await W(200);
     // 検入高さ: 厚板(H)では検査回数を出さない(少枚数だけ)
     await page.click('[data-tab="kenh"]'); await W(300);
     check(v.header.work !== "少枚数" && (await page.locator('#kenhBoxes input[data-name="KenCount"]').count()) === 0,
