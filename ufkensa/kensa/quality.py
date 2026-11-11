@@ -1454,14 +1454,17 @@ def _ratefuri_old(ta: Sequence[Sequence[Any]], C: dict[str, int], args: tuple) -
 _RATEFURI_ANCHORS = ("製造材質", "厚下", "幅下", "丈下")
 
 
-def ratefuri_ctx(args: tuple) -> dict[str, Any]:
-    return dict(zip(match_rules.RATEFURI_FIELDS, args))
+def ratefuri_ctx(args: tuple, lot: Optional["LotData"] = None) -> dict[str, Any]:
+    """照合の入力: 引当の 8 項目 + ロットの行(仕掛)のオーダー・BOX実績の項目(lot があれば)。"""
+    ctx = match_rules.lot_ctx(lot.fields, lot.records[0]) if lot is not None and lot.records else {}
+    ctx.update(zip(match_rules.RATEFURI_ARGS, args))
+    return ctx
 
 
 def _ratefuri_new(g: "match_rules.Group", ta: Sequence[Sequence[Any]], pf: Sequence[str], C: dict[str, int],
-                  args: tuple) -> tuple[list[int], list[bool]]:
+                  args: tuple, lot: Optional["LotData"] = None) -> tuple[list[int], list[bool]]:
     """新: 照合ルール「ラテフリ直角」で絞る。戻りは旧と同じ形(管理番号, 最後の行の Conditions(4,6,7,8))。"""
-    res = match_rules.match(g, ta, pf, ratefuri_ctx(args))
+    res = match_rules.match(g, ta, pf, ratefuri_ctx(args, lot))
     matching = [clng(cell(ta[i], C["管理番号"])) for i in res.rows]
     return matching, ratefuri_flags(g, res)
 
@@ -1482,8 +1485,11 @@ def ratefuri_flags(g: "match_rules.Group", res: "match_rules.MatchResult") -> li
 def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: float, haba: float, take: float, *,
                    additional_caption: str = "", mitsubishi_visible: bool = False, work_flag: str = "",
                    zenkasho_sheet: bool = True, lateral_lot: Optional[LotData] = None,
-                   lateral_quiet: bool = False) -> ReturnItemResult:
+                   lateral_quiet: bool = False, lot_row: Optional[LotData] = None) -> ReturnItemResult:
     """QP.DbReturnItem (QP:1176-1456)。「ラテフリ直角」でフリー反り・ラテラルボー・直角度の要否と表示。
+
+    lot_row: ロットの行(SIKALOT 仕掛)。照合ルールでオーダー・BOX実績の寸法を見るとき使う。
+    渡さなければ lateral_lot(同じ仕掛の行)を使う。既定のルールは引当の 8 項目だけを見る。
 
     atu/haba/take は VBA の Single 引数(製造の寸法)。additional_caption: いまの UF1.Additional.Caption。
     lateral_lot: 別表A/B のとき DBdisplayラテラル に渡すロット(UF1.Lot / UFMitsubishi.LotBox の Arrbox 結果)。
@@ -1508,7 +1514,7 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     args = (nou, tori, youtc, zai, tyou, atu, haba, take)
     g = match_rules.group(match_rules.RATEFURI)
     if g.new_way:
-        matching, c = _ratefuri_new(g, ta, pf, C, args)
+        matching, c = _ratefuri_new(g, ta, pf, C, args, lot_row if lot_row is not None else lateral_lot)
         if _shadow_on(g):
             match_rules.compare(match_rules.RATEFURI, _ratefuri_old(ta, C, args), (matching, c), repr(args))
     else:

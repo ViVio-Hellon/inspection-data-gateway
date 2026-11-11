@@ -37,8 +37,10 @@ def state() -> dict[str, Any]:
     for name, g in mr.groups(fresh=True).items():
         path, fields, rows = _table(g)
         out.append({**mr.to_payload(g), "table_fields": fields, "table_rows": len(rows), "table_path": str(path or ""),
-                    "default": mr.to_payload(mr.BY_NAME[name])})
-    return {"groups": out, "compares": list(mr.COMPARES), "preps": list(mr.PREPS), "blanks": list(mr.BLANKS),
+                    "default": mr.to_payload(mr.BY_NAME[name]),
+                    "field_sources": {f: mr.field_source(f) for f in g.fields},
+                    "dim_swap": [list(x) for x in mr.DIM_SWAP.get(name, ())]})
+    return {"groups": out, "help_switch": mr.HELP_SWITCH, "compares": list(mr.COMPARES), "preps": list(mr.PREPS), "blanks": list(mr.BLANKS),
             "use_rows": list(mr.USE_ROWS), "history": mr.history()}
 
 
@@ -110,7 +112,7 @@ def _ratefuri_inputs(store: LocalStore, lot: str) -> list[tuple[str, dict]]:
         if args in seen:
             continue
         seen.add(args)
-        out.append((f"{args[0]} / {args[1]}", q.ratefuri_ctx(args)))
+        out.append((f"{args[0]} / {args[1]}", q.ratefuri_ctx(args, getattr(lv, "data", None))))
     return out
 
 

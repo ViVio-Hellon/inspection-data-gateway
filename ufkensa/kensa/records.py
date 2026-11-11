@@ -435,6 +435,8 @@ def main_data_save(store: LocalStore, snap: KensaSnapshot, *, db_path: Optional[
             sh.write(n, 82, "〆")
 
     save_allowed(store, sh.name, period, snap.lot, snap.ng)
+    from . import match_rules
+    match_rules.record_use(snap.lot, f"{sh.name} {cell_text(period)}")   # 使った照合ルールの版(記録の jsonl だけ)
     end_r = sh.last_row(1)                                           # SaveLoad:4535-4561
     end_c = sh.last_col(1)
     values: list[Value] = [snap.line_name] + [sh.get(end_r, c) for c in range(1, end_c + 1)]
