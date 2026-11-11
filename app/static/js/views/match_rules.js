@@ -47,9 +47,31 @@ function pick(name) {
   render();
   $("rTrial").replaceChildren();
   $("rReg").replaceChildren();
+  renderInputs();
 }
 
-function colCount(cmp) { return cmp === "範囲" ? 3 : 1; }
+/** 試し照合の直接入力(測定機器ID: ライン・厚・用途 / 設備仕様: ライン・オーダー厚)。空ならロットの値 */
+function renderInputs() {
+  const names = G().inputs || [];
+  const box = $("rInputs");
+  box.hidden = !names.length;
+  box.replaceChildren(...names.flatMap((n) => {
+    const id = "rIn_" + n;
+    const lab = el("label", "", n);
+    lab.htmlFor = id;
+    const inp = el("input", "input");
+    Object.assign(inp, { id, size: n === "ライン" ? 6 : 5, maxLength: 40, placeholder: n === "ライン" ? "全部" : "ロットの値" });
+    inp.dataset.input = n;
+    return [lab, inp];
+  }));
+}
+function trialInputs() {
+  const out = {};
+  for (const i of $("rInputs").querySelectorAll("input[data-input]")) if (i.value.trim()) out[i.dataset.input] = i.value.trim();
+  return out;
+}
+
+function colCount(cmp, now) { return cmp === "範囲" ? (now === 2 ? 2 : 3) : 1; }
 
 function render() {
   const g = G(), w = R.work;
@@ -70,11 +92,11 @@ function render() {
     ord.setAttribute("aria-label", "順番");
     ord.addEventListener("change", () => { r.order = Number(ord.value); });
     const colTd = el("td");
-    const n = colCount(r.compare);
+    const n = colCount(r.compare, r.columns.length);
     while (r.columns.length < n) r.columns.push("");
     r.columns.length = n;
     r.columns.forEach((c, k) => {
-      const s = select(cols, c, ["列", "下の列", "上の列", "値の列"][n === 3 ? k + 1 : 0]);
+      const s = select(cols, c, ["列", "下の列", "上の列", "値の列"][n > 1 ? k + 1 : 0]);
       s.addEventListener("change", () => { r.columns[k] = s.value; });
       colTd.append(s);
     });
@@ -163,8 +185,8 @@ function stepTable(run) {
 $("rTrialForm").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   try {
-    const d = await api.post("/api/maint/match_rules/trial", { group: R.name, lot: $("rLot").value, edited: R.work });
-    const out = [el("p", "muted maint__small", d.note || `${d.lot}: ${d.cases.length} 件(表 ${d.table_rows} 行)`)];
+    const d = await api.post("/api/maint/match_rules/trial", { group: R.name, lot: $("rLot").value, edited: R.work, inputs: trialInputs() });
+    const out = [el("p", "muted maint__small", d.note || `${d.lot || "直接入力"}: ${d.cases.length} 件(表 ${d.table_rows} 行)`)];
     for (const c of d.cases) {
       const card = el("section", "card");
       const h = el("header");

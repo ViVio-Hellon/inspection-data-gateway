@@ -1161,6 +1161,17 @@ function rxSelect(ln) {
   pair("入力先", t.st ? `${t.st} … ${t.st_label}` : "");
   pair("ほかのラインで同じ番号", (t.others || []).map((r) => `${r["ライン"]} ${r["機器名"]}`).join("・"));
   pair("帳票の機器欄", (t.report || []).join(" / "));
+  if (t.rule) {     // 使う機器(厚・用途で引く行)は 照合ルール「測定機器ID」で決まる
+    const go = el("button", "btn btn--small", `照合ルール「${t.rule.group}」(版 ${t.rule.version || 0}${t.rule.new_way ? "" : "・いままでのコード"})`);
+    go.type = "button";
+    go.id = "rxRule";
+    go.title = "保守 → 照合ルール で、厚・用途から機器を引くルールを見る・直す";
+    go.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("match-rules:open", { detail: { group: t.rule.group, order: t.rule.order } }));
+    });
+    kv.append(el("dt", "", "使う機器の決め方"));
+    const dd = el("dd"); dd.append(go); kv.append(dd);
+  }
   $("rxNotes").replaceChildren(...(t.notes || []).map((n) => el("p", "maint__note", n)));
   // 案C: 下の表で当たった行を光らせる(このラインの同じ番号 = 判定の色、使うはずの機器 = 枠)
   if (grids.device) {

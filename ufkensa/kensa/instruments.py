@@ -23,10 +23,10 @@ B53 を直した場合は、"大板" で引けなければ実際のライン(バ
 from __future__ import annotations
 
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Callable, Optional, Sequence
 
-from . import ado_filter, datasource, flow, lines, paths, size_thresholds, vbx
+from . import ado_filter, datasource, flow, lines, match_rules, paths, size_thresholds, vbx
 from .flow import WARN
 from .lot import SubscriptOutOfRange
 
@@ -64,29 +64,30 @@ def check_thick_and_code(lower: Any, upper: Any, youto_cond: Any, atu: float, yo
     B52: Single と Double の比較なので 28.01 などの境界ちょうどで外れる。直した場合は厚下・厚上も Double で比べる。
     """
     lower_t, upper_t = _bounds(lower, upper)
-    tmp = "" if youto_cond is None else str(youto_cond)
-    items = tmp.split(",") if tmp != "" else []      # Split("", ",") は要素 0 個
-    found = False
-    for item in items:
-        if vbx.left(item, 1) == "≠":
-            if vbx.mid(item, 2) != yout:
-                found = True
-                break
-        elif vbx.left(item, 1) == "*":
-            if _instr(yout, vbx.mid(item, 2)) > 0:
-                found = True
-                break
-        elif vbx.right(item, 1) == "*":
-            if _instr(yout, vbx.left(item, len(item) - 1)) > 0:
-                found = True
-                break
-        else:
-            if item == yout:
-                found = True
-                break
+    found = youto_match(youto_cond, yout)
     if found:
         o = vbx.val_single(atu)
         return lower_t <= o and upper_t >= o
+    return False
+
+
+def youto_match(youto_cond: Any, yout: str) -> bool:
+    """CheckThickAndCode の用途の部分(MT:509-545)。照合ルールの 含む条件式 もこれを呼ぶ。"""
+    tmp = "" if youto_cond is None else str(youto_cond)
+    items = tmp.split(",") if tmp != "" else []      # Split("", ",") は要素 0 個
+    for item in items:
+        if vbx.left(item, 1) == "≠":
+            if vbx.mid(item, 2) != yout:
+                return True
+        elif vbx.left(item, 1) == "*":
+            if _instr(yout, vbx.mid(item, 2)) > 0:
+                return True
+        elif vbx.right(item, 1) == "*":
+            if _instr(yout, vbx.left(item, len(item) - 1)) > 0:
+                return True
+        else:
+            if item == yout:
+                return True
     return False
 
 
@@ -136,38 +137,82 @@ def db_return_micro(line_name: str, atu: float, yout: str, n: str = "", dep: str
         return c[name]
 
     atu = vbx.single(atu)
-    temp = [r for r in rows if lines.matches(r[col("ライン")], line_name)]
+    g = match_rules.group(match_rules.MICRO)
+    if g.new_way:
+        temp_i, hit = _micro_new(g, fields, rows, line_name, atu, yout, dep == "")
+        if match_rules.shadow_on(g):
+            match_rules.compare(match_rules.MICRO, _micro_old(fields, rows, col, line_name, atu, yout, dep == ""),
+                                (temp_i, hit), repr((line_name, atu, yout, dep)))
+    else:
+        temp_i, hit = _micro_old(fields, rows, col, line_name, atu, yout, dep == "")
+    temp = [rows[i] for i in temp_i]
     if not temp:
         return ""
     if dep != "":
         f = ado_filter.compile_filter("[機器名]= '" + ado_filter.quote(dep) + "'")
-        hit = [r for r in temp if f({"機器名": r[col("機器名")]})]
-        if not hit:
+        hits = [r for r in temp if f({"機器名": r[col("機器名")]})]
+        if not hits:
             return ""
-        return hit[0][col("出力テキスト")]
-
-    flag = any(r[col("用途")] != "" for r in temp)
-    itti = -1
-    if flag:
-        for i, r in enumerate(temp):
-            if check_thick_and_code(r[col("厚下")], r[col("厚上")], r[col("用途")], atu, yout):
-                itti = i
-                break
-    if itti < 0:
-        o = vbx.val_single(atu)
-        for i, r in enumerate(temp):
-            lower_t, upper_t = _bounds(r[col("厚下")], r[col("厚上")])     # B52
-            if lower_t <= o and upper_t >= o:
-                itti = i
-                break
-    if itti < 0:
+        return hits[0][col("出力テキスト")]
+    if hit is None:
         return ""
+    temp, itti = rows, hit
     out = temp[itti][col("出力テキスト")]
     if n == "機器名":
         out = temp[itti][col("機器名")]
     elif n == "ID":
         out = temp[itti][col("ID")]
     return out
+
+
+def _micro_old(fields: Sequence[str], rows: Sequence[Sequence[Any]], col: Callable[[str], int], line_name: str,
+               atu: float, yout: str, want_hit: bool = True) -> tuple[list[int], Optional[int]]:
+    """旧: DbReturnMicro の照合(MT:431-495)をコードで。(ラインの行の位置, 合った行の位置)。
+    照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    temp = [i for i, r in enumerate(rows) if lines.matches(r[col("ライン")], line_name)]
+    if not temp or not want_hit:
+        return temp, None
+    flag = any(rows[i][col("用途")] != "" for i in temp)
+    if flag:
+        for i in temp:
+            r = rows[i]
+            if check_thick_and_code(r[col("厚下")], r[col("厚上")], r[col("用途")], atu, yout):
+                return temp, i
+    o = vbx.val_single(atu)
+    for i in temp:
+        lower_t, upper_t = _bounds(rows[i][col("厚下")], rows[i][col("厚上")])     # B52
+        if lower_t <= o and upper_t >= o:
+            return temp, i
+    return temp, None
+
+
+def _micro_new(g: "match_rules.Group", fields: Sequence[str], rows: Sequence[Sequence[Any]], line_name: str,
+               atu: float, yout: str, want_hit: bool = True) -> tuple[list[int], Optional[int]]:
+    """新: 照合ルール「測定機器ID」で引く。戻りは旧と同じ形。
+
+    1. 先に外すルール(ライン)で絞る。2. 含む条件式 のセルがどれかの行にあれば全部のルールで最初の行。
+    3. 無ければ 含む条件式 のルールを外して最初の行。
+    """
+    from . import quality as q
+    for r in g.rules:
+        for c in r.columns:
+            if r.enabled and datasource.column_index(fields, c) < 0:
+                raise SubscriptOutOfRange(f"測定機器ID に {c} の列が無い")
+    pre, rest = match_rules.split_pre(g)
+    ctx = {"ライン": line_name, "厚": atu, "用途": yout}
+    temp = match_rules.match(pre, rows, fields, ctx).matched
+    if not temp or not want_hit:
+        return temp, None
+    sub = [rows[i] for i in temp]
+    youto_rules = [r for r in rest.rules if r.enabled and r.compare == "含む条件式"]
+    flag = any(q.vstr(q.cell(r, q.col_of(fields, x.columns[0]))) != "" for x in youto_rules for r in sub)
+    if flag:
+        res = match_rules.match(rest, sub, fields, ctx)
+        if res.rows:
+            return temp, temp[res.rows[0]]
+    res = match_rules.match(replace(rest, rules=tuple(r for r in rest.rules if r.compare != "含む条件式")),
+                            sub, fields, ctx)
+    return temp, (temp[res.rows[0]] if res.rows else None)
 
 
 # ------------------------------------------------------------------

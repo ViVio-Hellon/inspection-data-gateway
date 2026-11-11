@@ -379,6 +379,10 @@ def device_test(text: str, line: str, atu: str = "", hab: str = "", youto: str =
     except (datasource.DbMissing, datasource.TableMissing, lotmod.SubscriptOutOfRange) as e:
         out["expect"] = None
         out["notes"].append(f"測定機器ID を引けません: {e}")
+    from . import match_rules
+    g = match_rules.group(match_rules.MICRO)
+    out["rule"] = {"group": g.name, "order": next((r.order for r in g.rules if r.compare == "含む条件式"), 0),
+                   "version": g.version, "new_way": g.new_way}
     judge: dict[str, Any] = {"ok": None, "text": ""}
     if kind == "DT" and out["expect"] is not None:
         try:

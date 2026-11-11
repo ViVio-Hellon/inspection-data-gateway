@@ -16,6 +16,10 @@
     以上        check_size(ロットの値 ≧ CLng(表)。空なら通す)
     一致        表のセル(文字)とロットの値(文字)が同じ
     当板用か    表のセルが「当板用」かどうかが、ロットの値(「当板用」/ それ以外)と同じ。合わない行は先に外す
+    ライン      表のセル(ライン名)とラインが lines.matches で同じ(文字の幅だけ揃える。D13)。合わない行は先に外す
+    含む条件式  表のセル(カンマ区切り)のどれかに当たる: ≠X = X でない / *X・X* = X を**含む** / それ以外は完全一致
+                (MachineTransfer.CheckThickAndCode の用途。条件式 の前方一致とは別。空のセルは当たらない)
+第3段(測定機器ID・設備仕様)の 範囲 は 空のとき=通さない(check_within: 空は 0)。B52 を再現するなら 前処理=Single丸め。
 前処理: 範囲 で「Single丸め」= 下・上を Single にして比べる(B71 の再現側)。既定は なし(Double。いまのコード)
 空のとき: 条件式 で「通さない」= 表のセルが空でも通さない(blank_flag)
 
@@ -50,7 +54,9 @@ USE_EV = "match_rules.used"
 CHANGE_EV = "match_rules.change"
 TTL_SEC = 5.0
 
-COMPARES = ("条件式", "範囲", "以上", "一致", "当板用か")
+COMPARES = ("条件式", "範囲", "以上", "一致", "当板用か", "ライン", "含む条件式")
+#: 合わない行を先に外す比べ方(VBA の GoTo / ADO Filter。最後に評価した行には数えない)
+PREFILTER = ("当板用か", "ライン")
 PREPS = ("なし", "Single丸め")
 BLANKS = ("通す", "通さない")
 USE_ROWS = ("最初", "最後", "全部")
@@ -58,6 +64,8 @@ USE_ROWS = ("最初", "最後", "全部")
 RATEFURI = "ラテフリ直角"
 PACK = "梱包保護材"
 QP = "平坦度一覧QP追加"
+MICRO = "測定機器ID"
+EQUIP = "設備仕様"
 
 #: 試験用: 新旧を両方走らせ、違えば例外(tests/_isolation で真にする)
 SHADOW_STRICT = False
@@ -88,8 +96,8 @@ class Group:
     version: int = 0           # 照合ルールの版(保存のたびに 1 増える)
 
 
-def _r(order: int, cols: str, fld: str, cmp: str, note: str = "") -> Rule:
-    return Rule(order, tuple(cols.split(",")), fld, cmp, note=note)
+def _r(order: int, cols: str, fld: str, cmp: str, note: str = "", blank: str = "通す") -> Rule:
+    return Rule(order, tuple(cols.split(",")), fld, cmp, blank=blank, note=note)
 
 
 #: DbReturnItem の引数(引当の行。Lot情報履歴 / SIKAHIKINOW + 仕掛の製造寸法)。既定のルールはこれだけを見る
@@ -106,6 +114,11 @@ PACK_FIELDS = ("包装仕様NO", "材質", "調質", "用途ｺｰﾄﾞ", "厚"
 QP_FIELDS = ("用途ｺｰﾄﾞ", "製造材質", "ｵｰﾀﾞｰ材質", "製造調質", "ｵｰﾀﾞｰ調質", "ｵｰﾀﾞｰ板厚", "ｵｰﾀﾞｰ板幅", "ｵｰﾀﾞｰ板丈",
              "製造板厚", "製造板幅", "製造板丈", "BOX実績_板厚", "BOX実績_板幅", "BOX実績_板丈",
              "引当_納入先", "納入先ｺｰﾄﾞ", "引当_取引先", "取引先ｺｰﾄﾞ", "送り先名", "送り先ｺｰﾄﾞ", "BOX設計_横割数(板)")
+#: 測定機器ID で選べる項目(MachineTransfer.DbReturnMicro の引数: ライン・画面の厚・用途)
+MICRO_FIELDS = ("ライン", "厚", "用途")
+#: 設備仕様 で選べる項目(QP.CheckEquipmentDb の引数: 端末の設備名・仕掛の製造材質・オーダー寸法・製品単重)
+EQUIP_FIELDS = ("ライン", "製造材質", "オーダー厚", "オーダー幅", "オーダー丈", "単重")
+
 #: 平坦度一覧QP追加 の既定のルールの見出し(歪公差チェックの trace に出す。順番 → 名前)
 QP_LABELS = {10: "用途コード", 20: "製造材質", 30: "オーダー材質", 40: "製造調質", 50: "オーダー調質",
              60: "板厚(下〜上)", 70: "板幅(下〜上)", 80: "板丈(下〜上)", 90: "納入先", 100: "納入先コード",
@@ -149,6 +162,21 @@ DEFAULT_GROUPS: tuple[Group, ...] = (
         _r(140, "送り先コード", "送り先ｺｰﾄﾞ", "条件式", "DBQP 条件14"),
         _r(150, "巾取数幅分割数のこと", "BOX設計_横割数(板)", "以上", "DBQP 条件15"),
     ), "検査番号の頭(検番の頭か空)で先に絞った行に当てる。一致した行は全部。納入先などが書いてある行を優先(コード)"),
+    Group(MICRO, "測定機器ID", "伝送用ファイル", MICRO_FIELDS, "最初", True, (
+        _r(10, "ライン", "ライン", "ライン", "MT:431 [ライン]='<ライン>'(D13)"),
+        _r(20, "用途", "用途", "含む条件式", "MT:516-545 CheckThickAndCode"),
+        _r(30, "厚下,厚上", "厚", "範囲", "MT:547・489-490(B52)", "通さない"),
+    ), "最初に合う行の出力テキスト(機器名・ID)。用途の列がこのラインで全部空・用途で合う行が無いときは、"
+       "含む条件式 のルールを外して(厚だけで)引き直す。デプスなどの機器名指定はラインだけで引く(コード)"),
+    Group(EQUIP, "設備仕様", "伝送用ファイル", EQUIP_FIELDS, "全部", True, (
+        _r(10, "設備名", "ライン", "ライン", "QP:2105(D13)"),
+        _r(20, "製造材質", "製造材質", "条件式", "QP:2136"),
+        _r(30, "オーダー厚MIN,オーダー厚MAX", "オーダー厚", "範囲", "QP:2140", "通さない"),
+        _r(40, "オーダー幅MIN,オーダー幅MAX", "オーダー幅", "範囲", "QP:2141", "通さない"),
+        _r(50, "オーダー丈MIN,オーダー丈MAX", "オーダー丈", "範囲", "QP:2142", "通さない"),
+        _r(60, "単重MIN,単重MAX", "単重", "範囲", "QP:2143", "通さない"),
+    ), "設備名の行が無ければ 可。合う行が無ければ最後の行で最初に外れたルールで「… 範囲外」。"
+       "合えば空でない作業可否の最後のもの(コード)"),
 )
 BY_NAME = {g.name: g for g in DEFAULT_GROUPS}
 
@@ -162,7 +190,11 @@ FIELD_SOURCE: dict[str, str] = {
     "ﾛｯﾄNo": "引当", "ｵｰﾀﾞｰNo": "引当", "引当NO": "引当", "当板用": "引当",
     "引当_納入先": "引当", "引当_取引先": "引当", "納入先ｺｰﾄﾞ": "仕掛", "取引先ｺｰﾄﾞ": "仕掛", "送り先名": "仕掛",
     "送り先ｺｰﾄﾞ": "仕掛", "BOX設計_横割数(板)": "仕掛",
+    "ライン": "端末", "厚": "画面", "用途": "画面", "オーダー厚": "仕掛", "オーダー幅": "仕掛", "オーダー丈": "仕掛",
+    "単重": "仕掛",
 }
+#: 群ごとに出どころを変える項目(製造材質 は 設備仕様では仕掛の行)
+FIELD_SOURCE_BY_GROUP: dict[str, dict[str, str]] = {EQUIP: {"製造材質": "仕掛"}}
 #: 「製造寸法 ⇔ オーダー寸法をまとめて切り替え」で入れ替える組(寸法だけ)
 DIM_SWAP: dict[str, tuple[tuple[str, str], ...]] = {
     RATEFURI: (("製造板厚", "ｵｰﾀﾞｰ板厚"), ("製造板幅", "ｵｰﾀﾞｰ板幅"), ("製造板丈", "ｵｰﾀﾞｰ板丈")),
@@ -172,8 +204,21 @@ HELP_SWITCH = ("参照する寸法を変えるには:ロットの項目を『製
                "試し照合で行が変わるか確かめてから保存")
 
 
-def field_source(name: str) -> str:
-    return FIELD_SOURCE.get(name, "")
+def field_source(name: str, group: str = "") -> str:
+    return FIELD_SOURCE_BY_GROUP.get(group, {}).get(name) or FIELD_SOURCE.get(name, "")
+
+
+def split_pre(g: Group) -> tuple[Group, Group]:
+    """(先に外すルールだけの群, 残りのルールの群)。"""
+    return (replace(g, rules=tuple(r for r in g.rules if r.compare in PREFILTER), use_rows="全部"),
+            replace(g, rules=tuple(r for r in g.rules if r.compare not in PREFILTER)))
+
+
+def shadow_on(g: Group) -> bool:
+    """旧コードと並べるか(試験で、既定のルールのままのとき。ルールを変えたら違って当然なので並べない)。"""
+    if SHADOW_STRICT:
+        return g.rules == BY_NAME[g.name].rules
+    return False
 
 
 def swap_dims(g: Group) -> Group:
@@ -239,6 +284,12 @@ def _test(rule: Rule, row: Sequence[Any], fields: Sequence[str], value: Any) -> 
         return q.vstr(q.cell(row, cols[0])) == q.vstr(value)
     if cmp == "当板用か":
         return (q.vstr(q.cell(row, cols[0])) == "当板用") == (q.vstr(value) == "当板用")
+    if cmp == "ライン":
+        from . import lines
+        return lines.matches(q.cell(row, cols[0]), q.vstr(value))
+    if cmp == "含む条件式":
+        from . import instruments
+        return instruments.youto_match(q.cell(row, cols[0]), q.vstr(value))
     raise Invalid(f"比べ方「{cmp}」は使えません")
 
 
@@ -255,7 +306,7 @@ def match(group: Group, rows: Sequence[Sequence[Any]], fields: Sequence[str], ct
         skipped = False
         for k, r in enumerate(rules):
             t = _test(r, row, fields, ctx.get(r.field, ""))
-            if not t and r.compare == "当板用か":
+            if not t and r.compare in PREFILTER:
                 skipped = True            # VBA でも先に外す(GoTo)。Conditions は前の行のまま
                 break
             if not t and first_fail is None:
