@@ -8,7 +8,7 @@ from __future__ import annotations
 import mimetypes
 from pathlib import Path
 
-from flask import Blueprint, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 
 from ufkensa.kensa import paths, session, view
 from ufkensa.logging_utils import get_logger
@@ -279,6 +279,15 @@ def recv_poll():
     import time as _t
     since = int(request.args.get("since", "0") or 0)
     screen = str(request.args.get("screen", "kensa") or "kensa")
+    # 2026-11-11: 受信機の値は**いま使っている画面(タブ)**にだけ渡す。ほかのタブは
+    # 「開いている」に数えず、結果も渡さない(2つのタブが同じ値を2回入れない)
+    from ufkensa import screens as _screens
+    if not _screens.of(current_app).is_active(request.headers.get("X-Screen-Id", "")):
+        st = _recv_state()
+        with _recv_lock:
+            last = _recv_seq
+        return jsonify({"results": [], "last": last, "inactive": True, "running": st["on"], "port": st["port"],
+                        "error": st["error"], "why": st["why"], "received": st["last"]})
     with _recv_lock:
         if request.args.get("visible", "1") != "0":
             _recv_seen[screen] = _t.monotonic()

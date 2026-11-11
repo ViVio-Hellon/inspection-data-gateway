@@ -14,6 +14,7 @@ import * as busy from "./busy.js";
 import * as nav from "./nav.js";
 import * as running from "./running.js";
 import * as unsaved from "./unsaved.js";
+import * as screen from "./screen.js";
 
 // **押されたボタンを覚えておく。** `api.js` が送信を始めるときに、
 // そのボタンを待機の姿にする(無言で待たせない)
@@ -28,6 +29,8 @@ errlog.install((rid) => {
 });
 
 startHeartbeat();
+// 操作できる画面は1つだけ(ほかのタブには覆い。2回目の起動で前に出る)
+screen.start();
 // DB を切り替えて読み直したなら、その知らせ
 // 長い処理は帯に出す。**画面を離れても見える**ようにするため
 running.start();

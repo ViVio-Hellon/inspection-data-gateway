@@ -2,7 +2,7 @@
 // kensa.spec.js の後に同じサーバで動かす(検査員の登録・検査のロット・Min/Max・受信機(疑似端末)はそこで済んでいる)。
 // 各画面: 開く → 問いのある操作 1 つ(画面の確認窓で答える。ボタンの文言も見る)→ 受信機の値がその画面に届く。
 // どの画面も共通の op()(app/static/js/screen_op.js)と受信(app/static/js/recv.js)を使う。
-const { BASE, setup, shot, api, note, check, finish } = require("./common");
+const { BASE, setup, close, shot, api, note, check, finish } = require("./common");
 
 const PTY = process.env.E2E_PTY || "-";
 
@@ -117,5 +117,5 @@ const PTY = process.env.E2E_PTY || "-";
     await shot(page, "fatal_" + S.step).catch(() => {});
   }
   finish(S);
-  await browser.close();
+  await close(browser);
 })();

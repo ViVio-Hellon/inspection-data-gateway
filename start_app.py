@@ -281,9 +281,9 @@ def start(mode: str, *, open_browser: bool = True) -> int:
         guard = launch_guard.check_existing(mode)
         if not guard.should_start:
             log().info("既存のインスタンスに合流します: %s", guard.url)
-            print(f"すでに起動しています。ブラウザを開きます: {guard.url}")
-            if open_browser:
-                webbrowser.open(guard.url)
+            existing = guard.existing
+            join_running(guard.url, existing.port if existing else 0,
+                         existing.token if existing else "", open_browser=open_browser)
             return 0
         # 掃除できた(死んでいた・古い版だった)ので取り直す。
         # それでも取れなければ、掃除した隙に別の1つ目が入っている
@@ -302,9 +302,7 @@ def start(mode: str, *, open_browser: bool = True) -> int:
                 adopted = launch_guard.adopt_running(mode, joined)
                 url = adopted.url if adopted else f"http://{app_config.host()}:{joined.get('port')}/"
                 log().info("既存のインスタンスに合流します(同時起動の錠から): %s", url)
-                print(f"すでに起動しています。ブラウザを開きます: {url}")
-                if open_browser:
-                    webbrowser.open(url)
+                join_running(url, int(joined.get("port") or 0), "", open_browser=open_browser)
                 return 0
             message, hint = launch_guard.other_running_message(launch_guard.KIND_BROWSER)
             raise StartupError(message, hint, CODE_OTHER_RUNNING)
@@ -385,6 +383,25 @@ def start(mode: str, *, open_browser: bool = True) -> int:
             trace.event("app.stop", f"終了しました(版 {app_config.version()})", data={"mode": mode})
         except Exception:                         # noqa: BLE001 - 記録のせいで終了を止めない
             pass
+
+
+def join_running(url: str, port: int, token: str = "", *, open_browser: bool = True) -> bool:
+    """動いている1つ目に合流する(2026-11-11)。
+
+    **画面が開いていれば、新しく開かない。** 「前に出て」と頼み、その画面が次の心拍
+    (3秒ごと)で前に出る・題を点滅させる・「すでに開いています」と知らせる。
+    開いていなければ(ブラウザを閉じていた)今までどおりブラウザで開く。
+    戻り値: ブラウザを開いたか。
+    """
+    import launch_guard
+    if port and launch_guard.raise_open_screen(port, token):
+        log().info("開いている画面を前に出します(新しく開きません)")
+        print("すでに開いています。開いている画面を前に出します。")
+        return False
+    print(f"すでに起動しています。ブラウザを開きます: {url}")
+    if open_browser:
+        webbrowser.open(url)
+    return True
 
 
 # 錠を握っているブラウザ版が待ち受けを始めるのを待つ上限(秒)

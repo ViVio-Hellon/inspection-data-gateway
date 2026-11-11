@@ -63,6 +63,8 @@ async function request(path, options = {}) {
         "X-Tool-Token": TOKEN,
         // どのタブからの要求か。自動終了の見張りが画面ごとに数える
         "X-Screen-Id": window.APP.screenId || "",
+        // 同じタブで読み込み直す前の番号(使っている画面を引き継ぐ。screen.js)
+        ...(window.APP.screenPrev ? { "X-Screen-Prev": window.APP.screenPrev } : {}),
         // ファイルを送るとき(FormData)は、ブラウザに区切りごと決めさせる
         ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
         ...(options.headers || {}),
@@ -76,6 +78,8 @@ async function request(path, options = {}) {
     }
     if (!res.ok) {
       const err = new ApiError(res.status, body, res.headers.get("X-Request-Id") || "");
+      // ほかの画面が使っている(screen.js が覆いを出す)
+      if (err.code === "inactive_screen") document.dispatchEvent(new CustomEvent("app:inactive-screen"));
       throw err;
     }
     return body;
