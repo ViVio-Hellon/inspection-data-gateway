@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import re
+import sqlite3
 from typing import Optional
 
 from flask import Blueprint, jsonify, render_template, request
@@ -278,6 +279,41 @@ def judge_display_set():
         return _err("not_saved", str(e), 500)
     log.info("保守: 判定の画像の表示 %s → %s", before, after)
     return jsonify({"display": after})
+
+
+# ------------------------------------------------------------------
+# 公差外の確認を出す行(2026-11-11)。伝送用ファイルの共有マスタ。見るのは誰でも、変えるのは編集の鍵
+def _confi_rows_payload(rows: dict) -> dict:
+    from ufkensa.kensa import confi_rows as cr
+    return {"kinds": [{"kind": k, "label": cr.LABELS[k], "max": cr.MAX_ROW[k], "rows": cr.fmt(rows[k]),
+                       "default": cr.fmt(cr.DEFAULTS[k])} for k in cr.KINDS]}
+
+
+@bp.get("/api/maint/confi_rows")
+def confi_rows_get():
+    from ufkensa.kensa import confi_rows as cr
+    cr.ensure_table()                       # 無ければ VBA の既定で作る(読めなくても画面は既定を出す)
+    return jsonify(_confi_rows_payload(cr.rows_map()))
+
+
+@bp.post("/api/maint/confi_rows")
+def confi_rows_set():
+    if (d := _need_edit()) is not None:
+        return d
+    from ufkensa.kensa import confi_rows as cr
+    vals = _body().get("rows")
+    if not isinstance(vals, dict):
+        return _err("bad_request", "rows がありません")
+    before = cr.rows_map()
+    try:
+        after = cr.save(vals)
+    except cr.Invalid as e:
+        return _err("invalid", str(e), 400, field=e.kind)
+    except (OSError, sqlite3.Error) as e:
+        return _err("not_saved", f"保存できませんでした: {e}", 500)
+    log.info("保守: 公差外の確認行 %s → %s", {k: cr.fmt(v) for k, v in before.items()},
+             {k: cr.fmt(v) for k, v in after.items()})
+    return jsonify(_confi_rows_payload(after))
 
 
 # ------------------------------------------------------------------

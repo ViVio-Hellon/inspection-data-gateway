@@ -138,6 +138,7 @@ function showTab(name) {
   if (name === "device") openDevice();
   if (name === "hist") openHist();
   if (name === "judge") openJudge();
+  if (name === "confi") openConfi();
   if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -541,6 +542,41 @@ $("mJudgeSave").addEventListener("click", async () => {
   } catch (err) { toastError(err); }
 });
 $("mJudgeReset").addEventListener("click", () => { if (JD) jdRender(JD.defaults); });
+
+/* ---------- 公差外の確認を出す行 ---------- */
+let CR = null;
+function crRender(useDefault) {
+  $("mConfi").replaceChildren(...CR.kinds.flatMap((k) => {
+    const dt = el("dt");
+    const lab = el("label", "", k.label);
+    lab.htmlFor = `crRows-${k.kind}`;
+    dt.append(lab);
+    const dd = el("dd");
+    const i = el("input", "input");
+    Object.assign(i, { id: `crRows-${k.kind}`, value: useDefault ? k.default : k.rows, maxLength: 60 });
+    i.dataset.kind = k.kind;
+    dd.append(i, el("span", "muted maint__small", ` 1〜${k.max}(既定 ${k.default})`));
+    return [dt, dd];
+  }));
+}
+async function openConfi() {
+  try {
+    CR = await api.get("/api/maint/confi_rows");
+    crRender(false);
+  } catch (err) { toastError(err); }
+}
+$("mConfiSave").addEventListener("click", async () => {
+  if (!CR) return;
+  const rows = Object.fromEntries(CR.kinds.map((k) => [k.kind, $(`crRows-${k.kind}`).value]));
+  try {
+    const d = await withUnlock(() => api.post("/api/maint/confi_rows", { rows }));
+    if (!d) return;
+    CR = d;
+    crRender(false);
+    toast("公差外の確認を出す行を保存しました(全 PC 共通)", "ok");
+  } catch (err) { toastError(err); }
+});
+$("mConfiReset").addEventListener("click", () => { if (CR) crRender(true); });
 
 /* ---------- 仮ロット ---------- */
 let K = { fields: [], rows: [], original: "", hikiExtra: [], source: "" };

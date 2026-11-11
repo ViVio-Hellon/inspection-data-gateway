@@ -19,6 +19,7 @@
       <button class="tab" role="tab" type="button" data-tab="hist">履歴出力</button>
       <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
       <button class="tab" role="tab" type="button" data-tab="judge">判定の画像</button>
+      <button class="tab" role="tab" type="button" data-tab="confi">公差外の確認</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -315,6 +316,23 @@
           <div class="btn-row">
             <button class="btn btn--commit" type="button" id="mJudgeSave">保存する</button>
             <button class="btn" type="button" id="mJudgeReset">既定に戻す(3・3・2 秒、大)</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 公差外の確認を出す行(共有マスタ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="confi" id="pConfi" hidden>
+      <section class="card">
+        <header><h3>公差外の確認を出す行</h3><span class="lv">全 PC 共通(伝送用ファイル)</span></header>
+        <div class="pad">
+          <p class="muted maint__small">検査画面で、この行に入力したあと公差外の値があれば「公差外の確認」を出します
+            (VBA の OutTolerance.Out_Tolerance の直書きに当たります)。行番号をカンマ区切りで書きます。空にするとその作業では出しません。
+            変えるには編集の鍵が要ります。</p>
+          <dl class="maint__kv" id="mConfi"></dl>
+          <div class="btn-row">
+            <button class="btn btn--commit" type="button" id="mConfiSave">保存する</button>
+            <button class="btn" type="button" id="mConfiReset">既定に戻す(VBA と同じ)</button>
           </div>
         </div>
       </section>

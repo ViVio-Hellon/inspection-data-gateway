@@ -433,6 +433,7 @@ class Session:
         st, env, hooks = self.state, self._env(), self.hooks
         assert hooks is not None
         prev_lot = st.lot
+        tol_before = lot_watch.tolerance_view(st)          # 画面を空にする前の公差(判定し直すかの比べ元)
         if st.line_option != "Bala":
             ans = answers.get("lot_register")
             if ans is None:
@@ -490,9 +491,45 @@ class Session:
             self._log("Lot登録:" + text + ":" + st.lname)
             st.machin = ""
             self._log("Lot登録:" + text + ":" + st.lname, legacy_log.MEASURED_LOG)
-        return self._cb_change(answers)
+        return self._cb_change(answers, tol_before)
 
-    def _cb_change(self, answers: dict[str, bool]) -> Optional[Question]:
+    def _cb_change(self, answers: dict[str, bool], before: Optional[dict[str, str]] = None) -> Optional[Question]:
+        """CB_Change の後、公差が変わっていれば測定済みの値を新しい公差で判定し直す(2026-11-11 のご依頼)。
+
+        VBA の CB_Change(AccReflec)は公差の欄を書き換えるだけで、入っている測定値の色は前の公差のまま
+        (次に LoopJudg が走る操作 = Min/Max・再測定 などまで古い判定が残る)。別ロット登録・ロット分割・
+        読み直し・控えから読む のどれでも、ここで LoopJudg → HizLoopJudg → CheckLabelsByCategory をやり直す。
+        許容・保留(NG? のラベル)はそのまま。
+        """
+        if before is None:
+            before = lot_watch.tolerance_view(self.state)
+        try:
+            return self._cb_change_body(answers)
+        finally:
+            if lot_watch.tolerance_view(self.state) != before:
+                self._rejudge_measured()
+
+    def _rejudge_measured(self) -> None:
+        """測定値があれば、いまの公差で全部判定し直す(公差外の確認は出さない。許容・保留は変えない)。"""
+        st, env, hooks = self.state, self._env(), self.hooks
+        assert hooks is not None
+        extra = [n for p in grid.POSITIONS for n in ("Z" + p, "G" + p, "Lateral" + p, "Diag" + p + "Kou")]
+        if not (any(c.value != "" for _, c in st.iter_cells())
+                or any(n in st.view and st.view[n].value != "" for n in extra)):
+            return
+        try:
+            hooks.loop_judg(st)
+            hooks.hiz_loop_judg(st, 0)
+            for p in grid.POSITIONS:
+                hooks.check_labels_by_category(st, p)
+        except Stop as e:
+            env.messages.append(Message("新しい公差での判定し直しが途中で止まりました: " + e.text, WARN,
+                                        source="ロット読み込み"))
+            return
+        env.messages.append(Message("ロットの公差が変わったので、入っている測定値を新しい公差で判定し直しました",
+                                    INFO, source="ロット読み込み"))
+
+    def _cb_change_body(self, answers: dict[str, bool]) -> Optional[Question]:
         """UF1.CB_Change (UF1:4494-4535)。ロットの読み込み(Lot登録と「控えから読む」の切替から呼ぶ)。"""
         st, env, hooks = self.state, self._env(), self.hooks
         assert hooks is not None
@@ -562,6 +599,8 @@ class Session:
                 c.value, c.tag = v, t
         hooks.loop_judg(st)                                              # 新しい公差で判定し直す
         hooks.hiz_loop_judg(st)
+        for p in grid.POSITIONS:
+            hooks.check_labels_by_category(st, p)
         new_sig = getattr(self, "_lot_sig", None)
         kinds = new_sig.changed(old_sig) if new_sig is not None and old_sig is not None else []
         diff = lot_watch.tolerance_diff(before, lot_watch.tolerance_view(st))
