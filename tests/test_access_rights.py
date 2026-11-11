@@ -234,19 +234,38 @@ class EvaluateTest(_Env):
 
 
 class ApplyLineTest(_Env):
-    def test_applies_only_when_master_changes(self):
+    def test_master_line_is_source_of_truth(self):
+        """2026-11-11: 表でラインが決まれば起動・読み直しのたびに表の値(手で変えても戻す)。"""
         path = self.use_master([(self.login, self.pc, "HVC")])
         auth.ensure()
         self.assertEqual(terminal.facility(), "HVC")
         self.assertIn("HVC", auth.applied_note())
-        terminal.set_facility("LVC")                                         # 管理者パスワードで手で変えた
+        terminal.set_facility("LVC")
         auth.end()
         auth.ensure()
-        self.assertEqual(terminal.facility(), "LVC")                         # 表が同じなら戻さない
+        self.assertEqual(terminal.facility(), "HVC")                         # 表が正なので戻す
         master_db(path, [(self.login, self.pc, "中板A7")])
         auth.end()
         auth.ensure()
         self.assertEqual((terminal.facility(), terminal.line_no(), terminal.line_label()), ("丸徳", "A7", "中板A7"))
+
+    def test_no_line_or_unreadable_keeps_saved(self):
+        path = self.use_master([(self.login, self.pc, "HVC")])
+        auth.ensure()
+        master_db(path, [(self.login, self.pc, "Administrator")])          # ラインを書いていない
+        terminal.set_facility("LVC")
+        auth.end()
+        d = auth.ensure().rights
+        self.assertFalse(A.line_locked(d))
+        self.assertEqual(terminal.facility(), "LVC")
+        master_db(path, [(self.login, self.pc, "L-1")])
+        A.evaluate(self.login, self.pc)
+        path.unlink()                                                        # 読めない ≠ 無い
+        auth.end()
+        d = auth.ensure().rights
+        self.assertEqual(d.source, "cache")
+        self.assertFalse(A.line_locked(d))
+        self.assertEqual(terminal.facility(), "LVC")
 
     def test_maru_without_number_keeps_current(self):
         terminal.set_facility("丸徳", "A5")
@@ -411,9 +430,13 @@ class SettingsApiTest(_Env):
         st = self.post("/api/settings/rights/reload").get_json()
         self.assertEqual(st["terminal"]["facility"], "バランサー")
         self.assertIn("バランサー", st["rights"]["applied"])
-        r = self.post("/api/settings/terminal", facility="HVC")              # 一般・鍵なし
-        self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "not_admin"))
-        self.use_master([(self.login, self.pc, "バランサー"), (self.login, "", "Administrator")])
+        self.assertTrue(st["terminal"]["from_access"])
+        r = self.post("/api/settings/terminal", facility="HVC")              # 表が正なので手では変えない
+        self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (409, "from_access"))
+        self.use_master([(self.login, "", "Administrator")])                 # 表にラインが無い → 保存してある設定
+        st = self.post("/api/settings/rights/reload").get_json()
+        self.assertFalse(st["terminal"]["from_access"])
+        self.assertEqual(st["terminal"]["facility"], "バランサー")
         r = self.post("/api/settings/terminal", facility="HVC")
         self.assertEqual((r.status_code, r.get_json()["error"]["code"]), (403, "locked"))
         self.unlock()

@@ -41,14 +41,19 @@ function renderTerminal() {
   $("lineNoLabel").hidden = !maru;
   const canChange = t.unset || S.master_edit.possible;
   fac.disabled = no.disabled = $("saveTerminal").disabled = !canChange;
+  if (t.from_access) {                 // アクセス権限が正: 設備名は読むだけ(丸徳で号機が決まらなければ号機だけ選べる)
+    fac.disabled = true;
+    no.disabled = $("saveTerminal").disabled = !(t.number_free && canChange);
+  }
   $("termLevel").textContent = t.unset ? "未設定" : t.label;
   $("termLevel").className = "lv " + (t.unset ? "lv--ng" : "lv--ok");
   const ln = S.rights.line;
   const notes = [];
-  if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタの値が変わったときだけ自動で当てます)。`);
+  if (t.from_access) notes.push(`アクセス権限から読み込んでいます(この PC のラインは ${ln.text})。変えるときはアクセス権限マスタのライン名を直してください。`);
+  else if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタを読めないので、保存してある設定で動いています)。`);
   else if (ln.problem) notes.push("アクセス権限マスタではラインが決まりません: " + ln.problem);
   if (S.rights.applied) notes.push(S.rights.applied + "。");
-  if (!t.unset) notes.push(canChange ? "手で変えるときは管理者パスワードを聞きます。" : "変えるには管理者の権限と管理者パスワードが要ります(権限 の面を見てください)。");
+  if (!t.unset && !t.from_access) notes.push(canChange ? "手で変えるときは管理者パスワードを聞きます。" : "変えるには管理者の権限と管理者パスワードが要ります(権限 の面を見てください)。");
   $("termNote").textContent = notes.join(" ");
 
   const box = $("modeChoices");

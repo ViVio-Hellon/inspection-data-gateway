@@ -50,6 +50,9 @@ def _state() -> dict:
             "facilities": list(terminal.FACILITIES),
             "numbers": list(terminal.MARU_NUMBERS),
             "unset": terminal.line() is None,
+            # アクセス権限で決まったライン(設備名は読むだけ。丸徳で号機が決まらなければ号機だけ選べる)
+            "from_access": access_rights.line_locked(d),
+            "number_free": access_rights.line_locked(d) and d.facility == "丸徳" and not d.line_no,
         },
         "mode": m,
         "modes": [{"key": k, "label": v} for k, v in paths.MODE_LABELS.items()],
@@ -140,6 +143,12 @@ def state():
 def save_terminal():
     """未設定なら誰でも(VBA の SF3)。決まったあとに変えるのは管理者パスワード(all-tools「パスワードがあれば現行の通り変更可」)。"""
     body = request.get_json(silent=True) or {}
+    d = auth.ensure().rights
+    if access_rights.line_locked(d):
+        number_free = d.facility == "丸徳" and not d.line_no
+        if str(body.get("facility", "")) != d.facility or not number_free:
+            return _err("from_access", f"この端末のラインはアクセス権限から読み込んでいます({d.line_text()})。"
+                        "変えるときはアクセス権限マスタのライン名を直してください", 409)
     if terminal.line() is not None:
         refused = _refuse_path_edit()
         if refused:
