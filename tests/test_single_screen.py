@@ -170,3 +170,18 @@ class JoinDecisionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class JustStartedTest(unittest.TestCase):
+    """2026-11-11: 続けて2回押したとき、1つ目が起動したばかりなら2つ目はブラウザを開かない。"""
+
+    def test_recent_first_does_not_open(self):
+        import time
+        from unittest import mock
+        import start_app
+        with mock.patch("launch_guard.raise_open_screen", return_value=False), \
+                mock.patch("webbrowser.open") as op:
+            self.assertFalse(start_app.join_running("http://x/", 1, started_at=time.time() - 3))
+            op.assert_not_called()
+            self.assertTrue(start_app.join_running("http://x/", 1, started_at=time.time() - 600))
+            op.assert_called_once()
