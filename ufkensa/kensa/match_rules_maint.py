@@ -15,7 +15,9 @@ from . import datasource, match_rules as mr, quality as q, quality_session as qs
 from .store import LOT_HISTORY, LocalStore
 
 #: 試し照合でロットの代わりに直接入れられる値(画面の入力欄)
-INPUTS = {mr.MICRO: ["ライン", "厚", "用途"], mr.EQUIP: ["ライン", "オーダー厚"]}
+INPUTS = {mr.MICRO: ["ライン", "厚", "用途"], mr.EQUIP: ["ライン", "オーダー厚"], mr.BH: ["材質", "調質"]}
+#: 第4段: ロットの行(仕掛の先頭行)をそのまま入力にする群
+SIKA_GROUPS = (mr.APPEAR_H, mr.APPEAR_S, mr.LATERAL_N, mr.LATERAL_H)
 ROW_CAP = 30               # 1 ステップで並べる行の数
 LOT_CAP = 3000             # 保存の前の確かめで通すロットの数
 
@@ -70,7 +72,36 @@ def _label(rows: list[list[Any]], fields: Sequence[str], i: int) -> dict[str, An
     return {"row": i + 1, "no": q.vstr(rows[i][c - 1]) if c else ""}
 
 
+def _p4_result(g: mr.Group, rows: list[list[Any]], fields: Sequence[str], res: mr.MatchResult, ctx: dict) -> str:
+    """第4段の群の結果(コードに残した後処理を同じように当てる)。"""
+    def c(n: str) -> int:
+        return q.col_of(fields, n)
+    if g.name == mr.BH:
+        out = 0
+        for i in res.rows:
+            out = q.clng(q.cell(rows[i], c("バーコール下限値")))
+        return f"下限値 {out}" if out else "0(BH 不要)"
+    if not res.rows:
+        return "該当用途ｺｰﾄﾞなし" if g.name == mr.APPEAR_S and not res.evaluated else "該当なし"
+    nos = [q.vstr(q.cell(rows[i], c("管理番号"))) for i in res.rows]
+    if g.name == mr.APPEAR_H:
+        return f"管理番号 {', '.join(nos)}(後の番号の欠陥グレードで上書き)"
+    if g.name == mr.APPEAR_S:
+        r = rows[res.rows[0]]
+        o_atu = q.csng(ctx.get("ｵｰﾀﾞｰ板厚", 0) or 0)
+        if q.vstr(q.cell(r, c("厚フラグ"))) != "":
+            k = "パターン1" if vbx.val(q.cell(r, c("板厚1"))) >= vbx.val_single(o_atu) else "パターン2"
+        else:
+            k = "パターン1"
+        return f"管理番号 {nos[0]} → {k} = {q.vstr(q.cell(r, c(k)))}"
+    hit = q._hit_rows(rows, c("管理番号"), [q.clng(n) for n in nos])
+    v = q.loop_array(hit, list(fields), q.csng(ctx.get("製造板丈", 0) or 0), q.csng(ctx.get("製造板厚", 0) or 0))
+    return f"管理番号 {', '.join(nos)} → ラテラルボー {vbx.fmt(v, '0.0')}"
+
+
 def _result(g: mr.Group, rows: list[list[Any]], fields: Sequence[str], res: mr.MatchResult, ctx: dict) -> str:
+    if g.name in SIKA_GROUPS or g.name == mr.BH:
+        return _p4_result(g, rows, fields, res, ctx)
     if g.name == mr.QP:
         if not res.rows:
             return "合う行なし(等級表へ)"
@@ -247,6 +278,33 @@ def _equip_inputs(lot: str, lines_: list[str], over: Optional[dict] = None) -> l
              q.equipment_ctx(ln, zai, atu, hab, tak, wei)) for ln in lines_]
 
 
+def _sika_inputs(lot: str) -> list[tuple[str, dict]]:
+    """外観_厚板・外観_薄板・ラテラル: 仕掛の先頭行。"""
+    lv = qs.read_lot(lot)
+    data = getattr(lv, "data", None)
+    if data is None or not data.records or not data.fields:
+        return []
+    ctx = q.sika_ctx(data)
+    lab = " / ".join(q.vstr(ctx.get(k, "")) for k in ("用途ｺｰﾄﾞ", "製造材質", "製造調質"))
+    dims = "×".join(q.vstr(ctx.get(k, "")) for k in ("製造板厚", "製造板幅", "製造板丈"))
+    return [(f"{lab} 製造 {dims}(オーダー厚 {q.vstr(ctx.get('ｵｰﾀﾞｰ板厚', ''))})", ctx)]
+
+
+def _bh_inputs(lot: str, over: Optional[dict] = None) -> list[tuple[str, dict]]:
+    over = over or {}
+    zai = tyo = ""
+    if lot:
+        lv = qs.read_lot(lot)
+        zai, tyo = lv.form("Zai"), lv.form("Tyu")
+    if q.vstr(over.get("材質")).strip():
+        zai = q.vstr(over.get("材質")).strip()
+    if q.vstr(over.get("調質")).strip():
+        tyo = q.vstr(over.get("調質")).strip()
+    if zai == "":
+        return []                       # 材質が空なら BhSearch を呼ばない(wiring:1004)
+    return [(f"材質 {zai} / 調質 {tyo or '(空)'}", {"材質": zai, "調質": tyo})]
+
+
 def _hist(store: LocalStore) -> list[list[Any]]:
     return wiring.sheet_rows(store, LOT_HISTORY) or []
 
@@ -283,6 +341,10 @@ def trial(name: str, lot: str, payload: Optional[dict], store: LocalStore,
         inputs3 = [(lab, ctx, None) for lab, ctx in fn(lot, _table_lines(rows, fields, saved), inputs)]
     elif name == mr.QP:
         inputs3 = _qp_inputs(lot)
+    elif name in SIKA_GROUPS:
+        inputs3 = [(lab, ctx, None) for lab, ctx in _sika_inputs(lot)]
+    elif name == mr.BH:
+        inputs3 = [(lab, ctx, None) for lab, ctx in _bh_inputs(lot, inputs)]
     else:
         inputs3 = [(lab, ctx, None) for lab, ctx in
                    (_ratefuri_inputs(store, lot) if name == mr.RATEFURI else _pack_inputs(_hist(store), lot))]
@@ -294,7 +356,8 @@ def trial(name: str, lot: str, payload: Optional[dict], store: LocalStore,
         cases.append({"label": label, "saved": a, "edited": b, "changed": a["result"] != b["result"]})
     note = "" if inputs else ("厚が分かりません(ロットNo か 厚 を入れてください)" if name == mr.MICRO
                               else "仕掛にこのロットがありません(設備仕様はロットNo が要ります)" if name == mr.EQUIP
-                              else "仕掛にこのロットがありません" if name == mr.QP
+                              else "材質が分かりません(ロットNo か 材質 を入れてください)" if name == mr.BH
+                              else "仕掛にこのロットがありません" if name == mr.QP or name in SIKA_GROUPS
                               else "引当がありません(仕掛・Lot情報履歴)" if name == mr.RATEFURI
                               else "Lot情報履歴 にこのロットの対象の包装仕様(蓋アングル)の行がありません")
     return {"lot": lot, "cases": cases, "note": note, "table_rows": len(rows)}
@@ -319,6 +382,10 @@ def regression(name: str, payload: Optional[dict], store: LocalStore) -> dict[st
         lines_ = list(dict.fromkeys(_table_lines(rows, fields, saved) + _table_lines(rows, fields, new)))
         inputs = [(lot, lab, ctx) for lot in maint.lot_numbers(plate_only=False)[:LOT_CAP]
                   for lab, ctx in fn(lot, lines_)]
+    elif name in SIKA_GROUPS or name == mr.BH:
+        from . import maint
+        inputs = [(lot, lab, ctx) for lot in maint.lot_numbers(plate_only=False)[:LOT_CAP]
+                  for lab, ctx in (_sika_inputs(lot) if name in SIKA_GROUPS else _bh_inputs(lot))]
     elif name == mr.RATEFURI:
         from . import maint
         lots = maint.lot_numbers(plate_only=False)[:LOT_CAP]

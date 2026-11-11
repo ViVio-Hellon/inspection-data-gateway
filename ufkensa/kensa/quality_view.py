@@ -12,10 +12,10 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from . import datasource, paths, size_thresholds, vbx
+from . import datasource, match_rules, paths, size_thresholds, vbx
 from .flow import ERROR, Message
 from .quality import (NUM, STR, VAR, LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
-                      csng, find_indices, loop_array, rgb, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
+                      csng, find_indices, loop_array, rgb, sika_ctx, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
 
 VBCRLF = "\r\n"
 SYSTEM_BUTTON_FACE = -2147483648           # &H80000000(Noun の既定色)
@@ -139,6 +139,44 @@ def false_search_l(join_arr: list[list[Any]], resul: list[list[Any]]) -> list[li
     return out
 
 
+def _youto_filter(youto: str) -> str:
+    return "[用途コード] LIKE '*" + youto + "*'"
+
+
+def _pre_rows(pre: "match_rules.Group", db: Any, table: str, fq: Sequence[str], ctx: dict
+              ) -> Optional[list[list[Any]]]:
+    """新: 先に外すルール(用途コード 含む(SQL))で絞った行。0 件は None(GetRecordsArr と同じ)。"""
+    rows = datasource.get_records(db, table) or []
+    return [rows[i] for i in match_rules.match(pre, rows, fq, ctx).matched] or None
+
+
+def _h_old(aq: Sequence[Sequence[Any]], R: dict[str, int], zai: str, tyo: str, m_atu: float, o_haba: float,
+           o_take: float, nou: str) -> list[int]:
+    """旧: DBdisplay外観_H の照合(QDB:296-305)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    matching: list[int] = []
+    same = True          # B71(QDB:300-302): 直すと下・上も Double で比べる
+    for r in aq:
+        c1 = check_condition(r, R["材質"], zai)
+        # 直す: 調質で照合する(表に調質の列が無ければ条件なし。いまの別表2 には列が無い)
+        c2 = c1 & (check_condition(r, R["調質"], tyo) if R["調質"] else True)
+        c3 = c2 & check_thickness(r, R["板厚下"], R["板厚上"], R["厚"], m_atu, same_precision=same)
+        c4 = c3 & check_width(r, R["板幅下"], R["板幅上"], R["幅"], o_haba, same_precision=same)
+        c5 = c4 & check_width(r, R["板丈下"], R["板丈上"], R["丈"], o_take, same_precision=same)
+        c6 = c5 & check_condition(r, R["納入先"], nou)
+        if c1 and c2 and c3 and c4 and c5 and c6:
+            matching.append(clng(cell(r, R["管理番号"])))
+    return matching
+
+
+def _s_old(aq: Sequence[Sequence[Any]], C: dict[str, int], zai: str, grade: str) -> Optional[int]:
+    """旧: DBdisplay外観_S の照合(QDB:598-599)をコードで。最初に合う行の位置(無ければ None)。"""
+    for i, r in enumerate(aq):
+        if check_condition(r, C["材質"], zai):
+            if vbx.like(vstr(cell(r, C["表面処理コード"])), "*" + grade + "*"):
+                return i
+    return None
+
+
 def add_pages_arr_n(form: QualityForm, n: Optional[list[list[Any]]]) -> str:
     """H.AddPagesArrN (H:1569-1621)。各行の欠陥名でタブを**追加**し、欠陥名 & 改行 を連ねて返す。"""
     if not n:
@@ -215,7 +253,17 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
                                     "板幅下", "板幅上", "幅", "板丈下", "板丈上", "丈")}
     arry_l: list[list[Any]] = [[f, None] for f in fq if f not in _H_COND_COLS]
     arry_l.append([None, None])
-    aq = datasource.get_records(db, t2, "[用途コード] LIKE '*" + youto + "*'")
+    g = match_rules.group(match_rules.APPEAR_H)
+    shadow = g.new_way and match_rules.shadow_on(g)
+    ctx = sika_ctx(lot)
+    if g.new_way:
+        pre, rest = match_rules.split_pre(g)
+        aq = _pre_rows(pre, db, t2, fq, ctx)
+        if shadow:
+            match_rules.compare(match_rules.APPEAR_H, datasource.get_records(db, t2, _youto_filter(youto)), aq,
+                                "用途 " + youto)
+    else:
+        aq = datasource.get_records(db, t2, _youto_filter(youto))
     if aq is None:
         return res
     join_quality = [list(fq)] + aq
@@ -224,18 +272,14 @@ def display_appearance_h(lot: Optional[LotData], form: QualityForm, *, quiet: bo
         return res
     join_arr = [list(fq2)] + aq2
 
-    matching: list[int] = []
-    same = True          # B71(QDB:300-302): 直すと下・上も Double で比べる
-    for r in aq:
-        c1 = check_condition(r, R["材質"], zai)
-        # 直す: 調質で照合する(表に調質の列が無ければ条件なし。いまの別表2 には列が無い)
-        c2 = c1 & (check_condition(r, R["調質"], tyo) if R["調質"] else True)
-        c3 = c2 & check_thickness(r, R["板厚下"], R["板厚上"], R["厚"], m_atu, same_precision=same)
-        c4 = c3 & check_width(r, R["板幅下"], R["板幅上"], R["幅"], o_haba, same_precision=same)
-        c5 = c4 & check_width(r, R["板丈下"], R["板丈上"], R["丈"], o_take, same_precision=same)
-        c6 = c5 & check_condition(r, R["納入先"], nou)
-        if c1 and c2 and c3 and c4 and c5 and c6:
-            matching.append(clng(cell(r, R["管理番号"])))
+    def old() -> list[int]:
+        return _h_old(aq, R, zai, tyo, m_atu, o_haba, o_take, nou)
+    if g.new_way:
+        matching = [clng(cell(aq[i], R["管理番号"])) for i in match_rules.match(rest, aq, fq, ctx).rows]
+        if shadow:
+            match_rules.compare(match_rules.APPEAR_H, old(), matching, repr((zai, tyo, m_atu, o_haba, o_take, nou)))
+    else:
+        matching = old()
     if not matching:
         return res
 
@@ -348,7 +392,17 @@ def display_appearance_s(lot: Optional[LotData], out_name: str, form: QualityFor
     if fq is None:
         return res
     C = {n: col_of(fq, n) for n in ("表面処理コード", "材質", "厚フラグ", "板厚1", "パターン1", "パターン2", "更新日")}
-    aq = datasource.get_records(db, t1, "[用途コード] LIKE '*" + youto + "*'")
+    g = match_rules.group(match_rules.APPEAR_S)
+    shadow = g.new_way and match_rules.shadow_on(g)
+    ctx = sika_ctx(lot)
+    if g.new_way:
+        pre, rest = match_rules.split_pre(g)
+        aq = _pre_rows(pre, db, t1, fq, ctx)
+        if shadow:
+            match_rules.compare(match_rules.APPEAR_S, datasource.get_records(db, t1, _youto_filter(youto)), aq,
+                                "用途 " + youto)
+    else:
+        aq = datasource.get_records(db, t1, _youto_filter(youto))
     if aq is None:
         form.L2_visible = False
         form.Upater = "該当用途ｺｰﾄﾞなし"
@@ -361,20 +415,23 @@ def display_appearance_s(lot: Optional[LotData], out_name: str, form: QualityFor
         return res
     join_arr = [list(fq2)] + aq2
 
+    if g.new_way:
+        used = match_rules.match(rest, aq, fq, ctx).rows
+        hit = used[0] if used else None
+        if shadow:
+            match_rules.compare(match_rules.APPEAR_S, _s_old(aq, C, zai, grade), hit, repr((zai, grade)))
+    else:
+        hit = _s_old(aq, C, zai, grade)
     arry_s = 0
-    for r in aq:
-        if check_condition(r, C["材質"], zai):
-            if vbx.like(vstr(cell(r, C["表面処理コード"])), "*" + grade + "*"):
-                if vstr(cell(r, C["厚フラグ"])) != "":
-                    if vbx.val(cell(r, C["板厚1"])) >= vbx.val_single(o_atu):
-                        arry_s = clng(cell(r, C["パターン1"]))
-                        break
-                    if vbx.val(cell(r, C["板厚1"])) < vbx.val_single(o_atu):
-                        arry_s = clng(cell(r, C["パターン2"]))
-                        break
-                else:
-                    arry_s = clng(cell(r, C["パターン1"]))
-                    break
+    if hit is not None:
+        r = aq[hit]
+        if vstr(cell(r, C["厚フラグ"])) != "":
+            if vbx.val(cell(r, C["板厚1"])) >= vbx.val_single(o_atu):
+                arry_s = clng(cell(r, C["パターン1"]))
+            elif vbx.val(cell(r, C["板厚1"])) < vbx.val_single(o_atu):
+                arry_s = clng(cell(r, C["パターン2"]))
+        else:
+            arry_s = clng(cell(r, C["パターン1"]))
     form.Upater = str(arry_s)
     temp_size_s = false_search_s(join_arr, arry_s)
     if arry_s == 0:
