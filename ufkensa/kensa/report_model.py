@@ -1205,7 +1205,7 @@ def _print_borders(sh: XSheet, n: str, snap: KensaSnapshot, env: PrintEnv) -> No
             sh.copy(23, 2, 23, lascol, 24, 2, formats_only=True)
             sh.border(24, 2, 24, lascol, "top", linestyle="dot")
             sh.heights[24] = sh.heights.get(23, 23.25)
-        if snap.inspe_butt_visible and snap.inspe_butt_caption == "検入≧26":   # Print:902-917
+        if snap.inspe_butt_visible and str(snap.inspe_butt_caption).startswith("検入≧"):   # Print:902-917
             sh.put(14, 2, "")
             sh.put(21, 2, "")
             sh.copy(18, 14, 23, 14, 18, 10)

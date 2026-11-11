@@ -27,7 +27,7 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import cache_registry, datasource, lines, paths, vbx
+from . import cache_registry, datasource, lines, paths, size_thresholds, vbx
 from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
@@ -1082,7 +1082,7 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
     if not sori():
         res.kousa = None
         return res
-    if 6.0 >= o_atu:
+    if size_thresholds.thin_atu() >= o_atu:          # 保守 → 寸法のしきい値(既定 6.0)
         if naka_sika == "" or mimi_sika == "":
             f, rws = _table(db, table_n)
             if f is None or rws is None:

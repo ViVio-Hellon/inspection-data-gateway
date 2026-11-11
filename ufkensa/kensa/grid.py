@@ -38,8 +38,14 @@ from .model import POSITIONS, ROW_COUNT, Face, FormTag, Measures, Switch, Verdic
 #: 作業選択(OptionButton の名前)
 WORKS: tuple[str, ...] = ("厚板", "薄板", "少枚数", "極厚", "スラブ")
 
-#: FormRelat:3 `THIN_PLATE_ATU` 薄板判定のしきい値(mm)。これ以下で AtuFlag=True
+#: FormRelat:3 `THIN_PLATE_ATU` 薄板判定のしきい値(mm)の VBA の既定。これ以下で AtuFlag=True。
+#: 2026-11-11: 使う所は size_thresholds.thin_atu()(保守 → 寸法のしきい値)を読む。これは既定の記録
 THIN_PLATE_ATU = 6.0
+
+
+def _le_caption() -> str:
+    from . import size_thresholds       # 遅れて読む(grid は vbx 以外に頼らない)
+    return size_thresholds.le_caption()
 
 COLOR_DEFAULT = ""
 COLOR_OK = "OK"
@@ -298,7 +304,7 @@ class KensaState:
     at_butt_caption: str = "厚2ヵ所"   # AtButt.Caption(次に切り替わる先。"厚2ヵ所" = いま 4ヵ所)
     at_butt_visible: bool = False
     at_count: str = ""            # AtCount.Caption("厚4ヵ所検査中" など)
-    inspe_butt_caption: str = "検入≦25"  # InspeButt.Caption(次に切り替わる先。"検入≧26" = いま ≦25 = 2 回検査)
+    inspe_butt_caption: str = field(default_factory=lambda: _le_caption())  # 既定「検入≦25」(枚数は 保守 → 寸法のしきい値)。 InspeButt.Caption(次に切り替わる先。"検入≧26" = いま ≦25 = 2 回検査)
     inspe_butt_visible: bool = False
     ops: int = 0                  # OPS1..OPS6 のうち True の番号(0 = なし)。Min/Max の開始位置
     ope: int = 0                  # OPE1..OPE6。終了位置
@@ -493,7 +499,7 @@ def ken_flags(state: KensaState, ken_no: str, *, blank_in_flag1: bool = False) -
         f[2] = True
     if yama_is(state, 3):
         f[3] = True
-    if f[1] and state.inspe_butt_caption == "検入≧26":
+    if f[1] and state.inspe_butt_caption.startswith("検入≧"):    # 頭で見る(枚数は 保守 → 寸法のしきい値)
         f[4] = True
     if not blank_in_flag1 and ken_no == "":
         f[5] = True

@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Callable, Iterable, Optional, Sequence, Union
 from xml.etree import ElementTree as ET
 
-from . import datasource, paths, vbx
+from . import datasource, paths, size_thresholds, vbx
 from .model import Face, NORMAL, UiValues, diag_name, ken_h_name, kou_name, lateral_name, visual_under_name, visual_up_name
 from .flow import ERROR, INFO, WARN, Message, Stop
 
@@ -609,9 +609,13 @@ def ng_posting(uf: Uf1, posi: str, sheet: Optional[AbnormalSheet]) -> AbnormalSh
 # ------------------------------------------------------------------
 # 選択肢(ComboBox / ListBox)
 # ------------------------------------------------------------------
-def cb_shape_items(atu: float = 6.0) -> list[str]:
-    """定盤歪の形状(CB?1)。厚 6.00mm 以下は 幅/丈/耳/中、超えると 幅/丈。`CBAdd (O:1427-1460)`"""
-    return ["幅", "丈", "耳", "中"] if vbx.single(atu) <= 6.0 else ["幅", "丈"]
+def cb_shape_items(atu: Optional[float] = None) -> list[str]:
+    """定盤歪の形状(CB?1)。厚 6.00mm 以下は 幅/丈/耳/中、超えると 幅/丈。`CBAdd (O:1427-1460)`
+
+    2026-11-11: 6.00 は 保守 → 寸法のしきい値「薄板とみなす厚」。厚が無い(None)ときはしきい値ちょうど(= 耳/中も出す)。
+    """
+    th = size_thresholds.thin_atu()
+    return ["幅", "丈", "耳", "中"] if vbx.single(th if atu is None else atu) <= th else ["幅", "丈"]
 
 
 def cbg_shape_items(lg_captions: dict[str, str]) -> list[str]:

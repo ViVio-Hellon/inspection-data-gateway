@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from . import datasource, legacy_log, lines, paths, vbx
+from . import datasource, legacy_log, lines, paths, size_thresholds, vbx
 from . import sound as snd
 from .flow import ERROR, INFO, WARN, Message, Question, Stop
 from .workers import AinputValues, DailyContext, WorkerRegistry, daily_report, workers_text
@@ -176,9 +176,10 @@ def l_height(form: AinputForm) -> float:
 
 def l1_caption(lh: float) -> str:
     """≤300 はデプス(Height ゲージ)、>300 はコンベックス(UFAinput:1484-1488)。"""
-    if lh <= 300.0:
+    th = size_thresholds.get("depth_conb")            # 保守 → 寸法のしきい値(既定 300)
+    if lh <= th:
         return "Depth測定"
-    if lh > 300.0:
+    if lh > th:
         return "ｺﾝﾍﾞｯｸｽ測定"
     return "伝送高さ測定"
 

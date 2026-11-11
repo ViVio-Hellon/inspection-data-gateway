@@ -139,6 +139,7 @@ function showTab(name) {
   if (name === "hist") openHist();
   if (name === "judge") openJudge();
   if (name === "confi") openConfi();
+  if (name === "thresh") openThresh();
   if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -641,6 +642,56 @@ $("mConfiSave").addEventListener("click", async () => {
   } catch (err) { toastError(err); }
 });
 $("mConfiReset").addEventListener("click", () => { if (CR) crRender(true); });
+
+/* ---------- 寸法のしきい値 ---------- */
+let TH = null;
+function thRender(useDefault) {
+  $("mThresh").replaceChildren(...TH.groups.map((g) => {
+    const box = el("fieldset", "maint__thgroup");
+    box.append(el("legend", "", g.label));
+    const dl = el("dl", "maint__kv");
+    for (const it of g.items) {
+      const dt = el("dt");
+      const lab = el("label", "", it.label);
+      lab.htmlFor = `th-${it.key}`;
+      dt.append(lab);
+      const dd = el("dd");
+      const i = el("input", "input input--num");
+      Object.assign(i, { id: `th-${it.key}`, value: useDefault ? it.default : it.value, maxLength: 12, inputMode: "decimal" });
+      i.dataset.key = it.key;
+      const changed = !useDefault && it.value !== it.default;
+      dd.append(i, el("span", "muted maint__small", ` ${it.unit}(既定 ${it.default}${changed ? "・変更中" : ""})${it.note ? " " + it.note : ""}`));
+      dl.append(dt, dd);
+    }
+    box.append(dl);
+    return box;
+  }));
+  $("mThreshHist").replaceChildren(...(TH.history.length ? TH.history.map((h) =>
+    el("li", "", `${h.t} ${h.user || ""}@${h.pc || ""}: ` + h.changes.map((c) => `${c.label} ${c.before}→${c.after}`).join("、")))
+    : [el("li", "", "(まだ変更はありません)")]));
+}
+async function openThresh() {
+  try {
+    TH = await api.get("/api/maint/thresholds");
+    thRender(false);
+  } catch (err) { toastError(err); }
+}
+$("mThreshSave").addEventListener("click", async () => {
+  if (!TH) return;
+  const values = Object.fromEntries(TH.groups.flatMap((g) => g.items.map((it) => [it.key, $(`th-${it.key}`).value])));
+  for (const inp of document.querySelectorAll("#mThresh input")) inp.removeAttribute("aria-invalid");
+  try {
+    const d = await withUnlock(() => api.post("/api/maint/thresholds", { values }));
+    if (!d) return;
+    TH = d;
+    thRender(false);
+    toast("寸法のしきい値を保存しました(全 PC 共通)", "ok");
+  } catch (err) {
+    if (err && err.field && $(`th-${err.field}`)) { $(`th-${err.field}`).setAttribute("aria-invalid", "true"); $(`th-${err.field}`).focus(); }
+    toastError(err);
+  }
+});
+$("mThreshReset").addEventListener("click", () => { if (TH) thRender(true); });
 
 /* ---------- 仮ロット ---------- */
 let K = { fields: [], rows: [], original: "", hikiExtra: [], source: "" };

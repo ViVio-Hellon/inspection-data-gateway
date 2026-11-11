@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import cache_registry, datasource, flow, paths, vbx
+from . import cache_registry, datasource, flow, paths, size_thresholds, vbx
 from .flow import PACKING_SPEC
 from .model import NORMAL, THICK_ROWS, UiValues, bh_name, diag_name, kou_name, lateral_name, row_layout
 from . import sound as snd
@@ -1135,7 +1135,7 @@ def advance_check(lot: str, db_flag: str = "", *, arrbox: Optional[Arrbox] = Non
     thick = vbx.single(vbx.val(_at(row, c_thick)))
     surface = _at(row, c_surface)
     youto = _at(row, c_use)
-    f1 = thick <= 3.0
+    f1 = thick <= size_thresholds.sakko_thick()      # 保守 → 寸法のしきい値(既定 3.0)
     f2 = surface != "S" and surface != "T"
     f3 = vbx.left(youto, 1) == "T" or vbx.left(youto, 2) == "D1" or vbx.left(youto, 2) == "D2"
     return (f1 and f2) or (f2 and f3)

@@ -334,3 +334,9 @@
   background: var(--sunken); border-radius: 4px; font-size: 12px; }
 .maint__final dt { font-weight: 700; }
 .maint__finalh { grid-column: 1 / -1; font-weight: 700; }
+
+/* 寸法のしきい値(2026-11-11) */
+.maint__thgroup { border: 1px solid var(--rule); border-radius: 6px; padding: 6px 12px 10px; margin: 0 0 10px; }
+.maint__thgroup legend { font-weight: 700; font-size: var(--fs-sm); padding: 0 4px; }
+.maint__thgroup .input--num { width: 8em; }
+.maint__thgroup [aria-invalid="true"] { outline: 2px solid var(--state-error); }

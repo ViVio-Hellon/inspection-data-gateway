@@ -20,6 +20,7 @@
       <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
       <button class="tab" role="tab" type="button" data-tab="judge">判定の画像</button>
       <button class="tab" role="tab" type="button" data-tab="confi">公差外の確認</button>
+      <button class="tab" role="tab" type="button" data-tab="thresh">寸法のしきい値</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -334,6 +335,24 @@
             <button class="btn btn--commit" type="button" id="mConfiSave">保存する</button>
             <button class="btn" type="button" id="mConfiReset">既定に戻す(VBA と同じ)</button>
           </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 寸法のしきい値(共有マスタ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="thresh" id="pThresh" hidden>
+      <section class="card">
+        <header><h3>寸法のしきい値</h3><span class="lv">全 PC 共通(伝送用ファイル)</span></header>
+        <div class="pad">
+          <p class="muted maint__small">製品仕様で変わる厚・丈などの境目です(VBA の直書きに当たります)。既定は VBA と同じ値です
+            (6.0 と 6.001 の間の隙間などもそのまま)。変えるには編集の鍵が要ります。検査画面へは数秒で効きます。</p>
+          <div id="mThresh"></div>
+          <div class="btn-row">
+            <button class="btn btn--commit" type="button" id="mThreshSave">保存する</button>
+            <button class="btn" type="button" id="mThreshReset">既定に戻す(VBA と同じ)</button>
+          </div>
+          <h4>変更履歴</h4>
+          <ul class="muted maint__small" id="mThreshHist"></ul>
         </div>
       </section>
     </section>
