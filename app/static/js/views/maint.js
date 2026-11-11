@@ -237,6 +237,15 @@ function traceBox(x, name) {
       for (const r of t.rows) ul.append(el("li", "", r));
       body.append(ul);
     }
+    if (t.rule) {
+      const go = el("button", "btn btn--small", `照合ルール「${t.rule.group}」順番 ${t.rule.order}(版 ${t.rule.version || 0}${t.rule.new_way ? "" : "・いままでのコード"})`);
+      go.type = "button";
+      go.title = "保守 → 照合ルール でこの条件を見る・直す";
+      go.addEventListener("click", () => {
+        window.dispatchEvent(new CustomEvent("match-rules:open", { detail: { group: t.rule.group, order: t.rule.order } }));
+      });
+      body.append(el("br"), go);
+    }
     if (t.hits && t.hits.length) body.append(hitList(t));
     if (t.preview && t.preview.rows && t.preview.rows.length) body.append(previewTable(t));
     li.append(mark, body);

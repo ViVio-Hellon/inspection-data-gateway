@@ -222,4 +222,14 @@ async function open() {
 }
 const tab = document.querySelector('#mTabs .tab[data-tab="rules"]');
 if (tab) tab.addEventListener("click", open);
+// 歪公差チェックの「照合ルール … 順番 N」から開く
+window.addEventListener("match-rules:open", async (ev) => {
+  R.name = ev.detail.group;            // タブを開いたときの open() がこの群を選ぶ
+  if (tab) tab.click(); else await open();
+  setTimeout(() => {
+    const idx = R.work ? R.work.rules.findIndex((r) => r.order === ev.detail.order) : -1;
+    const tr = idx >= 0 ? $("rRules").children[idx] : null;
+    if (tr) { tr.classList.add("is-hit"); tr.scrollIntoView({ block: "center" }); }
+  }, 600);
+});
 if (!$("pRules").hidden) open();
