@@ -283,7 +283,8 @@ def start(mode: str, *, open_browser: bool = True) -> int:
             log().info("既存のインスタンスに合流します: %s", guard.url)
             existing = guard.existing
             join_running(guard.url, existing.port if existing else 0,
-                         existing.token if existing else "", open_browser=open_browser)
+                         existing.token if existing else "", open_browser=open_browser,
+                         started_at=existing.started_at if existing else 0.0)
             return 0
         # 掃除できた(死んでいた・古い版だった)ので取り直す。
         # それでも取れなければ、掃除した隙に別の1つ目が入っている
@@ -385,7 +386,13 @@ def start(mode: str, *, open_browser: bool = True) -> int:
             pass
 
 
-def join_running(url: str, port: int, token: str = "", *, open_browser: bool = True) -> bool:
+#: 2026-11-11: 1つ目が起動してからこの秒数のあいだは、1つ目が自分でブラウザを開いている最中とみなす
+#: (続けて2回押すと、1つ目の画面が心拍を送る前に2つ目が来て、もう1つ開いていた)
+OPENING_GRACE_SEC = 45.0
+
+
+def join_running(url: str, port: int, token: str = "", *, open_browser: bool = True,
+                 started_at: float = 0.0) -> bool:
     """動いている1つ目に合流する(2026-11-11)。
 
     **画面が開いていれば、新しく開かない。** 「前に出て」と頼み、その画面が次の心拍
@@ -397,6 +404,11 @@ def join_running(url: str, port: int, token: str = "", *, open_browser: bool = T
     if port and launch_guard.raise_open_screen(port, token):
         log().info("開いている画面を前に出します(新しく開きません)")
         print("すでに開いています。開いている画面を前に出します。")
+        return False
+    if started_at and 0 <= time.time() - started_at < OPENING_GRACE_SEC:
+        log().info("1つ目が起動したばかりで画面を開いている最中なので、開きません(%.0f秒前に起動)",
+                   time.time() - started_at)
+        print("起動中です。1つ目の画面が開くのを待ってください。")
         return False
     print(f"すでに起動しています。ブラウザを開きます: {url}")
     if open_browser:
