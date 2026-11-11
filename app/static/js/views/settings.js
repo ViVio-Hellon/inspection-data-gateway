@@ -41,14 +41,19 @@ function renderTerminal() {
   $("lineNoLabel").hidden = !maru;
   const canChange = t.unset || S.master_edit.possible;
   fac.disabled = no.disabled = $("saveTerminal").disabled = !canChange;
+  if (t.from_access) {                 // アクセス権限が正: 設備名は読むだけ(丸徳で号機が決まらなければ号機だけ選べる)
+    fac.disabled = true;
+    no.disabled = $("saveTerminal").disabled = !(t.number_free && canChange);
+  }
   $("termLevel").textContent = t.unset ? "未設定" : t.label;
   $("termLevel").className = "lv " + (t.unset ? "lv--ng" : "lv--ok");
   const ln = S.rights.line;
   const notes = [];
-  if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタの値が変わったときだけ自動で当てます)。`);
+  if (t.from_access) notes.push(`アクセス権限から読み込んでいます(この PC のラインは ${ln.text})。変えるときはアクセス権限マスタのライン名を直してください。`);
+  else if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタを読めないので、保存してある設定で動いています)。`);
   else if (ln.problem) notes.push("アクセス権限マスタではラインが決まりません: " + ln.problem);
   if (S.rights.applied) notes.push(S.rights.applied + "。");
-  if (!t.unset) notes.push(canChange ? "手で変えるときは管理者パスワードを聞きます。" : "変えるには管理者の権限と管理者パスワードが要ります(権限 の面を見てください)。");
+  if (!t.unset && !t.from_access) notes.push(canChange ? "手で変えるときは管理者パスワードを聞きます。" : "変えるには管理者の権限と管理者パスワードが要ります(権限 の面を見てください)。");
   $("termNote").textContent = notes.join(" ");
 
   const box = $("modeChoices");
@@ -503,6 +508,7 @@ async function load() {
   render();
   // 使用パス「音声」を変えたあとも音の面が古くならないよう、設定を読むたびに読み直す
   loadSound();
+  loadDist();
 }
 
 async function saveTerminal() {
@@ -649,6 +655,9 @@ async function checkOne(key, td) {
 
 function init() {
   tabs.attach($("settingsTabs"));
+  $("distExport").addEventListener("click", exportDist);
+  $("distReapply").addEventListener("click", reapplyDist);
+  $("distRemove").addEventListener("click", removeDist);
   $("facility").addEventListener("change", () => {
     const maru = $("facility").value === "丸徳";
     $("lineNo").hidden = !maru;
@@ -742,4 +751,90 @@ $("readTry")?.addEventListener("click", () => {
 if ($("readCard")) {
   renderReadCard();
   if (canSpeak()) window.speechSynthesis.addEventListener?.("voiceschanged", renderReadCard);
+}
+
+
+/* ---------- 配布設定(2026-11-11。`/api/settings/distribution`) ---------- */
+let DIST = null;
+function renderDist() {
+  const d = DIST;
+  $("distWhere").textContent = d.path;
+  const rows = d.items.map((it) => {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.dataset.key = it.key;
+    cb.checked = it.default;
+    cb.disabled = !it.set;
+    cb.setAttribute("aria-label", it.label);
+    td.append(cb);
+    tr.append(td, cell(it.label), cell(it.value + (it.here ? "(この PC の中を指しています)" : "")));
+    return tr;
+  });
+  const c = d.contents;
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.id = "distContents";
+  cb.checked = c.default;
+  cb.disabled = !c.exists;
+  cb.setAttribute("aria-label", c.label);
+  td.append(cb);
+  tr.append(td, cell(c.label), cell(c.file + (c.here ? "(この PC の中。配った先から見えないので中身を入れます)" : "(共有フォルダなら場所だけで足ります)")));
+  rows.push(tr);
+  $("distItems").querySelector("tbody").replaceChildren(...rows);
+  $("distExcluded").replaceChildren(...d.excluded.map((e) => {
+    const li = document.createElement("li");
+    li.textContent = `${e.label} … ${e.why}`;
+    return li;
+  }));
+  $("distLv").className = "lv " + (d.exists ? "lv--ok" : "lv--info");
+  $("distLv").textContent = d.exists ? "置いてあります" : "置いてありません";
+  const kv = d.exists ? [["作成", `${d.created_at}(${d.created_on})`],
+    ["書き出した版", d.version ? `VER${d.version}` + (d.version !== d.this_version ? `(この PC は VER${d.this_version})` : "") : "(不明)"],
+    ["この PC で最後に読んだ", d.applied_at || "(まだ)"]] : [];
+  $("distKv").replaceChildren(...kv.flatMap(([k, v]) => {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    return [dt, dd];
+  }));
+  $("distBundle").querySelector("tbody").replaceChildren(...d.bundle.map((b) => {
+    const r = document.createElement("tr");
+    r.append(cell(b.label), cell(b.value), cell(b.action || ""));
+    return r;
+  }));
+  $("distReapply").disabled = $("distRemove").disabled = !d.exists;
+}
+async function loadDist() {
+  try {
+    DIST = await api.get("/api/settings/distribution");
+    renderDist();
+  } catch (e) {
+    toastError(e);
+  }
+}
+async function postDist(url, body) {
+  try {
+    const r = await api.post(url, { password: $("distPassword").value, ...body });
+    $("distPassword").value = "";
+    DIST = r.summary;
+    renderDist();
+    toast(r.message, "success");
+  } catch (e) {
+    toastError(e);
+  }
+}
+function exportDist() {
+  const items = [...$("distItems").querySelectorAll("input[data-key]:checked")].map((x) => x.dataset.key);
+  postDist("/api/settings/distribution/export", { items, with_contents: $("distContents").checked });
+}
+async function reapplyDist() {
+  if (!(await confirmBox("配布設定を読み込み直します。この PC で変えた値も配布の値で上書きします。よいですか?"))) return;
+  postDist("/api/settings/distribution/reapply", {});
+}
+async function removeDist() {
+  if (!(await confirmBox("配布設定(配布設定フォルダ)を消します。この PC の設定はそのままです。よいですか?"))) return;
+  postDist("/api/settings/distribution/remove", {});
 }

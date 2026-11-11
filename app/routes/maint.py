@@ -317,6 +317,41 @@ def confi_rows_set():
 
 
 # ------------------------------------------------------------------
+# 寸法のしきい値(2026-11-11)。伝送用ファイルの共有マスタ。見るのは誰でも、変えるのは編集の鍵
+def _thresholds_payload(vals: dict) -> dict:
+    from ufkensa.kensa import size_thresholds as th
+    return {"groups": [{"group": g, "label": lab, "items": [
+        {"key": i.key, "label": i.label, "unit": i.unit, "value": th.fmt(vals[i.key]), "default": th.fmt(i.default),
+         "min": th.fmt(i.lo), "max": th.fmt(i.hi), "integer": i.integer, "note": i.note}
+        for i in th.ITEMS if i.group == g]} for g, lab in th.GROUPS],
+        "history": th.history()}
+
+
+@bp.get("/api/maint/thresholds")
+def thresholds_get():
+    from ufkensa.kensa import size_thresholds as th
+    th.ensure_table()                       # 無ければ VBA の既定で作る(読めなくても画面は既定を出す)
+    return jsonify(_thresholds_payload(th.values(fresh=True)))
+
+
+@bp.post("/api/maint/thresholds")
+def thresholds_set():
+    if (d := _need_edit()) is not None:
+        return d
+    from ufkensa.kensa import size_thresholds as th
+    vals = _body().get("values")
+    if not isinstance(vals, dict):
+        return _err("bad_request", "values がありません")
+    try:
+        after = th.save(vals)
+    except th.Invalid as e:
+        return _err("invalid", str(e), 400, field=e.key)
+    except (OSError, sqlite3.Error) as e:
+        return _err("not_saved", f"保存できませんでした: {e}", 500)
+    return jsonify(_thresholds_payload(after))
+
+
+# ------------------------------------------------------------------
 # マスタ管理(見るのは誰でも。直す・足す・消す は編集の鍵が要る)。ufkensa/kensa/master_admin.py
 # ------------------------------------------------------------------
 def _master_err(e: master_admin.MasterError):

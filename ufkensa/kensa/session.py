@@ -46,7 +46,7 @@ from .. import trace
 from ..logging_utils import get_logger
 from . import (calibration, checks, datasource, grid, input_router, judge, layout, legacy_log, lines, lot as lotmod, minmax, packing,
                paths, quality, records, report_html, report_model, terminal, view, vbx, workers, wiring)
-from . import lot_watch, nippou_export, shadow, worker_archive
+from . import lot_watch, nippou_export, shadow, size_thresholds, worker_archive
 from . import reasons as reason_master
 from .model import CellKey, Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
@@ -341,7 +341,7 @@ class Session:
                 else:
                     st.blindfold_tag = ""
             else:
-                hooks.cb_add(st, 6.0)
+                hooks.cb_add(st, size_thresholds.thin_atu())   # VBA は 6.0 固定(= 薄板の形状)。しきい値ちょうどを渡す
             st.form_tag = ""
             st.load = Switch.ON
             self.started = True

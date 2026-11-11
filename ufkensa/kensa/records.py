@@ -934,9 +934,9 @@ def load_text(store: LocalStore, lname: str, n: str = "", *, current_option: str
         out.calls.append(("AtCountSelect", 2))
     elif two_four == "厚4ヵ所":
         out.calls.append(("AtCountSelect", 4))
-    if above_below == "検入≧26":
+    if str(above_below).startswith("検入≧"):           # 2026-11-11: 枚数は設定で変わるので頭で見る
         out.calls.append(("InspectionSelect", "非表示"))
-    elif above_below == "検入≦25":
+    elif str(above_below).startswith("検入≦"):
         out.calls.append(("InspectionSelect", "表示"))
     if option == "スラブ":
         out.calls.append(("SlabSet",))

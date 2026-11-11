@@ -20,6 +20,8 @@
       <button class="tab" role="tab" type="button" data-tab="term">端末設定・パスワード</button>
       <button class="tab" role="tab" type="button" data-tab="judge">判定の画像</button>
       <button class="tab" role="tab" type="button" data-tab="confi">公差外の確認</button>
+      <button class="tab" role="tab" type="button" data-tab="thresh">寸法のしきい値</button>
+      <button class="tab" role="tab" type="button" data-tab="rules">照合ルール</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -338,6 +340,67 @@
       </section>
     </section>
 
+    <!-- ================= 寸法のしきい値(共有マスタ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="thresh" id="pThresh" hidden>
+      <section class="card">
+        <header><h3>寸法のしきい値</h3><span class="lv">全 PC 共通(伝送用ファイル)</span></header>
+        <div class="pad">
+          <p class="muted maint__small">製品仕様で変わる厚・丈などの境目です(VBA の直書きに当たります)。既定は VBA と同じ値です
+            (6.0 と 6.001 の間の隙間などもそのまま)。変えるには編集の鍵が要ります。検査画面へは数秒で効きます。</p>
+          <div id="mThresh"></div>
+          <div class="btn-row">
+            <button class="btn btn--commit" type="button" id="mThreshSave">保存する</button>
+            <button class="btn" type="button" id="mThreshReset">既定に戻す(VBA と同じ)</button>
+          </div>
+          <h4>変更履歴</h4>
+          <ul class="muted maint__small" id="mThreshHist"></ul>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 照合ルール(共有マスタ。ufkensa/kensa/match_rules.py) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="rules" id="pRules" hidden>
+      <section class="card">
+        <header><h3>照合ルール</h3><span class="lv">全 PC 共通(伝送用ファイル「照合ルール」)</span></header>
+        <div class="pad">
+          <p class="muted maint__small">品質基準の表を引くときに「表のどの列を、ロットのどの項目と、どう比べるか」です。
+            上から順に、全部のルールに合った行を使います。既定はいままでのコードと同じです。表の列・ロットの項目は選ぶだけ(在るものだけ)。
+            保存の前に、仕掛のロットで結果が変わるものを確かめます。保存には編集の鍵が要ります。</p>
+          <div class="btn-row" id="rGroups" role="group" aria-label="ルール群"></div>
+          <p class="muted maint__small" id="rInfo"></p>
+          <div class="btn-row">
+            <label>使う行 <select class="input" id="rUse"></select></label>
+            <label><input type="checkbox" id="rNew"> 新方式(ルールで照合。外すと、いままでのコード)</label>
+          </div>
+          <div class="tablewrap">
+            <table class="table table--dense">
+              <thead><tr><th>順番</th><th>表の列</th><th>ロットの項目</th><th>比べ方</th><th>前処理</th><th>空のとき</th><th>有効</th><th>備考</th><th></th></tr></thead>
+              <tbody id="rRules"></tbody>
+            </table>
+          </div>
+          <div class="btn-row">
+            <button class="btn" type="button" id="rAdd">ルールを足す</button>
+            <button class="btn" type="button" id="rReset">既定に戻す(いまのコードと同じ)</button>
+          </div>
+          <h4>試し照合</h4>
+          <form class="btn-row" id="rTrialForm" autocomplete="off">
+            <label for="rLot">ロットNo</label><input class="input" id="rLot" maxlength="20">
+            <button class="btn" type="submit">試す(保存済み と 編集中 を並べる)</button>
+          </form>
+          <div id="rTrial"></div>
+          <h4>保存</h4>
+          <div class="btn-row">
+            <button class="btn" type="button" id="rCheck">結果が変わるロットを確かめる</button>
+            <label for="rReason">理由</label><input class="input" id="rReason" maxlength="200" placeholder="結果が変わるときは必須">
+            <button class="btn btn--commit" type="button" id="rSave">保存する</button>
+          </div>
+          <div id="rReg"></div>
+          <h4>変更履歴</h4>
+          <ul class="muted maint__small" id="rHist"></ul>
+        </div>
+      </section>
+    </section>
+
     <!-- ================= 端末設定・パスワード ================= -->
     <section class="tabpanel tabpanel--scroll" data-panel="term" id="pTerm" hidden>
       <div class="maint__two">
@@ -375,4 +438,5 @@
 
 {% block scripts %}
 <script type="module" src="{{ url_for('static', filename='js/views/maint.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/views/match_rules.js') }}"></script>
 {% endblock %}

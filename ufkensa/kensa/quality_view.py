@@ -12,7 +12,7 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from . import datasource, paths, vbx
+from . import datasource, paths, size_thresholds, vbx
 from .flow import ERROR, Message
 from .quality import (NUM, STR, VAR, LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
                       csng, find_indices, loop_array, rgb, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
@@ -436,7 +436,7 @@ def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any
     form.Uzai, form.Utyou, form.UYoucode, form.Uhyou = zai, tyo, youto, grade
     form.Noun = nou
     form.Noun_BackColor = SYSTEM_BUTTON_FACE
-    atu_flag = o_atu <= 6.0
+    atu_flag = o_atu <= size_thresholds.thin_atu()       # 保守 → 寸法のしきい値(既定 6.0)
     vc_flag = vbx.val(_lv(la, hf, "VC")) == 1
 
     use_flag = False

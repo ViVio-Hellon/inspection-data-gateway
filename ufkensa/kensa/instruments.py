@@ -26,7 +26,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence
 
-from . import ado_filter, datasource, flow, lines, paths, vbx
+from . import ado_filter, datasource, flow, lines, paths, size_thresholds, vbx
 from .flow import WARN
 from .lot import SubscriptOutOfRange
 
@@ -273,9 +273,10 @@ def machine_transfer(t: TransferInput, *, db: Callable[..., str] = db_return_mic
     line, conb = "", ""
     if official == "L-1":
         line = "L-1"
-        if vbx.val(t.tak) > 5500.0:
+        conb_take = size_thresholds.get("conb_take")    # 保守 → 寸法のしきい値(既定 5500)
+        if vbx.val(t.tak) > conb_take:
             conb = " C11"
-        if vbx.val(t.tak) <= 5500.0:
+        if vbx.val(t.tak) <= conb_take:
             conb = " C12"
     elif official in _LINE_CONB:
         line, conb = _LINE_CONB[official]

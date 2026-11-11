@@ -13,7 +13,7 @@ import threading
 from typing import Any, Callable, Optional
 
 #: 覚えを登録するモジュール(ufkensa.kensa の下)。足したらここにも足す
-MODULES = ("datasource", "judge", "lot_copy", "paths", "quality", "reasons")
+MODULES = ("datasource", "judge", "lot_copy", "match_rules", "paths", "quality", "reasons", "size_thresholds")
 
 _lock = threading.Lock()
 _entries: dict[str, tuple[Callable[[], None], Callable[[], int]]] = {}

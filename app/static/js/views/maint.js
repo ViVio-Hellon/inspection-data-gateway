@@ -139,6 +139,7 @@ function showTab(name) {
   if (name === "hist") openHist();
   if (name === "judge") openJudge();
   if (name === "confi") openConfi();
+  if (name === "thresh") openThresh();
   if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -236,11 +237,75 @@ function traceBox(x, name) {
       for (const r of t.rows) ul.append(el("li", "", r));
       body.append(ul);
     }
+    if (t.hits && t.hits.length) body.append(hitList(t));
+    if (t.preview && t.preview.rows && t.preview.rows.length) body.append(previewTable(t));
     li.append(mark, body);
     ol.append(li);
   }
+  const fin = finalRows(x.trace);
+  if (fin) box.append(fin);
   box.append(ol);
   return box;
+}
+
+/** 条件・等級表で当たった行(表の行番号と鍵の列)。chosen は最後に使った行 */
+function hitList(t) {
+  const ul = el("ul", "maint__hits");
+  const shown = t.hits.slice(0, 8);
+  const label = (t.table ? `表「${t.table}」` : "") + (t.before !== undefined ? ` 残った行${t.hits.length < t.kept ? `(先頭 ${t.hits.length} 行)` : ""}:` : " 当たった行:");
+  ul.append(el("li", "muted", label));
+  for (const h of shown) {
+    const keys = Object.entries(h.keys || {}).filter(([, v]) => v !== "").map(([k, v]) => `${k}=${v}`).join("・");
+    const li = el("li", h.chosen ? "is-chosen" : "", `${h.no} 行目` + (keys ? `　${keys}` : "") + (h.col ? `　列「${h.col}」` : "") + (h.value !== undefined ? ` = ${h.value || "(空)"}` : "") + (h.chosen ? "　← 使った行" : ""));
+    ul.append(li);
+  }
+  if (t.hits.length > shown.length) ul.append(el("li", "muted", `…ほか ${t.hits.length - shown.length} 行`));
+  return ul;
+}
+
+/** 表のプレビュー。当たった行を目立たせる(測定機器ID の行と同じ考え) */
+function previewTable(t) {
+  const p = t.preview;
+  const det = el("details", "maint__pv");
+  det.open = true;
+  det.append(el("summary", "", `表「${t.table || ""}」のプレビュー(全 ${p.total} 行中 ${p.rows.length} 行・当たり ${p.hit.length} 行)`));
+  const wrap = el("div", "maint__pvwrap");
+  const tbl = el("table", "maint__pvt");
+  const hr = el("tr", "");
+  hr.append(el("th", "", "行"));
+  for (const f of p.fields) hr.append(el("th", "", f));
+  const thead = el("thead", ""); thead.append(hr);
+  const tb = el("tbody", "");
+  const hitCol = (t.hits && t.hits[0] && t.hits[0].col) || "";
+  for (const r of p.rows) {
+    const isHit = p.hit.includes(r.no);
+    const chosen = (t.hits || []).some((h) => h.no === r.no && h.chosen);
+    const tr = el("tr", isHit ? (chosen || t.hits.length === 1 ? "is-hit is-chosen" : "is-hit") : "");
+    tr.append(el("td", "n", String(r.no)));
+    r.cells.forEach((c, i) => tr.append(el("td", isHit && p.fields[i] === hitCol ? "is-cell" : "", c)));
+    tb.append(tr);
+  }
+  tbl.append(thead, tb);
+  wrap.append(tbl);
+  det.append(wrap);
+  return det;
+}
+
+/** 出力(ソリ幅・ソリ丈・中歪・耳歪)ごとに最後に使った行のまとめ */
+function finalRows(trace) {
+  const last = {};
+  for (const t of trace) if (t.output && t.hits && t.hits.length) last[t.output] = t;
+  const qp = trace.filter((t) => t.step === "平坦度一覧QP追加の判定" && t.chosen).pop();
+  const keys = Object.keys(last);
+  if (!keys.length && !qp) return null;
+  const dl = el("dl", "maint__final");
+  dl.append(el("dt", "maint__finalh", "最終的に使った行"), el("dd", "maint__finalh", ""));
+  if (qp) dl.append(el("dt", "", "平坦度一覧QP追加"), el("dd", "", `管理番号 ${qp.chosen}`));
+  for (const k of keys) {
+    const t = last[k], h = t.hits.find((x) => x.chosen) || t.hits[0];
+    dl.append(el("dt", "", k), el("dd", "", `表「${t.table}」 ${h.no} 行目 列「${h.col || "-"}」 = ${h.value || "(空)"}` + (t.chosen !== undefined && t.output !== "ソリ幅・ソリ丈・中歪/耳歪" ? ` → ${t.chosen}` : "")));
+  }
+  return dl;
 }
 
 /* ---------- 歪公差: 全ロット(1 行 1 ロット。違う欄は「変更前 → 変更後」) ---------- */
@@ -577,6 +642,56 @@ $("mConfiSave").addEventListener("click", async () => {
   } catch (err) { toastError(err); }
 });
 $("mConfiReset").addEventListener("click", () => { if (CR) crRender(true); });
+
+/* ---------- 寸法のしきい値 ---------- */
+let TH = null;
+function thRender(useDefault) {
+  $("mThresh").replaceChildren(...TH.groups.map((g) => {
+    const box = el("fieldset", "maint__thgroup");
+    box.append(el("legend", "", g.label));
+    const dl = el("dl", "maint__kv");
+    for (const it of g.items) {
+      const dt = el("dt");
+      const lab = el("label", "", it.label);
+      lab.htmlFor = `th-${it.key}`;
+      dt.append(lab);
+      const dd = el("dd");
+      const i = el("input", "input input--num");
+      Object.assign(i, { id: `th-${it.key}`, value: useDefault ? it.default : it.value, maxLength: 12, inputMode: "decimal" });
+      i.dataset.key = it.key;
+      const changed = !useDefault && it.value !== it.default;
+      dd.append(i, el("span", "muted maint__small", ` ${it.unit}(既定 ${it.default}${changed ? "・変更中" : ""})${it.note ? " " + it.note : ""}`));
+      dl.append(dt, dd);
+    }
+    box.append(dl);
+    return box;
+  }));
+  $("mThreshHist").replaceChildren(...(TH.history.length ? TH.history.map((h) =>
+    el("li", "", `${h.t} ${h.user || ""}@${h.pc || ""}: ` + h.changes.map((c) => `${c.label} ${c.before}→${c.after}`).join("、")))
+    : [el("li", "", "(まだ変更はありません)")]));
+}
+async function openThresh() {
+  try {
+    TH = await api.get("/api/maint/thresholds");
+    thRender(false);
+  } catch (err) { toastError(err); }
+}
+$("mThreshSave").addEventListener("click", async () => {
+  if (!TH) return;
+  const values = Object.fromEntries(TH.groups.flatMap((g) => g.items.map((it) => [it.key, $(`th-${it.key}`).value])));
+  for (const inp of document.querySelectorAll("#mThresh input")) inp.removeAttribute("aria-invalid");
+  try {
+    const d = await withUnlock(() => api.post("/api/maint/thresholds", { values }));
+    if (!d) return;
+    TH = d;
+    thRender(false);
+    toast("寸法のしきい値を保存しました(全 PC 共通)", "ok");
+  } catch (err) {
+    if (err && err.field && $(`th-${err.field}`)) { $(`th-${err.field}`).setAttribute("aria-invalid", "true"); $(`th-${err.field}`).focus(); }
+    toastError(err);
+  }
+});
+$("mThreshReset").addEventListener("click", () => { if (TH) thRender(true); });
 
 /* ---------- 仮ロット ---------- */
 let K = { fields: [], rows: [], original: "", hikiExtra: [], source: "" };

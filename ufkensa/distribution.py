@@ -34,6 +34,11 @@
 揃えたいときは、設定 →「配布設定」の「読み込み直す」(管理者パスワード)で上書きする。
 共有フォルダの設定ファイルは、読み込み直しでも上書きしない(ほかの PC も使っているため)。
 
+【2026-11-11 に足したもの】使用パス(判定の画像 OK/NG/診断 も)・判定の画像の表示・音・モード・受信機(COM)。
+受信機とモードは PC ごとの機械・使い方なので**既定では入れない**(選べば入る)。ライン(設備名・号機)・前回の ID・
+配色(ブラウザの中)は配らない(`EXCLUDED`)。{…} の値(使用パス など)は中を 1 か所ずつ比べ、その PC で変えた所だけ残す。
+書き出したツールの版を `app_version` に入れ、設定画面で「読み込んだらこの PC で何が起きるか」を見せる。
+
 【パスワード】書き出す・消す・読み込み直すには管理者パスワードが要る。起動時の読み込みには要らない
 (`配布設定\\` を置いたのは、フォルダを配った管理者本人だから)。
 """
@@ -68,10 +73,25 @@ FORMAT = 1
 # この PC が最後に読み込んだとき
 KEY_APPLIED = "distribution_applied"
 
+# 2026-11-11: あとから増えた PC ごとの設定(`ufkensa/kensa/*`・`app/routes/maint.py` の鍵)。
+# kensa を import すると重いので鍵の字だけ持つ(同じ字かは tests/test_distribution.py が確かめる)
+KEY_KENSA_PATHS = "kensa_paths"        # ufkensa.kensa.paths.KEY_PATHS(使用パス。判定の画像 OK/NG/診断 も)
+KEY_KENSA_MODE = "kensa_mode"          # ufkensa.kensa.paths.KEY_MODE
+KEY_JUDGE_DISPLAY = "judge_display"    # ufkensa.kensa.judge_images.DISPLAY_KEY
+KEY_COM_KENSA = "com_kensa"            # app.routes.maint.KEY_COM_KENSA
+KEY_COM_CARDS = "com_cards"            # app.routes.maint.KEY_COM_CARDS
+KEY_COM_RECEIVE = "com_receive"        # app.routes.maint.KEY_COM
+SOUND_PREFIX = "sound_file_"           # ufkensa.kensa.sound.SETTING_PREFIX(出来事ごとに 1 つ)
+SOUND = "sound_files"                  # 画面の項目(書き出すときに sound_file_* 全部に広げる)
+
 # 入れられるもの: (鍵, 画面の名前, 既定で入れるか)。鍵は `user_config.json` の鍵そのもの
+# 既定で入れないもの(False)は **その PC の機械・置き場所に結びつくもの**。選べば入れられる
 ITEMS: tuple[tuple[str, str, bool], ...] = (
     (config.KEY_SETTINGS_FILE, "設定ファイルの場所(権限・かんたん設定・接続先)", True),
     (config.KEY_DB_PATH, "開く DB", True),
+    (KEY_KENSA_PATHS, "使用パス(参照先・仕掛台帳の第1/第2・判定の画像 OK/NG/診断 など)", True),
+    (KEY_JUDGE_DISPLAY, "判定の画像の表示時間・大きさ(保守 → 判定の画像)", True),
+    (SOUND, "音(どこで何を鳴らすか)", True),
     (config.KEY_REF_DIR, "参照ファイルの起点", True),
     (config.KEY_EXPORT_DIR, "出力先", True),
     (config.KEY_EXPORT_FORMAT, "出力の形式", True),
@@ -80,12 +100,54 @@ ITEMS: tuple[tuple[str, str, bool], ...] = (
     (config.KEY_LOG_KEEP_DAYS, "記録を残す日数", True),
     (config.KEY_ACCESS_LOG, "Access.log を書く", True),
     (config.KEY_RELOGIN_MIN, "無操作で再ログイン(分)", True),
+    (config.KEY_ADMIN_PASSWORD, "管理者パスワード", True),
+    (KEY_KENSA_MODE, "モード(オンライン/オフライン。PC ごとに違うことがある)", False),
+    (KEY_COM_KENSA, "検査画面で受け取る受信機(COM ポート。PC ごとの機械)", False),
+    (KEY_COM_CARDS, "保守で並べる受信機(COM ポート。PC ごとの機械)", False),
+    (KEY_COM_RECEIVE, "受信の設定の初期値(COM ポート。PC ごとの機械)", False),
     (config.KEY_ACCDB_SOURCE, "Access 取り込みの元(.accdb)", False),
     (config.KEY_ACCDB_TARGET, "Access 取り込みの保存先", False),
-    (config.KEY_ADMIN_PASSWORD, "管理者パスワード", True),
 )
 ITEM_KEYS = frozenset(k for k, _, _ in ITEMS)
 ITEM_LABELS = {k: label for k, label, _ in ITEMS}
+# 中を 1 つずつ比べる項目({…} の値)。その PC で 1 か所だけ変えていても、ほかの所は配布の値を入れる
+MERGE_KEYS = frozenset({KEY_KENSA_PATHS, KEY_JUDGE_DISPLAY, KEY_COM_CARDS})
+
+# 配らないもの(画面・はじめに読む.txt に理由と並べる)
+EXCLUDED: tuple[tuple[str, str], ...] = (
+    ("この端末のライン(設備名・号機)", "PC ごとに違う。アクセス権限マスタから自動で当たる"),
+    ("前回のログイン ID・選んだ表示する表", "その PC の使い方の覚え"),
+    ("配色(テーマ)・読み上げ ON/OFF", "ブラウザの中(localStorage)にあり、ツールからは読めない"),
+    ("配布設定を読んだ記録・ラインを当てた記録", "ツールが自分で付ける覚え"),
+    ("stage3_shadow などの試験用の切り替え", "開発・確かめ用"),
+)
+
+
+def is_item_key(key: str) -> bool:
+    """配布設定に入る鍵か(画面の項目 + 広げた sound_file_*)。"""
+    return (key in ITEM_KEYS and key != SOUND) or (key.startswith(SOUND_PREFIX) and len(key) > len(SOUND_PREFIX))
+
+
+def label_of(key: str) -> str:
+    if key.startswith(SOUND_PREFIX):
+        name = key[len(SOUND_PREFIX):]
+        try:
+            from .kensa import sound
+            spec = sound.spec(name)
+            name = spec.label if spec else name
+        except Exception:                                          # noqa: BLE001  名前が出せなくても配れる
+            pass
+        return f"音: {name}"
+    return ITEM_LABELS.get(key, key)
+
+
+def _expand(current: dict[str, Any], key: str) -> list[str]:
+    """画面の項目 → 実際の鍵。"""
+    if key == SOUND:
+        return sorted(k for k in current if is_item_key(k) and k.startswith(SOUND_PREFIX))
+    return [key]
+
+
 # 場所の項目(この PC の中を指していたら、書き出すときに知らせる)
 PATH_KEYS = frozenset({config.KEY_SETTINGS_FILE, config.KEY_DB_PATH, config.KEY_REF_DIR, config.KEY_EXPORT_DIR,
                        config.KEY_LOG_DIR, config.KEY_ACCDB_SOURCE, config.KEY_ACCDB_TARGET})
@@ -239,6 +301,7 @@ class Bundle:
     contents: Optional[dict[str, list[dict]]] = None
     created_at: str = ""
     created_on: str = ""
+    version: str = ""                                  # 書き出したツールの版(2026-11-11)
 
     def fingerprint(self) -> str:
         return _digest({"settings": self.settings, "contents": self.contents})
@@ -262,7 +325,7 @@ def read(base: Optional[Path] = None) -> Optional[Bundle]:
             log.warning("配布設定の形が違うため読みません: %s", path)
             return None
         raw = data.get("settings") or {}
-        settings = {k: v for k, v in raw.items() if k in ITEM_KEYS}       # 知らない鍵は捨てる
+        settings = {k: v for k, v in raw.items() if is_item_key(k)}       # 知らない鍵は捨てる
         meta = data
     contents = None
     cpath = contents_path(base)
@@ -274,7 +337,7 @@ def read(base: Optional[Path] = None) -> Optional[Bundle]:
     if not settings and contents is None:
         return None
     return Bundle(settings=settings, contents=contents, created_at=str(meta.get("created_at", "")),
-                  created_on=str(meta.get("created_on", "")))
+                  created_on=str(meta.get("created_on", "")), version=str(meta.get("app_version", "")))
 
 
 def show(key: str, value: Any) -> str:
@@ -283,6 +346,11 @@ def show(key: str, value: Any) -> str:
         return "(設定済み)"
     if isinstance(value, bool):
         return "する" if value else "しない"
+    if isinstance(value, dict):
+        n = sum(1 for _, v in _leaves(value) if not _blank(v))
+        return f"{n} か所" if n else "(既定)"
+    if isinstance(value, list):
+        return f"{len(value)} 件" if value else "(なし)"
     text = "" if value is None else str(value)
     return text if text.strip() else "(既定)"
 
@@ -302,11 +370,15 @@ def summary() -> dict[str, Any]:
     sf_here = is_here(sf)
     items = []
     for key, label, default in ITEMS:
-        have = key in current and not _blank(current.get(key))
-        value = current.get(key) if have else None
+        keys = [k for k in _expand(current, key) if k in current and not _blank(current.get(k))]
+        have = bool(keys)
+        if key == SOUND:
+            value_text = f"{len(keys)} 件" if have else ""
+        else:
+            value_text = show(key, current.get(key)) if have else ""
         items.append({"key": key, "label": label, "default": default and have, "set": have,
-                      "value": show(key, value) if have else "(既定のまま。入れなくても配った先も既定)",
-                      "here": bool(have and key in PATH_KEYS and is_here(Path(str(value))))})
+                      "value": value_text if have else "(既定のまま。入れなくても配った先も既定)",
+                      "here": bool(have and key in PATH_KEYS and is_here(Path(str(current.get(key)))))})
     out: dict[str, Any] = {
         "exists": bundle is not None,
         "path": str(DIR),
@@ -317,14 +389,27 @@ def summary() -> dict[str, Any]:
         "bundle": [],
         "created_at": "",
         "created_on": "",
+        "version": "",
+        "this_version": _app_version(),
+        "excluded": [{"label": a, "why": b} for a, b in EXCLUDED],
     }
     if bundle is None:
         return out
-    rows = [{"label": ITEM_LABELS[k], "value": show(k, v)} for k, v in bundle.settings.items()]
+    # 2026-11-11: 読み込んだら この PC で何が起きるか(起動時の読み込み = 上書きしない で見積もる)
+    plan = _plan(bundle, current, _applied_record(), overwrite=False)
+    rows = [{"label": label_of(k), "value": show(k, v), "action": plan.get(k, ACT_SAME)}
+            for k, v in bundle.settings.items()]
     if bundle.contents is not None:
-        rows.append({"label": CONTENTS_LABEL, "value": f"{CONTENTS_NAME}({_count(bundle.contents)})"})
-    out.update(bundle=rows, created_at=bundle.created_at, created_on=bundle.created_on)
+        rows.append({"label": CONTENTS_LABEL, "value": f"{CONTENTS_NAME}({_count(bundle.contents)})", "action": ""})
+    out.update(bundle=rows, created_at=bundle.created_at, created_on=bundle.created_on, version=bundle.version)
     return out
+
+
+def _app_version() -> str:
+    try:
+        return app_config.version()
+    except Exception:                                              # noqa: BLE001
+        return ""
 
 
 # ------------------------------------------------------------------
@@ -351,8 +436,9 @@ def export(password: str, items: list[str], with_contents: bool) -> Result:
         return Result(False, "入れる項目を 1 つ以上選んでください。", REFUSE_BAD_INPUT)
 
     current = user_settings.load_all()
-    settings = {k: current[k] for k in items if k in current and not _blank(current[k])}
-    defaults = [ITEM_LABELS[k] for k in items if k not in settings]
+    settings = {k: current[k] for item in items for k in _expand(current, item)
+                if k in current and not _blank(current[k])}
+    defaults = [ITEM_LABELS[k] for k in items if not any(x in settings for x in _expand(current, k))]
     contents = None
     if with_contents:
         try:
@@ -367,7 +453,8 @@ def export(password: str, items: list[str], with_contents: bool) -> Result:
 
     # **フォルダの中へ直接書き、ファイルごとに置き換える**(python-web-tools と同じ。Windows で作った直後の
     # フォルダの付け替えが失敗して、前のものだけ消えることがあったため)。設定.json は最後に書く
-    meta = {"format": FORMAT, "created_at": _now(), "created_on": platform.node(), "settings": settings}
+    meta = {"format": FORMAT, "created_at": _now(), "created_on": platform.node(), "app_version": _app_version(),
+            "settings": settings}
     try:
         DIR.mkdir(parents=True, exist_ok=True)
         if contents is not None:
@@ -387,10 +474,10 @@ def export(password: str, items: list[str], with_contents: bool) -> Result:
     # 書き出した PC は、いまの値がそのまま配布設定の値
     _mark_applied(written, settings, _digest(contents) if contents is not None else None)
 
-    names = [ITEM_LABELS[k] for k in settings] + ([CONTENTS_LABEL] if contents is not None else [])
+    names = [label_of(k) for k in settings] + ([CONTENTS_LABEL] if contents is not None else [])
     message = (f"配布設定を書き出しました({len(names)} 項目): {DIR}。配るときは scripts\\make_dist.bat で"
                "配布用フォルダを作ってください(このフォルダも入ります)。")
-    here = [ITEM_LABELS[k] for k in settings if k in PATH_KEYS and is_here(Path(str(settings[k])))]
+    here = [label_of(k) for k in settings if k in PATH_KEYS and is_here(Path(str(settings[k])))]
     if here:
         message += " この PC の中を指している場所があります(配った先に同じ場所が無いと使えません): " + "・".join(here) + "。"
     if defaults:
@@ -400,19 +487,32 @@ def export(password: str, items: list[str], with_contents: bool) -> Result:
 
 
 def _readme(meta: dict[str, Any], contents: Optional[dict]) -> str:
-    lines = ["UF検査判定 配布設定", "", f"作成: {meta['created_at']}({meta['created_on']})", "",
+    ver = f" / VER{meta['app_version']}" if meta.get("app_version") else ""
+    lines = ["UF検査判定 配布設定", "", f"作成: {meta['created_at']}({meta['created_on']}{ver})", "",
              "このフォルダに入っているもの"]
     for key, value in meta["settings"].items():
-        lines.append(f"  {ITEM_LABELS[key]}: {show(key, value)}")
+        lines.append(f"  {label_of(key)}: {show(key, value)}")
     if contents is not None:
         lines.append(f"  {CONTENTS_LABEL}: {CONTENTS_NAME}({_count(contents)})")
+    left = [label for key, label, _ in ITEMS
+            if not any(k in meta["settings"] for k in ([key] if key != SOUND else [x for x in meta["settings"]
+                                                                                   if x.startswith(SOUND_PREFIX)]))]
+    if left:
+        lines += ["", "入れていないもの(書き出すときに選ばなかった・その PC で変えていなかった)"]
+        lines += [f"  {label}" for label in left]
+    lines += ["", "いつも配らないもの(PC ごとのもの)"]
+    lines += [f"  {a} … {b}" for a, b in EXCLUDED]
     lines += [
         "",
         "配った先で起きること",
         "  起動したときにこのフォルダを読み込みます。",
         "  無い項目・空の項目は埋めます。書き出し直したものなら、前の配布のまま変えていない",
         "  項目も新しい値に入れ替えます。その PC で変えた設定は上書きしません。",
+        "  使用パス・判定の画像の表示・保守の受信機は、中を 1 か所ずつ比べます",
+        "  (その PC で 1 か所だけ変えていれば、そこだけ残してほかは配布の値を入れます)。",
+        "  受信機(COM ポート)は PC ごとの機械なので、選んで書き出したときだけ入ります。",
         "  設定ファイルの中身は、その PC の設定ファイルがまだ無ければ、それで作ります。",
+        "  何が入れ替わるかは、設定 →「配布設定」の「置いてある配布設定」で確かめられます。",
         "  揃えたいときは、設定 →「配布設定」→「配布設定を読み込み直す」(管理者パスワード)。",
         "",
     ]
@@ -437,7 +537,7 @@ def remove(password: str) -> Result:
 def _applied_record() -> dict[str, Any]:
     raw = user_settings.get(KEY_APPLIED)
     if not isinstance(raw, dict):
-        return {}
+        return {"at": "", "fingerprint": "", "values": {}, "contents": ""}
     return {"at": str(raw.get("at", "")), "fingerprint": str(raw.get("fingerprint", "")),
             "values": dict(raw.get("values") or {}), "contents": str(raw.get("contents", ""))}
 
@@ -459,6 +559,83 @@ def _blank(value: Any) -> bool:
     return value is None or (isinstance(value, str) and not value.strip())
 
 
+ACT_TAKE, ACT_SAME, ACT_KEEP = "入れる", "同じ", "この PC の値を残す"
+
+
+def _leaves(value: Any, path: tuple = ()) -> list[tuple[tuple, Any]]:
+    """{…} の中の値を 1 つずつ(道筋, 値)。{} の中身が無ければ道筋そのもの。"""
+    if isinstance(value, dict) and value:
+        out: list[tuple[tuple, Any]] = []
+        for k, v in value.items():
+            out += _leaves(v, path + (str(k),))
+        return out
+    return [(path, value)]
+
+
+def _leaf_key(key: str, path: tuple) -> str:
+    return key + "\x1f" + "\x1f".join(path)
+
+
+def _decide(present: bool, have: Any, value: Any, prev: Any, has_prev: bool, *, overwrite: bool,
+            renewed: bool) -> str:
+    if overwrite or not present or _blank(have):
+        return ACT_SAME if present and have == value else ACT_TAKE
+    if have == value:
+        return ACT_SAME
+    if renewed and has_prev and have == prev:
+        return ACT_TAKE                                            # 前の配布のまま変えていない
+    return ACT_KEEP                                                # この PC で入れた値
+
+
+def _merge_plan(key: str, have: Any, value: dict, record: dict, *, overwrite: bool, renewed: bool):
+    """{…} の値を 1 か所ずつ決める。(入れたあとの値, 決めたこと, 覚える値{葉の鍵: 値})"""
+    mine = dict(_leaves(have)) if isinstance(have, dict) else {}
+    merged = _copy(have) if isinstance(have, dict) else {}
+    acts: list[str] = []
+    remember: dict[str, Any] = {}
+    for path, v in _leaves(value):
+        if not path:
+            continue
+        lk = _leaf_key(key, path)
+        present = path in mine
+        act = _decide(present, mine.get(path), v, record["values"].get(lk), lk in record["values"],
+                      overwrite=overwrite, renewed=renewed)
+        acts.append(act)
+        if act != ACT_KEEP:
+            remember[lk] = v
+        if act == ACT_TAKE:
+            node = merged
+            for part in path[:-1]:
+                if not isinstance(node.get(part), dict):
+                    node[part] = {}
+                node = node[part]
+            node[path[-1]] = _copy(v)
+    if ACT_TAKE in acts:
+        act = ACT_TAKE + ("(一部はこの PC の値を残す)" if ACT_KEEP in acts else "")
+    elif ACT_KEEP in acts:
+        act = ACT_KEEP
+    else:
+        act = ACT_SAME
+    return merged, act, remember
+
+
+def _copy(value: Any) -> Any:
+    return json.loads(json.dumps(value, ensure_ascii=False))
+
+
+def _plan(bundle: Bundle, current: dict, record: dict, *, overwrite: bool) -> dict[str, str]:
+    """鍵ごとに、読み込んだら何が起きるか(書かない)。"""
+    renewed = bool(record.get("fingerprint")) and record["fingerprint"] != bundle.fingerprint()
+    out = {}
+    for key, value in bundle.settings.items():
+        if key in MERGE_KEYS and isinstance(value, dict):
+            out[key] = _merge_plan(key, current.get(key), value, record, overwrite=overwrite, renewed=renewed)[1]
+        else:
+            out[key] = _decide(key in current, current.get(key), value, record["values"].get(key),
+                               key in record["values"], overwrite=overwrite, renewed=renewed)
+    return out
+
+
 def _apply(bundle: Bundle, *, overwrite: bool) -> Result:
     result = Result()
     # 2026-11-08: この PC の設定ファイルを読めないときは、空とみなして配布の値で上書きしない(何も書かない)
@@ -471,21 +648,31 @@ def _apply(bundle: Bundle, *, overwrite: bool) -> Result:
     renewed = bool(record.get("fingerprint")) and record["fingerprint"] != bundle.fingerprint()
     given: dict[str, Any] = {}
     for key, value in bundle.settings.items():
-        have = current.get(key)
-        if overwrite or key not in current or _blank(have):
-            take = True
-        elif have == value:
-            given[key] = value                                     # もう同じ値
+        label = label_of(key)
+        if key in MERGE_KEYS and isinstance(value, dict):
+            merged, act, remember = _merge_plan(key, current.get(key), value, record,
+                                                overwrite=overwrite, renewed=renewed)
+            if act.startswith(ACT_TAKE):
+                if user_settings.save(key, merged):
+                    result.applied.append(label)
+                    given.update(remember)
+                    if act != ACT_TAKE:
+                        result.kept.append(label + "(この PC で変えた所)")
+            else:
+                given.update(remember)
+                if act == ACT_KEEP:
+                    result.kept.append(label)
             continue
-        elif renewed and key in record["values"] and have == record["values"][key]:
-            take = True                                            # 前の配布のまま変えていない
+        act = _decide(key in current, current.get(key), value, record["values"].get(key), key in record["values"],
+                      overwrite=overwrite, renewed=renewed)
+        if act == ACT_SAME:
+            given[key] = value                                     # もう同じ値
+        elif act == ACT_TAKE:
+            if user_settings.save(key, value):
+                result.applied.append(label)
+                given[key] = value
         else:
-            take = False
-        if take and user_settings.save(key, value):
-            result.applied.append(ITEM_LABELS[key])
-            given[key] = value
-        elif not take:
-            result.kept.append(ITEM_LABELS[key])                   # この PC で入れた値
+            result.kept.append(label)                              # この PC で入れた値
     contents_digest = None
     if bundle.contents is not None:
         target = settings_file.path()                              # 上で場所を入れたなら、その場所

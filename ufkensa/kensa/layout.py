@@ -14,7 +14,8 @@ from typing import Any, Optional
 from . import paths, vbx
 from .model import FormTag, NORMAL, Switch, THICK_ROWS, bh_name, diag_name, kou_name, lateral_name, thick_format, visual_under_name, visual_up_name
 from .flow import ERROR, INFO, Message
-from .grid import (THIN_PLATE_ATU, WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
+from . import size_thresholds
+from .grid import (WORKS, Hooks, KensaState, ken_flags, small_count_th, typed_cmp,
                    variant_eq)
 
 #: VBA の On Error Resume Next で飛ばされる実行時エラーに当たる Python の例外
@@ -378,7 +379,7 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
     f = ken_flags(state, ken_no)
     yama = state.yama
     if n == "非表示":
-        state.inspe_butt_caption = "検入≧26"
+        state.inspe_butt_caption = size_thresholds.ge_caption()
         _cells(state, range(1, 11), ("C",), False, False)
         _show(state, "DiagC", False)
         _caps(state, FC="", C="")
@@ -404,7 +405,7 @@ def inspection_select(state: KensaState, n: str, hooks: Hooks) -> None:
             for p in ("U", "C", "D"):
                 _show(state, lateral_name(p), False)
     elif n == "表示":
-        state.inspe_butt_caption = "検入≦25"
+        state.inspe_butt_caption = size_thresholds.le_caption()
         if ken_no == "T" or state.at_butt_caption == "厚2ヵ所":
             _cells(state, range(1, 11), ("C",), True, True)
         elif state.at_butt_caption == "厚4ヵ所":
@@ -466,9 +467,9 @@ def at_butt_click(state: KensaState, hooks: Hooks) -> None:
 def inspe_butt_click(state: KensaState, hooks: Hooks) -> None:
     """UF1.InspeButt_Click (UF1:4481-4492)。On Error Resume Next。"""
     try:
-        if state.inspe_butt_caption == "検入≧26":
+        if size_thresholds.is_ge(state.inspe_butt_caption):
             inspection_select(state, "表示", hooks)
-        elif state.inspe_butt_caption == "検入≦25":
+        elif size_thresholds.is_le(state.inspe_butt_caption):
             inspection_select(state, "非表示", hooks)
     except VBA_ERRORS as _vba_e:
         vba_swallow(_vba_e, "layout.py inspe_butt_click")
@@ -824,7 +825,7 @@ def _lselect_lot_facts(state: KensaState, n: str, hooks: Hooks, msgs: list[Messa
                     new_atu = 0.0
             if new_atu == 0 and state.atu != "":
                 new_atu = vbx.single(vbx.val(state.atu))
-            if vbx.val_single(new_atu) <= THIN_PLATE_ATU:
+            if vbx.val_single(new_atu) <= size_thresholds.thin_atu():
                 atu_flag = True
     info.ken_no, info.hi_flag, info.fs4_flag, info.atu_flag = ken_no, hi, fs4, atu_flag
     info.new_atu, info.course, info.jumped = new_atu, course, jumped
@@ -1202,22 +1203,23 @@ def atu_opselect(state: KensaState, atu: float, hooks: Hooks, weight_g: float = 
             state.work_visible[w] = w == "薄板"
         return
     x = new_atu
-    if 1 <= x <= 6.0:
+    t = size_thresholds.values()                     # 2026-11-11: 保守 → 寸法のしきい値(既定は VBA の直書きと同じ)
+    if t["op_thin_lo"] <= x <= t["op_thin_hi"]:
         state.work_visible["厚板"] = False
         state.work_caption["薄板"] = ken_no
-    elif 200.1 <= x <= 299.0:
-        if weight_g != 0 and weight_g > 1500.0:
+    elif t["op_heavy_lo"] <= x <= t["op_heavy_hi"]:
+        if weight_g != 0 and weight_g > t["op_heavy_weight"]:
             state.work_visible["厚板"] = False
-    elif 300.0 <= x <= 800.0:
+    elif t["op_notthick_lo"] <= x <= t["op_notthick_hi"]:
         state.work_visible["厚板"] = False
-    if 6.001 <= x <= 800.0:
+    if t["op_notthin_lo"] <= x <= t["op_notthin_hi"]:
         state.work_visible["薄板"] = False
     state.work_caption["厚板"] = ken_no
-    if 1 <= x <= 6.0:
+    if t["op_thin_lo"] <= x <= t["op_thin_hi"]:
         state.work_visible["少枚数"] = False
-    if 1 <= x <= 29.9:
+    if t["op_notgoku_lo"] <= x <= t["op_notgoku_hi"]:
         state.work_visible["極厚"] = False
-    if 1 <= x <= 199.9:
+    if t["op_notslab_lo"] <= x <= t["op_notslab_hi"]:
         state.work_visible["スラブ"] = False
 
 
@@ -1313,7 +1315,7 @@ def yama_change(state: KensaState, hooks: Hooks, msgs: Optional[list[Message]] =
         return
     six_display(state, "off", hooks)
 
-    if state.inspe_butt_visible and state.inspe_butt_caption == "検入≧26":
+    if state.inspe_butt_visible and size_thresholds.is_ge(state.inspe_butt_caption):
         if typed_cmp(y, 1) == 0:
             _caps(state, S="S", C="", E="E", FS="S", FC="", FE="E", OPS1="S", OPS3="", OPS5="E",
                   OPE1="S", OPE3="", OPE5="E", U="", FU="", D="", FD="")
@@ -1321,7 +1323,7 @@ def yama_change(state: KensaState, hooks: Hooks, msgs: Optional[list[Message]] =
             _caps(state, S="2-2-S", U="", C="", D="", E="2-1-E", FS="2-2-S", FU="", FC="", FD="", FE="2-1-E",
                   OPS1="2-2-S", OPS2="", OPS3="", OPS4="", OPS5="2-1-E",
                   OPE1="2-2-S", OPE2="", OPE3="", OPE4="", OPE5="2-1-E")
-    elif state.inspe_butt_visible and state.inspe_butt_caption == "検入≦25":
+    elif state.inspe_butt_visible and size_thresholds.is_le(state.inspe_butt_caption):
         if typed_cmp(y, 1) == 0:
             _caps(state, S="S", C="2", E="E", FS="S", FC="2", FE="E", OPS1="S", OPS3="2", OPS5="E",
                   OPE1="S", OPE3="2", OPE5="E", U="", FU="", D="", FD="")

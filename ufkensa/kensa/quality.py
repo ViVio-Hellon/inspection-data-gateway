@@ -27,7 +27,7 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import cache_registry, datasource, lines, paths, vbx
+from . import cache_registry, datasource, lines, match_rules, paths, size_thresholds, vbx
 from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
@@ -464,7 +464,16 @@ def is_half_width(s: str) -> bool:
     return all(ord(ch) <= 0xFF for ch in s)
 
 
-def loop_array(rows: Sequence[Sequence[Any]], fields: Sequence[str], return_size: float, atu: float) -> float:
+def _hit_ret(hit: Optional[dict[str, Any]], ri: int, col: int, row: Sequence[Any]) -> float:
+    """LoopArray / SoriArray の戻り値。hit を渡すと当たった行(0 始まり)と列(1 始まり)を書く(結果は変えない)。"""
+    v = csng(vbx.fmt(cell(row, col), "0.0"))
+    if hit is not None:
+        hit.update(row=ri, col=col, raw=vstr(cell(row, col)))
+    return v
+
+
+def loop_array(rows: Sequence[Sequence[Any]], fields: Sequence[str], return_size: float, atu: float,
+               hit: Optional[dict[str, Any]] = None) -> float:
     """QDB.LoopArray (QDB:1386-1453)。列名が数の列を「列の並び順」でサイズ区間にして公差を引く。
 
     - 板厚下 <= 厚 <= 板厚上 の**最初の行**
@@ -477,7 +486,7 @@ def loop_array(rows: Sequence[Sequence[Any]], fields: Sequence[str], return_size
     sizes = [vbx.val(f) for f in fields if vbx.is_numeric(f)]
     if not sizes:
         raise VbaRuntimeError(9, "ReDim TempSize(1 To 0)")
-    for row in rows:
+    for ri, row in enumerate(rows):
         und = vbx.single(vbx.val(cell(row, c_lo)))
         ove = vbx.single(vbx.val(cell(row, c_hi)))
         if not (und <= atu and ove >= atu):
@@ -489,33 +498,34 @@ def loop_array(rows: Sequence[Sequence[Any]], fields: Sequence[str], return_size
                 if sizes[a - 1] >= return_size and 0 < return_size:
                     for ic, name in enumerate(fields, start=1):
                         if vbx.val(name) == sizes[0]:
-                            return csng(vbx.fmt(cell(row, ic), "0.0"))
+                            return _hit_ret(hit, ri, ic, row)
                 # GoTo skipErr: 最後の数の列
                 a = len(sizes)
                 for ic, name in enumerate(fields, start=1):
                     if vbx.is_numeric(name) and vbx.val(name) == vbx.val(sizes[a - 1]):
-                        return csng(vbx.fmt(cell(row, ic), "0.0"))
+                        return _hit_ret(hit, ri, ic, row)
                 break
             if sizes[a - 1] >= return_size and sizes[n - 1] < return_size:
                 for ic, name in enumerate(fields, start=1):
                     if vbx.is_numeric(name) and vbx.val(name) == vbx.val(sizes[a - 1]):
-                        return csng(vbx.fmt(cell(row, ic), "0.0"))
+                        return _hit_ret(hit, ri, ic, row)
             a -= 1
         # VBA は一致の有無に関わらず matchFlag で抜ける(列が見つからない場合は次の行へ)
     return 0.0
 
 
-def sori_array(rows: Sequence[Sequence[Any]], fields: Sequence[str], atu: float, col: int) -> float:
+def sori_array(rows: Sequence[Sequence[Any]], fields: Sequence[str], atu: float, col: int,
+               hit: Optional[dict[str, Any]] = None) -> float:
     """QP.SoriArray (QP:1458-1497)。col が 0 なら 0。板厚下 <= 厚 <= 板厚上 の最初の行の col 列。"""
     if col == 0:
         return 0.0
     c_lo = col_of(fields, "板厚下")
     c_hi = col_of(fields, "板厚上")
-    for row in rows:
+    for ri, row in enumerate(rows):
         lo = vbx.single(vbx.val(cell(row, c_lo)))
         hi = vbx.single(vbx.val(cell(row, c_hi)))
         if lo <= atu and hi >= atu:
-            return csng(vbx.fmt(cell(row, col), "0.0"))
+            return _hit_ret(hit, ri, col, row)
     return 0.0
 
 
@@ -609,6 +619,76 @@ class QpResult:
 
 def _t(res: "QpResult", step: str, detail: str = "", ok: Optional[bool] = None, **extra: Any) -> None:
     res.trace.append({"step": step, "detail": detail, "ok": ok, **extra})
+
+
+#: 当たった行の見本(表の行をいくつまで画面に送るか)。保守 → 歪公差チェックの表プレビュー
+_PREVIEW_AROUND = 3
+
+
+def _preview(fields: Sequence[str], rows: Sequence[Sequence[Any]], hit_rows: Sequence[int],
+             cols: Sequence[int], around: int = _PREVIEW_AROUND) -> dict[str, Any]:
+    """表のプレビュー。hit_rows(0 始まり)の前後 around 行。cols は 1 始まりの列番号。行番号は 1 始まり。"""
+    keep: set[int] = set()
+    for h in hit_rows:
+        keep.update(range(max(0, h - around), min(len(rows), h + around + 1)))
+    if not hit_rows:
+        keep.update(range(min(len(rows), around * 2 + 1)))
+    cols = [c for c in dict.fromkeys(cols) if 0 < c <= len(fields)]
+    return {"fields": [vstr(fields[c - 1]) for c in cols],
+            "rows": [{"no": i + 1, "cells": [vstr(cell(rows[i], c)) for c in cols]} for i in sorted(keep)],
+            "hit": [h + 1 for h in hit_rows], "total": len(rows)}
+
+
+def _grade_cols(fields: Sequence[str], hit_col: int) -> list[int]:
+    """等級表で見せる列: 板厚下・板厚上と、当たった列(と数・H・T の列)。"""
+    out = [col_of(fields, "板厚下"), col_of(fields, "板厚上")]
+    for i, name in enumerate(fields, start=1):
+        n = vstr(name)
+        if vbx.is_numeric(n) or (n[:1] in ("H", "T") and vbx.is_numeric(n[1:])):
+            out.append(i)
+    if hit_col:
+        out.append(hit_col)
+    return out
+
+
+def _grade_trace(res: "QpResult", out: str, table: str, fields: Sequence[str], rows: Sequence[Sequence[Any]],
+                 hit: dict[str, Any], atu: float, size: float, value: str) -> None:
+    ri = hit.get("row")
+    col = hit.get("col", 0)
+    colname = vstr(fields[col - 1]) if 0 < col <= len(fields) else ""
+    lo, hi = col_of(fields, "板厚下"), col_of(fields, "板厚上")
+    if ri is None:
+        detail = f"表「{table}」 厚 {vbx.fmt(atu, '0.000')}・寸法 {vbx.fmt(size, '0.0')} に当たる行がありません → {value}"
+        hits: list[dict[str, Any]] = []
+    else:
+        r = rows[ri]
+        detail = (f"表「{table}」 {ri + 1} 行目(板厚 {vstr(cell(r, lo))}〜{vstr(cell(r, hi))})の列「{colname}」"
+                  f" = {hit.get('raw', '')} → {value}(厚 {vbx.fmt(atu, '0.000')} / 寸法 {vbx.fmt(size, '0.0')})")
+        hits = [{"no": ri + 1, "keys": {"板厚下": vstr(cell(r, lo)), "板厚上": vstr(cell(r, hi))},
+                 "col": colname, "value": hit.get("raw", "")}]
+    _t(res, f"{out}: 当たった行", detail, ri is not None, table=table, output=out, hits=hits,
+       compared={"板厚": vbx.fmt(atu, "0.000"), "寸法": vbx.fmt(size, "0.0")}, chosen=value,
+       preview=_preview(fields, rows, [ri] if ri is not None else [], _grade_cols(fields, col)))
+
+
+def _loop_hit(res: "QpResult", out: str, table: str, fields: Sequence[str], rows: Sequence[Sequence[Any]],
+              size: float, atu: float) -> str:
+    """`Format(LoopArray(...), "0.0")` と同じ値を返し、当たった行を trace に書く。"""
+    hit: dict[str, Any] = {}
+    v = vbx.fmt(loop_array(rows, fields, size, atu, hit=hit), "0.0")
+    _grade_trace(res, out, table, fields, rows, hit, atu, size, v)
+    return v
+
+
+def _sori_hit(res: "QpResult", out: str, table: str, fields: Sequence[str], rows: Sequence[Sequence[Any]],
+              atu: float, col: int, size: float) -> str:
+    """`Format(SoriArray(...), "0.0")` と同じ値を返し、当たった行を trace に書く。"""
+    hit: dict[str, Any] = {}
+    v = vbx.fmt(sori_array(rows, fields, atu, col, hit=hit), "0.0")
+    if col and "col" not in hit:
+        hit["col"] = col
+    _grade_trace(res, out, table, fields, rows, hit, atu, size, v)
+    return v
 
 
 def _table(db: Union[str, Path], table: str) -> tuple[Optional[list[str]], Optional[list[list[str]]]]:
@@ -721,7 +801,9 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
                  ("取引先",), ("取引先コード",), ("送り先",), ("送り先コード",), ("巾取数幅分割数のこと",)]
     survive = [0] * 16
     prev_rows: list[list[Any]] = [[] for _ in range(16)]
-    for r in aq:
+    kept_rows: list[list[int]] = [[] for _ in range(16)]     # 条件 i まで合った行(0 始まり。見本 20 行まで)
+    matched_idx: list[int] = []
+    for ri, r in enumerate(aq):
         c = [False] * 16
         c[1] = check_condition(r, C["用途コード"], youto)
         c[2] = c[1] & check_condition(r, C["製造材質"], m_zai)
@@ -743,10 +825,13 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
         for i in range(1, 16):
             if c[i]:
                 survive[i] += 1
+                if len(kept_rows[i]) < 20:
+                    kept_rows[i].append(ri)
             elif (i == 1 or c[i - 1]) and len(prev_rows[i]) < 5:
                 prev_rows[i].append(r)       # 前の条件までは合って、ここで外れた行(見本 5 行まで)
         if all(c[1:last + 1]):
             matching.append(clng(cell(r, C["管理番号"])))
+            matched_idx.append(ri)
 
     before = len(aq)
     stuck = False
@@ -758,7 +843,9 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
             for r in prev_rows[i]:
                 miss.append(f"管理番号{vstr(cell(r, C['管理番号']))}: " + "〜".join(vstr(cell(r, C[k])) or "(空)" for k in cols))
         _t(res, f"条件 {i}: {cond_names[i]}", f"ロット {cond_vals[i] or '(空)'} → {before} 行中 {survive[i]} 行が合う",
-           ok if not stuck else None, rows=miss, kept=survive[i], before=before)
+           ok if not stuck else None, rows=miss, kept=survive[i], before=before, table=table_name,
+           hits=[{"no": x + 1, "keys": {"管理番号": vstr(cell(aq[x], C["管理番号"])),
+                                        **{k: vstr(cell(aq[x], C[k])) for k in cols}}} for x in kept_rows[i]])
         if not ok and not stuck:
             stuck = True
         before = survive[i]
@@ -784,8 +871,16 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
             break
     if prio is not None:
         new_array[0] = prio
+    key_names = ["管理番号"] + [k for cs in cond_cols[1:] for k in cs]
+    chosen_idx = next((x for x in matched_idx if veq(cell(aq[x], C["管理番号"]), new_array[0], VAR, NUM)), None)
+    qp_hits = [{"no": x + 1, "keys": {k: vstr(cell(aq[x], C[k])) for k in key_names},
+                "chosen": x == chosen_idx} for x in matched_idx]
+    show_cols = [C[k] for k in key_names] + [C["1m当たり平坦度上限"], hit_haba[0], hit_take[0], C["中歪・耳歪"],
+                                             C["平坦度上限値参照元"], C["フラグ"]]
     _t(res, "平坦度一覧QP追加の判定", f"合った管理番号 {', '.join(str(x) for x in matching)}"
-       + (f"。納入先などが書いてある {prio} を優先" if prio is not None else f"。先頭の {new_array[0]} を使う"), True)
+       + (f"。納入先などが書いてある {prio} を優先" if prio is not None else f"。先頭の {new_array[0]} を使う"), True,
+       table=table_name, hits=qp_hits, chosen=str(new_array[0]),
+       preview=_preview(fq, aq, matched_idx, show_cols, around=1))
 
     kousa: list[list[Any]] = [[None] * 9 for _ in new_array]
     for a, no in enumerate(new_array):
@@ -819,7 +914,13 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
 
     k0 = kousa[0]
     _t(res, "中歪・耳歪の欄", f"「{vstr(k0[K_NAKA]) or '(空)'}」 幅の列 {fq[hit_haba[0] - 1] if 0 < hit_haba[0] <= len(fq) else '?'}"
-       f" / 丈の列 {fq[hit_take[0] - 1] if 0 < hit_take[0] <= len(fq) else '?'}", None)
+       f" / 丈の列 {fq[hit_take[0] - 1] if 0 < hit_take[0] <= len(fq) else '?'}", None,
+       table=table_name, output="ソリ幅・ソリ丈・中歪/耳歪",
+       hits=[] if chosen_idx is None else [{
+           "no": chosen_idx + 1, "keys": {"管理番号": vstr(k0[K_NO])}, "chosen": True,
+           "col": " / ".join(vstr(fq[c - 1]) if 0 < c <= len(fq) else "?" for c in (hit_haba[0], hit_take[0])),
+           "value": f"ソリ幅 {vstr(k0[K_HA]) or '(空)'} / ソリ丈 {vstr(k0[K_TA]) or '(空)'}"
+                    f" / 中歪・耳歪 {vstr(k0[K_NAKA]) or '(空)'}"}])
     goto = ""
     table_n = table_m = ""
     v4 = k0[K_NAKA]
@@ -878,11 +979,11 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
                 f, rws = _table(db, table_n)
                 if f is None or rws is None:
                     return res
-                k0[K_NAKA] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+                k0[K_NAKA] = _loop_hit(res, "中歪", table_n, f, rws, o_take, o_atu)
                 f, rws = _table(db, table_m)
                 if f is None or rws is None:
                     return res
-                k0[K_MIMI] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+                k0[K_MIMI] = _loop_hit(res, "耳歪", table_m, f, rws, o_take, o_atu)
         if goto == "":
             if table_n == "":
                 goto = "SkipT"
@@ -890,11 +991,11 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
                 f, rws = _table(db, table_n)
                 if f is None or rws is None:
                     return res
-                k0[K_NAKA] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+                k0[K_NAKA] = _loop_hit(res, "中歪", table_n, f, rws, o_take, o_atu)
                 f, rws = _table(db, table_m)
                 if f is None or rws is None:
                     return res
-                k0[K_MIMI] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+                k0[K_MIMI] = _loop_hit(res, "耳歪", table_m, f, rws, o_take, o_atu)
                 if vbx.instr(vstr(k0[K_SOURCE]), search_s) == 0:
                     k0[K_SOURCE] = vstr(k0[K_SOURCE]) + " " + search_s
                 goto = "SkipT"
@@ -908,8 +1009,8 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
                 return res
             sh = find_indices(f, "H", o_haba)
             st = find_indices(f, "T", o_take)
-            k0[K_HA] = vbx.fmt(sori_array(rws, f, o_atu, sh[0]), "0.0")
-            k0[K_TA] = vbx.fmt(sori_array(rws, f, o_atu, st[0]), "0.0")
+            k0[K_HA] = _sori_hit(res, "ソリ幅", sori, f, rws, o_atu, sh[0], o_haba)
+            k0[K_TA] = _sori_hit(res, "ソリ丈", sori, f, rws, o_atu, st[0], o_take)
             if vbx.instr(vstr(k0[K_SOURCE]), search_s) == 0:
                 k0[K_SOURCE] = vstr(k0[K_SOURCE]) + " " + search_s
             _t(res, "等級表", f"巾歪・丈歪が「フラットネス品質等級」なので 表「{sori}」から引きました", True)
@@ -963,8 +1064,8 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
         _t(res, "等級表", f"ソリ(幅・丈)を 表「{table_name}」から引きました", True)
         sh = find_indices(f, "H", o_haba)
         st = find_indices(f, "T", o_take)
-        k0[K_HA] = vbx.fmt(sori_array(rws, f, o_atu, sh[0]), "0.0")
-        k0[K_TA] = vbx.fmt(sori_array(rws, f, o_atu, st[0]), "0.0")
+        k0[K_HA] = _sori_hit(res, "ソリ幅", table_name, f, rws, o_atu, sh[0], o_haba)
+        k0[K_TA] = _sori_hit(res, "ソリ丈", table_name, f, rws, o_atu, st[0], o_take)
         if vbx.instr(vstr(k0[K_SOURCE]), search_s) == 0:
             k0[K_SOURCE] = vstr(k0[K_SOURCE]) + " " + search_s
         return True
@@ -981,18 +1082,18 @@ def _dbqp_skip_qp(res: QpResult, db: Path, flat: int, m_tyo: str, o_atu: float, 
     if not sori():
         res.kousa = None
         return res
-    if 6.0 >= o_atu:
+    if size_thresholds.thin_atu() >= o_atu:          # 保守 → 寸法のしきい値(既定 6.0)
         if naka_sika == "" or mimi_sika == "":
             f, rws = _table(db, table_n)
             if f is None or rws is None:
                 res.kousa = None
                 return res
-            k0[K_NAKA] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+            k0[K_NAKA] = _loop_hit(res, "中歪", table_n, f, rws, o_take, o_atu)
             f, rws = _table(db, table_m)
             if f is None or rws is None:
                 res.kousa = None
                 return res
-            k0[K_MIMI] = vbx.fmt(loop_array(rws, f, o_take, o_atu), "0.0")
+            k0[K_MIMI] = _loop_hit(res, "耳歪", table_m, f, rws, o_take, o_atu)
             _t(res, "等級表", f"中 {table_n} / 耳 {table_m} を引きました(厚 6.0 以下)", True)
     else:
         k0[K_NAKA] = ""
@@ -1319,6 +1420,65 @@ def rgb(r: int, g: int, b: int) -> int:
 ORANGE = rgb(255, 153, 0)
 
 
+def _shadow_on(g: "match_rules.Group") -> bool:
+    """旧コードと並べるか(試験、または既定のルールのままのとき。ルールを変えたら違って当然なので並べない)。"""
+    if match_rules.SHADOW_STRICT:
+        return g.rules == match_rules.BY_NAME[g.name].rules
+    return False
+
+
+def _ratefuri_old(ta: Sequence[Sequence[Any]], C: dict[str, int], args: tuple) -> tuple[list[int], list[bool]]:
+    """旧: DbReturnItem の照合(QP:1240-1270)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    nou, tori, youtc, zai, tyou, atu, haba, take = args
+    matching: list[int] = []
+    c = [False] * 9
+    # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
+    # 直した場合は同じ精度(Double)で比べる(QP:1263-1265)
+    same = True
+    for r in ta:
+        c = [False] * 9
+        c[1] = check_condition(r, C["納入先"], nou)
+        c[2] = c[1] & check_condition(r, C["取引先"], tori)
+        c[3] = c[2] & check_condition(r, C["用途コード"], youtc)
+        c[4] = c[3] & check_condition(r, C["製造材質"], zai)
+        c[5] = c[4] & check_condition(r, C["製造調質"], tyou)
+        c[6] = c[5] & check_thickness(r, C["厚下"], C["厚上"], C["製造板厚"], atu, same_precision=same)
+        c[7] = c[6] & check_width(r, C["幅下"], C["幅上"], C["製造板幅"], haba, same_precision=same)
+        c[8] = c[7] & check_width(r, C["丈下"], C["丈上"], C["製造板丈"], take, same_precision=same)
+        if all(c[1:9]):
+            matching.append(clng(cell(r, C["管理番号"])))
+    return matching, [c[4], c[6], c[7], c[8]]
+
+
+#: 該当なしの文言(材質・厚・幅・丈)を決める目印のルール(表の列の最初の列)
+_RATEFURI_ANCHORS = ("製造材質", "厚下", "幅下", "丈下")
+
+
+def ratefuri_ctx(args: tuple) -> dict[str, Any]:
+    return dict(zip(match_rules.RATEFURI_FIELDS, args))
+
+
+def _ratefuri_new(g: "match_rules.Group", ta: Sequence[Sequence[Any]], pf: Sequence[str], C: dict[str, int],
+                  args: tuple) -> tuple[list[int], list[bool]]:
+    """新: 照合ルール「ラテフリ直角」で絞る。戻りは旧と同じ形(管理番号, 最後の行の Conditions(4,6,7,8))。"""
+    res = match_rules.match(g, ta, pf, ratefuri_ctx(args))
+    matching = [clng(cell(ta[i], C["管理番号"])) for i in res.rows]
+    return matching, ratefuri_flags(g, res)
+
+
+def ratefuri_flags(g: "match_rules.Group", res: "match_rules.MatchResult") -> list[bool]:
+    if res.evaluated == 0:
+        return [False] * 4
+    if res.last_fail is None:
+        return [True] * 4
+    rules = [r for r in sorted(g.rules, key=lambda r: r.order) if r.enabled]
+    out = []
+    for a in _RATEFURI_ANCHORS:
+        pos = next((k for k, r in enumerate(rules) if r.columns and r.columns[0] == a), None)
+        out.append(True if pos is None else res.last_fail > pos)
+    return out
+
+
 def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: float, haba: float, take: float, *,
                    additional_caption: str = "", mitsubishi_visible: bool = False, work_flag: str = "",
                    zenkasho_sheet: bool = True, lateral_lot: Optional[LotData] = None,
@@ -1345,23 +1505,14 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     ta = datasource.get_records(db, table)
     if ta is None:
         return out
-    matching: list[int] = []
-    c = [False] * 9
-    # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
-    # 直した場合は同じ精度(Double)で比べる(QP:1263-1265)
-    same = True
-    for r in ta:
-        c = [False] * 9
-        c[1] = check_condition(r, C["納入先"], nou)
-        c[2] = c[1] & check_condition(r, C["取引先"], tori)
-        c[3] = c[2] & check_condition(r, C["用途コード"], youtc)
-        c[4] = c[3] & check_condition(r, C["製造材質"], zai)
-        c[5] = c[4] & check_condition(r, C["製造調質"], tyou)
-        c[6] = c[5] & check_thickness(r, C["厚下"], C["厚上"], C["製造板厚"], atu, same_precision=same)
-        c[7] = c[6] & check_width(r, C["幅下"], C["幅上"], C["製造板幅"], haba, same_precision=same)
-        c[8] = c[7] & check_width(r, C["丈下"], C["丈上"], C["製造板丈"], take, same_precision=same)
-        if all(c[1:9]):
-            matching.append(clng(cell(r, C["管理番号"])))
+    args = (nou, tori, youtc, zai, tyou, atu, haba, take)
+    g = match_rules.group(match_rules.RATEFURI)
+    if g.new_way:
+        matching, c = _ratefuri_new(g, ta, pf, C, args)
+        if _shadow_on(g):
+            match_rules.compare(match_rules.RATEFURI, _ratefuri_old(ta, C, args), (matching, c), repr(args))
+    else:
+        matching, c = _ratefuri_old(ta, C, args)
 
     additional = additional_caption
     if not matching:
@@ -1369,13 +1520,13 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         if vbx.like(nou, "*ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ*"):
             u["Sumisei.Caption"] = nou
             if not vbx.like(additional, "*ﾗﾃﾗﾙﾎﾞ-追記公差あり*"):
-                if not c[4]:
+                if not c[0]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_製造材質"
-                elif not c[6]:
+                elif not c[1]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ厚"
-                elif not c[7]:
+                elif not c[2]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ幅"
-                elif not c[8]:
+                elif not c[3]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ丈"
                 else:
                     text = ""
@@ -1789,7 +1940,7 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
 
     path = datasource.resolve(db) if db is not None else _packing_db("梱包資材マスタ.sqlite3")
     if _pack_cache.valid(path) and _pack_cache.value is not None:
-        C, rows = _pack_cache.value
+        C, rows, pf = _pack_cache.value
     else:
         pf = datasource.get_fields(path, "梱包保護材")
         if pf is None:
@@ -1801,7 +1952,36 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
         if rows is None:
             # `m_PackQuality() As Variant`(動的配列)に Empty を入れると型エラー
             raise vbx.TypeMismatch("梱包保護材が 0 件(動的配列に Empty を代入)")
-        _pack_cache.store(path, (C, rows))
+        _pack_cache.store(path, (C, rows, list(pf)))
+    vals = (pack, zai, tyo, you, atu, hab, tak, check_bikou)
+    g = match_rules.group(match_rules.PACK)
+    if not g.new_way:
+        return _pack_old(rows, C, vals)
+    ctx = pack_ctx(hdr, a, check_bikou)
+    res = match_rules.match(g, rows, pf, ctx)
+    got = vstr(cell(rows[res.rows[0]], C["使用保護材"])) if res.rows else "一致なし"
+    if _shadow_on(g):
+        match_rules.compare(match_rules.PACK, _pack_old(rows, C, vals), got, repr(vals))
+    return got
+
+
+def pack_ctx(hdr: Sequence[Any], a: Sequence[Any], check_bikou: bool) -> dict[str, Any]:
+    """梱包保護材のロットの項目(Lot情報履歴 の見出し → 値。厚・巾・丈 は CSng。+ 当板用か)。"""
+    ctx: dict[str, Any] = {}
+    for i, h in enumerate(hdr, start=1):
+        name = vstr(h)
+        if name and name not in ctx:
+            ctx[name] = cell(a, i)
+    for n in ("厚", "巾", "丈"):
+        if n in ctx:
+            ctx[n] = csng(ctx[n])
+    ctx["当板用"] = "当板用" if check_bikou else ""
+    return ctx
+
+
+def _pack_old(rows: Sequence[Sequence[Any]], C: dict[str, int], vals: tuple) -> str:
+    """旧: MaterialsUpperPart の照合(QP:1750-1770)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    pack, zai, tyo, you, atu, hab, tak, check_bikou = vals
     same = True          # B71(QP:1764-1766): 直すと下・上も Double で比べる
     for r in rows:
         is_bikou = vstr(cell(r, C["備考"])) == "当板用"

@@ -33,8 +33,10 @@ all-tools 日報ツール(`tools/nippou/nippou/logic/access_rights.py` v4.12.0�
 は読まず、設定の画面に「正規は…」を添えて出す(`inspect`)。
 
 【ラインを決めないとき】この PC の行に**違うラインが 2 つ以上**(号機違いも)あれば決めず、理由を出す。
-ラインを書いていなければ触らない。表のラインは**前に当てたものから変わったときだけ**当てる(`should_apply`):
-管理者パスワードで変えたライン(「パスワードがあれば現行の通り変更可」)が、起動のたびに戻らないように。
+ラインを書いていなければ触らない(保存してある設定のまま)。表でラインが決まれば**起動・権限の読み直しのたびに**
+表の値にし、設定「この端末」の設備名は読むだけにする(`line_locked`・2026-11-11「アクセス権限に設定されている
+ラインを読み込んで」)。all-tools は「前に当てたものから変わったときだけ」当て(`should_apply`)、管理者パスワードで
+手で変えられる ── ここは表が正なので手では変えない(違い)。読めないとき(前回の結果)は当てない(読めない ≠ 無い)。
 
 【表がどこにあるか】設定 → 使用パス の「アクセス権限マスタ」。**フォルダでもファイルでもよい**
 (フォルダなら その中の `梱包資材マスタ.sqlite3`。all-tools の「梱包資材マスタのフォルダ + ファイル名」と同じ)。
@@ -519,21 +521,34 @@ def overview() -> dict[str, Any]:
 KEY_LINE_APPLIED = "kensa_access_line_applied"
 
 
-def apply_line(d: Decision) -> str:
-    """表で決まったラインを この端末の設備名 にする(前に当てたものから変わったときだけ)。知らせを返す。
+def line_locked(d: Optional[Decision]) -> bool:
+    """この端末のラインをアクセス権限が決めているか(= 設定「この端末」で設備名を手で変えない)。
 
-    マスタを読めたとき(source = master)だけ当てる。号機が決まらない 丸徳 は、いまの号機を残す。
+    いまマスタを**読めて**(source = master)、この PC の行でラインが 1 つに決まったときだけ。
+    未設定・読めない(前回の結果 cache も含む)・行にラインが無い・2 つ以上 → 保存してある設定のまま(手で決める)。
+    """
+    return d is not None and d.source == SOURCE_MASTER and bool(d.facility)
+
+
+def apply_line(d: Decision) -> str:
+    """アクセス権限で決まったラインを この端末の設備名 にする(起動・権限の読み直しのたび)。知らせを返す。
+
+    2026-11-11 のご依頼「読み込むラインは アクセス権限に設定されているラインを読み込んでください」:
+    表が正(source of truth)。前は all-tools と同じく「前に当てたものから変わったときだけ」当てていたが、
+    いまは**表で決まっていれば毎回**表の値にする(違っていれば直す)。
+    マスタを読めたとき(source = master)だけ当てる ── 読めない(前回の結果 cache)・行にラインが無いときは
+    保存してある設定に触らない(読めない ≠ 無い)。号機が決まらない 丸徳 は、いまの号機を残す。
     """
     from . import user_settings
     from .kensa import terminal
-    if d.source != SOURCE_MASTER or not d.facility:
-        return ""
-    last = str(user_settings.get(KEY_LINE_APPLIED, "") or "")
-    if not should_apply(d.line_key, last):
+    if not line_locked(d):
         return ""
     number = d.line_no
     if not number and d.facility == "丸徳" and terminal.facility() == "丸徳":
         number = terminal.line_no()
+    if (terminal.facility(), terminal.line_no()) == (d.facility, number):
+        user_settings.save(KEY_LINE_APPLIED, d.line_key)
+        return ""
     before = terminal.line_label() or "(未設定)"
     try:
         terminal.set_facility(d.facility, number)

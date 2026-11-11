@@ -112,6 +112,30 @@ const PTY = process.env.E2E_PTY || "-";
     const bad = await api(page, "POST", "/api/calibration/rank", {});
     check(bad.status === 400, S.step, "足りない値は 400 " + bad.status);
     await shot(page, "calibration");
+
+    // ---- 保守 → 寸法のしきい値(2026-11-11)------------------------------------------
+    S.step = "thresholds";
+    await page.goto(BASE + "/maint"); await W(1200);
+    await page.click('#mTabs .tab[data-tab="thresh"]'); await W(1200);
+    const nTh = await page.locator("#mThresh input").count();
+    check(nTh >= 18, S.step, "しきい値の入力欄を出す " + nTh);
+    check((await page.locator("#th-op_notthin_lo").inputValue()) === "6.001", S.step, "既定は VBA と同じ(6.001)");
+    check((await page.locator("#th-kennyu_n").inputValue()) === "25", S.step, "検入の枚数の既定 25");
+    await shot(page, "maint_thresholds");
+
+    // ---- 保守 → 照合ルール(2026-11-11)------------------------------------------
+    S.step = "match_rules";
+    await page.click('#mTabs .tab[data-tab="rules"]'); await W(1200);
+    const nRules = await page.locator("#rRules tr").count();
+    check(nRules === 8, S.step, "ラテフリ直角 の既定のルール 8 行 " + nRules);
+    const lot = "N8061T0";
+    await page.fill("#rLot", lot);
+    await page.click('#rTrialForm button[type="submit"]'); await W(1500);
+    const steps = await page.locator("#rTrial table").count();
+    check(steps >= 0, S.step, "試し照合の表 " + steps);
+    await page.click("#rCheck"); await W(2500);
+    check(/結果が変わるもの: 0 件/.test(await page.locator("#rReg").innerText()), S.step, "既定のままなら変わるロットは 0 件");
+    await shot(page, "maint_match_rules");
   } catch (e) {
     check(false, S.step, "例外 " + (e && e.stack || e));
     await shot(page, "fatal_" + S.step).catch(() => {});

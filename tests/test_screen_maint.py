@@ -131,6 +131,40 @@ class DistCheckTest(MaintBase):
             maint.resolve_alt(str(self.tmp))                              # .sqlite3 でない
 
 
+class TraceHitRowsTest(MaintBase):
+    """trace に当たった行(表の行番号・鍵の列・比べた値・最後に使った行)が入る。結果は変えない。"""
+
+    def test_qp_table_hit_rows(self) -> None:
+        tr = maint.dist_check("H9022K1")["current"]["trace"]
+        j = next(t for t in tr if t["step"] == "平坦度一覧QP追加の判定")
+        self.assertEqual(j["table"], "平坦度一覧QP追加")
+        self.assertEqual([h["keys"]["管理番号"] for h in j["hits"]], ["25", "98", "104"])
+        self.assertEqual([h["no"] for h in j["hits"] if h["chosen"]], [16])
+        self.assertEqual(j["chosen"], "25")
+        self.assertEqual(j["preview"]["hit"], [16, 40, 68])
+        self.assertIn("管理番号", j["preview"]["fields"])
+        c6 = next(t for t in tr if t["step"].startswith("条件 6:"))
+        self.assertEqual([h["no"] for h in c6["hits"]], [16, 40, 44, 68, 97])
+        self.assertIn("板厚下", c6["hits"][0]["keys"])
+        naka = next(t for t in tr if t["step"] == "中歪・耳歪の欄")
+        self.assertEqual(naka["hits"][0]["keys"]["管理番号"], "25")
+        self.assertIn("ソリ幅 2.5", naka["hits"][0]["value"])
+
+    def test_grade_table_hit_rows(self) -> None:
+        r = maint.dist_check("N8061T0")
+        tr = r["current"]["trace"]
+        got = {t["output"]: t for t in tr if t["step"].endswith("当たった行")}
+        self.assertEqual({k: (t["table"], t["hits"][0]["no"], t["chosen"]) for k, t in got.items()},
+                         {"ソリ幅": ("ソリ4級", 1, "2.0"), "ソリ丈": ("ソリ4級", 1, "3.0"),
+                          "中歪": ("中歪4級", 4, "2.0"), "耳歪": ("耳歪4級", 4, "2.0")})
+        for t in got.values():
+            self.assertIn(t["hits"][0]["no"], t["preview"]["hit"])
+            self.assertIn("板厚下", t["hits"][0]["keys"])
+            self.assertTrue(t["hits"][0]["col"])
+        v = r["current"]["values"]
+        self.assertEqual((v["HaHiz"], v["TaHiz"]), ("2.0", "3.0"))
+
+
 class SoriEquipmentTest(MaintBase):
     def test_sori(self) -> None:
         # ソリ4級: 板厚 2.01〜7 の行。幅 1200 → H1500(2)、丈は T1530 まで 2、超えると T1999(3)
