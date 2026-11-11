@@ -60,7 +60,7 @@ function announceReport(v) {
         { label: "帳票を開く", onClick: () => window.open(url, "_blank", "noopener") });
 }
 
-const refocus = () => $("measIn")?.focus();   // 画面を移ったあと(入れ替え式)でも落ちない
+const refocus = () => $("measIn")?.focus({ preventScroll: true });   // 画面を移ったあと(入れ替え式)でも落ちない
 
 /**
  * 2026-11-10(現場の声): 検査員を登録して、この直の校正が済んでいなければ、そのまま校正画面へ移る。
@@ -211,11 +211,11 @@ function renderGrid(g, v) {
     const tr = rowOf("判定", g.ng.map((c) => {
       const td = cellTd({ ...c, name: "" }, "sub ng");
       if (c.visible !== false) { td.dataset.pos = c.pos; td.title = "ダブルクリックでまとめて削除"; }
-      const badge = ngBadge(c.value);
+      const badge = ngBadge(c.value, c.pos);
       if (badge && c.visible !== false) {
         td.replaceChildren(badge);
         td.dataset.flag = NG_BADGE[String(c.value).trim()];
-        td.title = `${c.pos}: ${String(c.value).trim()}(ダブルクリックでまとめて削除)`;
+        td.title = `${c.pos}: ${String(c.value).trim()}(ダブルクリックでまとめて削除${td.dataset.flag === "ng" ? "" : "。印を押すと外す"})`;
       }
       return td;
     }), "sep ngrow", "");
@@ -225,7 +225,7 @@ function renderGrid(g, v) {
   const flags = Object.fromEntries(g.ng.filter((c) => c.visible !== false).map((c) => [c.pos, String(c.value || "").trim()]));
   const ths = rows[0].querySelectorAll("th");
   g.positions.forEach((p, i) => {
-    const b = p.visible ? ngBadge(flags[p.key]) : null;
+    const b = p.visible ? ngBadge(flags[p.key], p.key) : null;
     if (b) { b.classList.add("ngflag--sm"); ths[i + 1].append(" ", b); }
   });
   $("mgrid").replaceChildren(...rows);
@@ -265,9 +265,17 @@ function renderStrainTol(v) {
 
 /* 2026-11-10: NG? ラベル(NG / 許容 / 保留)をはっきり見せる(現場の声「保留・許容のフラグが見えない」) */
 const NG_BADGE = { NG: "ng", 許容: "allow", 保留: "hold" };
-function ngBadge(value) {
-  const kind = NG_BADGE[String(value || "").trim()];
-  return kind ? el("span", { class: `ngflag ngflag--${kind}`, textContent: String(value).trim() }) : null;
+function ngBadge(value, pos) {
+  const v = String(value || "").trim();
+  const kind = NG_BADGE[v];
+  if (!kind) return null;
+  const b = el("span", { class: `ngflag ngflag--${kind}`, textContent: v });
+  if (pos && kind !== "ng") {          // 2026-11-11: 許容・保留は押すと外せる
+    b.dataset.pos = pos;
+    b.setAttribute("role", "button");
+    b.title = `${pos}: ${v}(押すと${v}を外します。NG の値は消しません)`;
+  }
+  return b;
 }
 
 function renderStrain(v) {
@@ -596,6 +604,7 @@ function setPhase(p) {
   (measure ? $("rpaneTol") : $("kside")).append($("tolCard"));
   // 2026-11-09: 受信機の状態(入らない理由)は選ぶまでも見えるように左の列へ。測定中は右の列(次に測るの下)
   if (measure) $("nextBox").after($("recvBox")); else $("kside").prepend($("recvBox"));
+  if (measure) setTimeout(refocus, 0);           // 2026-11-11: 測定に入ったら受け取る欄に焦点を置く
   // カードの追加・別のロットの入力は、測定中は右の列の下へ
   const add = $("kAddPad");
   if (measure) add.append($("cardBox"), $("lotBox"), $("lotSrcRow"));
@@ -876,7 +885,7 @@ function onEnter(id, fn, autoLen = 0) {
 const selected = (sel) => (sel.tagName === "SELECT" ? [...sel.selectedOptions]
   : [...sel.querySelectorAll('[role="option"][aria-selected="true"]')]).map((o) => Number(o.value ?? o.dataset.value));
 
-/** 不良要因の一覧(2 列)。押すと選ぶ/外す(複数可)。↑↓ で動き、Space で選ぶ。描き直しでも選択は残す */
+/** 不良要因の一覧(2 列)。押すと選ぶ/外す(1 つだけ)。↑↓ で動き、Space で選ぶ。描き直しでも選択は残す */
 function defectListbox(box, items) {
   const sig = JSON.stringify(items);
   if (box.dataset.sig === sig) return;
@@ -890,7 +899,13 @@ function defectListbox(box, items) {
   for (const o of box.children) o.setAttribute("aria-selected", String(keep.has(Number(o.dataset.value))));
   if (box.dataset.wired) return;
   box.dataset.wired = "1";
-  const toggle = (o) => o && o.setAttribute("aria-selected", String(o.getAttribute("aria-selected") !== "true"));
+  // 2026-11-11: 1 つだけ選ぶ(サーバは「不良要因は1つずつ選んでから枚数を入れてください」)。別の行を押すと入れ替え、
+  // 選んだ行をもう一度押すと外す
+  const toggle = (o) => {
+    if (!o) return;
+    const on = o.getAttribute("aria-selected") !== "true";
+    for (const r of box.children) r.setAttribute("aria-selected", String(on && r === o));
+  };
   box.addEventListener("click", (e) => {
     const o = e.target.closest('[role="option"]');
     if (!o) return;
@@ -968,13 +983,21 @@ function initReceiver() {
   const box = $("measIn");
   const show = () => {
     if ($("recvBox").dataset.direct === "1") return;     // 受信機から直接のときはカーソルに関係ない
-    const on = document.activeElement === box;
-    $("recvBox").dataset.on = on ? "1" : "";
-    text($("recvState"), on ? "受信待ち(測定器のボタンで入ります)" : "受け取れません — ここを押してください");
+    const a = document.activeElement;
+    const other = a && a !== box && a.matches && a.matches("input, select, textarea, [contenteditable]");
+    $("recvBox").dataset.on = other ? "" : "1";
+    text($("recvState"), other ? "ほかの欄に入力中 — ここを押すと測定を受けます" : "受信待ち(測定器のボタンで入ります)");
   };
   initReceiverShow = show;
   box.addEventListener("focus", show);
-  box.addEventListener("blur", () => setTimeout(show, 0));
+  box.addEventListener("blur", () => setTimeout(() => {
+    // 2026-11-11: 入力欄でない所(表・ボタンなど)へ焦点が移ったら、受け取る欄へ戻す(測定中だけ。窓が開いていれば戻さない)
+    const a = document.activeElement;
+    const other = a && a !== document.body && a.matches("input, select, textarea, [contenteditable]");
+    if (phase === "measure" && !other && !document.querySelector("dialog[open]")) box.focus({ preventScroll: true });
+    show();
+  }, 0));
+  document.addEventListener("focusin", () => setTimeout(show, 0));
   document.addEventListener("keydown", (e) => {
     const t = e.target;
     const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
@@ -1066,7 +1089,10 @@ function init() {
   // クリックはダブルクリックか分かるまで少し待つ。すぐ送ると描き直しで表が入れ替わり、
   // 2 回目のクリックが別の要素に当たってダブルクリック(消去)が効かないことがあった
   let clickTimer = null;
-  $("mgrid").addEventListener("click", (e) => {
+  $("mgrid").addEventListener("click", async (e) => {
+    // 2026-11-11: 許容・保留の印(判定の行・見出し)を押すと外す(NG の値は消さない。サーバが確かめる)
+    const flag = e.target.closest(".ngflag--allow[data-pos], .ngflag--hold[data-pos]");
+    if (flag) { clearTimeout(clickTimer); await op("ng-release", { pos: flag.dataset.pos }); refocus(); return; }
     const td = e.target.closest("td[data-name]");
     if (!td) return;
     const name = td.dataset.name;
@@ -1076,7 +1102,7 @@ function init() {
   $("mgrid").addEventListener("dblclick", async (e) => {
     clearTimeout(clickTimer);
     const ng = e.target.closest("td.ng[data-pos]");
-    if (ng) { await op("ng-delete", { pos: ng.dataset.pos }); return; }
+    if (ng && !e.target.closest(".ngflag--allow, .ngflag--hold")) { await op("ng-delete", { pos: ng.dataset.pos }); return; }
     const td = e.target.closest("td[data-name]");
     if (!td || !td.textContent) return;
     await op("dblclick", { name: td.dataset.name });

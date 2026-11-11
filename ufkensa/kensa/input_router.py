@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -343,6 +344,24 @@ KEN_COUNT_MISSING = "検査回数を入れてください"
 # ------------------------------------------------------------------
 # INP_Change
 # ------------------------------------------------------------------
+_CELL = re.compile(r"^[SUCDEF](\d{1,2})$")
+
+
+def manual_target_mismatch(state: KensaState, pucket: str) -> bool:
+    """手で選んだ入力先(Auto="off" の INP.Tag)が、届いた種類(DT / #L)の行の範囲に無いか(I8)。
+
+    測定の欄(S1〜F14)だけを見る。#〆(手入力)・測定の欄でない入力先は、VBA どおり選んだ欄へ入れる。
+    """
+    if pucket not in ("DT", "#L") or state.inp_tag == "":
+        return False
+    m = _CELL.match(state.inp_tag)
+    if not m:
+        return False
+    row = int(m.group(1))
+    own = is_thick(row) if pucket == "DT" else not is_thick(row)
+    return not own
+
+
 def _msg_error(text: str, n: int, source: str) -> Message:
     """OutTolerance.MsgError(Trm, Lname, n) の表示(1=!、2=×、4=i「注意」)。"""
     level = {1: WARN, 2: ERROR, 4: INFO}.get(n, INFO)
@@ -384,6 +403,10 @@ def inp_change(state: KensaState, hooks: Hooks) -> list[Message]:
             state.inp = ""
             state.flag_label = 1
             return msgs
+    elif manual_target_mismatch(state, state.paked):
+        # 2026-11-11(I8。利用者の決定): 手で選んだ欄が届いた種類の行でなければ(DT を幅・丈・対角へ、#L を厚へ)、
+        # その欄には入れず、種類の行の範囲で次に空いた欄へ回す。VBA は Auto="off" なら PucketMove を飛ばして選んだ欄へ入れていた
+        pucket_move(state, state.paked, ken_no, youc, hooks, msgs)
 
     if state.inp_tag == "":
         # B55: VBA は FlagLabel=0 のまま抜け、フォームを押すまで次の伝送を受け付けない。直す: ほかの抜け方と同じく戻す

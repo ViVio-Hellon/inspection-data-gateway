@@ -21,7 +21,7 @@ from unittest import mock
 
 from tests import kensa_fixture
 from ufkensa import user_settings
-from ufkensa.kensa import paths, quirks, records, session, store, terminal, workers
+from ufkensa.kensa import grid, paths, quirks, records, session, store, terminal, workers
 from ufkensa.kensa.store import HOZON, LOT_HISTORY
 
 LOT = "H7345B0"
@@ -670,6 +670,31 @@ class ScreenGapTest(SessionBase):
         self.assertEqual(r.question.text, "まとめて削除しますか?")
         self.ok(s.ng_delete("C", {"ng_delete": True}))
         self.assertEqual((s.confi["page"], s.confi["posi"], s.confi["n"], s.confi["moto"]), (1, "C", 0, "C板1枚"))
+
+    def test_ng_release(self) -> None:
+        # 2026-11-11: 許容・保留を外す(NG の値は消さない)。NG 色の値が残れば「NG」、無ければ ""
+        from unittest import mock
+        self.lot_ready()
+        s, st = self.s, self.s.state
+        r = self.ok(s.ng_release("S"))
+        self.assertIn("S は許容・保留ではありません", [m.text for m in r.messages])
+        st.cells["S1"].value = "15.5"
+        st.set_color("S1", grid.COLOR_NG)
+        st.ng["S"].value = "許容"
+        r = s.ng_release("S")
+        self.assertEqual(r.question.text, st.header("S") + "の許容を外しますか")
+        self.ok(s.ng_release("S", {"ng_release": False}))
+        self.assertEqual(st.ng["S"].value, "許容")
+        with mock.patch.object(s._env(), "log") as log:
+            self.ok(s.ng_release("S", {"ng_release": True}))
+        self.assertEqual(st.ng["S"].value, "NG")
+        self.assertEqual(st.cells["S1"].value, "15.5")
+        text = log.call_args[0][0].msg
+        self.assertIn("S_許容:理由選択:許容解除:", text)
+        st.ng["U"].value = "保留"
+        self.ok(s.ng_release("U", {"ng_release": True}))
+        self.assertEqual(st.ng["U"].value, "")
+        self.assertIsNotNone(s.ng_release("X").stop)
 
     # --- 廃棄フラグ(IzyouFl_Click)・印刷履歴クリア(PrintBreset_Click)--------
     def test_izyou(self) -> None:
