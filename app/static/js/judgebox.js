@@ -31,6 +31,20 @@ function style() {
     .alarmbox__ok { font-size: 24px; font-weight: 700; padding: 12px 40px; border-radius: 10px;
                     border: 0; background: #c62828; color: #fff; cursor: pointer; }
     .alarmbox__ok:focus-visible { outline: 4px solid #ffb300; outline-offset: 3px; }
+    .packbox { border: 4px solid #ef6c00; border-radius: var(--radius, 10px); padding: 0;
+               width: min(900px, 94vw); max-height: 92vh; background: #fffaf2; color: #2b1600;
+               box-shadow: 0 25px 80px rgb(120 60 0 / 45%); }
+    .packbox[open] { display: flex; flex-direction: column; }
+    .packbox::backdrop { background: rgb(80 40 0 / 55%); }
+    .packbox__head { background: #ef6c00; color: #fff; font-size: 30px; font-weight: 800; letter-spacing: .06em; padding: 12px 24px; }
+    .packbox__body { overflow: auto; padding: 8px 24px; }
+    .packbox__sec { margin: 12px 0; }
+    .packbox__sec h3 { margin: 0 0 6px; font-size: 22px; color: #e65100; border-bottom: 2px solid #ffcc80; }
+    .packbox__sec ul { margin: 0; padding-left: 28px; font-size: 24px; font-weight: 700; line-height: 1.5; }
+    .packbox__foot { display: flex; justify-content: flex-end; padding: 12px 24px 20px; }
+    .packbox__ok { font-size: 24px; font-weight: 700; padding: 12px 48px; border-radius: 10px; border: 0;
+                   background: #ef6c00; color: #fff; cursor: pointer; }
+    .packbox__ok:focus-visible { outline: 4px solid #1565c0; outline-offset: 3px; }
     .judgeimg { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
                 background: rgb(0 0 0 / 35%); cursor: pointer; }
     .judgeimg[hidden] { display: none; }
@@ -89,6 +103,65 @@ export function alarmBox(text) {
   });
   alarmQueue = alarmQueue.then(run);
   return alarmQueue;
+}
+
+/* ---------------- 包装の知らせ(2026-11-11) ----------------
+   VBA では Judg.PackagingSpecificationNo(「注意_包装仕様」)と QP.MaterialsUpperPart(「梱包保護材」)の
+   MsgBox。トーストでは見落とすので、1 つの大きな窓にまとめ、「確認」を押すまで閉じない(Esc でも閉じない)。
+   sections: [{title, lines: [文…]}](文はサーバの原文のまま) */
+let packQueue = Promise.resolve();
+export const PACKING_TITLES = { packing_spec: "包装仕様の注意", packing_material: "梱包保護材" };
+export function packingBox(sections) {
+  const run = () => new Promise((resolve) => {
+    style();
+    let d = document.getElementById("packingBox");
+    if (!d) {
+      d = document.createElement("dialog");
+      d.className = "packbox";
+      d.id = "packingBox";
+      d.setAttribute("role", "alertdialog");
+      d.setAttribute("aria-labelledby", "packingHead");
+      d.innerHTML = `<div class="packbox__head" id="packingHead">包装の注意</div><div class="packbox__body"></div>
+        <div class="packbox__foot"><button class="packbox__ok" type="button">確認</button></div>`;
+      document.body.appendChild(d);
+    }
+    d.querySelector(".packbox__body").replaceChildren(...sections.filter((s) => s.lines.length).map((s) => {
+      const sec = document.createElement("section");
+      sec.className = "packbox__sec";
+      sec.dataset.kind = s.kind || "";
+      const h = document.createElement("h3");
+      h.textContent = s.title;
+      const ul = document.createElement("ul");
+      ul.append(...s.lines.map((t) => { const li = document.createElement("li"); li.textContent = t; return li; }));
+      sec.append(h, ul);
+      return sec;
+    }));
+    const ok = d.querySelector(".packbox__ok");
+    const onCancel = (e) => e.preventDefault();
+    const done = () => { ok.removeEventListener("click", done); d.removeEventListener("cancel", onCancel); d.close(); resolve(true); };
+    ok.addEventListener("click", done);
+    d.addEventListener("cancel", onCancel);
+    if (!d.open) d.showModal();
+    ok.focus();
+  });
+  packQueue = packQueue.then(run);
+  return packQueue;
+}
+
+/** 包装の知らせを集めて、同じ操作の分を 1 つの窓に出す。まとめる知らせなら true。 */
+let packPending = null;
+export function collectPacking(m) {
+  if (!m || !PACKING_TITLES[m.kind] || !m.text) return false;
+  if (!packPending) {
+    packPending = { packing_spec: [], packing_material: [] };
+    setTimeout(() => {
+      const p = packPending;
+      packPending = null;
+      packingBox(Object.keys(PACKING_TITLES).map((k) => ({ kind: k, title: PACKING_TITLES[k], lines: p[k] })));
+    }, 0);
+  }
+  packPending[m.kind].push(m.text);
+  return true;
 }
 
 /** サーバの知らせが異常値か(UF異常値発見: title「異常」)。 */

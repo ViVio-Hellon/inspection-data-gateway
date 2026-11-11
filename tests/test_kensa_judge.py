@@ -11,7 +11,7 @@ from ufkensa.kensa import paths
 from pathlib import Path
 
 from tests import kensa_fixture
-from ufkensa.kensa import judge, quirks, vbx
+from ufkensa.kensa import flow, judge, quirks, vbx
 from ufkensa.kensa.judge import NG, OK, WHITE
 
 
@@ -564,6 +564,21 @@ class PackagingTest(QuirkCase):
         self.assertEqual([m.text for m in out.msg_errors], [",B,直角度の測定をすること,先行データ票が必要です。"])
         self.assertEqual(out.msg_errors[0].icon, 4)
         self.assertEqual(out.sounds, [judge.SOUND_NEED, judge.SOUND_RIGHT_ANGLE])
+        # 2026-11-11: 画面で「包装仕様の注意」の窓にまとめるための印(文は変えない)
+        self.assertEqual([m.kind for m in out.msg_errors], [flow.PACKING_SPEC])
+
+    def test_materials_kind_reaches_screen(self) -> None:
+        """MsgError を通っても kind が残り、画面へ渡す dict に入る(無い知らせには入らない)。"""
+        from ufkensa.kensa import wiring
+        from ufkensa.kensa.grid import KensaState
+        self.add(コメント="注意A")
+        out = self.msgbox(flag=False)
+        from ufkensa.kensa.store import LocalStore
+        env = wiring.Env(LocalStore(str(self.tmp / "s.sqlite3")), write_logs=False)
+        wiring.apply_judge(KensaState(), out, env)
+        d = [m.to_dict() for m in env.messages if m.text]
+        self.assertEqual([(x["text"], x.get("kind")) for x in d], [("注意A", flow.PACKING_SPEC)])
+        self.assertNotIn("kind", flow.Message("x").to_dict())
 
     def test_materials_single_comment(self) -> None:
         self.add(コメント="注意A")

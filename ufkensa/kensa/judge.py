@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
 from . import cache_registry, datasource, flow, paths, vbx
+from .flow import PACKING_SPEC
 from .model import NORMAL, THICK_ROWS, UiValues, bh_name, diag_name, kou_name, lateral_name, row_layout
 from . import sound as snd
 
@@ -197,6 +198,7 @@ class MsgErrorCall:
     lname: str
     icon: int = 0
     temp: str = ""
+    kind: str = ""                 # 画面でまとめる種類(flow.PACKING_SPEC など)。表示の文・ログは変えない
 
 
 @dataclass
@@ -1336,7 +1338,7 @@ def materials_msgbox(form: Form, ord_no: str, *,
                                       db=packing_db)
     if temp == "":
         if flag:
-            out.msg_errors.append(MsgErrorCall(ADVANCE_MSG, lname, 4))
+            out.msg_errors.append(MsgErrorCall(ADVANCE_MSG, lname, 4, kind=PACKING_SPEC))
             out.sounds.append(SOUND_NEED)
         return out
 
@@ -1352,7 +1354,7 @@ def materials_msgbox(form: Form, ord_no: str, *,
         elif n_count <= 1:
             if n_count == -1:
                 if flag:
-                    out.msg_errors.append(MsgErrorCall(ADVANCE_MSG, lname, 4))
+                    out.msg_errors.append(MsgErrorCall(ADVANCE_MSG, lname, 4, kind=PACKING_SPEC))
                     out.sounds.append(SOUND_NEED)
                 return out
             temp = parts[0]
@@ -1362,7 +1364,7 @@ def materials_msgbox(form: Form, ord_no: str, *,
         if vbx.instr(temp, "直角度の測定") > 0:
             out.sounds.append(SOUND_RIGHT_ANGLE)
         temp = ",".join(dict.fromkeys(temp.split(",")))     # Dictionary で重複を除く(入れた順)
-        out.msg_errors.append(MsgErrorCall(temp, lname, 4))
+        out.msg_errors.append(MsgErrorCall(temp, lname, 4, kind=PACKING_SPEC))
     return out
 
 

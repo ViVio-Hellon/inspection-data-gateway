@@ -324,6 +324,27 @@ li.is-stale { opacity: .6; }
 .strain-tol b { color: var(--accent); }
 .strain-tol__item { font-family: var(--mono); font-weight: 600; }
 .strain-tol__item.is-empty { color: var(--muted); font-weight: 400; }
+/* 2026-11-11: 歪の公差を大きく、項目ごとに色の枠(測定表の寸法公差と同じ色の付け方) */
+.strain-tol { font-size: 1.15rem; padding: 6px 10px; gap: 6px 10px; }
+.strain-tol b { font-size: 1.1rem; }
+.strain-tol__item { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; font-weight: 800; font-size: 1.25rem;
+                    border: 2px solid var(--g, var(--rule)); border-left-width: 6px; border-radius: 4px;
+                    background: color-mix(in srgb, var(--g, transparent) 22%, transparent); color: var(--ink); }
+.strain-tol__item small { font-family: inherit; font-size: .8em; font-weight: 700; }
+.strain-tol__item[data-k="ha"] { --g: var(--hue-green); } .strain-tol__item[data-k="ta"] { --g: var(--hue-orange); }
+.strain-tol__item[data-k="naka"] { --g: var(--hue-blue); } .strain-tol__item[data-k="mimi"] { --g: var(--hue-purple); }
+.strain-tol__item[data-k="mg"] { --g: var(--hue-slate); }
+/* 歪の入力欄を大きく */
+.mgrid.strain .cellin { font-size: 1.2rem; min-height: 40px; padding: 4px 6px; }
+.mgrid.strain select.cellin { min-width: 6.5em; }
+/* 不良要因: 名前は左・コードは右(等幅) */
+.deflist { display: block; width: 100%; min-width: 0; box-sizing: border-box; font-size: var(--fs-sm); height: calc(9 * 1.9em + 8px); overflow-y: auto; padding: 4px; cursor: default; }
+.deflist__row { display: flex; justify-content: space-between; gap: 1.5em; padding: 2px 8px; line-height: 1.7; border-radius: 3px; user-select: none; }
+.deflist__code { font-family: var(--mono); text-align: right; min-width: 2.5ch; }
+.deflist__row[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+.deflist__row.is-cur { outline: 1px dotted var(--accent); }
+.deflist__row:hover { background: var(--accent-soft); }
+.deflist__row[aria-selected="true"]:hover { background: var(--accent); }
 
 /* 2026-11-10: 低い画面(1366x768 など)では「操作」の札を列の中でスクロールせずに収める。
    ボタンを 3 列の格子に詰め、札・余白・最近の操作の欄を小さくする(押す的は 32px を割らない)。

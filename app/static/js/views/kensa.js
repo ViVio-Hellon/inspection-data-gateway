@@ -17,7 +17,7 @@ import { playMessage } from "../sound.js";
 import { promptBox } from "../askbox.js";
 import { LEVEL_KIND, screenOp } from "../screen_op.js";
 import { fromServer, startReceiver } from "../recv.js";
-import { alarmBox, isAbnormal, showJudgeImage } from "../judgebox.js";
+import { alarmBox, collectPacking, isAbnormal, showJudgeImage } from "../judgebox.js";
 import { packDialog } from "./pack_dialog.js";
 
 const $ = (id) => document.getElementById(id);
@@ -31,6 +31,7 @@ function showMessage(m) {
   playMessage(m);                                               // 音(D29: 出来事の鍵。鳴らせなければ文言)
   showJudgeImage(m);                                            // VBA の UFOK / UFNG / UF対角(画像が無ければ出さない)
   if (isAbnormal(m)) { alarmBox(m.text); return; }              // VBA の UF異常値発見
+  if (collectPacking(m)) return;                                // 2026-11-11: 包装仕様の注意・梱包保護材は 1 つの窓に
   if (m.text) toast(m.text, LEVEL_KIND[m.level] || "info");     // 音だけの知らせはトーストを出さない
 }
 
@@ -257,8 +258,9 @@ function renderStrainTol(v) {
   const s = v.strain_tol || {};
   const has = STRAIN_TOL.some(([, key]) => s[key]);
   $("strainTol").replaceChildren(...(has ? [el("b", { textContent: "歪の公差" }),
-    ...STRAIN_TOL.map(([k, key]) => el("span", { class: "strain-tol__item" + (s[key] ? "" : " is-empty"),
-                                                 textContent: `${k} ${s[key] || "-"}` }))] : []));
+    // 2026-11-11: 測定表の寸法公差と同じく、項目ごとに色の枠を付けて大きく出す(現場の声)
+    ...STRAIN_TOL.map(([k, key]) => el("span", { class: "strain-tol__item" + (s[key] ? "" : " is-empty"), dataset: { k: key } },
+                                                 el("small", { textContent: k }), el("span", { textContent: s[key] || "-" })))] : []));
 }
 
 /* 2026-11-10: NG? ラベル(NG / 許容 / 保留)をはっきり見せる(現場の声「保留・許容のフラグが見えない」) */
@@ -284,10 +286,10 @@ function renderStrain(v) {
     headRow(pos),
     rowOf(`${zLabel} 形状`, each((p) => selectTd(sc[`CB${p}1`], `CB${p}1`, (cb[p] || {})["1"]))),
     rowOf("上下・型", each((p) => selectTd(sc[`CB${p}2`], `CB${p}2`, (cb[p] || {})["2"]))),
-    rowOf(`${zLabel} 値`, each((p) => inputTd(zc[p], `Z${p}`))),
+    rowOf(`${zLabel} 値`, each((p) => inputTd(zc[p], `Z${p}`, { width: "6.5em" }))),
     rowOf(`${gLabel} 形状`, each((p) => selectTd(sc[`CB${p}3`], `CB${p}3`, (cb[p] || {})["3"])), "sep"),
     rowOf("上下", each((p) => selectTd(sc[`CB${p}4`], `CB${p}4`, (cb[p] || {})["4"]))),
-    rowOf(`${gLabel} 値`, each((p) => inputTd(gc[p], `G${p}`))),
+    rowOf(`${gLabel} 値`, each((p) => inputTd(gc[p], `G${p}`, { width: "6.5em" }))),
   );
   text($("faceLv"), v.strain.face === "Now_B" ? "B面" : "A面");
   $("aorbBtn").textContent = v.strain.face === "Now_B" ? "いま B面(A面へ)" : "いま A面(B面へ)";
@@ -318,7 +320,9 @@ function renderVisual(v) {
 }
 
 function renderBad(v) {
-  fillList($("defectList"), v.lists.defect, (x) => `${x.name || "(空白)"}  ${x.code || ""}`);
+  // 2026-11-11: VBA の ListBox と同じ 2 列(名前は左・コードは右)。<select> の中では列を揃えられないので、
+  // 選べる一覧(role=listbox)で描く。名前が空(全角空白だけ)の行はコードだけを右に出す
+  defectListbox($("defectList"), v.lists.defect || []);
   const bad = Object.fromEntries(v.bad.map((c) => [c.pos, c]));
   $("badGrid").replaceChildren(headRow(v.grid.positions),
     rowOf("枚数", POS.map((p) => inputTd(bad[p], `${p}Bad`, {
@@ -345,7 +349,8 @@ function renderKenH(v) {
     const t = el("table", { class: "mgrid" }, el("tr", {}, el("th", { class: "rowh", textContent: cap }), inputTd(c, `KenHBox${c.no}`), el("th", { textContent: unit })));
     items.push(t);
   }
-  if (v.ken_count_visible) {
+  // 2026-11-11: 検査回数は少枚数のときだけ(厚板 H など他の作業では出さない。現場の声)
+  if (v.ken_count_visible && v.header.work === "少枚数") {
     // 2026-11-10: 少枚数(厚板の検番 H)で枚数があるのに検査回数が無いと、測定はサーバで止まる
     // (input_router.ken_count_missing「検査回数を入れてください」)。同じ決まりで、欄を「必須」に見せる
     const thick = (v.header.works || []).find((w) => w.key === "厚板") || {};
@@ -868,7 +873,41 @@ function onEnter(id, fn, autoLen = 0) {
   if (autoLen) box.addEventListener("input", () => { if (box.value.trim().length === autoLen) send(); });
 }
 
-const selected = (sel) => [...sel.selectedOptions].map((o) => Number(o.value));
+const selected = (sel) => (sel.tagName === "SELECT" ? [...sel.selectedOptions]
+  : [...sel.querySelectorAll('[role="option"][aria-selected="true"]')]).map((o) => Number(o.value ?? o.dataset.value));
+
+/** 不良要因の一覧(2 列)。押すと選ぶ/外す(複数可)。↑↓ で動き、Space で選ぶ。描き直しでも選択は残す */
+function defectListbox(box, items) {
+  const sig = JSON.stringify(items);
+  if (box.dataset.sig === sig) return;
+  const keep = new Set(selected(box));
+  box.dataset.sig = sig;
+  box.replaceChildren(...items.map((x, i) => {
+    const name = String(x.name || "").trim(), code = String(x.code || "").trim();
+    return el("div", { role: "option", class: "deflist__row", dataset: { value: String(i) }, ariaSelected: String(keep.has(i)) },
+      el("span", { class: "deflist__name", textContent: name }), el("span", { class: "deflist__code", textContent: code }));
+  }));
+  for (const o of box.children) o.setAttribute("aria-selected", String(keep.has(Number(o.dataset.value))));
+  if (box.dataset.wired) return;
+  box.dataset.wired = "1";
+  const toggle = (o) => o && o.setAttribute("aria-selected", String(o.getAttribute("aria-selected") !== "true"));
+  box.addEventListener("click", (e) => {
+    const o = e.target.closest('[role="option"]');
+    if (!o) return;
+    toggle(o);
+    for (const r of box.children) r.classList.toggle("is-cur", r === o);
+  });
+  box.addEventListener("keydown", (e) => {
+    const rows = [...box.children];
+    let i = rows.findIndex((r) => r.classList.contains("is-cur"));
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      i = Math.max(0, Math.min(rows.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)));
+      rows.forEach((r, j) => r.classList.toggle("is-cur", j === i));
+      if (rows[i]) rows[i].scrollIntoView({ block: "nearest" });
+    } else if (e.key === " " && rows[i]) { e.preventDefault(); toggle(rows[i]); }
+  });
+}
 
 function initTabs() {
   const tabs = [...document.querySelectorAll("#subtabs [data-tab]")];
@@ -1055,6 +1094,13 @@ function init() {
     await op("visual-clear", { lc: Number(td.dataset.lc) });
   });
   $("reflectBtn").addEventListener("click", async () => {
+    // 2026-11-11: 枚数は Enter を押さずに「反映」を押されることが多い。画面に打った枚数を先に送る
+    // (送らないとサーバは空のまま →「枚数入力がありません」)。VBA では ?Bad_Change で打った時点で入っていた
+    const sent = Object.fromEntries(((V && V.bad) || []).map((c) => [c.pos, c.value ?? ""]));
+    for (const inp of $("badGrid").querySelectorAll("input[data-name]")) {
+      const pos = inp.dataset.name[0];
+      if (inp.value.trim() !== "" && inp.value !== sent[pos]) await op("value", { name: inp.dataset.name, value: inp.value });
+    }
     await op("defect-reflect", { items: selected($("defectList")) });
     refocus();
   });

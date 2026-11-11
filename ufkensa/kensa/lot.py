@@ -48,7 +48,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from . import ado_filter, datasource, flow, lot_ledger, paths, vbx
 from .model import UiValues
-from .flow import ERROR, INFO, WARN, Message
+from .flow import ERROR, INFO, PACKING_MATERIAL, WARN, Message
 
 TABLE = "仕掛"
 VC_TABLE = "VC厚"
@@ -1012,10 +1012,10 @@ def vc_picture(sheet_rows: Sequence[Sequence[Any]], lot: Any, order_no: str = ""
             r1 = materials_upper_part(order_no, False)
             r2 = materials_upper_part(order_no, True)
             if r1 != "" and r1 != "一致なし":
-                v.messages.append(Message(r1, INFO, source="SaveLoad:1621"))
+                v.messages.append(Message(r1, INFO, kind=PACKING_MATERIAL, source="SaveLoad:1621"))
             if r1 == "アングル":
                 if r2 != "" and r2 != "一致なし":
-                    v.messages.append(Message(r2, INFO, source="SaveLoad:1624"))
+                    v.messages.append(Message(r2, INFO, kind=PACKING_MATERIAL, source="SaveLoad:1624"))
 
     # VC厚 の系統・備考(ファイルが無いと GetRecordsArr の中で End → DbMissing)
     file_path = paths.join(_denso_base(test), DENSO + ".sqlite3")

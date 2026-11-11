@@ -80,7 +80,7 @@
           <button type="button" role="tab" data-tab="visual">外観</button>
           <button type="button" role="tab" data-tab="bad">不良</button>
           <button type="button" role="tab" data-tab="kenh">検入高さ</button>
-          <button type="button" role="tab" data-tab="bh">BH</button>
+          <button type="button" role="tab" data-tab="bh" hidden title="使っていないので隠しています(値は今までどおり保存・復元)">BH</button>
           <button type="button" role="tab" data-tab="order">オーダー・VC</button>
         </div>
         <span class="lv lv--info" id="faceLv"></span>
@@ -97,7 +97,7 @@
       </div>
       <div class="pad subpane" data-pane="bad" hidden>
         <div class="visual">
-          <div><label class="muted" for="defectList">不良要因選択</label><select class="input" id="defectList" multiple size="9"></select></div>
+          <div><span class="muted" id="defectListLab">不良要因選択</span><div class="input deflist" id="defectList" role="listbox" aria-multiselectable="true" aria-labelledby="defectListLab" tabindex="0"></div></div>
           <div>
             <table class="mgrid" id="badGrid" aria-label="不良枚数"></table>
             <p class="muted">単位(枚)。欄を押して枚数を入れ、不良要因を選んで「反映」。</p>

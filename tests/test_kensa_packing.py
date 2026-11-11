@@ -133,3 +133,18 @@ class PackingB84FixTest(PackingTest):
         self.assertEqual(self.check(), "1P1216")
         hist = [self.hist[0], row(LOT, "1", "1", "0.txt")]                 # 7 文字目でない名前はそのまま照合
         self.assertEqual(self.check(hist=hist), "0.txt")
+
+
+class UpperPartKindTest(unittest.TestCase):
+    """2026-11-11: 梱包保護材(QP.MaterialsUpperPart)の知らせに印を付け、画面で 1 つの窓にまとめる。文は原文のまま。"""
+
+    def test_kind(self) -> None:
+        from unittest import mock
+        from ufkensa.kensa import flow, packing as pk
+        res = {False: "アングル", True: "上部保護材X"}
+        with mock.patch.object(pk.quality, "materials_upper_part", lambda o, h, b=False: res[b]):
+            msgs: list = []
+            pk._upper_part_messages("ORD1", None, msgs, "UF_PackNo.Activate")
+        self.assertEqual([(m.text, m.kind) for m in msgs],
+                         [("アングル", flow.PACKING_MATERIAL), ("上部保護材X", flow.PACKING_MATERIAL)])
+        self.assertEqual(msgs[0].to_dict()["kind"], "packing_material")

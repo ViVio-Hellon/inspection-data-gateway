@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
 from . import datasource, paths, quality, vbx
-from .flow import ERROR, INFO, WARN, Message
+from .flow import ERROR, INFO, PACKING_MATERIAL, WARN, Message
 from .lot import read_check
 
 FOLDER = "包装仕様書"
@@ -312,9 +312,9 @@ def _upper_part_messages(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], m
     r1 = quality.materials_upper_part(ord_no, hist)
     r2 = quality.materials_upper_part(ord_no, hist, True)
     if r1 != "" and r1 != "一致なし":
-        msgs.append(Message(r1, INFO, source=source))
+        msgs.append(Message(r1, INFO, kind=PACKING_MATERIAL, source=source))
     if r1 == "アングル" and r2 != "" and r2 != "一致なし":
-        msgs.append(Message(r2, INFO, source=source))
+        msgs.append(Message(r2, INFO, kind=PACKING_MATERIAL, source=source))
 
 
 def pack_open(n: str, pc_lot: str, hist: Optional[Sequence[Sequence[Any]]], *,

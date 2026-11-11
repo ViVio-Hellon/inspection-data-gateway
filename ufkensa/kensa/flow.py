@@ -28,6 +28,11 @@ from typing import Any, Optional
 INFO, WARN, ERROR = "info", "warn", "error"
 
 
+# 2026-11-11: 包装の知らせ(画面で 1 つの大きな窓にまとめ、「確認」を押すまで閉じない)
+PACKING_SPEC = "packing_spec"           # Judg.PackagingSpecificationNo(梱包資材マスタ「注意_包装仕様」)→ MaterialsMsgBox
+PACKING_MATERIAL = "packing_material"   # QP.MaterialsUpperPart(梱包資材マスタ「梱包保護材」)
+
+
 @dataclass
 class Message:
     text: str                      # VBA の原文
@@ -35,9 +40,12 @@ class Message:
     title: str = ""                # MsgBox のタイトル
     sound: str = ""                # 鳴らす音の出来事の鍵(`sound.SOUNDS`。ファイル名は設定で決まる D29)
     source: str = ""               # VBA の場所(例 "Judg:471")
+    kind: str = ""                 # 2026-11-11: 画面でまとめて出す知らせの種類(PACKING_SPEC / PACKING_MATERIAL)。文は変えない
 
     def to_dict(self) -> dict[str, Any]:
         d = {"text": self.text, "level": self.level, "title": self.title, "sound": "", "source": self.source}
+        if self.kind:
+            d["kind"] = self.kind
         if self.sound:
             d["cue"] = self.sound          # 2026-11-09: 出来事の鍵(音を鳴らさない設定でも、判定の画像はこれで出す)
         if self.sound:

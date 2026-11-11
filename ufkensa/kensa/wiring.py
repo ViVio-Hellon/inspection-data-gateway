@@ -42,6 +42,7 @@ VBA のコントロール名(`ATU`、`S1`、`DiagSKou`、`LateralText.Tag`、`�
 """
 from __future__ import annotations
 
+import dataclasses
 import functools
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -445,11 +446,11 @@ class Env:
         self.messages.append(Message("", INFO, sound=key, source=source))
 
 
-def _msg_error(env: Env, state: KensaState, text: str, n: int, temp: str = "") -> None:
+def _msg_error(env: Env, state: KensaState, text: str, n: int, temp: str = "", kind: str = "") -> None:
     """OutTolerance.MsgError(text, Lname, n, temp)。表示とログ。"END" は Stop(D10)。"""
     reg = registry(state)
     out = checks.msg_error(text, state.lname, n, temp, (reg.t1, reg.t2, reg.t3))
-    env.messages.append(out.message)
+    env.messages.append(dataclasses.replace(out.message, kind=kind) if kind else out.message)
     env.log(legacy_log.line_entry(state.line_name, out.log_text))
     if out.end:
         raise Stop(out.message.text, messages=list(env.messages), source="OutTolerance.MsgError")
@@ -476,7 +477,7 @@ def apply_judge(state: KensaState, out: judge.Outcome, env: Env) -> None:
         if env.write_logs:
             legacy_log.write_log(lg.text, lg.sepl, lg.target_path, lg.target_file, now=env.now())
     for m in out.msg_errors:
-        _msg_error(env, state, m.text, m.icon, m.temp)
+        _msg_error(env, state, m.text, m.icon, m.temp, kind=m.kind)
     if out.ng_erase is not None:
         input_router.ng_erase(state, out.ng_erase)
 
