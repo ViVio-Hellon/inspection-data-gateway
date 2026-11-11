@@ -136,6 +136,16 @@ const PTY = process.env.E2E_PTY || "-";
     await page.click("#rCheck"); await W(2500);
     check(/結果が変わるもの: 0 件/.test(await page.locator("#rReg").innerText()), S.step, "既定のままなら変わるロットは 0 件");
     await shot(page, "maint_match_rules");
+    // 第3段: 測定機器ID(ライン・厚・用途を直接入れて試す)
+    await page.click('#rGroups button:has-text("測定機器ID")'); await W(600);
+    check(await page.locator("#rRules tr").count() === 3, S.step, "測定機器ID の既定のルール 3 行");
+    await page.fill("#rLot", "");
+    await page.fill("#rIn_ライン", "HVC"); await page.fill("#rIn_厚", "10"); await page.fill("#rIn_用途", "H191");
+    await page.click('#rTrialForm button[type="submit"]'); await W(1200);
+    check(/M4/.test(await page.locator("#rTrial").innerText()), S.step, "HVC 厚10 用途H191 → M4");
+    await page.click("#rCheck"); await W(2500);
+    check(/結果が変わるもの: 0 件/.test(await page.locator("#rReg").innerText()), S.step, "測定機器ID 既定のままなら 0 件");
+    await shot(page, "maint_match_rules_micro");
   } catch (e) {
     check(false, S.step, "例外 " + (e && e.stack || e));
     await shot(page, "fatal_" + S.step).catch(() => {});

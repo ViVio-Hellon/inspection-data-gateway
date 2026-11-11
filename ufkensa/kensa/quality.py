@@ -2173,9 +2173,34 @@ def check_equipment_db(line: str, zai: str, atu: float, haba: float, take: float
         return ""
     C = {n: col_of(f, n) for n in ("管理番号", "設備名", "製造材質", "オーダー厚MIN", "オーダー厚MAX", "オーダー幅MIN",
                                    "オーダー幅MAX", "オーダー丈MIN", "オーダー丈MAX", "単重MIN", "単重MAX", "作業可否")}
-    rows = [r for r in (datasource.get_records(db, "設備仕様") or []) if lines.matches(cell(r, C["設備名"]), line)]
+    table = datasource.get_records(db, "設備仕様") or []
+    g = match_rules.group(match_rules.EQUIP)
+    if g.new_way:
+        got = _equipment_new(g, table, f, C, line, zai, atu, haba, take, wei)
+        if match_rules.shadow_on(g):
+            match_rules.compare(match_rules.EQUIP, _equipment_old(table, C, line, zai, atu, haba, take, wei), got,
+                                repr((line, zai, atu, haba, take, wei)))
+    else:
+        got = _equipment_old(table, C, line, zai, atu, haba, take, wei)
+    rows, matching, text = got
     if not rows:
         return "可"
+    if not matching:
+        return text
+    out = ""
+    for h in _hit_rows(rows, C["管理番号"], matching):
+        if vstr(cell(h, C["作業可否"])) != "":
+            out = vstr(cell(h, C["作業可否"]))
+    return out
+
+
+def _equipment_old(table: Sequence[Sequence[Any]], C: dict[str, int], line: str, zai: str, atu: float, haba: float,
+                   take: float, wei: float) -> tuple[list[Any], list[int], str]:
+    """旧: CheckEquipmentDb の照合(QP:2105-2172)をコードで。(設備名の行, 管理番号, 該当なしの文言)。
+    照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    rows = [r for r in table if lines.matches(cell(r, C["設備名"]), line)]
+    if not rows:
+        return rows, [], "可"
     matching: list[int] = []
     c = [False] * 6
     same = True          # B71(QP:2140-2143): 直すと MIN・MAX も Double で比べる
@@ -2188,22 +2213,45 @@ def check_equipment_db(line: str, zai: str, atu: float, haba: float, take: float
         c[5] = c[4] & check_within(r, C["単重MIN"], C["単重MAX"], wei, same_precision=same)
         if all(c[1:6]):
             matching.append(clng(cell(r, C["管理番号"])))
+    text = ""
     if not matching:
-        if not c[1]:
-            return "製造材質 範囲外"
-        if not c[2]:
-            return "オーダー厚 範囲外"
-        if not c[3]:
-            return "オーダー幅 範囲外"
-        if not c[4]:
-            return "オーダー丈 範囲外"
-        if not c[5]:
-            return "単重 範囲外"
-    out = ""
-    for h in _hit_rows(rows, C["管理番号"], matching):
-        if vstr(cell(h, C["作業可否"])) != "":
-            out = vstr(cell(h, C["作業可否"]))
-    return out
+        for k, t in enumerate(EQUIP_NG, start=1):
+            if not c[k]:
+                text = t
+                break
+    return rows, matching, text
+
+
+#: 該当なしの文言(最後の行で最初に外れたルールの、表の列の最初の列 → 文言)
+EQUIP_NG = ("製造材質 範囲外", "オーダー厚 範囲外", "オーダー幅 範囲外", "オーダー丈 範囲外", "単重 範囲外")
+_EQUIP_ANCHORS = dict(zip(("製造材質", "オーダー厚MIN", "オーダー幅MIN", "オーダー丈MIN", "単重MIN"), EQUIP_NG))
+
+
+def equipment_ctx(line: str, zai: str, atu: float, haba: float, take: float, wei: float) -> dict[str, Any]:
+    return dict(zip(match_rules.EQUIP_FIELDS, (line, zai, atu, haba, take, wei)))
+
+
+def equipment_ng(g: "match_rules.Group", res: "match_rules.MatchResult") -> str:
+    """合う行が無いときの文言: 最後に評価した行で最初に外れたルール。"""
+    if res.rows or res.last_fail is None:
+        return ""
+    rules = [r for r in sorted(g.rules, key=lambda r: r.order) if r.enabled]
+    r = rules[res.last_fail]
+    return _EQUIP_ANCHORS.get(r.columns[0], f"{r.columns[0]} 範囲外")
+
+
+def _equipment_new(g: "match_rules.Group", table: Sequence[Sequence[Any]], f: Sequence[str], C: dict[str, int],
+                   line: str, zai: str, atu: float, haba: float, take: float, wei: float
+                   ) -> tuple[list[Any], list[int], str]:
+    """新: 照合ルール「設備仕様」。先に外すルール(設備名 ← ライン)で絞り、残りのルールを当てる。戻りは旧と同じ形。"""
+    pre, rest = match_rules.split_pre(g)
+    ctx = equipment_ctx(line, zai, atu, haba, take, wei)
+    rows = [table[i] for i in match_rules.match(pre, table, f, ctx).matched]
+    if not rows:
+        return rows, [], "可"
+    res = match_rules.match(rest, rows, f, ctx)
+    matching = [clng(cell(rows[i], C["管理番号"])) for i in res.rows]
+    return rows, matching, equipment_ng(rest, res)
 
 
 # ------------------------------------------------------------------
