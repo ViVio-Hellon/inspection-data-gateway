@@ -11,6 +11,7 @@
 - この端末: ラインはアクセス権限マスタで決まれば自動で当たる(D30)。決まったあとに手で変えるのは管理者パスワードで
 - 権限: アクセス権限マスタ(梱包資材マスタの「アクセス権限」。all-tools と共通。D12・D30)を読んだ結果と表ぜんぶの点検
 - 不具合の扱い: `config/quirks.json` の中身(D3)
+- 配布設定: `ufkensa.distribution` の書き出す・読み込み直す・消す(管理者パスワード)
 
 `GET /api/fs/list` はサーバ側のフォルダを一覧する(「参照…」。python-web-tools と同じ)。
 """
@@ -345,3 +346,49 @@ def save_log():
         if refused:
             return refused
     return jsonify(_state())
+
+
+# ------------------------------------------------------------------
+# 配布設定(2026-11-11。`ufkensa.distribution`)。書き出す・消す・読み込み直すは管理者パスワード
+# ------------------------------------------------------------------
+def _dist_reply(res):
+    from ufkensa import distribution
+    if not res.ok:
+        status = 403 if res.reason == distribution.REFUSE_NEED_PASSWORD else 400
+        return _err(res.reason or "failed", res.message, status)
+    return jsonify({"message": res.message, "applied": res.applied, "kept": res.kept,
+                    "summary": distribution.summary()})
+
+
+@bp.get("/api/settings/distribution")
+def distribution_state():
+    from ufkensa import distribution
+    return jsonify(distribution.summary())
+
+
+@bp.post("/api/settings/distribution/export")
+def distribution_export():
+    from ufkensa import distribution
+    b = request.get_json(silent=True) or {}
+    items = [str(k) for k in (b.get("items") or []) if isinstance(k, str)]
+    res = distribution.export(str(b.get("password", "") or ""), items, bool(b.get("with_contents")))
+    if res.ok:
+        trace.event("settings.distribution", "配布設定を書き出しました", data={"items": res.applied})
+    return _dist_reply(res)
+
+
+@bp.post("/api/settings/distribution/remove")
+def distribution_remove():
+    from ufkensa import distribution
+    b = request.get_json(silent=True) or {}
+    return _dist_reply(distribution.remove(str(b.get("password", "") or "")))
+
+
+@bp.post("/api/settings/distribution/reapply")
+def distribution_reapply():
+    from ufkensa import distribution
+    b = request.get_json(silent=True) or {}
+    res = distribution.reapply(str(b.get("password", "") or ""))
+    if res.ok:
+        trace.event("settings.distribution", res.message, data={"applied": res.applied, "kept": res.kept})
+    return _dist_reply(res)

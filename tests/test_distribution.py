@@ -223,6 +223,117 @@ class ContentsTest(_Case):
         self.assertNotIn("作業標準", [row[1] for row in self.rows(shared, settings_file.T_DBS)])
 
 
+class NewKeysTest(_Case):
+    """2026-11-11: あとから増えた PC ごとの設定(使用パス・判定の画像・音・モード・受信機)。"""
+
+    PATHS = {"items": {"judge_ok": r"\\srv\画像\OK", "judge_ng": r"\\srv\画像\NG"},
+             "lot": {"first": r"\\srv\台帳", "second": r"\\srv\控え"}, "second_names": {}, "first_names": {}}
+
+    def test_keys_match_their_sources(self) -> None:
+        from app.routes import maint
+        from ufkensa.kensa import judge_images, paths, sound
+        self.assertEqual(distribution.KEY_KENSA_PATHS, paths.KEY_PATHS)
+        self.assertEqual(distribution.KEY_KENSA_MODE, paths.KEY_MODE)
+        self.assertEqual(distribution.KEY_JUDGE_DISPLAY, judge_images.DISPLAY_KEY)
+        self.assertEqual(distribution.SOUND_PREFIX, sound.SETTING_PREFIX)
+        self.assertEqual(distribution.KEY_COM_KENSA, maint.KEY_COM_KENSA)
+        self.assertEqual(distribution.KEY_COM_CARDS, maint.KEY_COM_CARDS)
+        self.assertEqual(distribution.KEY_COM_RECEIVE, maint.KEY_COM)
+        # 配らないもの: ライン・前回の ID は入れられない
+        for k in ("kensa_facility", "kensa_line_no", config.KEY_LAST_USER, distribution.KEY_APPLIED):
+            self.assertFalse(distribution.is_item_key(k), k)
+        defaults = {k: d for k, _, d in distribution.ITEMS}
+        for k in (distribution.KEY_COM_KENSA, distribution.KEY_COM_CARDS, distribution.KEY_KENSA_MODE):
+            self.assertFalse(defaults[k], k)                 # PC ごとの機械・使い方は既定で入れない
+
+    def fill(self) -> None:
+        from ufkensa.kensa import sound
+        user_settings.save(distribution.KEY_KENSA_PATHS, self.PATHS)
+        user_settings.save(distribution.KEY_JUDGE_DISPLAY, {"ok": {"ms": 1500, "size": 60}})
+        user_settings.save(sound.setting_key(sound.SOUND_KEYS[0]), "ピンポン.wav")
+        user_settings.save(distribution.KEY_COM_KENSA, [{"port": "COM3", "baud": 9600}])
+        user_settings.save("kensa_facility", "第1")
+
+    def test_round_trip(self) -> None:
+        from ufkensa.kensa import sound
+        self.fill()
+        r = distribution.export("nisk", [distribution.KEY_KENSA_PATHS, distribution.KEY_JUDGE_DISPLAY,
+                                         distribution.SOUND, distribution.KEY_COM_KENSA], False)
+        self.assertTrue(r.ok, r.message)
+        readme = (self.dist / distribution.README_NAME).read_text(encoding="utf-8-sig")
+        self.assertIn("いつも配らないもの", readme)
+        self.assertIn("音:", readme)
+        meta = json.loads(distribution.settings_path().read_text(encoding="utf-8"))
+        self.assertIn("app_version", meta)
+        self.assertNotIn("kensa_facility", meta["settings"])
+        self.pc("配られた PC")
+        user_settings.save("kensa_facility", "第2")
+        self.assertTrue(distribution.apply_on_start().applied)
+        self.assertEqual(user_settings.get(distribution.KEY_KENSA_PATHS), self.PATHS)
+        self.assertEqual(user_settings.get(distribution.KEY_JUDGE_DISPLAY), {"ok": {"ms": 1500, "size": 60}})
+        self.assertEqual(user_settings.get(sound.setting_key(sound.SOUND_KEYS[0])), "ピンポン.wav")
+        self.assertEqual(user_settings.get(distribution.KEY_COM_KENSA), [{"port": "COM3", "baud": 9600}])
+        self.assertEqual(user_settings.get("kensa_facility"), "第2")     # ラインは配らない
+
+    def test_com_not_included_by_default_ui(self) -> None:
+        self.fill()
+        s = distribution.summary()
+        row = {i["key"]: i for i in s["items"]}
+        self.assertFalse(row[distribution.KEY_COM_KENSA]["default"])
+        self.assertTrue(row[distribution.KEY_KENSA_PATHS]["default"])
+        self.assertTrue(row[distribution.SOUND]["default"])
+        self.assertTrue(s["excluded"])
+
+    def test_nested_paths_keep_only_what_this_pc_changed(self) -> None:
+        user_settings.save(distribution.KEY_KENSA_PATHS, self.PATHS)
+        self.assertTrue(distribution.export("nisk", [distribution.KEY_KENSA_PATHS], False).ok)
+        self.pc("配られた PC")
+        user_settings.save(distribution.KEY_KENSA_PATHS, {"items": {"judge_ok": r"D:\自分のOK"}})
+        r = distribution.apply_on_start()
+        got = user_settings.get(distribution.KEY_KENSA_PATHS)
+        self.assertEqual(got["items"]["judge_ok"], r"D:\自分のOK")         # この PC で変えた所は残す
+        self.assertEqual(got["items"]["judge_ng"], self.PATHS["items"]["judge_ng"])
+        self.assertEqual(got["lot"], self.PATHS["lot"])
+        self.assertTrue(any("この PC で変えた所" in k for k in r.kept), r.kept)
+        # 書き出し直し: 前の配布のまま変えていない所は入れ替え、自分で変えた所は残す
+        self.pc("配る PC")
+        new = json.loads(json.dumps(self.PATHS))
+        new["items"]["judge_ng"] = r"\\srv2\NG"
+        new["items"]["judge_ok"] = r"\\srv2\OK"
+        user_settings.save(distribution.KEY_KENSA_PATHS, new)
+        self.assertTrue(distribution.export("nisk", [distribution.KEY_KENSA_PATHS], False).ok)
+        self.pc("配られた PC")
+        s = distribution.summary()
+        self.assertTrue(s["bundle"][0]["action"].startswith(distribution.ACT_TAKE))   # 差分の見積もり
+        distribution.apply_on_start()
+        got = user_settings.get(distribution.KEY_KENSA_PATHS)
+        self.assertEqual(got["items"]["judge_ng"], r"\\srv2\NG")
+        self.assertEqual(got["items"]["judge_ok"], r"D:\自分のOK")
+        self.assertTrue(distribution.reapply("nisk").ok)                         # 揃える
+        self.assertEqual(user_settings.get(distribution.KEY_KENSA_PATHS)["items"]["judge_ok"], r"\\srv2\OK")
+
+    def test_scalar_own_value_kept(self) -> None:
+        user_settings.save(distribution.KEY_KENSA_MODE, "offline")
+        self.assertTrue(distribution.export("nisk", [distribution.KEY_KENSA_MODE], False).ok)
+        self.pc("配られた PC")
+        user_settings.save(distribution.KEY_KENSA_MODE, "online")
+        r = distribution.apply_on_start()
+        self.assertEqual(user_settings.get(distribution.KEY_KENSA_MODE), "online")
+        self.assertEqual(distribution.summary()["bundle"][0]["action"], distribution.ACT_KEEP)
+        self.assertTrue(r.kept)
+
+    def test_routes(self) -> None:
+        user_settings.save(distribution.KEY_KENSA_PATHS, self.PATHS)
+        c = make_client()
+        self.assertEqual(c.get("/api/settings/distribution", headers=auth()).status_code, 200)
+        r = c.post("/api/settings/distribution/export", headers=auth(),
+                   json={"password": "ちがう", "items": [distribution.KEY_KENSA_PATHS]})
+        self.assertEqual(r.status_code, 403)
+        r = c.post("/api/settings/distribution/export", headers=auth(),
+                   json={"password": "nisk", "items": [distribution.KEY_KENSA_PATHS]})
+        self.assertEqual(r.status_code, 200, r.get_json())
+        self.assertTrue(r.get_json()["summary"]["exists"])
+
 
 if __name__ == "__main__":
     unittest.main()

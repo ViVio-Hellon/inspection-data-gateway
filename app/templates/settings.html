@@ -24,6 +24,9 @@
     <button class="tab" type="button" role="tab" data-key="log" id="tab-log" aria-controls="panel-log" aria-selected="false">
       <span class="tab__label">ログ</span><span class="tab__badge" hidden></span>
     </button>
+    <button class="tab" type="button" role="tab" data-key="dist" id="tab-dist" aria-controls="panel-dist" aria-selected="false">
+      <span class="tab__label">配布設定</span><span class="tab__badge" hidden></span>
+    </button>
     <button class="tab" type="button" role="tab" data-key="quirks" id="tab-quirks" aria-controls="panel-quirks" aria-selected="false">
       <span class="tab__label">不具合の扱い</span><span class="tab__badge" hidden></span>
     </button>
@@ -201,6 +204,35 @@
         <header><h3>最近の警告・エラー(7日)</h3><span class="lv lv--info" id="logCount"></span></header>
         <div class="pad">
           <div class="tablewrap"><table class="table" id="logTable"><thead><tr><th>日時</th><th>重さ</th><th>処理</th><th>内容</th><th>時間</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="tabpanel tabpanel--scroll" id="panel-dist" role="tabpanel" aria-labelledby="tab-dist" hidden>
+      <section class="card">
+        <header><h3>配布設定を書き出す</h3><span class="lv lv--info" id="distWhere"></span></header>
+        <div class="pad">
+          <p class="muted">この PC のいまの設定を、ツールのフォルダの <code>配布設定</code> に書き出します。<code>scripts\make_dist.bat</code> で作った配布用フォルダに入り、配った先は起動したときに読み込みます。<b>配った先でその PC が変えた設定は上書きしません。</b>中身は <code>配布設定\はじめに読む.txt</code> にも書きます。</p>
+          <div class="tablewrap"><table class="table" id="distItems"><thead><tr><th>入れる</th><th>項目</th><th>この PC のいまの値</th></tr></thead><tbody></tbody></table></div>
+          <h4>いつも配らないもの</h4>
+          <ul class="muted" id="distExcluded"></ul>
+          <div class="field">
+            <label for="distPassword">管理者パスワード</label>
+            <input class="input" type="password" id="distPassword" autocomplete="off" placeholder="鍵を開けていれば空でよい">
+            <button class="btn btn--primary" type="button" id="distExport">書き出す</button>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <header><h3>置いてある配布設定</h3><span class="lv" id="distLv"></span></header>
+        <div class="pad">
+          <dl class="kv" id="distKv"></dl>
+          <p class="muted">「この PC では」は、起動時の読み込み(上書きしない)で起きることです。</p>
+          <div class="tablewrap"><table class="table" id="distBundle"><thead><tr><th>項目</th><th>配布の値</th><th>この PC では</th></tr></thead><tbody></tbody></table></div>
+          <div class="field">
+            <button class="btn" type="button" id="distReapply">配布設定を読み込み直す(この PC の値も上書き)</button>
+            <button class="btn btn--danger" type="button" id="distRemove">配布設定を消す</button>
+          </div>
         </div>
       </section>
     </section>
