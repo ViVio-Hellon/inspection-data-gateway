@@ -137,6 +137,17 @@ def report(name: str):
     return screen_common.report_file(session.get().store.print_dir, name)
 
 
+@bp.get("/api/kensa/defect_preview")
+def defect_preview():
+    """不良タブの見本(印刷するのと同じ 不良要因票 の HTML。読むだけ)。まだ反映していなければ 204。"""
+    h = session.get().defect_preview_html()
+    if h is None:
+        return "", 204
+    resp = current_app.response_class(h, mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @bp.get("/api/kensa/lot-watch")
 def lot_watch():
     """ロット情報の見張り(画面が定期に呼ぶ)。登録・読み直しの後に変わった種類を返す。"""

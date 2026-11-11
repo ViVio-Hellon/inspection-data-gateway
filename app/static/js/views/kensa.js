@@ -39,8 +39,46 @@ function showMessage(m) {
 const op = screenOp("kensa", {
   render,
   showMessage,
-  after: (name, res) => { if (name === "print-commit" || name === "print-check") announceReport(res.view); },
+  after: (name, res) => {
+    if (name === "print-commit" || name === "print-check") announceReport(res.view);
+    if (PREVIEW_OPS.has(name)) refreshDefectPreview();
+  },
 });
+
+/* 不良タブの見本(2026-11-11): 印刷・保存と同じ 不良要因票(/api/kensa/defect_preview)。反映・ｸﾘｱのたびに描き直す */
+const PREVIEW_OPS = new Set(["start", "lot", "lot-reload", "new", "defect-reflect", "defect-clear", "print-commit"]);
+let previewSeq = 0;
+async function refreshDefectPreview() {
+  const frame = document.getElementById("defPrev"), empty = document.getElementById("defPrevEmpty");
+  if (!frame) return;
+  const seq = ++previewSeq;
+  let html = "";
+  try {
+    const r = await fetch(tokenUrl("/api/kensa/defect_preview"), { cache: "no-store" });
+    if (r.status === 200) html = await r.text();
+  } catch (e) { /* 見本が出せなくても入力はできる */ }
+  if (seq !== previewSeq) return;
+  frame.hidden = !html;
+  empty.hidden = !!html;
+  if (!html) { frame.removeAttribute("srcdoc"); return; }
+  frame.onload = fitDefectPreview;
+  frame.srcdoc = html;
+}
+/** 帳票を箱の幅に合わせて縮める(縦は箱の中でスクロール) */
+function fitDefectPreview() {
+  const frame = document.getElementById("defPrev");
+  const doc = frame && frame.contentDocument;
+  if (!doc || !doc.body || frame.hidden) return;
+  const sheet = doc.querySelector(".sheet") || doc.body;
+  doc.body.style.zoom = "";
+  const w = Math.max(sheet.scrollWidth, doc.documentElement.scrollWidth), avail = frame.clientWidth - 8;
+  if (!w || !avail) return;
+  doc.body.style.zoom = String(Math.min(1, avail / w));
+  // 縮めた後もはみ出すとき(文字の最小の大きさなど)はもう一段縮める
+  const over = doc.documentElement.scrollWidth - frame.clientWidth;
+  if (over > 0) doc.body.style.zoom = String(Math.min(1, avail / w) * (frame.clientWidth - 8) / (frame.clientWidth + over));
+}
+window.addEventListener("resize", fitDefectPreview);
 
 /** 印刷のあと 1 回だけ「帳票を開く」を知らせる(キャスクと同じく /api/…/report/<名前> で開く。サーバのパスは出さない)。 */
 let lastReport = "";
@@ -933,7 +971,7 @@ function initTabs() {
     for (const p of document.querySelectorAll(".subpane")) p.hidden = p.dataset.pane !== name;
     try { localStorage.setItem("kensa.subtab", name); } catch (e) { /* 同上 */ }
   };
-  for (const t of tabs) t.addEventListener("click", () => { show(t.dataset.tab); refocus(); });
+  for (const t of tabs) t.addEventListener("click", () => { show(t.dataset.tab); if (t.dataset.tab === "bad") fitDefectPreview(); refocus(); });
   if (cur === "grid") cur = "strain";
   show(tabs.some((t) => t.dataset.tab === cur) ? cur : "strain");
   // 画面が低い(1366x768 など)ときは、測定表と 歪・外観… を1つのタブにまとめてスクロールをなくす。

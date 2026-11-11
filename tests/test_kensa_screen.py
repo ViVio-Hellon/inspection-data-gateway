@@ -57,6 +57,27 @@ class KensaScreenTest(SessionBase):
         self.assertFalse(d["view"]["print_ready"])
         self.assertTrue(any(c["ok"] is False for c in d["view"]["checks"]))
 
+    def test_defect_preview(self) -> None:
+        """不良タブの見本: 反映する前は 204、反映したら 印刷するのと同じ 不良要因票 に枚数が出る(2026-11-11)。"""
+        self.post("start")
+        self.post("worker", card=CARD, answers={"worker_register": True})
+        self.post("lot", lot=LOT, answers={"lot_register": True})
+        self.post("work", work="厚板")
+        r = self.c.get("/api/kensa/defect_preview", headers=self.h)
+        self.assertEqual(r.status_code, 204)
+        self.post("value", name="SBad", value="7")
+        self.post("defect-reflect", items=[2])
+        r = self.c.get("/api/kensa/defect_preview", headers=self.h)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.mimetype, "text/html")
+        h = r.get_data(as_text=True)
+        self.assertIn("<table", h)
+        self.assertIn(LOT, h)
+        self.assertRegex(h, r">7</td>")
+        self.post("defect-clear")
+        h2 = self.c.get("/api/kensa/defect_preview", headers=self.h).get_data(as_text=True)
+        self.assertNotRegex(h2, r">7</td>")
+
     def test_new_ops_round_trip(self) -> None:
         """足した操作(外観・不良要因・山数・保留・オーダー・包装仕様書・印刷履歴クリア・サイズ修正)の往復。"""
         self.post("start")
