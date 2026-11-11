@@ -374,11 +374,13 @@ def confi_reason_open(uf: Uf1, posi: str, n: int, lname: str, moto: str, del_cou
     return ConfiRequest(posi, n, lname, moto, None, del_count, 1, last_worker(uf))
 
 
-def out_tolerance(uf: Uf1, temp: str = "") -> list[ConfiRequest]:
+def out_tolerance(uf: Uf1, temp: str = "", rows: Optional[dict] = None) -> list[ConfiRequest]:
     """入力後に公差外を探して確認フォームを出す。`Out_Tolerance (O:818-977)`
 
     戻り値は Confi_Open を呼んだ順。UFConfi は 1 つしかなく vbModeless で出すので、
     **画面に残るのは最後の 1 件**(G2 §12 Q3 実機確認待ち)。
+    rows: 確認を出す行(区分 薄板・スラブ・厚板・それ以外 → 行番号)。None は VBA の直書き
+    (2026-11-11: 保守 → 公差外の確認 のマスタ。confi_rows.py)。
     その行の NG? ラベルが「許容」なら確認しない(「保留」は確認する)。
     """
     if uf.t("INP.Tag") == "":
@@ -420,17 +422,20 @@ def out_tolerance(uf: Uf1, temp: str = "") -> list[ConfiRequest]:
             if posi in rows and uf.is_ng(f"{posi}{i}"):
                 out.append(confi_open(uf, posi, i, lname, uf.t(f"{posi}{i}"), dc))
 
+    r = {"薄板": (2, 4, 6, 8, 10), "スラブ": (2, 4, 6, 8, 10), "厚板": (4, 10), "それ以外": (4, 7, 10, 12, 14)}
+    if rows:
+        r.update(rows)
     if uf.work == "薄板":
-        if _case_in(rig, (2, 4, 6, 8, 10)):
+        if _case_in(rig, r["薄板"]):
             scan(10, POSITIONS)
     elif uf.work == "スラブ":
-        if _case_in(rig, (2, 4, 6, 8, 10)):
+        if _case_in(rig, r["スラブ"]):
             scan(10, POSITIONS[:5])
     elif uf.work in ("厚板", "少枚数"):
-        if _case_in(rig, (4, 10)):
+        if _case_in(rig, r["厚板"]):
             scan(10, POSITIONS)
     else:
-        if _case_in(rig, (4, 7, 10, 12, 14)):
+        if _case_in(rig, r["それ以外"]):
             scan(14, POSITIONS[:5])
 
     if ng_posi != "許容":

@@ -994,7 +994,8 @@ class RealHooks(Hooks):
 
     def out_tolerance(self, state: KensaState) -> None:
         """OutTolerance.Out_Tolerance。UFConfi に出すもの(最後の 1 件が画面に残る)を env.confi に積む。"""
-        reqs = checks.out_tolerance(to_uf1(state, worker_day_max(self.store, state.lname)))
+        from . import confi_rows        # 2026-11-11: 確認を出す行は 保守 の共有マスタ(無ければ VBA の既定)
+        reqs = checks.out_tolerance(to_uf1(state, worker_day_max(self.store, state.lname)), rows=confi_rows.rows_map())
         if reqs:
             self.env.confi = reqs
 
