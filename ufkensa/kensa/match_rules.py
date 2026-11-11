@@ -19,6 +19,15 @@
     ライン      表のセル(ライン名)とラインが lines.matches で同じ(文字の幅だけ揃える。D13)。合わない行は先に外す
     含む条件式  表のセル(カンマ区切り)のどれかに当たる: ≠X = X でない / *X・X* = X を**含む** / それ以外は完全一致
                 (MachineTransfer.CheckThickAndCode の用途。条件式 の前方一致とは別。空のセルは当たらない)
+    含む(SQL)   `[表の列] LIKE '*値*'` を ADO Filter と同じ規則で(大文字小文字を区別しない・Null は空・' は構文エラー)。
+                合わない行は先に外す(VBA の SQL で絞った行に当たる)
+    含む(Like)  表のセル Like "*値*"(VBA の Like。大文字小文字を区別する)
+第4段(2026-11-11): 外観_厚板(Q_S_QA_124_別表2)・外観_薄板(SRF_128_別表1)・ラテラル_日車 / 白銅滑川(DIM_179)・
+バーコール(Q_S_KE_ALL_053)。どの表を使うか(オーダー厚 8・画面の文字)と後処理(欠陥グレードの上書き・パターン 1/2・
+区間列の LoopArray・最後の行の下限値)はコードに残す。外観_薄板 の VBA は入れ子の If(短絡)だが、Like が例外を
+出す書き方のグレード(閉じない [ など)でなければ結果は同じ。
+前処理: 右3文字 = ロットの値が 4 文字以上なら右 3 文字(BhSearch)/ 列が無ければ通す = 表にその列が無ければ条件なし
+(124 別表2 の 調質。B25 を直した側)
 第3段(測定機器ID・設備仕様)の 範囲 は 空のとき=通さない(check_within: 空は 0)。B52 を再現するなら 前処理=Single丸め。
 前処理: 範囲 で「Single丸め」= 下・上を Single にして比べる(B71 の再現側)。既定は なし(Double。いまのコード)
 空のとき: 条件式 で「通さない」= 表のセルが空でも通さない(blank_flag)
@@ -30,6 +39,7 @@ VBA の And は短絡しないので、行ごとに全部のルールを評価�
 """
 from __future__ import annotations
 
+import functools
 import sqlite3
 import threading
 import time
@@ -54,10 +64,10 @@ USE_EV = "match_rules.used"
 CHANGE_EV = "match_rules.change"
 TTL_SEC = 5.0
 
-COMPARES = ("条件式", "範囲", "以上", "一致", "当板用か", "ライン", "含む条件式")
+COMPARES = ("条件式", "範囲", "以上", "一致", "当板用か", "ライン", "含む条件式", "含む(SQL)", "含む(Like)")
 #: 合わない行を先に外す比べ方(VBA の GoTo / ADO Filter。最後に評価した行には数えない)
-PREFILTER = ("当板用か", "ライン")
-PREPS = ("なし", "Single丸め")
+PREFILTER = ("当板用か", "ライン", "含む(SQL)")
+PREPS = ("なし", "Single丸め", "右3文字", "列が無ければ通す")
 BLANKS = ("通す", "通さない")
 USE_ROWS = ("最初", "最後", "全部")
 
@@ -66,6 +76,11 @@ PACK = "梱包保護材"
 QP = "平坦度一覧QP追加"
 MICRO = "測定機器ID"
 EQUIP = "設備仕様"
+APPEAR_H = "外観_厚板"
+APPEAR_S = "外観_薄板"
+LATERAL_N = "ラテラル_日車"
+LATERAL_H = "ラテラル_白銅滑川"
+BH = "バーコール"
 
 #: 試験用: 新旧を両方走らせ、違えば例外(tests/_isolation で真にする)
 SHADOW_STRICT = False
@@ -118,6 +133,13 @@ QP_FIELDS = ("用途ｺｰﾄﾞ", "製造材質", "ｵｰﾀﾞｰ材質", "製
 MICRO_FIELDS = ("ライン", "厚", "用途")
 #: 設備仕様 で選べる項目(QP.CheckEquipmentDb の引数: 端末の設備名・仕掛の製造材質・オーダー寸法・製品単重)
 EQUIP_FIELDS = ("ライン", "製造材質", "オーダー厚", "オーダー幅", "オーダー丈", "単重")
+
+#: 外観_厚板・外観_薄板・ラテラル で選べるロットの項目(仕掛の行。QDB.DBdisplay外観_H / 外観_S / DBdisplayラテラル)
+SIKA_FIELDS = ("用途ｺｰﾄﾞ", "製造材質", "製造調質", "ｵｰﾀﾞｰ材質", "ｵｰﾀﾞｰ調質", "製造板厚", "製造板幅", "製造板丈",
+               "ｵｰﾀﾞｰ板厚", "ｵｰﾀﾞｰ板幅", "ｵｰﾀﾞｰ板丈", "BOX実績_板厚", "BOX実績_板幅", "BOX実績_板丈",
+               "納入先名", "納入先ｺｰﾄﾞ", "品質ｸﾞﾚｰﾄﾞ_表面処理")
+#: バーコール で選べる項目(QDB.BhSearch の引数: 画面の材質・調質)
+BH_FIELDS = ("材質", "調質")
 
 #: 平坦度一覧QP追加 の既定のルールの見出し(歪公差チェックの trace に出す。順番 → 名前)
 QP_LABELS = {10: "用途コード", 20: "製造材質", 30: "オーダー材質", 40: "製造調質", 50: "オーダー調質",
@@ -180,6 +202,42 @@ DEFAULT_GROUPS: tuple[Group, ...] = (
 )
 BY_NAME = {g.name: g for g in DEFAULT_GROUPS}
 
+
+def _lateral(name: str, table: str) -> Group:
+    return Group(name, table, "品質基準", SIKA_FIELDS, "全部", True, (
+        _r(10, "材質", "製造材質", "条件式", "QDB:1630"),
+        _r(20, "板厚下,板厚上,厚", "製造板厚", "範囲", "QDB:1637(B71 は直した側 = なし)"),
+        _r(30, "板幅下,板幅上,幅", "製造板幅", "範囲", "QDB:1638"),
+    ), "一致した行は全部(管理番号で引き直す)。値は 製造丈 の区間列 × 製造厚 で LoopArray(コード)。"
+       "日車 / 白銅滑川 のどちらの表を使うかは画面の文字で決める(コード)")
+
+
+#: 第4段(2026-11-11)。SQL の LIKE による先の絞り込みは 含む(SQL)(先に外す)にした
+DEFAULT_GROUPS = DEFAULT_GROUPS + (
+    Group(APPEAR_H, "Q_S_QA_124_別表2", "品質基準", SIKA_FIELDS, "全部", True, (
+        _r(10, "用途コード", "用途ｺｰﾄﾞ", "含む(SQL)", "QDB:213 [用途コード] LIKE '*用途*'"),
+        _r(20, "材質", "製造材質", "条件式", "QDB:296"),
+        replace(_r(30, "調質", "製造調質", "条件式", "QDB:298 B25(いまの別表2 には列が無い)"), prep="列が無ければ通す"),
+        _r(40, "板厚下,板厚上,厚", "製造板厚", "範囲", "QDB:300 製造厚"),
+        _r(50, "板幅下,板幅上,幅", "ｵｰﾀﾞｰ板幅", "範囲", "QDB:301 オーダー幅"),
+        _r(60, "板丈下,板丈上,丈", "ｵｰﾀﾞｰ板丈", "範囲", "QDB:302 オーダー丈"),
+        _r(70, "納入先", "納入先名", "条件式", "QDB:303"),
+    ), "オーダー厚 8 以上のとき(コード)。一致した行は全部、後の管理番号の欠陥グレードで上書き(コード)"),
+    Group(APPEAR_S, "Q_S_QA_SRF_128_別表1", "品質基準", SIKA_FIELDS, "最初", True, (
+        _r(10, "用途コード", "用途ｺｰﾄﾞ", "含む(SQL)", "QDB:560 [用途コード] LIKE '*用途*'"),
+        _r(20, "材質", "製造材質", "条件式", "QDB:598"),
+        _r(30, "表面処理コード", "品質ｸﾞﾚｰﾄﾞ_表面処理", "含む(Like)", "QDB:599 Like *グレード*"),
+    ), "オーダー厚 8 未満のとき(コード)。最初に合う行の パターン(厚フラグがあれば 板厚1 とオーダー厚で 1/2。コード)。"
+       "用途で残る行が無ければ「該当用途ｺｰﾄﾞなし」"),
+    _lateral(LATERAL_N, "Q_S_QA_DIM_179_日車"),
+    _lateral(LATERAL_H, "Q_S_QA_DIM_179_白銅滑川"),
+    Group(BH, "Q_S_KE_ALL_053", "品質基準", BH_FIELDS, "全部", True, (
+        replace(_r(10, "材質", "材質", "含む(SQL)", "QDB:1479-1481 4 文字以上は右3文字"), prep="右3文字"),
+        _r(20, "調質", "調質", "一致", "QDB:1484"),
+    ), "一致した行を順に読み、最後の行の バーコール下限値(コード)。無ければ 0(BH 不要)"),
+)
+BY_NAME = {g.name: g for g in DEFAULT_GROUPS}
+
 #: ロットの項目の出どころ(画面に出す見出し)
 FIELD_SOURCE: dict[str, str] = {
     "納入先": "引当", "取引先": "引当", "用途ｺｰﾄﾞ": "引当",
@@ -192,14 +250,18 @@ FIELD_SOURCE: dict[str, str] = {
     "送り先ｺｰﾄﾞ": "仕掛", "BOX設計_横割数(板)": "仕掛",
     "ライン": "端末", "厚": "画面", "用途": "画面", "オーダー厚": "仕掛", "オーダー幅": "仕掛", "オーダー丈": "仕掛",
     "単重": "仕掛",
+    "納入先名": "仕掛", "納入先ｺｰﾄﾞ": "仕掛", "品質ｸﾞﾚｰﾄﾞ_表面処理": "仕掛",
 }
 #: 群ごとに出どころを変える項目(製造材質 は 設備仕様では仕掛の行)
-FIELD_SOURCE_BY_GROUP: dict[str, dict[str, str]] = {EQUIP: {"製造材質": "仕掛"}}
+FIELD_SOURCE_BY_GROUP: dict[str, dict[str, str]] = {EQUIP: {"製造材質": "仕掛"},
+                                                   BH: {"材質": "画面", "調質": "画面"}}
 #: 「製造寸法 ⇔ オーダー寸法をまとめて切り替え」で入れ替える組(寸法だけ)
 DIM_SWAP: dict[str, tuple[tuple[str, str], ...]] = {
     RATEFURI: (("製造板厚", "ｵｰﾀﾞｰ板厚"), ("製造板幅", "ｵｰﾀﾞｰ板幅"), ("製造板丈", "ｵｰﾀﾞｰ板丈")),
     QP: (("製造板厚", "ｵｰﾀﾞｰ板厚"), ("製造板幅", "ｵｰﾀﾞｰ板幅"), ("製造板丈", "ｵｰﾀﾞｰ板丈")),
 }
+for _n in (APPEAR_H, LATERAL_N, LATERAL_H):
+    DIM_SWAP[_n] = DIM_SWAP[QP]
 HELP_SWITCH = ("参照する寸法を変えるには:ロットの項目を『製造板厚』→『ｵｰﾀﾞｰ板厚』に選び直し、"
                "試し照合で行が変わるか確かめてから保存")
 
@@ -266,10 +328,34 @@ class MatchResult:
     evaluated: int = 0
 
 
+@functools.lru_cache(maxsize=512)
+def _sql_like(col: str, value: str) -> Any:
+    """`[列] LIKE '*値*'` を ADO Filter と同じ規則で(datasource の絞り込みと同じ関数。' があれば構文エラー)。"""
+    from . import ado_filter
+    return ado_filter.compile_filter("[" + col + "] LIKE '*" + value + "*'")
+
+
+def prep_value(rule: Rule, value: Any) -> Any:
+    """前処理 右3文字: 4 文字以上なら右 3 文字(QDB.BhSearch)。"""
+    if rule.prep == "右3文字":
+        from . import quality as q, vbx
+        v = q.vstr(value)
+        return vbx.right(v, 3) if len(v) >= 4 else v
+    return value
+
+
 def _test(rule: Rule, row: Sequence[Any], fields: Sequence[str], value: Any) -> bool:
     from . import quality as q
     cols = [q.col_of(fields, c) for c in rule.columns]
     cmp = rule.compare
+    if rule.prep == "列が無ければ通す" and not all(cols):
+        return True
+    value = prep_value(rule, value)
+    if cmp == "含む(SQL)":
+        return _sql_like(rule.columns[0], q.vstr(value))(dict(zip(fields, row)))
+    if cmp == "含む(Like)":
+        from . import vbx
+        return vbx.like(q.vstr(q.cell(row, cols[0])), "*" + q.vstr(value) + "*")
     if cmp == "条件式":
         return q.check_condition(row, cols[0], q.vstr(value), "" if rule.blank == "通す" else "1")
     if cmp == "範囲":
@@ -480,7 +566,7 @@ def check(g: Group, table_fields: Optional[Sequence[str]] = None) -> None:
         need = (2, 3) if r.compare == "範囲" else (1,)
         if len(r.columns) not in need or not all(r.columns):
             raise Invalid("表の列の数が合いません(範囲 は 下・上・値 の 3 列、ほかは 1 列)", g.name, r.order)
-        if table_fields is not None:
+        if table_fields is not None and r.prep != "列が無ければ通す":
             bad = [c for c in r.columns if c not in table_fields]
             if bad:
                 raise Invalid(f"表「{g.table}」に列「{'・'.join(bad)}」がありません", g.name, r.order)

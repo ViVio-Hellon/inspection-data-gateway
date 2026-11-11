@@ -50,9 +50,11 @@ def trial():
     lot = str(b.get("lot", "")).strip().upper()
     inputs = b.get("inputs") if isinstance(b.get("inputs"), dict) else {}
     inputs = {str(k): str(v)[:40] for k, v in inputs.items() if str(k) in mm.INPUTS.get(name, [])}
-    direct = name == mr.MICRO and str(inputs.get("厚", "")).strip() != ""
+    direct = ((name == mr.MICRO and str(inputs.get("厚", "")).strip() != "")
+              or (name == mr.BH and str(inputs.get("材質", "")).strip() != ""))
     if not (_LOT_RE.match(lot) or (lot == "" and direct)):
-        return _err("bad_lot", "ロットNo は英数字 20 文字までです" + ("(または 厚 を入れてください)" if name == mr.MICRO else ""),
+        return _err("bad_lot", "ロットNo は英数字 20 文字までです" + ("(または 厚 を入れてください)" if name == mr.MICRO
+                    else "(または 材質 を入れてください)" if name == mr.BH else ""),
                     field="lot")
     try:
         return jsonify(mm.trial(name, lot, b.get("edited"), st.LocalStore(), inputs))

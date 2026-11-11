@@ -1470,6 +1470,27 @@ def dbdisplay_lateral(lot: Optional[LotData], target_text: str, *, quiet: bool =
     aq = datasource.get_records(db, table)
     if aq is None:
         return 0.0
+    name = match_rules.LATERAL_N if target_text == "日車" else match_rules.LATERAL_H
+    g = match_rules.group(name)
+
+    def old() -> list[int]:
+        return _lateral_old(aq, (c_zai, c_lo, c_hi, c_atu, c_wlo, c_whi, c_w, c_no), zai, m_atu, m_haba)
+    if g.new_way:
+        res = match_rules.match(g, aq, fq, sika_ctx(lot))
+        matching = [clng(cell(aq[i], c_no)) for i in res.rows]
+        if match_rules.shadow_on(g):
+            match_rules.compare(name, old(), matching, repr((zai, m_atu, m_haba)))
+    else:
+        matching = old()
+    if not matching:
+        return 0.0
+    hit = _hit_rows(aq, c_no, matching)
+    return csng(vbx.fmt(loop_array(hit, fq, m_take, m_atu), "0.0"))
+
+
+def _lateral_old(aq: Sequence[Sequence[Any]], c: tuple[int, ...], zai: str, m_atu: float, m_haba: float) -> list[int]:
+    """旧: DBdisplayラテラル の照合(QDB:1630-1640)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    c_zai, c_lo, c_hi, c_atu, c_wlo, c_whi, c_w, c_no = c
     matching: list[int] = []
     same = True          # B71(QDB:1637-1638): 直すと下・上も Double で比べる
     for r in aq:
@@ -1478,10 +1499,19 @@ def dbdisplay_lateral(lot: Optional[LotData], target_text: str, *, quiet: bool =
         c3 = c2 & check_width(r, c_wlo, c_whi, c_w, m_haba, same_precision=same)
         if c1 and c2 and c3:
             matching.append(clng(cell(r, c_no)))
-    if not matching:
-        return 0.0
-    hit = _hit_rows(aq, c_no, matching)
-    return csng(vbx.fmt(loop_array(hit, fq, m_take, m_atu), "0.0"))
+    return matching
+
+
+def sika_ctx(lot: Optional["LotData"]) -> dict[str, Any]:
+    """照合の入力: ロットの行(仕掛の先頭行)の項目(外観_厚板・外観_薄板・ラテラル)。列が無ければ入れない。"""
+    out: dict[str, Any] = {}
+    if lot is None or not lot.fields or not lot.records:
+        return out
+    rec = lot.records[0]
+    for i, f in enumerate(lot.fields):
+        if f in match_rules.SIKA_FIELDS and i < len(rec):
+            out[f] = "" if rec[i] is None else rec[i]
+    return out
 
 
 def _hit_rows(rows: Sequence[Sequence[Any]], c_no: int, numbers: Sequence[int]) -> list[list[Any]]:
@@ -2267,6 +2297,23 @@ def bh_search(zai: str, tyo: str) -> int:
     if f is None:
         return 0
     c_tyo, c_bh = col_of(f, "調質"), col_of(f, "バーコール下限値")
+    g = match_rules.group(match_rules.BH)
+    if not g.new_way:
+        return _bh_old(db, zai, tyo, c_tyo, c_bh)
+    ctx = dict(zip(match_rules.BH_FIELDS, (zai, tyo)))
+    table = datasource.get_records(db, "Q_S_KE_ALL_053") or []
+    pre, rest = match_rules.split_pre(g)
+    rows = [table[i] for i in match_rules.match(pre, table, f, ctx).matched]
+    out = 0
+    for i in match_rules.match(rest, rows, f, ctx).rows:
+        out = clng(cell(rows[i], c_bh))
+    if match_rules.shadow_on(g):
+        match_rules.compare(match_rules.BH, _bh_old(db, zai, tyo, c_tyo, c_bh), out, repr((zai, tyo)))
+    return out
+
+
+def _bh_old(db: Any, zai: str, tyo: str, c_tyo: int, c_bh: int) -> int:
+    """旧: BhSearch の照合(QDB:1479-1487)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
     if len(zai) >= 4:
         zai = vbx.right(zai, 3)
     rows = datasource.get_records(db, "Q_S_KE_ALL_053", "[材質] LIKE '*" + zai + "*'")

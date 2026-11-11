@@ -146,6 +146,20 @@ const PTY = process.env.E2E_PTY || "-";
     await page.click("#rCheck"); await W(2500);
     check(/結果が変わるもの: 0 件/.test(await page.locator("#rReg").innerText()), S.step, "測定機器ID 既定のままなら 0 件");
     await shot(page, "maint_match_rules_micro");
+    // 第4段: 外観_厚板(124 別表2)・バーコール(材質・調質を直接入れて試す)
+    await page.click('#rGroups button:has-text("外観_厚板")'); await W(600);
+    check(await page.locator("#rRules tr").count() === 7, S.step, "外観_厚板 の既定のルール 7 行");
+    await page.fill("#rLot", "H8401Z0");
+    await page.click('#rTrialForm button[type="submit"]'); await W(1500);
+    check(/管理番号 15, 21/.test(await page.locator("#rTrial").innerText()), S.step, "H8401Z0 → 管理番号 15, 21");
+    await page.click("#rCheck"); await W(2500);
+    check(/結果が変わるもの: 0 件/.test(await page.locator("#rReg").innerText()), S.step, "外観_厚板 既定のままなら 0 件");
+    await shot(page, "maint_match_rules_appearance");
+    await page.click('#rGroups button:has-text("バーコール")'); await W(600);
+    await page.fill("#rLot", "");
+    await page.fill("#rIn_材質", "U74"); await page.fill("#rIn_調質", "T4");
+    await page.click('#rTrialForm button[type="submit"]'); await W(1200);
+    check(/下限値 78/.test(await page.locator("#rTrial").innerText()), S.step, "U74 T4 → 下限値 78");
   } catch (e) {
     check(false, S.step, "例外 " + (e && e.stack || e));
     await shot(page, "fatal_" + S.step).catch(() => {});
