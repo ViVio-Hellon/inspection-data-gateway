@@ -27,7 +27,7 @@ from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence, Union
 
-from . import cache_registry, datasource, lines, paths, size_thresholds, vbx
+from . import cache_registry, datasource, lines, match_rules, paths, size_thresholds, vbx
 from .flow import ERROR, Message
 
 VBCRLF = "\r\n"
@@ -1420,6 +1420,65 @@ def rgb(r: int, g: int, b: int) -> int:
 ORANGE = rgb(255, 153, 0)
 
 
+def _shadow_on(g: "match_rules.Group") -> bool:
+    """旧コードと並べるか(試験、または既定のルールのままのとき。ルールを変えたら違って当然なので並べない)。"""
+    if match_rules.SHADOW_STRICT:
+        return g.rules == match_rules.BY_NAME[g.name].rules
+    return False
+
+
+def _ratefuri_old(ta: Sequence[Sequence[Any]], C: dict[str, int], args: tuple) -> tuple[list[int], list[bool]]:
+    """旧: DbReturnItem の照合(QP:1240-1270)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    nou, tori, youtc, zai, tyou, atu, haba, take = args
+    matching: list[int] = []
+    c = [False] * 9
+    # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
+    # 直した場合は同じ精度(Double)で比べる(QP:1263-1265)
+    same = True
+    for r in ta:
+        c = [False] * 9
+        c[1] = check_condition(r, C["納入先"], nou)
+        c[2] = c[1] & check_condition(r, C["取引先"], tori)
+        c[3] = c[2] & check_condition(r, C["用途コード"], youtc)
+        c[4] = c[3] & check_condition(r, C["製造材質"], zai)
+        c[5] = c[4] & check_condition(r, C["製造調質"], tyou)
+        c[6] = c[5] & check_thickness(r, C["厚下"], C["厚上"], C["製造板厚"], atu, same_precision=same)
+        c[7] = c[6] & check_width(r, C["幅下"], C["幅上"], C["製造板幅"], haba, same_precision=same)
+        c[8] = c[7] & check_width(r, C["丈下"], C["丈上"], C["製造板丈"], take, same_precision=same)
+        if all(c[1:9]):
+            matching.append(clng(cell(r, C["管理番号"])))
+    return matching, [c[4], c[6], c[7], c[8]]
+
+
+#: 該当なしの文言(材質・厚・幅・丈)を決める目印のルール(表の列の最初の列)
+_RATEFURI_ANCHORS = ("製造材質", "厚下", "幅下", "丈下")
+
+
+def ratefuri_ctx(args: tuple) -> dict[str, Any]:
+    return dict(zip(match_rules.RATEFURI_FIELDS, args))
+
+
+def _ratefuri_new(g: "match_rules.Group", ta: Sequence[Sequence[Any]], pf: Sequence[str], C: dict[str, int],
+                  args: tuple) -> tuple[list[int], list[bool]]:
+    """新: 照合ルール「ラテフリ直角」で絞る。戻りは旧と同じ形(管理番号, 最後の行の Conditions(4,6,7,8))。"""
+    res = match_rules.match(g, ta, pf, ratefuri_ctx(args))
+    matching = [clng(cell(ta[i], C["管理番号"])) for i in res.rows]
+    return matching, ratefuri_flags(g, res)
+
+
+def ratefuri_flags(g: "match_rules.Group", res: "match_rules.MatchResult") -> list[bool]:
+    if res.evaluated == 0:
+        return [False] * 4
+    if res.last_fail is None:
+        return [True] * 4
+    rules = [r for r in sorted(g.rules, key=lambda r: r.order) if r.enabled]
+    out = []
+    for a in _RATEFURI_ANCHORS:
+        pos = next((k for k, r in enumerate(rules) if r.columns and r.columns[0] == a), None)
+        out.append(True if pos is None else res.last_fail > pos)
+    return out
+
+
 def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: float, haba: float, take: float, *,
                    additional_caption: str = "", mitsubishi_visible: bool = False, work_flag: str = "",
                    zenkasho_sheet: bool = True, lateral_lot: Optional[LotData] = None,
@@ -1446,23 +1505,14 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     ta = datasource.get_records(db, table)
     if ta is None:
         return out
-    matching: list[int] = []
-    c = [False] * 9
-    # B71: 下限・上限を Single に入れて Double と比べるので、厚 0.6–0.6 のような境界ちょうどで外れる。
-    # 直した場合は同じ精度(Double)で比べる(QP:1263-1265)
-    same = True
-    for r in ta:
-        c = [False] * 9
-        c[1] = check_condition(r, C["納入先"], nou)
-        c[2] = c[1] & check_condition(r, C["取引先"], tori)
-        c[3] = c[2] & check_condition(r, C["用途コード"], youtc)
-        c[4] = c[3] & check_condition(r, C["製造材質"], zai)
-        c[5] = c[4] & check_condition(r, C["製造調質"], tyou)
-        c[6] = c[5] & check_thickness(r, C["厚下"], C["厚上"], C["製造板厚"], atu, same_precision=same)
-        c[7] = c[6] & check_width(r, C["幅下"], C["幅上"], C["製造板幅"], haba, same_precision=same)
-        c[8] = c[7] & check_width(r, C["丈下"], C["丈上"], C["製造板丈"], take, same_precision=same)
-        if all(c[1:9]):
-            matching.append(clng(cell(r, C["管理番号"])))
+    args = (nou, tori, youtc, zai, tyou, atu, haba, take)
+    g = match_rules.group(match_rules.RATEFURI)
+    if g.new_way:
+        matching, c = _ratefuri_new(g, ta, pf, C, args)
+        if _shadow_on(g):
+            match_rules.compare(match_rules.RATEFURI, _ratefuri_old(ta, C, args), (matching, c), repr(args))
+    else:
+        matching, c = _ratefuri_old(ta, C, args)
 
     additional = additional_caption
     if not matching:
@@ -1470,13 +1520,13 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
         if vbx.like(nou, "*ﾆﾎﾝｼﾔﾘﾖｳｾｲｿﾞｳ*"):
             u["Sumisei.Caption"] = nou
             if not vbx.like(additional, "*ﾗﾃﾗﾙﾎﾞ-追記公差あり*"):
-                if not c[4]:
+                if not c[0]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_製造材質"
-                elif not c[6]:
+                elif not c[1]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ厚"
-                elif not c[7]:
+                elif not c[2]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ幅"
-                elif not c[8]:
+                elif not c[3]:
                     text = "ﾗﾃﾗﾙﾎﾞｰ検査不要_ｻｲｽﾞ丈"
                 else:
                     text = ""
@@ -1890,7 +1940,7 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
 
     path = datasource.resolve(db) if db is not None else _packing_db("梱包資材マスタ.sqlite3")
     if _pack_cache.valid(path) and _pack_cache.value is not None:
-        C, rows = _pack_cache.value
+        C, rows, pf = _pack_cache.value
     else:
         pf = datasource.get_fields(path, "梱包保護材")
         if pf is None:
@@ -1902,7 +1952,36 @@ def materials_upper_part(ord_no: str, hist: Optional[Sequence[Sequence[Any]]], c
         if rows is None:
             # `m_PackQuality() As Variant`(動的配列)に Empty を入れると型エラー
             raise vbx.TypeMismatch("梱包保護材が 0 件(動的配列に Empty を代入)")
-        _pack_cache.store(path, (C, rows))
+        _pack_cache.store(path, (C, rows, list(pf)))
+    vals = (pack, zai, tyo, you, atu, hab, tak, check_bikou)
+    g = match_rules.group(match_rules.PACK)
+    if not g.new_way:
+        return _pack_old(rows, C, vals)
+    ctx = pack_ctx(hdr, a, check_bikou)
+    res = match_rules.match(g, rows, pf, ctx)
+    got = vstr(cell(rows[res.rows[0]], C["使用保護材"])) if res.rows else "一致なし"
+    if _shadow_on(g):
+        match_rules.compare(match_rules.PACK, _pack_old(rows, C, vals), got, repr(vals))
+    return got
+
+
+def pack_ctx(hdr: Sequence[Any], a: Sequence[Any], check_bikou: bool) -> dict[str, Any]:
+    """梱包保護材のロットの項目(Lot情報履歴 の見出し → 値。厚・巾・丈 は CSng。+ 当板用か)。"""
+    ctx: dict[str, Any] = {}
+    for i, h in enumerate(hdr, start=1):
+        name = vstr(h)
+        if name and name not in ctx:
+            ctx[name] = cell(a, i)
+    for n in ("厚", "巾", "丈"):
+        if n in ctx:
+            ctx[n] = csng(ctx[n])
+    ctx["当板用"] = "当板用" if check_bikou else ""
+    return ctx
+
+
+def _pack_old(rows: Sequence[Sequence[Any]], C: dict[str, int], vals: tuple) -> str:
+    """旧: MaterialsUpperPart の照合(QP:1750-1770)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    pack, zai, tyo, you, atu, hab, tak, check_bikou = vals
     same = True          # B71(QP:1764-1766): 直すと下・上も Double で比べる
     for r in rows:
         is_bikou = vstr(cell(r, C["備考"])) == "当板用"

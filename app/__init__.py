@@ -611,8 +611,9 @@ def _register_routes(app: Flask) -> None:
     from .routes import remote_stop as remote_stop_routes
     app.register_blueprint(remote_stop_routes.bp)   # 管理者以外停止モード(保守 → 管理者以外停止)
     if "maint" in READY_SCREENS:
-        from .routes import maint
+        from .routes import maint, match_rules as match_rules_routes
         app.register_blueprint(maint.bp)
+        app.register_blueprint(match_rules_routes.bp)       # 保守 → 照合ルール
     if "meibo" in READY_SCREENS:
         from .routes import meibo
         app.register_blueprint(meibo.bp)
