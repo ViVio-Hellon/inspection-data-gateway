@@ -60,6 +60,21 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     v = await state();
     check(v.header.work !== "", S.step, "作業を選ぶ " + v.header.work);
     await shot(page, "kensa_work");
+    await W(300);
+    check(await page.evaluate(() => document.activeElement && document.activeElement.id === "measIn"), S.step,
+      "測定に入ると受け取る欄(見えない)に焦点がある");
+    // 2026-11-11: 不良要因は 1 つだけ選ぶ(別の行で入れ替え、同じ行で外す)
+    await page.click('[data-tab="bad"]'); await W(300);
+    const drows = page.locator('#defectList [role="option"]');
+    if (await drows.count() >= 2) {
+      await drows.nth(0).click(); await drows.nth(1).click();
+      const sel = () => page.locator('#defectList [role="option"][aria-selected="true"]').count();
+      check(await sel() === 1 && await drows.nth(1).getAttribute("aria-selected") === "true", S.step, "不良要因は 1 つだけ選ぶ");
+      await shot(page, "kensa_bad_tab");
+      await drows.nth(1).click();
+      check(await sel() === 0, S.step, "選んだ行をもう一度押すと外す");
+    }
+    await page.click('[data-tab="strain"]'); await W(200);
 
     // ---- 公差外の確認の窓(選ぶまで閉じない)-------------------------------------
     S.step = "confi";
@@ -75,6 +90,14 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     check(!!(rr.json && rr.json.stop), S.step, "確認中は測定を受け付けない");
     await page.locator("#confiBox button", { hasText: "許容" }).click(); await W(800); await askAll(page);
     check(await page.locator("#confiDlg[open]").count() === 0, S.step, "許容を選ぶと閉じる");
+    // 2026-11-11: 許容の印を押すと「許容を外しますか」(ここでは「いいえ」)
+    const allowB = page.locator('#mgrid .ngflag--allow[data-pos="S"]').first();
+    check(await allowB.count() === 1, S.step, "許容の印は押せる");
+    if (await allowB.count()) {
+      await allowB.click();
+      const asked = await askAll(page, "no");
+      check(asked.some((t) => /許容を外しますか/.test(t)), S.step, "許容を外すか聞く");
+    }
 
     // ---- 測定(受信機 → 疑似端末、残りは受信 API)--------------------------------
     S.step = "measure";
@@ -203,6 +226,11 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     S.step = "tabs";
     await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; }); await W(300);
     await page.click('[data-tab="strain"]'); await W(300);
+    // 2026-11-11: 右の列に受け取る欄(テキストボックス)を見せない。状態の 1 行と「次に測る」は出す
+    const rin = await page.evaluate(() => { const r = document.getElementById("measIn").getBoundingClientRect(); return r.right; });
+    check(rin <= 0 && await page.locator("#nextBox").isVisible() && await page.locator("#recvState").isVisible(), S.step,
+      "受け取る欄は画面の外・状態と次に測るは見える " + rin);
+    await shot(page, "kensa_right_dark");
     const tol = await page.evaluate(() => [...document.querySelectorAll("#strainTol .strain-tol__item")].map((x) => ({
       k: x.dataset.k, border: getComputedStyle(x).borderLeftWidth, fs: parseFloat(getComputedStyle(x).fontSize) })));
     check(tol.length === 5 && tol.every((t) => t.border === "6px" && t.fs >= 18), S.step, "歪の公差を大きく色の枠で出す " + JSON.stringify(tol));

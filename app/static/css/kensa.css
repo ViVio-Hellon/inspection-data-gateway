@@ -178,7 +178,8 @@ li.is-stale { opacity: .6; }
 .recv[data-on="1"] { border-color: var(--state-ok); background: var(--ok-bg); }
 .recv__state { font-weight: 700; font-size: var(--fs-sm); color: var(--state-error); }
 .recv[data-on="1"] .recv__state { color: var(--state-ok); }
-.recv__in { font-family: var(--mono); }
+/* 受け取る欄は見せない(画面の外。キーボードと同じ伝送を受けるため焦点は持てる) */
+.recv__in { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; }
 /* 上の帯: 押せる段 */
 .kstep.is-click { cursor: pointer; }
 .kstep.is-click:hover { outline: 2px solid var(--focus); }
@@ -293,7 +294,6 @@ li.is-stale { opacity: .6; }
 /* 測定中: 受信欄は小さく(状態は 1 行・入力は低く) */
 .kensa[data-phase="measure"] .recv { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 4px 8px; border-width: 1px; }
 .kensa[data-phase="measure"] .recv__state { font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kensa[data-phase="measure"] .recv__in { min-height: 28px; height: 28px; padding: 2px 6px; font-size: var(--fs-sm); }
 .kensa[data-phase="measure"] .recv__dev, .kensa[data-phase="measure"] .recv__last { font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kensa[data-phase="measure"] .recv__why { font-size: var(--fs-xs); }
 /* VC は既定で大きく(列の幅いっぱい・高さ約 1.5 倍)。はみ出す分は右の列の中でスクロール */
@@ -307,6 +307,8 @@ li.is-stale { opacity: .6; }
 .ngflag--ng    { background: var(--state-error); color: var(--on-state); }
 .ngflag--allow { background: var(--flag-allow); color: var(--flag-allow-fg); border-color: var(--flag-allow-line); }
 .ngflag--hold  { background: var(--flag-hold); color: var(--flag-hold-fg); border-color: var(--flag-hold-line); }
+.ngflag[role="button"] { cursor: pointer; }
+.ngflag[role="button"]:hover { outline: 2px solid var(--focus); }
 .ngflag--sm { padding: 0 6px; font-size: 11px; vertical-align: middle; }
 .mgrid tr.ngrow td.ng { padding: 4px 2px; text-align: center; }
 .mgrid tr.ngrow td.ng[data-flag] { background: transparent; }

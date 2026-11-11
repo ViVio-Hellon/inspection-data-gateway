@@ -142,6 +142,12 @@ VBA は作った頭を作業選択ボタンの表示にしか使わず、次に�
   - I7: 薄板で DB に検査番号が無いときは、最終圧延機から作った検番の頭を使う(3.0 の注)。試験は `test_kensa_input_router`・`test_kensa_layout`
     (書き留めの画面は DB の検番も作れる頭も無いので、書き留めは変わらない)。
 
+- 2026-11-11(利用者の決定。intended の I8): 手で欄を押して選んだとき(自動の入力先探しが止まる)も、
+  **DT は幅・丈・対角の欄へ、#L は厚の欄へ入れません**。選んだ欄が届いた種類の行でなければ、その種類の行の範囲で
+  次に空いた欄(上の表の順)へ入れます(例: S2 を選んで #L が届く → S5 から先の空いた欄)。種類が合う欄を選んだときは、
+  VBA どおり選んだ欄へ入れます。#〆(手入力)は選んだ欄へ入れます(変えない)。VBA は自動が止まっていると種類を見ずに選んだ欄へ入れていました。
+  (`input_router.manual_target_mismatch`)
+
 コード: `input_router.next_cells`(表を引く)・`input_router.pucket_move`・`input_router.all_check`
 試験: `tests/test_next_cell_matrix.py`(作業 × 画面の状態 × 操作の並びで書き留めたもの。`fixtures/next_cell_matrix.json`)
 

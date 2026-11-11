@@ -238,6 +238,30 @@ class InpChangeTest(QuirkCase):
         self.assertEqual([c[0] for c in h.calls], ["calculate_sheets", "loop_text", "posting", "out_tolerance"])
         self.assertEqual(h.calls[1], ("loop_text", "S1"))
 
+    def test_manual_target_kind_mismatch(self) -> None:
+        # I8(2026-11-11): 手で選んだ欄が届いた種類の行でなければ、その欄に入れず種類の行の次に空いた欄へ
+        s = ready()
+        h = FakeHooks()
+        ir.text_tag(s, "S2", h)                       # 厚の欄を選ぶ
+        ir.receive(s, "#L395.8", h)
+        self.assertEqual((s.cells["S2"].value, s.cells["S5"].value), ("", "395.8"))
+        s = ready()
+        ir.text_tag(s, "S6", h)                       # 幅の欄を選ぶ
+        ir.receive(s, "DT10002+0000021.712M", h)
+        self.assertEqual((s.cells["S6"].value, s.cells["S1"].value), ("", "21.712"))
+        s = ready()
+        ir.text_tag(s, "S3", h)                       # 種類が合えば選んだ欄へ
+        ir.receive(s, "DT10002+0000021.712M", h)
+        self.assertEqual((s.cells["S1"].value, s.cells["S3"].value), ("", "21.712"))
+        s = ready()
+        ir.text_tag(s, "S7", h)
+        ir.receive(s, "#L395.8", h)
+        self.assertEqual((s.cells["S5"].value, s.cells["S7"].value), ("", "395.8"))
+        s = ready()
+        ir.text_tag(s, "S2", h)                       # #〆(手入力)は選んだ欄へ(変えない)
+        ir.receive(s, "#〆1.5", h)
+        self.assertEqual(s.cells["S2"].value, "1.5")
+
     def test_register_check_blocks(self) -> None:
         s = ready()
         with self.assertRaises(Stop) as cm:

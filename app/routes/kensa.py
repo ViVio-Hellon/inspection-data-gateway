@@ -53,6 +53,7 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     # 保留・まとめて削除・廃棄フラグ・印刷履歴クリア・サイズ修正・名簿画面の案内
     "hold": ("hold", ("answers",)),
     "ng-delete": ("ng_delete", ("pos", "answers")),
+    "ng-release": ("ng_release", ("pos", "answers")),       # 許容・保留を外す(2026-11-11)
     "izyou": ("izyou", ("answers",)),
     "print-reset": ("print_reset", ("answers",)),
     "resize": ("resize", ("answers",)),

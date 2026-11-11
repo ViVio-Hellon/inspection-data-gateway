@@ -1542,6 +1542,33 @@ class Session:
             self.hooks.confi_reason_open(st, pos, 0, st.lname, pos + "板1枚", vbx.val(st.delete_c))
         return None
 
+    def ng_release(self, pos: str, answers: Optional[dict[str, bool]] = None) -> Result:
+        return self._run(self._ng_release, pos, answers or {})
+
+    def _ng_release(self, pos: str, answers: dict[str, bool]) -> Optional[Question]:
+        """許容・保留を外す(2026-11-11 追加。VBA には無い: NG?_DblClick は「まとめて削除」、許容・保留は NG_Erase で
+        NG 色が消えたときにしか消えない)。NG の値は消さず、NG? を「NG」(まだ NG 色の値があれば)か "" に戻し、
+        CheckLabelsByCategory をやり直して、理由の行と同じ形でライン別 Access.log に残す。"""
+        st, env = self.state, self._env()
+        if pos not in grid.POSITIONS:
+            raise Stop(f"NG{pos} はありません", source="ng_release")
+        flag = st.ctl("NG" + pos).value.strip()
+        if flag not in ("許容", "保留"):
+            env.messages.append(Message(f"{pos} は許容・保留ではありません", INFO, source="ng_release"))
+            return None
+        ans = answers.get("ng_release")
+        if ans is None:
+            return Question("ng_release", f"{st.header(pos)}の{flag}を外しますか", source="ng_release")
+        if not ans:
+            return None
+        rows = range(1, 11) if pos == "F" else range(1, 15)
+        has_ng = any(st.ctl(f"{pos}{i}").value != "" and st.is_ng(f"{pos}{i}") for i in rows)
+        st.ctl("NG" + pos).value = "NG" if has_ng else ""
+        self.hooks.check_labels_by_category(st, pos)
+        env.log(legacy_log.line_entry(st.line_name, pos + "_" + flag + ":" + "理由選択:" + flag + "解除:"
+                                      + self.hooks.worker_name(st)))
+        return None
+
     def izyou(self, answers: Optional[dict[str, bool]] = None) -> Result:
         return self._run(self._izyou, answers or {})
 
