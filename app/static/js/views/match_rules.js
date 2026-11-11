@@ -53,7 +53,11 @@ function colCount(cmp) { return cmp === "範囲" ? 3 : 1; }
 
 function render() {
   const g = G(), w = R.work;
-  $("rInfo").textContent = `表「${g.table}」(${g.source}・${g.table_rows} 行)。${g.note || ""}`;
+  $("rInfo").textContent = `表「${g.table}」(${g.source}・${g.table_rows} 行)。照合ルールの版 ${g.version || 0}${g.version ? "" : "(既定)"}。${g.note || ""}`;
+  $("rHelp").textContent = R.state.help_switch || "";
+  $("rSwapRow").hidden = !(g.dim_swap && g.dim_swap.length);
+  const src = g.field_sources || {};
+  const fieldLabel = (f) => (src[f] ? `${f}【${src[f]}】` : f);
   const use = $("rUse");
   use.replaceChildren(...R.state.use_rows.map((u) => { const o = el("option", "", u); o.value = u; return o; }));
   use.value = w.use_rows;
@@ -75,7 +79,14 @@ function render() {
       colTd.append(s);
     });
     const fld = select(g.fields, r.field, "ロットの項目");
-    fld.addEventListener("change", () => { r.field = fld.value; });
+    for (const op of fld.options) if (g.fields.includes(op.value)) op.textContent = fieldLabel(op.value);
+    fld.addEventListener("change", () => { r.field = fld.value; render(); });
+    const fldWrap = el("span");
+    const badge = el("span", "lv", src[r.field] || "-");
+    badge.title = "ロットの項目の出どころ";
+    badge.dataset.src = src[r.field] || "";
+    if (src[r.field] === "オーダー") badge.className = "lv lv--warn";
+    fldWrap.append(badge, " ", fld);
     const cmp = select(R.state.compares, r.compare, "比べ方");
     cmp.addEventListener("change", () => { r.compare = cmp.value; render(); });
     const prep = select(R.state.preps, r.prep, "前処理");
@@ -92,13 +103,13 @@ function render() {
     const del = el("button", "btn btn--danger", "消す");
     del.type = "button";
     del.addEventListener("click", () => { w.rules.splice(i, 1); render(); });
-    for (const x of [ord, colTd, fld, cmp, prep, blank, en, note, del]) {
+    for (const x of [ord, colTd, fldWrap, cmp, prep, blank, en, note, del]) {
       if (x.tagName === "TD") tr.append(x); else { const td = el("td"); td.append(x); tr.append(td); }
     }
     return tr;
   }));
   $("rHist").replaceChildren(...(R.state.history.filter((h) => h.group === R.name).map((h) =>
-    el("li", "", `${h.t} ${h.user || ""}@${h.pc || ""}${h.reason ? "(" + h.reason + ")" : ""}: ${(h.summary || []).join("、") || "変更なし"}`)))
+    el("li", "", `${h.t}${h.version ? " 版" + h.version : ""} ${h.user || ""}@${h.pc || ""}${h.reason ? "(" + h.reason + ")" : ""}: ${(h.summary || []).join("、") || "変更なし"}`)))
     .concat([]).slice(0, 30));
   if (!$("rHist").children.length) $("rHist").append(el("li", "", "(まだ変更はありません)"));
 }
@@ -109,6 +120,18 @@ $("rAdd").addEventListener("click", () => {
   const max = Math.max(0, ...R.work.rules.map((r) => r.order));
   R.work.rules.push({ order: max + 10, columns: [""], field: G().fields[0], compare: "条件式", prep: "なし", blank: "通す", enabled: true, note: "" });
   render();
+});
+$("rSwap").addEventListener("click", async () => {
+  const pairs = G().dim_swap || [];
+  const m = new Map();
+  for (const [a, b] of pairs) { m.set(a, b); m.set(b, a); }
+  const changed = [];
+  for (const r of R.work.rules) {
+    if (m.has(r.field)) { changed.push(`順番${r.order}: ${r.field} → ${m.get(r.field)}`); r.field = m.get(r.field); }
+  }
+  render();
+  $("rSwapNote").textContent = changed.length ? `切り替えました(まだ保存していません): ${changed.join("、")}` : "寸法のルールがありません";
+  try { await regression(); } catch (err) { toastError(err); }
 });
 $("rReset").addEventListener("click", () => { R.work = { ...structuredClone(G().default), new_way: true }; render(); });
 
@@ -199,4 +222,14 @@ async function open() {
 }
 const tab = document.querySelector('#mTabs .tab[data-tab="rules"]');
 if (tab) tab.addEventListener("click", open);
+// 歪公差チェックの「照合ルール … 順番 N」から開く
+window.addEventListener("match-rules:open", async (ev) => {
+  R.name = ev.detail.group;            // タブを開いたときの open() がこの群を選ぶ
+  if (tab) tab.click(); else await open();
+  setTimeout(() => {
+    const idx = R.work ? R.work.rules.findIndex((r) => r.order === ev.detail.order) : -1;
+    const tr = idx >= 0 ? $("rRules").children[idx] : null;
+    if (tr) { tr.classList.add("is-hit"); tr.scrollIntoView({ block: "center" }); }
+  }, 600);
+});
 if (!$("pRules").hidden) open();

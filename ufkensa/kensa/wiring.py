@@ -889,7 +889,7 @@ class RealHooks(Hooks):
                                       self.arrbox(state, "SIKALOTNOW.accdb", state.lot, "Record"))
         r = quality.db_return_item(delivery, customer, youto, zai, tyu, atu, hab, tak,
                                    additional_caption=state.additional, lateral_lot=lateral_lot,
-                                   lateral_quiet=True)
+                                   lateral_quiet=True, lot_row=lateral_lot)
         apply_values(state, r.uf1)
         if r.cb_add_atu is not None:
             self.cb_add(state, r.cb_add_atu)

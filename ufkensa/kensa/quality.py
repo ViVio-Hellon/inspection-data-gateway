@@ -25,7 +25,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
-from typing import Any, Callable, Optional, Sequence, Union
+from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
 from . import cache_registry, datasource, lines, match_rules, paths, size_thresholds, vbx
 from .flow import ERROR, Message
@@ -615,6 +615,8 @@ class QpResult:
     uf1: dict[str, Any] = field(default_factory=dict)
     #: どの表のどの条件で何行残ったか(保守 → 歪公差チェックで見せる)。{"step", "detail", "ok": True/False/None, "rows"?}
     trace: list[dict[str, Any]] = field(default_factory=list)
+    #: 平坦度一覧QP追加 の照合に使った照合ルールの版(0 = 既定)
+    rule_version: int = 0
 
 
 def _t(res: "QpResult", step: str, detail: str = "", ok: Optional[bool] = None, **extra: Any) -> None:
@@ -694,6 +696,133 @@ def _sori_hit(res: "QpResult", out: str, table: str, fields: Sequence[str], rows
 def _table(db: Union[str, Path], table: str) -> tuple[Optional[list[str]], Optional[list[list[str]]]]:
     """`GetFieldsArr(表, "")` と `GetRecordsArr(表, "")`(VBA は2回開くが結果は同じ)。"""
     return datasource.get_fields(db, table), datasource.get_records(db, table)
+
+
+@dataclass
+class _QpMatch:
+    """平坦度一覧QP追加 の照合の結果と、条件ごとの途中経過(歪公差チェックの trace)。添字 1 始まり。"""
+    matching: list[int]
+    matched_idx: list[int]
+    survive: list[int]
+    prev_rows: list[list[Any]]
+    kept_rows: list[list[int]]
+    names: list[str]
+    vals: list[str]
+    cols: list[Any]
+    last: int
+    orders: list[int] = field(default_factory=lambda: [0] + list(range(10, 160, 10)))
+
+
+def _qp_old(aq: Sequence[Sequence[Any]], C: dict[str, int], v: Mapping[str, Any]) -> _QpMatch:
+    """旧: DBQP の照合 15 条件(QP:300-330)をコードで。照合ルールの shadow で差が 0 件と確かめたら消す。"""
+    youto, m_zai, o_zai, m_tyo, o_tyo = (v[k] for k in ("用途ｺｰﾄﾞ", "製造材質", "ｵｰﾀﾞｰ材質", "製造調質", "ｵｰﾀﾞｰ調質"))
+    o_atu, o_haba, o_take = v["ｵｰﾀﾞｰ板厚"], v["ｵｰﾀﾞｰ板幅"], v["ｵｰﾀﾞｰ板丈"]
+    delivery, nou_code, good, tori_code = v["引当_納入先"], v["納入先ｺｰﾄﾞ"], v["引当_取引先"], v["取引先ｺｰﾄﾞ"]
+    okuri, okuri_code, yokowari = v["送り先名"], v["送り先ｺｰﾄﾞ"], v["BOX設計_横割数(板)"]
+    matching: list[int] = []
+    same = True
+    last = 15
+    cond_names = ["", "用途コード", "製造材質", "オーダー材質", "製造調質", "オーダー調質", "板厚(下〜上)",
+                  "板幅(下〜上)", "板丈(下〜上)", "納入先", "納入先コード", "取引先", "取引先コード", "送り先",
+                  "送り先コード", "巾取数"]
+    cond_vals = ["", youto, m_zai, o_zai, m_tyo, o_tyo, vbx.fmt(o_atu, "0.000"), vbx.fmt(o_haba, "0.0"),
+                 vbx.fmt(o_take, "0.0"), delivery, nou_code, good, tori_code, okuri, okuri_code, yokowari]
+    cond_cols = [None, ("用途コード",), ("製造材質",), ("オーダー材質",), ("製造調質",), ("オーダー調質",),
+                 ("板厚下", "板厚上"), ("板幅下", "板幅上"), ("板丈下", "板丈上"), ("納入先",), ("納入先コード",),
+                 ("取引先",), ("取引先コード",), ("送り先",), ("送り先コード",), ("巾取数幅分割数のこと",)]
+    survive = [0] * 16
+    prev_rows: list[list[Any]] = [[] for _ in range(16)]
+    kept_rows: list[list[int]] = [[] for _ in range(16)]     # 条件 i まで合った行(0 始まり。見本 20 行まで)
+    matched_idx: list[int] = []
+    for ri, r in enumerate(aq):
+        c = [False] * 16
+        c[1] = check_condition(r, C["用途コード"], youto)
+        c[2] = c[1] & check_condition(r, C["製造材質"], m_zai)
+        c[3] = c[2] & check_condition(r, C["オーダー材質"], o_zai)
+        c[4] = c[3] & check_condition(r, C["製造調質"], m_tyo)
+        c[5] = c[4] & check_condition(r, C["オーダー調質"], o_tyo)
+        # B71(QP:313-315): 下・上を Single に入れて Val(オーダー寸法) の Double と比べる。直すと同じ精度
+        c[6] = c[5] & check_thickness(r, C["板厚下"], C["板厚上"], C["オーダー板厚"], o_atu, same_precision=same)
+        c[7] = c[6] & check_width(r, C["板幅下"], C["板幅上"], C["オーダー板幅"], o_haba, same_precision=same)
+        c[8] = c[7] & check_width(r, C["板丈下"], C["板丈上"], C["オーダー板丈"], o_take, same_precision=same)
+        c[9] = c[8] & check_condition(r, C["納入先"], delivery)
+        c[10] = c[9] & check_condition(r, C["納入先コード"], nou_code)
+        c[11] = c[10] & check_condition(r, C["取引先"], good)
+        c[12] = c[11] & check_condition(r, C["取引先コード"], tori_code)
+        c[13] = c[12] & check_condition(r, C["送り先"], okuri)
+        c[14] = c[13] & check_condition(r, C["送り先コード"], okuri_code)
+        c[15] = c[14] & check_size(r, C["巾取数幅分割数のこと"], yokowari)
+        # B24: 送り先コード・巾取数が最終判定に入っていない(last = 13)
+        for i in range(1, 16):
+            if c[i]:
+                survive[i] += 1
+                if len(kept_rows[i]) < 20:
+                    kept_rows[i].append(ri)
+            elif (i == 1 or c[i - 1]) and len(prev_rows[i]) < 5:
+                prev_rows[i].append(r)       # 前の条件までは合って、ここで外れた行(見本 5 行まで)
+        if all(c[1:last + 1]):
+            matching.append(clng(cell(r, C["管理番号"])))
+            matched_idx.append(ri)
+    return _QpMatch(matching, matched_idx, survive, prev_rows, kept_rows, cond_names, cond_vals, cond_cols, last)
+
+
+_QP_FMT = {"ｵｰﾀﾞｰ板厚": "0.000", "製造板厚": "0.000", "ｵｰﾀﾞｰ板幅": "0.0", "ｵｰﾀﾞｰ板丈": "0.0", "製造板幅": "0.0",
+           "製造板丈": "0.0"}
+
+
+def _qp_new(g: "match_rules.Group", aq: Sequence[Sequence[Any]], fq: Sequence[str], C: dict[str, int],
+            v: Mapping[str, Any]) -> _QpMatch:
+    """新: 照合ルール「平坦度一覧QP追加」で絞る。戻りと途中経過は旧と同じ形。"""
+    res = match_rules.match(g, aq, fq, v)
+    rules = [s.rule for s in res.steps]
+    base = {r.order: r for r in match_rules.BY_NAME[match_rules.QP].rules}
+    names, vals, cols = [""], [""], [None]
+    for r in rules:
+        d = base.get(r.order)
+        same_rule = d is not None and (d.columns, d.field, d.compare) == (r.columns, r.field, r.compare)
+        names.append(match_rules.QP_LABELS.get(r.order, "") if same_rule
+                     else f"{r.columns[0]} ← {r.field}({r.compare})")
+        x = v.get(r.field, "")
+        vals.append(vbx.fmt(x, _QP_FMT[r.field]) if r.field in _QP_FMT and r.compare == "範囲" else vstr(x))
+        cols.append(tuple(r.columns[:2]) if r.compare == "範囲" else tuple(r.columns[:1]))
+    n = len(rules)
+    survive = [0] + [len(s.remain) for s in res.steps]
+    kept = [[]] + [s.remain[:20] for s in res.steps]
+    prev: list[list[Any]] = [[]]
+    for k, s in enumerate(res.steps):
+        alive = set(s.remain)
+        before = range(len(aq)) if k == 0 else res.steps[k - 1].remain
+        prev.append([aq[i] for i in before if i not in alive][:5])
+    matching = [clng(cell(aq[i], C["管理番号"])) for i in res.matched]
+    return _QpMatch(matching, list(res.matched), survive, prev, kept, names, vals, cols, n,
+                    [0] + [r.order for r in rules])
+
+
+def qp_ctx(lot: LotData, delivery: str, good: str) -> dict[str, Any]:
+    """平坦度一覧QP追加 の照合の入力(DBQP と同じ読み方。仕掛の先頭行 + 引当の納入先・取引先)。"""
+    hi, la = lot.fields, lot.records[0]
+
+    def lv(name: str) -> Any:
+        return cell(la, col_of(hi, name))
+    out: dict[str, Any] = {
+        "用途ｺｰﾄﾞ": vstr(lv("用途ｺｰﾄﾞ")), "製造材質": vstr(lv("製造材質")), "ｵｰﾀﾞｰ材質": vstr(lv("ｵｰﾀﾞｰ材質")),
+        "製造調質": vstr(lv("製造調質")), "ｵｰﾀﾞｰ調質": vstr(lv("ｵｰﾀﾞｰ調質")),
+        "ｵｰﾀﾞｰ板厚": csng(lv("ｵｰﾀﾞｰ板厚")), "ｵｰﾀﾞｰ板幅": csng(lv("ｵｰﾀﾞｰ板幅")), "ｵｰﾀﾞｰ板丈": csng(lv("ｵｰﾀﾞｰ板丈")),
+        "製造板厚": csng(lv("製造板厚")), "製造板幅": csng(lv("製造板幅")), "製造板丈": csng(lv("製造板丈")),
+        "引当_納入先": delivery, "納入先ｺｰﾄﾞ": vstr(lv("納入先ｺｰﾄﾞ")), "引当_取引先": good,
+        "取引先ｺｰﾄﾞ": vstr(lv("取引先ｺｰﾄﾞ")), "送り先名": vstr(lv("送り先名")), "送り先ｺｰﾄﾞ": vstr(lv("送り先ｺｰﾄﾞ")),
+        "BOX設計_横割数(板)": vstr(lv("BOX設計_横割数(板)"))}
+    for k in ("BOX実績_板厚", "BOX実績_板幅", "BOX実績_板丈"):
+        out[k] = lv(k) if col_of(hi, k) else ""
+    return out
+
+
+def qp_ken_head(ken_no: str, lot: LotData) -> str:
+    """DBQP の検番の頭(0 か空なら 実績_設備ｺｰｽ から)。決まらなければ ""。"""
+    ken_a = vbx.left(ken_no, 1)
+    if ken_a == "0" or ken_a == "":
+        ken_a = find_priority(vstr(cell(lot.records[0], col_of(lot.fields, "実績_設備ｺｰｽ"))))
+    return ken_a
 
 
 def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotData], *,
@@ -788,50 +917,23 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
     hit_take = find_indices(fq, "T", o_take)
     search_s = ""
 
-    matching: list[int] = []
-    same = True
-    last = 15
-    cond_names = ["", "用途コード", "製造材質", "オーダー材質", "製造調質", "オーダー調質", "板厚(下〜上)",
-                  "板幅(下〜上)", "板丈(下〜上)", "納入先", "納入先コード", "取引先", "取引先コード", "送り先",
-                  "送り先コード", "巾取数"]
-    cond_vals = ["", youto, m_zai, o_zai, m_tyo, o_tyo, vbx.fmt(o_atu, "0.000"), vbx.fmt(o_haba, "0.0"),
-                 vbx.fmt(o_take, "0.0"), delivery, nou_code, good, tori_code, okuri, okuri_code, yokowari]
-    cond_cols = [None, ("用途コード",), ("製造材質",), ("オーダー材質",), ("製造調質",), ("オーダー調質",),
-                 ("板厚下", "板厚上"), ("板幅下", "板幅上"), ("板丈下", "板丈上"), ("納入先",), ("納入先コード",),
-                 ("取引先",), ("取引先コード",), ("送り先",), ("送り先コード",), ("巾取数幅分割数のこと",)]
-    survive = [0] * 16
-    prev_rows: list[list[Any]] = [[] for _ in range(16)]
-    kept_rows: list[list[int]] = [[] for _ in range(16)]     # 条件 i まで合った行(0 始まり。見本 20 行まで)
-    matched_idx: list[int] = []
-    for ri, r in enumerate(aq):
-        c = [False] * 16
-        c[1] = check_condition(r, C["用途コード"], youto)
-        c[2] = c[1] & check_condition(r, C["製造材質"], m_zai)
-        c[3] = c[2] & check_condition(r, C["オーダー材質"], o_zai)
-        c[4] = c[3] & check_condition(r, C["製造調質"], m_tyo)
-        c[5] = c[4] & check_condition(r, C["オーダー調質"], o_tyo)
-        # B71(QP:313-315): 下・上を Single に入れて Val(オーダー寸法) の Double と比べる。直すと同じ精度
-        c[6] = c[5] & check_thickness(r, C["板厚下"], C["板厚上"], C["オーダー板厚"], o_atu, same_precision=same)
-        c[7] = c[6] & check_width(r, C["板幅下"], C["板幅上"], C["オーダー板幅"], o_haba, same_precision=same)
-        c[8] = c[7] & check_width(r, C["板丈下"], C["板丈上"], C["オーダー板丈"], o_take, same_precision=same)
-        c[9] = c[8] & check_condition(r, C["納入先"], delivery)
-        c[10] = c[9] & check_condition(r, C["納入先コード"], nou_code)
-        c[11] = c[10] & check_condition(r, C["取引先"], good)
-        c[12] = c[11] & check_condition(r, C["取引先コード"], tori_code)
-        c[13] = c[12] & check_condition(r, C["送り先"], okuri)
-        c[14] = c[13] & check_condition(r, C["送り先コード"], okuri_code)
-        c[15] = c[14] & check_size(r, C["巾取数幅分割数のこと"], yokowari)
-        # B24: 送り先コード・巾取数が最終判定に入っていない(last = 13)
-        for i in range(1, 16):
-            if c[i]:
-                survive[i] += 1
-                if len(kept_rows[i]) < 20:
-                    kept_rows[i].append(ri)
-            elif (i == 1 or c[i - 1]) and len(prev_rows[i]) < 5:
-                prev_rows[i].append(r)       # 前の条件までは合って、ここで外れた行(見本 5 行まで)
-        if all(c[1:last + 1]):
-            matching.append(clng(cell(r, C["管理番号"])))
-            matched_idx.append(ri)
+    qp_in = qp_ctx(lot, delivery, good)
+    g = match_rules.group(match_rules.QP)
+    if g.new_way:
+        m = _qp_new(g, aq, fq, C, qp_in)
+        if _shadow_on(g):
+            o = _qp_old(aq, C, qp_in)
+            match_rules.compare(match_rules.QP, (o.matching, o.matched_idx, o.survive[1:o.last + 1]),
+                                (m.matching, m.matched_idx, m.survive[1:m.last + 1]), lot_no)
+    else:
+        m = _qp_old(aq, C, qp_in)
+    res.rule_version = g.version
+    matching, matched_idx, survive, prev_rows, kept_rows = m.matching, m.matched_idx, m.survive, m.prev_rows, m.kept_rows
+    cond_names, cond_vals, cond_cols, last = m.names, m.vals, m.cols, m.last
+    for cs in cond_cols[1:]:
+        for k in cs:
+            if k not in C:
+                C[k] = col_of(fq, k)
 
     before = len(aq)
     stuck = False
@@ -844,6 +946,7 @@ def dbqp(lot_no: str, ken_no: str, delivery: str, good: str, lot: Optional[LotDa
                 miss.append(f"管理番号{vstr(cell(r, C['管理番号']))}: " + "〜".join(vstr(cell(r, C[k])) or "(空)" for k in cols))
         _t(res, f"条件 {i}: {cond_names[i]}", f"ロット {cond_vals[i] or '(空)'} → {before} 行中 {survive[i]} 行が合う",
            ok if not stuck else None, rows=miss, kept=survive[i], before=before, table=table_name,
+           rule={"group": match_rules.QP, "order": m.orders[i], "version": g.version, "new_way": g.new_way},
            hits=[{"no": x + 1, "keys": {"管理番号": vstr(cell(aq[x], C["管理番号"])),
                                         **{k: vstr(cell(aq[x], C[k])) for k in cols}}} for x in kept_rows[i]])
         if not ok and not stuck:
@@ -1205,6 +1308,7 @@ def dist_array(lot_no: str, ken_no: str, hiki: Optional[Sequence[tuple[str, str]
             _t(out, f"引当 納入先 {nou}", "この納入先で引きます", None)
         out.trace.extend(r.trace)
         out.messages.extend(r.messages)
+        out.rule_version = r.rule_version
         if r.form:
             out.form = r.form
         if r.uf1:
@@ -1454,14 +1558,17 @@ def _ratefuri_old(ta: Sequence[Sequence[Any]], C: dict[str, int], args: tuple) -
 _RATEFURI_ANCHORS = ("製造材質", "厚下", "幅下", "丈下")
 
 
-def ratefuri_ctx(args: tuple) -> dict[str, Any]:
-    return dict(zip(match_rules.RATEFURI_FIELDS, args))
+def ratefuri_ctx(args: tuple, lot: Optional["LotData"] = None) -> dict[str, Any]:
+    """照合の入力: 引当の 8 項目 + ロットの行(仕掛)のオーダー・BOX実績の項目(lot があれば)。"""
+    ctx = match_rules.lot_ctx(lot.fields, lot.records[0]) if lot is not None and lot.records else {}
+    ctx.update(zip(match_rules.RATEFURI_ARGS, args))
+    return ctx
 
 
 def _ratefuri_new(g: "match_rules.Group", ta: Sequence[Sequence[Any]], pf: Sequence[str], C: dict[str, int],
-                  args: tuple) -> tuple[list[int], list[bool]]:
+                  args: tuple, lot: Optional["LotData"] = None) -> tuple[list[int], list[bool]]:
     """新: 照合ルール「ラテフリ直角」で絞る。戻りは旧と同じ形(管理番号, 最後の行の Conditions(4,6,7,8))。"""
-    res = match_rules.match(g, ta, pf, ratefuri_ctx(args))
+    res = match_rules.match(g, ta, pf, ratefuri_ctx(args, lot))
     matching = [clng(cell(ta[i], C["管理番号"])) for i in res.rows]
     return matching, ratefuri_flags(g, res)
 
@@ -1482,8 +1589,11 @@ def ratefuri_flags(g: "match_rules.Group", res: "match_rules.MatchResult") -> li
 def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: float, haba: float, take: float, *,
                    additional_caption: str = "", mitsubishi_visible: bool = False, work_flag: str = "",
                    zenkasho_sheet: bool = True, lateral_lot: Optional[LotData] = None,
-                   lateral_quiet: bool = False) -> ReturnItemResult:
+                   lateral_quiet: bool = False, lot_row: Optional[LotData] = None) -> ReturnItemResult:
     """QP.DbReturnItem (QP:1176-1456)。「ラテフリ直角」でフリー反り・ラテラルボー・直角度の要否と表示。
+
+    lot_row: ロットの行(SIKALOT 仕掛)。照合ルールでオーダー・BOX実績の寸法を見るとき使う。
+    渡さなければ lateral_lot(同じ仕掛の行)を使う。既定のルールは引当の 8 項目だけを見る。
 
     atu/haba/take は VBA の Single 引数(製造の寸法)。additional_caption: いまの UF1.Additional.Caption。
     lateral_lot: 別表A/B のとき DBdisplayラテラル に渡すロット(UF1.Lot / UFMitsubishi.LotBox の Arrbox 結果)。
@@ -1508,7 +1618,7 @@ def db_return_item(nou: str, tori: str, youtc: str, zai: str, tyou: str, atu: fl
     args = (nou, tori, youtc, zai, tyou, atu, haba, take)
     g = match_rules.group(match_rules.RATEFURI)
     if g.new_way:
-        matching, c = _ratefuri_new(g, ta, pf, C, args)
+        matching, c = _ratefuri_new(g, ta, pf, C, args, lot_row if lot_row is not None else lateral_lot)
         if _shadow_on(g):
             match_rules.compare(match_rules.RATEFURI, _ratefuri_old(ta, C, args), (matching, c), repr(args))
     else:

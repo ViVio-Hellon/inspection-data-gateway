@@ -37,8 +37,10 @@ def state() -> dict[str, Any]:
     for name, g in mr.groups(fresh=True).items():
         path, fields, rows = _table(g)
         out.append({**mr.to_payload(g), "table_fields": fields, "table_rows": len(rows), "table_path": str(path or ""),
-                    "default": mr.to_payload(mr.BY_NAME[name])})
-    return {"groups": out, "compares": list(mr.COMPARES), "preps": list(mr.PREPS), "blanks": list(mr.BLANKS),
+                    "default": mr.to_payload(mr.BY_NAME[name]),
+                    "field_sources": {f: mr.field_source(f) for f in g.fields},
+                    "dim_swap": [list(x) for x in mr.DIM_SWAP.get(name, ())]})
+    return {"groups": out, "help_switch": mr.HELP_SWITCH, "compares": list(mr.COMPARES), "preps": list(mr.PREPS), "blanks": list(mr.BLANKS),
             "use_rows": list(mr.USE_ROWS), "history": mr.history()}
 
 
@@ -64,6 +66,12 @@ def _label(rows: list[list[Any]], fields: Sequence[str], i: int) -> dict[str, An
 
 
 def _result(g: mr.Group, rows: list[list[Any]], fields: Sequence[str], res: mr.MatchResult, ctx: dict) -> str:
+    if g.name == mr.QP:
+        if not res.rows:
+            return "合う行なし(等級表へ)"
+        nos = [q.vstr(q.cell(rows[i], _key_col(fields))) for i in res.rows]
+        lim = q.vstr(q.cell(rows[res.rows[0]], q.col_of(fields, "1m当たり平坦度上限")))
+        return f"管理番号 {', '.join(nos)}(先頭の 1m当たり平坦度上限 {lim or '(空)'})"
     if g.name == mr.PACK:
         c = q.col_of(fields, "使用保護材")
         return q.vstr(rows[res.rows[0]][c - 1]) if res.rows and c else "一致なし"
@@ -110,7 +118,35 @@ def _ratefuri_inputs(store: LocalStore, lot: str) -> list[tuple[str, dict]]:
         if args in seen:
             continue
         seen.add(args)
-        out.append((f"{args[0]} / {args[1]}", q.ratefuri_ctx(args)))
+        out.append((f"{args[0]} / {args[1]}", q.ratefuri_ctx(args, getattr(lv, "data", None))))
+    return out
+
+
+def _qp_rows(rows: list[list[Any]], fields: Sequence[str], head: str) -> list[int]:
+    """DBQP の先の絞り込み: 検査番号の頭 LIKE '*頭*' OR = ''(表の行の位置)。"""
+    c = q.col_of(fields, "検査番号の頭")
+    out = []
+    for i, r in enumerate(rows):
+        v = q.vstr(q.cell(r, c)) if c else ""
+        if v == "" or (head and head in v):
+            out.append(i)
+    return out
+
+
+def _qp_inputs(lot: str) -> list[tuple[str, dict, str]]:
+    """(見出し, 照合の入力, 検番の頭)。引当ごと(納入先・取引先)。"""
+    lv = qs.read_lot(lot)
+    data = getattr(lv, "data", None)
+    if data is None or not data.records or not data.fields:
+        return []
+    head = q.qp_ken_head(lv.ken_no or "", data)
+    pairs = list(dict.fromkeys((q.vstr(n), q.vstr(t)) for n, t in (q.hiki_arr_create(lot) or []))) or [("", "")]
+    out = []
+    for n, t in pairs:
+        try:
+            out.append((f"{n or '(納入先なし)'} / {t}(検番の頭 {head or '-'})", q.qp_ctx(data, n, t), head))
+        except Exception:  # noqa: BLE001 - 寸法が数でない
+            continue
     return out
 
 
@@ -144,12 +180,19 @@ def trial(name: str, lot: str, payload: Optional[dict], store: LocalStore) -> di
     saved = mr.groups(fresh=True)[name]
     new = edited(name, payload)
     _path, fields, rows = _table(saved)
-    inputs = _ratefuri_inputs(store, lot) if name == mr.RATEFURI else _pack_inputs(_hist(store), lot)
+    if name == mr.QP:
+        inputs3 = _qp_inputs(lot)
+    else:
+        inputs3 = [(lab, ctx, None) for lab, ctx in
+                   (_ratefuri_inputs(store, lot) if name == mr.RATEFURI else _pack_inputs(_hist(store), lot))]
+    inputs = inputs3
     cases = []
-    for label, ctx in inputs:
-        a, b = run(saved, rows, fields, ctx), run(new, rows, fields, ctx)
+    for label, ctx, head in inputs3:
+        sub = rows if head is None else [rows[i] for i in _qp_rows(rows, fields, head)]
+        a, b = run(saved, sub, fields, ctx), run(new, sub, fields, ctx)
         cases.append({"label": label, "saved": a, "edited": b, "changed": a["result"] != b["result"]})
-    note = "" if inputs else ("引当がありません(仕掛・Lot情報履歴)" if name == mr.RATEFURI
+    note = "" if inputs else ("仕掛にこのロットがありません" if name == mr.QP
+                              else "引当がありません(仕掛・Lot情報履歴)" if name == mr.RATEFURI
                               else "Lot情報履歴 にこのロットの対象の包装仕様(蓋アングル)の行がありません")
     return {"lot": lot, "cases": cases, "note": note, "table_rows": len(rows)}
 
@@ -159,7 +202,15 @@ def regression(name: str, payload: Optional[dict], store: LocalStore) -> dict[st
     saved = mr.groups(fresh=True)[name]
     new = edited(name, payload)
     _path, fields, rows = _table(saved)
-    if name == mr.RATEFURI:
+    heads: dict[int, Optional[str]] = {}
+    if name == mr.QP:
+        from . import maint
+        inputs = []
+        for lot in maint.lot_numbers(plate_only=False)[:LOT_CAP]:
+            for lab, ctx, head in _qp_inputs(lot):
+                heads[len(inputs)] = head
+                inputs.append((lot, lab, ctx))
+    elif name == mr.RATEFURI:
         from . import maint
         lots = maint.lot_numbers(plate_only=False)[:LOT_CAP]
         inputs = [(lot, lab, ctx) for lot in lots for lab, ctx in _ratefuri_inputs(store, lot)]
@@ -169,8 +220,10 @@ def regression(name: str, payload: Optional[dict], store: LocalStore) -> dict[st
         for lab, ctx in _pack_inputs(hist, None):
             inputs.append((q.vstr(ctx.get("ﾛｯﾄNo", "")), lab, ctx))
     changed = []
-    for lot, lab, ctx in inputs:
-        a, b = run(saved, rows, fields, ctx)["result"], run(new, rows, fields, ctx)["result"]
+    for n, (lot, lab, ctx) in enumerate(inputs):
+        head = heads.get(n)
+        sub = rows if head is None else [rows[i] for i in _qp_rows(rows, fields, head)]
+        a, b = run(saved, sub, fields, ctx)["result"], run(new, sub, fields, ctx)["result"]
         if a != b:
             changed.append({"lot": lot, "label": lab, "before": a, "after": b})
     return {"checked": len(inputs), "changed": changed[:200], "changed_count": len(changed)}

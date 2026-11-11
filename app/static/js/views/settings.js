@@ -41,7 +41,9 @@ function renderTerminal() {
   $("lineNoLabel").hidden = !maru;
   const canChange = t.unset || S.master_edit.possible;
   fac.disabled = no.disabled = $("saveTerminal").disabled = !canChange;
-  if (t.from_access) {                 // アクセス権限が正: 設備名は読むだけ(丸徳で号機が決まらなければ号機だけ選べる)
+  if (t.from_access && t.can_override) {   // 管理者パスワード + Administrator: 試験などで手で上書きできる
+    fac.disabled = no.disabled = $("saveTerminal").disabled = false;
+  } else if (t.from_access) {                 // アクセス権限が正: 設備名は読むだけ(丸徳で号機が決まらなければ号機だけ選べる)
     fac.disabled = true;
     no.disabled = $("saveTerminal").disabled = !(t.number_free && canChange);
   }
@@ -49,7 +51,11 @@ function renderTerminal() {
   $("termLevel").className = "lv " + (t.unset ? "lv--ng" : "lv--ok");
   const ln = S.rights.line;
   const notes = [];
+  $("termOverride").hidden = !t.override;
+  $("termOverrideText").textContent = t.override ? `${t.override.text}。戻すまで起動しても このままです。` : "";
+  if (t.from_access && t.can_override) notes.push("管理者なので、試験などのために手で変えられます(戻すまで アクセス権限のラインは当てません)。");
   if (t.from_access) notes.push(`アクセス権限から読み込んでいます(この PC のラインは ${ln.text})。変えるときはアクセス権限マスタのライン名を直してください。`);
+  else if (ln.text && t.override) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です。いまは管理者が手で ${t.label} にしています。`);
   else if (ln.text) notes.push(`アクセス権限マスタでは この PC のラインは ${ln.text} です(マスタを読めないので、保存してある設定で動いています)。`);
   else if (ln.problem) notes.push("アクセス権限マスタではラインが決まりません: " + ln.problem);
   if (S.rights.applied) notes.push(S.rights.applied + "。");
@@ -494,6 +500,7 @@ function renderBadges() {
   if (!S) return;
   const badges = {};
   if (S.terminal.unset) badges.terminal = { text: "未設定", level: "ng" };
+  else if (S.terminal.override) badges.terminal = { text: "手で変更中", level: "warn" };
   if (S.rights.setup) badges.rights = { text: "設定の途中", level: "warn" };
   else if (!S.admin) badges.rights = { text: "一般", level: "info" };
   else if (S.rights.table.findings.length) badges.rights = { text: `点検 ${S.rights.table.findings.length}`, level: "warn" };
@@ -516,6 +523,16 @@ async function saveTerminal() {
     S = await api.post("/api/settings/terminal", { facility: $("facility").value, line_no: $("lineNo").value });
     render();
     toast("この端末のラインを決めました: " + S.terminal.label, "success");
+  } catch (e) {
+    toastError(e);
+  }
+}
+
+async function restoreTerminal() {
+  try {
+    S = await api.post("/api/settings/terminal/restore", {});
+    render();
+    toast("アクセス権限のラインに戻しました: " + S.terminal.label, "success");
   } catch (e) {
     toastError(e);
   }
@@ -664,6 +681,7 @@ function init() {
     $("lineNoLabel").hidden = !maru;
   });
   $("saveTerminal").addEventListener("click", saveTerminal);
+  $("restoreTerminal").addEventListener("click", restoreTerminal);
   $("soundCheck").addEventListener("click", checkSoundDir);
   $("soundReload").addEventListener("click", loadSound);
   $("soundToPaths").addEventListener("click", (ev) => {

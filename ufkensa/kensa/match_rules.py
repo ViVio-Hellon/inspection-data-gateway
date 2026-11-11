@@ -44,6 +44,9 @@ TABLE = "照合ルール"
 GROUP_TABLE = "照合ルール群"
 COLUMNS = ("ルール群", "順番", "表の列", "ロットの項目", "比べ方", "前処理", "空のとき", "有効", "備考")
 GROUP_COLUMNS = ("ルール群", "使う行", "新方式", "備考")
+#: 照合ルールの版(ルール群ごと。保存のたびに 1 増える。表が無い・一度も保存していない = 0 = 既定)
+VERSION_TABLE = "照合ルールの版"
+USE_EV = "match_rules.used"
 CHANGE_EV = "match_rules.change"
 TTL_SEC = 5.0
 
@@ -54,6 +57,7 @@ USE_ROWS = ("最初", "最後", "全部")
 
 RATEFURI = "ラテフリ直角"
 PACK = "梱包保護材"
+QP = "平坦度一覧QP追加"
 
 #: 試験用: 新旧を両方走らせ、違えば例外(tests/_isolation で真にする)
 SHADOW_STRICT = False
@@ -81,16 +85,31 @@ class Group:
     new_way: bool
     rules: tuple[Rule, ...]
     note: str = ""
+    version: int = 0           # 照合ルールの版(保存のたびに 1 増える)
 
 
 def _r(order: int, cols: str, fld: str, cmp: str, note: str = "") -> Rule:
     return Rule(order, tuple(cols.split(",")), fld, cmp, note=note)
 
 
-#: ラテフリ直角 で選べるロットの項目(DbReturnItem の引数 = 引当の行。Lot情報履歴 / SIKAHIKINOW + 仕掛の製造寸法)
-RATEFURI_FIELDS = ("納入先", "取引先", "用途ｺｰﾄﾞ", "製造材質", "製造調質", "製造板厚", "製造板幅", "製造板丈")
+#: DbReturnItem の引数(引当の行。Lot情報履歴 / SIKAHIKINOW + 仕掛の製造寸法)。既定のルールはこれだけを見る
+RATEFURI_ARGS = ("納入先", "取引先", "用途ｺｰﾄﾞ", "製造材質", "製造調質", "製造板厚", "製造板幅", "製造板丈")
+#: ロットの行(SIKALOT 仕掛)から足す項目。オーダー寸法・BOX実績の寸法に切り替えられるように(2026-11-11)
+RATEFURI_LOT_FIELDS = ("ｵｰﾀﾞｰ材質", "ｵｰﾀﾞｰ調質", "ｵｰﾀﾞｰ板厚", "ｵｰﾀﾞｰ板幅", "ｵｰﾀﾞｰ板丈",
+                       "BOX実績_板厚", "BOX実績_板幅", "BOX実績_板丈")
+#: ラテフリ直角 で選べるロットの項目
+RATEFURI_FIELDS = RATEFURI_ARGS + RATEFURI_LOT_FIELDS
 #: 梱包保護材 で選べるロットの項目(Lot情報履歴 の見出し。+ 当板用か)
 PACK_FIELDS = ("包装仕様NO", "材質", "調質", "用途ｺｰﾄﾞ", "厚", "巾", "丈", "ﾛｯﾄNo", "ｵｰﾀﾞｰNo", "引当NO", "当板用")
+
+#: 平坦度一覧QP追加 で選べるロットの項目(仕掛の行 + 引当の納入先・取引先。QP.DBQP)
+QP_FIELDS = ("用途ｺｰﾄﾞ", "製造材質", "ｵｰﾀﾞｰ材質", "製造調質", "ｵｰﾀﾞｰ調質", "ｵｰﾀﾞｰ板厚", "ｵｰﾀﾞｰ板幅", "ｵｰﾀﾞｰ板丈",
+             "製造板厚", "製造板幅", "製造板丈", "BOX実績_板厚", "BOX実績_板幅", "BOX実績_板丈",
+             "引当_納入先", "納入先ｺｰﾄﾞ", "引当_取引先", "取引先ｺｰﾄﾞ", "送り先名", "送り先ｺｰﾄﾞ", "BOX設計_横割数(板)")
+#: 平坦度一覧QP追加 の既定のルールの見出し(歪公差チェックの trace に出す。順番 → 名前)
+QP_LABELS = {10: "用途コード", 20: "製造材質", 30: "オーダー材質", 40: "製造調質", 50: "オーダー調質",
+             60: "板厚(下〜上)", 70: "板幅(下〜上)", 80: "板丈(下〜上)", 90: "納入先", 100: "納入先コード",
+             110: "取引先", 120: "取引先コード", 130: "送り先", 140: "送り先コード", 150: "巾取数"}
 
 DEFAULT_GROUPS: tuple[Group, ...] = (
     Group(RATEFURI, "ラテフリ直角", "品質基準", RATEFURI_FIELDS, "全部", True, (
@@ -113,8 +132,69 @@ DEFAULT_GROUPS: tuple[Group, ...] = (
         _r(70, "板幅下,板幅上,板幅", "巾", "範囲", "QP:1765"),
         _r(80, "板丈下,板丈上,板丈", "丈", "範囲", "QP:1766"),
     ), "最初に一致した行の 使用保護材"),
+    Group(QP, "平坦度一覧QP追加", "品質基準", QP_FIELDS, "全部", True, (
+        _r(10, "用途コード", "用途ｺｰﾄﾞ", "条件式", "DBQP 条件1"),
+        _r(20, "製造材質", "製造材質", "条件式", "DBQP 条件2"),
+        _r(30, "オーダー材質", "ｵｰﾀﾞｰ材質", "条件式", "DBQP 条件3"),
+        _r(40, "製造調質", "製造調質", "条件式", "DBQP 条件4"),
+        _r(50, "オーダー調質", "ｵｰﾀﾞｰ調質", "条件式", "DBQP 条件5"),
+        _r(60, "板厚下,板厚上,オーダー板厚", "ｵｰﾀﾞｰ板厚", "範囲", "DBQP 条件6"),
+        _r(70, "板幅下,板幅上,オーダー板幅", "ｵｰﾀﾞｰ板幅", "範囲", "DBQP 条件7"),
+        _r(80, "板丈下,板丈上,オーダー板丈", "ｵｰﾀﾞｰ板丈", "範囲", "DBQP 条件8"),
+        _r(90, "納入先", "引当_納入先", "条件式", "DBQP 条件9"),
+        _r(100, "納入先コード", "納入先ｺｰﾄﾞ", "条件式", "DBQP 条件10"),
+        _r(110, "取引先", "引当_取引先", "条件式", "DBQP 条件11"),
+        _r(120, "取引先コード", "取引先ｺｰﾄﾞ", "条件式", "DBQP 条件12"),
+        _r(130, "送り先", "送り先名", "条件式", "DBQP 条件13"),
+        _r(140, "送り先コード", "送り先ｺｰﾄﾞ", "条件式", "DBQP 条件14"),
+        _r(150, "巾取数幅分割数のこと", "BOX設計_横割数(板)", "以上", "DBQP 条件15"),
+    ), "検査番号の頭(検番の頭か空)で先に絞った行に当てる。一致した行は全部。納入先などが書いてある行を優先(コード)"),
 )
 BY_NAME = {g.name: g for g in DEFAULT_GROUPS}
+
+#: ロットの項目の出どころ(画面に出す見出し)
+FIELD_SOURCE: dict[str, str] = {
+    "納入先": "引当", "取引先": "引当", "用途ｺｰﾄﾞ": "引当",
+    "製造材質": "製造", "製造調質": "製造", "製造板厚": "製造", "製造板幅": "製造", "製造板丈": "製造",
+    "ｵｰﾀﾞｰ材質": "オーダー", "ｵｰﾀﾞｰ調質": "オーダー", "ｵｰﾀﾞｰ板厚": "オーダー", "ｵｰﾀﾞｰ板幅": "オーダー",
+    "ｵｰﾀﾞｰ板丈": "オーダー", "BOX実績_板厚": "実績", "BOX実績_板幅": "実績", "BOX実績_板丈": "実績",
+    "包装仕様NO": "引当", "材質": "引当", "調質": "引当", "厚": "引当", "巾": "引当", "丈": "引当",
+    "ﾛｯﾄNo": "引当", "ｵｰﾀﾞｰNo": "引当", "引当NO": "引当", "当板用": "引当",
+    "引当_納入先": "引当", "引当_取引先": "引当", "納入先ｺｰﾄﾞ": "仕掛", "取引先ｺｰﾄﾞ": "仕掛", "送り先名": "仕掛",
+    "送り先ｺｰﾄﾞ": "仕掛", "BOX設計_横割数(板)": "仕掛",
+}
+#: 「製造寸法 ⇔ オーダー寸法をまとめて切り替え」で入れ替える組(寸法だけ)
+DIM_SWAP: dict[str, tuple[tuple[str, str], ...]] = {
+    RATEFURI: (("製造板厚", "ｵｰﾀﾞｰ板厚"), ("製造板幅", "ｵｰﾀﾞｰ板幅"), ("製造板丈", "ｵｰﾀﾞｰ板丈")),
+    QP: (("製造板厚", "ｵｰﾀﾞｰ板厚"), ("製造板幅", "ｵｰﾀﾞｰ板幅"), ("製造板丈", "ｵｰﾀﾞｰ板丈")),
+}
+HELP_SWITCH = ("参照する寸法を変えるには:ロットの項目を『製造板厚』→『ｵｰﾀﾞｰ板厚』に選び直し、"
+               "試し照合で行が変わるか確かめてから保存")
+
+
+def field_source(name: str) -> str:
+    return FIELD_SOURCE.get(name, "")
+
+
+def swap_dims(g: Group) -> Group:
+    """寸法のルールのロットの項目を 製造 ⇔ オーダー でまとめて入れ替える(保存はしない)。"""
+    pairs = DIM_SWAP.get(g.name, ())
+    m = {a: b for a, b in pairs} | {b: a for a, b in pairs}
+    return replace(g, rules=tuple(replace(r, field=m.get(r.field, r.field)) for r in g.rules))
+
+
+def lot_ctx(fields: Optional[Sequence[str]], record: Optional[Sequence[Any]]) -> dict[str, Any]:
+    """ロットの行(仕掛)から照合に足す項目。列が無い・行が無いときは入れない。"""
+    out: dict[str, Any] = {}
+    if not fields or not record:
+        return out
+    idx = {str(f): i for i, f in enumerate(fields)}
+    for name in RATEFURI_LOT_FIELDS:
+        i = idx.get(name)
+        if i is not None and i < len(record):
+            v = record[i]
+            out[name] = "" if v is None else v
+    return out
 
 
 class Invalid(ValueError):
@@ -233,6 +313,8 @@ def _create(con: sqlite3.Connection) -> None:
                 f'"有効" INTEGER NOT NULL DEFAULT 1, "備考" TEXT)')
     con.execute(f'CREATE TABLE IF NOT EXISTS "{GROUP_TABLE}" ("ルール群" TEXT NOT NULL PRIMARY KEY, '
                 f'"使う行" TEXT NOT NULL, "新方式" INTEGER NOT NULL DEFAULT 1, "備考" TEXT)')
+    con.execute(f'CREATE TABLE IF NOT EXISTS "{VERSION_TABLE}" ("ルール群" TEXT NOT NULL PRIMARY KEY, '
+                f'"版" INTEGER NOT NULL DEFAULT 0, "日時" TEXT)')
 
 
 def ensure_table(path: Optional[Path] = None) -> bool:
@@ -273,6 +355,13 @@ def _read(p: Path) -> Optional[dict[str, Group]]:
             rules = con.execute(f'SELECT {",".join(chr(34) + c + chr(34) for c in COLUMNS)} FROM "{TABLE}"').fetchall()
             grows = con.execute(f'SELECT {",".join(chr(34) + c + chr(34) for c in GROUP_COLUMNS)} '
                                 f'FROM "{GROUP_TABLE}"').fetchall()
+            versions: dict[str, int] = {}
+            if _has(con, VERSION_TABLE):
+                for vn, vv in con.execute(f'SELECT "ルール群", "版" FROM "{VERSION_TABLE}"'):
+                    try:
+                        versions[str(vn)] = int(vv or 0)
+                    except (TypeError, ValueError):
+                        pass
         finally:
             con.close()
     except (OSError, sqlite3.Error) as e:
@@ -293,12 +382,12 @@ def _read(p: Path) -> Optional[dict[str, Group]]:
             except (TypeError, ValueError):
                 log.warning("照合ルールの行が悪いので飛ばします: %s", r)
         g = replace(base, use_rows=str(use) if str(use) in USE_ROWS else base.use_rows, new_way=_truthy(new),
-                    rules=tuple(mine), note=str(note or ""))
+                    rules=tuple(mine), note=str(note or ""), version=versions.get(base.name, 0))
         try:
             check(g)
         except Invalid as e:
             log.warning("照合ルール「%s」が悪いので既定を使います: %s", base.name, e)
-            g = base
+            g = replace(base, version=versions.get(base.name, 0))
         out[base.name] = g
     return out
 
@@ -368,7 +457,7 @@ def from_payload(name: str, d: Mapping[str, Any]) -> Group:
 
 def to_payload(g: Group) -> dict[str, Any]:
     return {"name": g.name, "table": g.table, "source": g.source, "fields": list(g.fields), "use_rows": g.use_rows,
-            "new_way": g.new_way, "note": g.note,
+            "new_way": g.new_way, "note": g.note, "version": g.version,
             "rules": [{"order": r.order, "columns": list(r.columns), "field": r.field, "compare": r.compare,
                        "prep": r.prep, "blank": r.blank, "enabled": r.enabled, "note": r.note} for r in g.rules]}
 
@@ -377,6 +466,7 @@ def save(g: Group, path: Optional[Path] = None, *, reason: str = "") -> Group:
     p = path or _db_path()
     check(g)
     before = groups(p, fresh=True).get(g.name)
+    g = replace(g, version=(before.version if before else 0) + 1)
     if not ensure_table(p):
         raise OSError(f"伝送用ファイルに書けません: {p}")
     con = safe_io.connect_existing(p, timeout=10)
@@ -385,6 +475,8 @@ def save(g: Group, path: Optional[Path] = None, *, reason: str = "") -> Group:
             con.execute(f'DELETE FROM "{TABLE}" WHERE "ルール群" = ?', (g.name,))
             con.executemany(f'INSERT INTO "{TABLE}" VALUES (?,?,?,?,?,?,?,?,?)', _rule_rows([g]))
             con.execute(f'INSERT OR REPLACE INTO "{GROUP_TABLE}" VALUES (?,?,?,?)', _group_rows([g])[0])
+            con.execute(f'INSERT OR REPLACE INTO "{VERSION_TABLE}" VALUES (?,?,datetime(\'now\', \'localtime\'))',
+                        (g.name, g.version))
     finally:
         con.close()
     with _lock:
@@ -392,11 +484,29 @@ def save(g: Group, path: Optional[Path] = None, *, reason: str = "") -> Group:
     try:
         from .. import trace
         trace.event(CHANGE_EV, f"保守: 照合ルール「{g.name}」を変更",
-                    data={"group": g.name, "reason": reason,
+                    data={"group": g.name, "reason": reason, "version": g.version,
                           "summary": _summary(to_payload(before) if before else None, to_payload(g))})
     except Exception as e:  # noqa: BLE001 - 履歴が残せなくても保存は済んでいる
         log.warning("照合ルールの変更履歴を残せませんでした: %s", e)
     return g
+
+
+def versions() -> dict[str, int]:
+    """いまの照合ルールの版(ルール群 → 版)。"""
+    return {n: g.version for n, g in groups().items()}
+
+
+def record_use(lot: str, where: str = "") -> dict[str, int]:
+    """検査の保存のとき、使った照合ルールの版を記録に残す(ufkensa_記録 の jsonl。保存用の列は変えない)。"""
+    v = {}
+    try:
+        v = versions()
+        from .. import trace
+        trace.event(USE_EV, f"照合ルールの版: " + "・".join(f"{k} 版{n}" for k, n in v.items()) + f"(ロット {lot})",
+                    data={"lot": lot, "where": where, "versions": v})
+    except Exception as e:  # noqa: BLE001 - 記録が残せなくても保存は済んでいる
+        log.warning("照合ルールの版を記録できませんでした: %s", e)
+    return v
 
 
 def history(days: int = 90, limit: int = 30) -> list[dict[str, Any]]:
@@ -409,6 +519,7 @@ def history(days: int = 90, limit: int = 30) -> list[dict[str, Any]]:
         if not isinstance(d, dict):
             continue
         out.append({"t": r.get("t", ""), "user": r.get("user", ""), "pc": r.get("pc", ""), "group": d.get("group", ""),
+                    "version": d.get("version"),
                     "reason": d.get("reason", ""), "summary": d.get("summary") or []})
         if len(out) >= limit:
             break

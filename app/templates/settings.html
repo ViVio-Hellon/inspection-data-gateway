@@ -37,6 +37,11 @@
         <header><h3>この端末のライン</h3><span class="lv" id="termLevel"></span></header>
         <div class="pad">
           <p class="muted">VBA のレジストリ「設備名」(初期設定 SF3)に当たります。検査の画面はこのラインで動きます。</p>
+          <div class="banner banner--warn" id="termOverride" role="status" hidden
+               style="background:#fef3c7;border:2px solid #d97706;color:#7c2d12;padding:8px 12px;border-radius:6px;margin:8px 0;font-weight:bold">
+            <span id="termOverrideText"></span>
+            <button class="btn" type="button" id="restoreTerminal" style="margin-left:12px">アクセス権限のラインに戻す</button>
+          </div>
           <div class="field">
             <label for="facility">設備名</label>
             <select class="input" id="facility"></select>

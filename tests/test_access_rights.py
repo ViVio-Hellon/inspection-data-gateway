@@ -444,6 +444,34 @@ class SettingsApiTest(_Env):
         st = self.post("/api/settings/rights/reload").get_json()
         self.assertEqual(st["terminal"]["facility"], "HVC")                  # 表が同じなら手で変えたまま
 
+    def test_admin_override_persists_until_restore(self):
+        """管理者パスワード + Administrator なら、アクセス権限のラインを TEST に手で変えられ、戻すまで当て直さない。"""
+        self.use_master([(self.login, self.pc, "HVC"), (self.login, "", "Administrator")])
+        st = self.post("/api/settings/rights/reload").get_json()
+        self.assertEqual(st["terminal"]["facility"], "HVC")
+        self.assertFalse(st["terminal"]["can_override"])                     # パスワード前
+        r = self.post("/api/settings/terminal", facility="Test")
+        self.assertEqual(r.status_code, 409)
+        self.unlock()
+        with mock.patch.object(trace, "event", wraps=trace.event) as ev:
+            r = self.post("/api/settings/terminal", facility="Test")
+        self.assertEqual(r.status_code, 200, r.get_json())
+        st = r.get_json()
+        self.assertEqual(st["terminal"]["facility"], "Test")
+        self.assertIn("アクセス権限: HVC → いま: Test", st["terminal"]["override"]["text"])
+        self.assertFalse(st["terminal"]["from_access"])
+        self.assertTrue(any(c.args and c.args[0] == "settings.terminal.override" for c in ev.call_args_list))
+        auth.end()                                                           # 起動し直しても当て直さない
+        auth.ensure()
+        self.assertEqual(terminal.facility(), "Test")
+        from app.shell import ribbon_values
+        self.assertIn("手で変えています", ribbon_values()["line_override"])
+        st = self.post("/api/settings/terminal/restore").get_json()
+        self.assertEqual(st["terminal"]["facility"], "HVC")
+        self.assertIsNone(st["terminal"]["override"])
+        self.assertTrue(st["terminal"]["from_access"])
+        self.assertEqual(A.override_text(), "")
+
     def test_unset_terminal_anyone(self):
         self.use_master([("yamada", "", "Administrator")])
         self.assertEqual(self.post("/api/settings/terminal", facility="LVC").status_code, 200)   # 未設定なら誰でも

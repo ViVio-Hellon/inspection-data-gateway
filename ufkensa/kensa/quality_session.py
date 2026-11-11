@@ -332,7 +332,7 @@ def card_ratefuri(store: LocalStore, lv: LotView) -> Card:
             done.add(key)
             r = quality.db_return_item(delivery, _s(row[1]), _s(row[2]), _s(row[3]), _s(row[4]), atu, hab, tak,
                                        additional_caption=lv.reflect.additional if lv.reflect else "",
-                                       lateral_lot=lv.data, lateral_quiet=True)
+                                       lateral_lot=lv.data, lateral_quiet=True, lot_row=lv.data)
             c.messages += r.messages
             items = r.items
             u = r.uf1

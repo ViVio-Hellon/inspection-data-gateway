@@ -66,6 +66,38 @@ class MatchRulesTest(unittest.TestCase):
         self.assertEqual(len(res.steps), 7)
         self.assertTrue(all(len(a.remain) >= len(b.remain) for a, b in zip(res.steps, res.steps[1:])))
 
+    def test_lot_row_order_dims_and_swap(self) -> None:
+        """ロットの行(仕掛)を渡すと オーダー寸法 でも照合できる。既定は引当の 8 項目だけ(結果は同じ)。"""
+        args = ("ﾆﾂﾎﾟﾝﾌﾙﾊ-ﾌ(ｶ", "", "F975", "52S", "H18", q.vbx.single(0.6), 1217.0, 2438.0)
+        lot = q.LotData(["ﾛｯﾄ番号", "ｵｰﾀﾞｰ板厚", "ｵｰﾀﾞｰ板幅", "ｵｰﾀﾞｰ板丈", "BOX実績_板厚"],
+                        [["X1", "300", "1217", "2438", "0.6"]])
+        ctx = q.ratefuri_ctx(args, lot)
+        self.assertEqual((ctx["ｵｰﾀﾞｰ板厚"], ctx["製造板厚"], ctx["BOX実績_板厚"]), ("300", args[5], "0.6"))
+        self.assertEqual(q.db_return_item(*args, lot_row=lot).items, ",フリー反り")      # 既定 = 製造寸法
+        g = mr.swap_dims(mr.BY_NAME[mr.RATEFURI])
+        self.assertEqual([r.field for r in g.rules if r.order in (60, 70, 80)], ["ｵｰﾀﾞｰ板厚", "ｵｰﾀﾞｰ板幅", "ｵｰﾀﾞｰ板丈"])
+        self.assertEqual(mr.swap_dims(g).rules, mr.BY_NAME[mr.RATEFURI].rules)          # 2 回で元どおり
+        mr.save(g, reason="オーダー寸法")
+        self.assertEqual(q.db_return_item(*args, lot_row=lot).items, "")                 # オーダー厚 300 は範囲外
+        self.assertEqual(mr.field_source("ｵｰﾀﾞｰ板厚"), "オーダー")
+        self.assertEqual(mr.field_source("製造板厚"), "製造")
+
+    def test_version_increments_and_recorded(self) -> None:
+        from unittest import mock
+        from ufkensa import trace
+        self.assertEqual(mr.group(mr.RATEFURI).version, 0)
+        g = mr.BY_NAME[mr.RATEFURI]
+        mr.save(g, reason="1")
+        mr.save(g, reason="2")
+        self.assertEqual(mr.groups(fresh=True)[mr.RATEFURI].version, 2)
+        self.assertEqual(mr.groups(fresh=True)[mr.PACK].version, 0)
+        self.assertEqual(mr.history()[0]["version"], 2)
+        with mock.patch.object(trace, "event") as ev:
+            v = mr.record_use("N1", "保存用")
+        self.assertEqual(v[mr.RATEFURI], 2)
+        self.assertEqual(ev.call_args.args[0], mr.USE_EV)
+        self.assertEqual(ev.call_args.kwargs["data"]["versions"][mr.RATEFURI], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -88,6 +120,9 @@ class MatchRulesRouteTest(MaintRouteTest):
         d = self.client.get("/api/maint/match_rules", headers=self.h).get_json()
         g = {x["name"]: x for x in d["groups"]}[mr.RATEFURI]
         self.assertIn("厚下", g["table_fields"])
+        self.assertEqual(g["field_sources"]["ｵｰﾀﾞｰ板厚"], "オーダー")
+        self.assertIn(["製造板厚", "ｵｰﾀﾞｰ板厚"], g["dim_swap"])
+        self.assertIn("ｵｰﾀﾞｰ板厚", d["help_switch"])
         r = self.post("/api/maint/match_rules/trial", {"group": mr.RATEFURI, "lot": "N8061T0"}).get_json()
         self.assertIn("cases", r)
         edited = dict(g)

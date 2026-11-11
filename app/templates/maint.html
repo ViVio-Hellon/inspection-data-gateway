@@ -368,6 +368,11 @@
             保存の前に、仕掛のロットで結果が変わるものを確かめます。保存には編集の鍵が要ります。</p>
           <div class="btn-row" id="rGroups" role="group" aria-label="ルール群"></div>
           <p class="muted maint__small" id="rInfo"></p>
+          <p class="maint__small" id="rHelp" style="background:#eef6ff;border-left:4px solid #2563eb;padding:6px 10px"></p>
+          <div class="btn-row" id="rSwapRow" hidden>
+            <button class="btn" type="button" id="rSwap">製造寸法 ⇔ オーダー寸法をまとめて切り替え</button>
+            <span class="muted maint__small" id="rSwapNote"></span>
+          </div>
           <div class="btn-row">
             <label>使う行 <select class="input" id="rUse"></select></label>
             <label><input type="checkbox" id="rNew"> 新方式(ルールで照合。外すと、いままでのコード)</label>

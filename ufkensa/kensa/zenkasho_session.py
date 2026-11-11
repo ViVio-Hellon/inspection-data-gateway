@@ -490,7 +490,7 @@ class ZenkashoSession(SubInspectionCommon):
                                              additional_caption=getattr(st, "additional", "") or "",
                                              mitsubishi_visible=f.visible, work_flag=f.work_flag,
                                              zenkasho_sheet=ZEN in b.sheets, lateral_lot=lateral_lot,
-                                             lateral_quiet=quiet)
+                                             lateral_quiet=quiet, lot_row=lateral_lot)
             except (quality.VbaRuntimeError, vbx.TypeMismatch, datasource.DbMissing) as e:
                 raise self._vba_error(e) from e
             self._msgs.extend(res.messages)

@@ -113,6 +113,7 @@ def _run_dist(lot_no: str, ken_no: str, hiki: Any, data: quality.LotData) -> dic
         out["status"], out["note"] = "error", f"{type(e).__name__}: {getattr(e, 'text', '') or e}"
         return out
     out["trace"] = qp.trace
+    out["rule_version"] = qp.rule_version
     out["messages"] = [m.text for m in qp.messages]
     if not qp.kousa:
         # VBA は QpArryD が Empty のまま LBound を取って実行時エラー(13)
