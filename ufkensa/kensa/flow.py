@@ -31,6 +31,8 @@ INFO, WARN, ERROR = "info", "warn", "error"
 # 2026-11-11: 包装の知らせ(画面で 1 つの大きな窓にまとめ、「確認」を押すまで閉じない)
 PACKING_SPEC = "packing_spec"           # Judg.PackagingSpecificationNo(梱包資材マスタ「注意_包装仕様」)→ MaterialsMsgBox
 PACKING_MATERIAL = "packing_material"   # QP.MaterialsUpperPart(梱包資材マスタ「梱包保護材」)
+# 2026-11-12: QF空冷時間チェックリスト・導電率の「品証連絡」(Conductiv_Coolingtime_Check / SaveLoad:404・409)も大きな窓に
+QF_COOLING = "qf_cooling"
 
 
 @dataclass

@@ -421,7 +421,12 @@
               <button class="btn" type="button" id="qfReload">読み直す</button>
               <span class="muted maint__small" id="qfCount"></span>
             </div>
-            <div class="maint__qfgrid"><table class="table table--dense" id="qfTable"></table></div>
+            <div class="seg maint__qfview" role="group" aria-label="出し方">
+              <button class="btn btn--sm is-on" type="button" data-qfview="sheet" aria-pressed="true">シートの見た目</button>
+              <button class="btn btn--sm" type="button" data-qfview="table" aria-pressed="false">表(絞り込み)</button>
+            </div>
+            <div class="maint__qfsheet" id="qfSheet"></div>
+            <div class="maint__qfgrid" id="qfGrid" hidden><table class="table table--dense" id="qfTable"></table></div>
           </div>
         </section>
         <section class="card">

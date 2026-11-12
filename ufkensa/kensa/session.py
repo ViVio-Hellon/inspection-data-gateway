@@ -50,7 +50,7 @@ from . import lot_watch, nippou_export, shadow, size_thresholds, worker_archive
 from . import reasons as reason_master
 from .model import CellKey, Face, FormTag, Switch, bad_name, ken_h_name
 from . import sound as snd
-from .flow import ERROR, INFO, WARN, Message, Question, Stop, unexpected_stop
+from .flow import ERROR, INFO, QF_COOLING, WARN, Message, Question, Stop, unexpected_stop
 from .grid import KensaState
 from .store import HOZON, LOT_HISTORY, MIMI, LocalStore, line_sheet
 from .wiring import Env, RealHooks
@@ -694,14 +694,16 @@ class Session:
             elif qf == "":
                 st.v("ConductivL").visible = False
                 env.messages.append(Message("指定ファイルに写真確認Noに入力がない" + "\r\n" + "品証連絡", WARN,
-                                            source="SaveLoad:404"))
+                                            source="SaveLoad:404", kind=QF_COOLING))
             else:
                 st.v("ConductivL").visible = False
                 env.messages.append(Message("指定ファイルにLotNo入力がない" + "\r\n" + "品証連絡", WARN,
-                                            source="SaveLoad:409"))
+                                            source="SaveLoad:409", kind=QF_COOLING))
         result = lotmod.dedupe_message(temp_e)
         if result != "":
-            wiring._msg_error(env, st, result, 4)
+            # 2026-11-12: 導電率の注意を含むときは QF空冷の窓へ(文は変えない)
+            wiring._msg_error(env, st, result, 4,
+                              kind=QF_COOLING if "導電率測定が必要です" in result else "")
         try:
             ord_no, msgs, _ = lotmod.materials_order_no(st.lot, r.past_hiki[0], st.dbflag, now=env.now(),
                                                          over12=hooks._over12(st))

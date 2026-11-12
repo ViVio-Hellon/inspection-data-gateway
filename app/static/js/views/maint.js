@@ -944,7 +944,28 @@ function renderWhere(storage) {
 }
 
 /* ---------- QF空冷時間チェックリスト(読むだけ) ---------- */
-const QF = { data: null, hits: [] };
+const QF = { data: null, hits: [], sheet: null, view: "sheet" };
+/* 2026-11-12: シートの見た目(サーバの xlsx_html。文字は escape 済み)。当たった行は data-r で光らせる */
+function qfSheetRender() {
+  const box = $("qfSheet"), d = QF.sheet;
+  if (!d) return;
+  if (!d.found) { box.replaceChildren(el("p", "muted pad", d.problem)); return; }
+  box.innerHTML = d.html;
+  for (const r of QF.hits) box.querySelector(`tr[data-r="${r}"]`)?.classList.add("is-hit");
+  const hit = box.querySelector("tr.is-hit");
+  if (hit) hit.scrollIntoView({ block: "center" });
+}
+function qfShowView(v) {
+  QF.view = v;
+  for (const b of document.querySelectorAll("[data-qfview]")) {
+    const on = b.dataset.qfview === v;
+    b.classList.toggle("is-on", on);
+    b.setAttribute("aria-pressed", String(on));
+  }
+  $("qfSheet").hidden = v !== "sheet";
+  $("qfGrid").hidden = v !== "table";
+}
+for (const b of document.querySelectorAll("[data-qfview]")) b.addEventListener("click", () => qfShowView(b.dataset.qfview));
 function qfRender() {
   const d = QF.data;
   const t = $("qfTable");
@@ -968,9 +989,13 @@ function qfRender() {
 }
 async function openQf(force) {
   if (QF.data && !force) return;
-  try { QF.data = await api.get("/api/maint/qf"); qfRender(); } catch (err) { toastError(err); }
+  try {
+    [QF.data, QF.sheet] = await Promise.all([api.get("/api/maint/qf"), api.get("/api/maint/qf/preview")]);
+    qfRender();
+    qfSheetRender();
+  } catch (err) { toastError(err); }
 }
-$("qfFilter").addEventListener("input", qfRender);
+$("qfFilter").addEventListener("input", () => { if ($("qfFilter").value.trim()) qfShowView("table"); qfRender(); });
 $("qfReload").addEventListener("click", () => openQf(true));
 $("qfTest").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -986,6 +1011,7 @@ $("qfTest").addEventListener("submit", async (e) => {
     $("qfOut").replaceChildren(dl, el("h4", "", "検査画面に出る知らせ"), ul);
     if (r.hits.length) { $("qfFilter").value = r.lot; }
     qfRender();
+    qfSheetRender();
   } catch (err) { toastError(err); }
 });
 

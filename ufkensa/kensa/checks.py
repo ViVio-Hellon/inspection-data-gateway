@@ -29,7 +29,7 @@ from xml.etree import ElementTree as ET
 
 from . import datasource, paths, size_thresholds, vbx
 from .model import Face, NORMAL, UiValues, diag_name, ken_h_name, kou_name, lateral_name, visual_under_name, visual_up_name
-from .flow import ERROR, INFO, WARN, Message, Stop
+from .flow import ERROR, INFO, QF_COOLING, WARN, Message, Stop
 
 # ------------------------------------------------------------------
 # 色(VBA の RGB 値)
@@ -1294,7 +1294,7 @@ def coolingtime_lookup(rows: Sequence[Sequence[object]], lot: str) -> str:
 
 def coolingtime_path() -> str:
     """`QualityPath & "75S・14S焼入れチェック\\QF空冷時間チェックリスト.xlsx"`"""
-    return paths.join(paths.get("quality"), "75S・14S焼入れチェック", "QF空冷時間チェックリスト.xlsx")
+    return paths.get("qf_cooling") or paths.slot_default("qf_cooling")   # 2026-11-12: 使用パス(空なら 品証やり取り\\75S・14S焼入れチェック\\…)
 
 
 _NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -1380,11 +1380,11 @@ def conductiv_coolingtime_check(lot: str, path: Optional[Path] = None) -> Coolin
     p = path or paths.to_local(text_path)
     if not p.is_file():
         return CoolingResult("", (Message(text_path + "がありません" + "_Conductiv_Coolingtime_Check", ERROR,
-                                          source="OutTolerance:2193"),))
+                                          source="OutTolerance:2193", kind=QF_COOLING),))
     cells = read_xlsx_sheet(p, "Sheet1")
     if cells is None:
         return CoolingResult("", (Message("指定シートがありません" + "_Conductiv_Coolingtime_Check", ERROR,
-                                          source="OutTolerance:2251"),))
+                                          source="OutTolerance:2251", kind=QF_COOLING),))
     nonempty = lambda v: v is not None and _cell_text(v) != ""   # noqa: E731
     end_r = max([r for (r, c), v in cells.items() if c == 2 and nonempty(v)], default=1)
     end_c = max([c for (r, c), v in cells.items() if r == 4 and nonempty(v)], default=1)

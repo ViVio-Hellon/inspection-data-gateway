@@ -264,6 +264,57 @@ class QfTest(MaintBase):
         self.assertEqual(r["verdict"], "読めない")
         self.assertTrue(r["messages"][0].endswith("がありません_Conductiv_Coolingtime_Check"))
 
+    # 2026-11-12: シートの見た目(xlsx_html)と、使用パス「QF空冷時間チェックリスト」
+    def test_preview_looks_like_sheet(self) -> None:
+        d = maint.qf_preview()
+        self.assertTrue(d["found"], d["problem"])
+        h = d["html"]
+        self.assertIn('<td colspan="6" style="font-weight:700;font-size:14pt;text-align:center">QF空冷時間チェックリスト</td>', h)
+        self.assertIn('<col style="width:89px">', h)                       # 列 A の幅 12 → 89px
+        self.assertIn("background:#DDEBF7", h)                              # 見出しの塗り
+        self.assertIn('<tr data-r="5" ', h)
+        self.assertIn(">H9022K1<", h)
+
+    def test_preview_escapes_text(self) -> None:
+        rows = (("<b>1</b>", "H9022K1", "", "", "", ""),)
+        kensa_fixture.write_qf_book(self.tmp / "db", rows=rows)
+        h = maint.qf_preview()["html"]
+        self.assertIn("&lt;b&gt;1&lt;/b&gt;", h)
+        self.assertNotIn("<b>1</b>", h)
+
+    def test_path_item(self) -> None:
+        from ufkensa.kensa import checks
+        self.assertTrue(checks.coolingtime_path().endswith("75S・14S焼入れチェック\\QF空冷時間チェックリスト.xlsx"))
+        other = self.tmp / "別" / "QF.xlsx"
+        src = kensa_fixture.write_qf_book(self.tmp / "別")
+        other.parent.mkdir(exist_ok=True)
+        shutil.move(str(src), other)
+        paths.set_path("qf_cooling", str(other))
+        self.addCleanup(paths.reset_path, "qf_cooling")
+        self.assertEqual(checks.coolingtime_path(), str(other))
+        self.assertTrue(maint.qf_sheet()["found"])
+        self.assertTrue(maint.qf_preview()["found"])
+        self.assertEqual(checks.conductiv_coolingtime_check("H9022K1").value, "101")
+        paths.set_path("qf_cooling", "")                                    # 空 = 既定(品証やり取りの下)
+        self.assertTrue(checks.coolingtime_path().endswith("QF空冷時間チェックリスト.xlsx"))
+
+    def test_missing_file_kind(self) -> None:
+        from ufkensa.kensa import checks, flow
+        (self.tmp / "db" / "75S・14S焼入れチェック" / "QF空冷時間チェックリスト.xlsx").unlink()
+        r = checks.conductiv_coolingtime_check("H9022K1")
+        self.assertEqual([m.kind for m in r.messages], [flow.QF_COOLING])   # 大きな窓へ(文は変えない)
+        self.assertEqual(r.messages[0].to_dict()["kind"], "qf_cooling")
+
+
+class XlsxHtmlFormatTest(unittest.TestCase):
+    def test_number_formats(self) -> None:
+        from ufkensa.kensa import xlsx_html as x
+        self.assertEqual(x.format_number(45000, "yyyy/m/d"), "2023/3/15")
+        self.assertEqual(x.format_number(1234.5, "#,##0.00"), "1,234.50")
+        self.assertEqual(x.format_number(0.123, "0.0%"), "12.3%")
+        self.assertEqual(x.format_number(12.0, "General"), "12")
+        self.assertEqual(x.format_number(0.5, "h:mm"), "12:00")
+
 
 class MaintRouteTest(MaintBase):
     def setUp(self) -> None:
@@ -358,6 +409,7 @@ class MaintRouteTest(MaintBase):
         self.assertIn("rules", d["storage"])
         kensa_fixture.write_qf_book(self.tmp / "db")
         self.assertTrue(self.client.get("/api/maint/qf", headers=self.h).get_json()["found"])
+        self.assertIn("table class=\"xl\"", self.client.get("/api/maint/qf/preview", headers=self.h).get_json()["html"])
         r = self.post("/api/maint/qf/test", {"lot": "H9022K1"}).get_json()
         self.assertEqual(r["label"], "101")
         self.assertEqual(self.post("/api/maint/qf/test", {"lot": ""}).status_code, 400)

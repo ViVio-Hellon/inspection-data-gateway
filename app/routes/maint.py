@@ -196,6 +196,12 @@ def qf_sheet():
     return jsonify(maint.qf_sheet())
 
 
+@bp.get("/api/maint/qf/preview")
+def qf_preview():
+    """シートの見た目のまま(2026-11-12: xlsx_html)。"""
+    return jsonify(maint.qf_preview())
+
+
 @bp.post("/api/maint/qf/test")
 def qf_test():
     b = _body()

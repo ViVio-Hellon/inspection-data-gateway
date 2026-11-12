@@ -526,6 +526,30 @@ def qf_sheet(path: Optional[Path] = None) -> dict[str, Any]:
     return out
 
 
+def qf_preview(path: Optional[Path] = None, max_rows: int = 2000) -> dict[str, Any]:
+    """シートの見た目(セルの結合・列の幅・書式)のまま HTML にする(xlsx_html)。
+
+    {"path", "found", "problem", "sheet", "html", "rows", "cols", "cut"}。文字は xlsx_html がすべて escape する。
+    """
+    from . import checks, xlsx_html
+    text_path = checks.coolingtime_path()
+    p = path or paths.to_local(text_path)
+    out: dict[str, Any] = {"path": str(p), "path_text": text_path, "found": False, "problem": "", "html": ""}
+    if not p.is_file():
+        out["problem"] = text_path + "がありません"
+        return out
+    try:
+        out.update(xlsx_html.render(p, QF_SHEET, max_rows))
+    except xlsx_html.NotXlsx as e:
+        out["problem"] = str(e)
+        return out
+    except Exception as e:                                       # noqa: BLE001 - 壊れたファイルでも画面は出す
+        out["problem"] = f"読めません: {type(e).__name__}: {e}"
+        return out
+    out["found"] = True
+    return out
+
+
 def qf_test(lot: str, zai: str = "", tyu: str = "", path: Optional[Path] = None) -> dict[str, Any]:
     """LotNo でチェックリストを引き、検査画面(SaveLoad:396-410)と同じ知らせを組み立てる。
 
