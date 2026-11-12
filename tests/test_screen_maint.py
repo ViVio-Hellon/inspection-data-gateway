@@ -184,20 +184,85 @@ class SoriEquipmentTest(MaintBase):
 
 
 class TerminalTest(MaintBase):
-    def test_presets_and_clear(self) -> None:
-        paths.set_mode(paths.OFFLINE)
-        t = maint.apply_preset("HVC")                                     # 初期設定.HVC: モードはそのまま
-        self.assertEqual((t["facility"], t["mode"]), ("HVC", paths.OFFLINE))
-        t = maint.apply_preset("AIM")                                     # 初期設定.AIM: Test + オンライン
-        self.assertEqual((t["facility_text"], t["mode"], t["mode_saved"]), ("Test", paths.ONLINE, True))
+    def test_presets_removed_and_clear(self) -> None:
+        """2026-11-12: AIM / HVC のプリセットは外した。端末設定を消す(DelSet)は残す。"""
+        self.assertEqual(maint.terminal_state()["presets"], [])
+        with self.assertRaises(ValueError):
+            maint.apply_preset("AIM")
         terminal.set_facility("丸徳", "A3")
         t = maint.clear_terminal()                                        # 初期設定.DelSet
         self.assertEqual((t["facility"], t["facility_text"], t["line_no"]), ("", "存在なし", ""))
         self.assertTrue(t["unset"])
         self.assertFalse(t["mode_saved"])
         self.assertIsNone(terminal.line())                                # 次の起動で「この端末」を求める
+
+    def test_line_reset(self) -> None:
+        """レジストリ消去(ラインリセット): ライン関係の鍵を消し、モードは残す。"""
+        from ufkensa import access_rights
+        paths.set_mode(paths.OFFLINE)
+        terminal.set_facility("丸徳", "A3")
+        access_rights.set_line_override("HVC", "丸徳A3", "tester")
+        user_settings.save(access_rights.KEY_LINE_APPLIED, "HVC")
+        r = maint.line_reset()
+        self.assertEqual(set(r["removed"]), set(maint.line_keys()))
+        self.assertEqual(r["before"][terminal.KEY_FACILITY], "丸徳")
+        for k in maint.line_keys():
+            self.assertIsNone(user_settings.get(k, None), k)
+        self.assertIsNone(terminal.line())
+        self.assertEqual(paths.mode(), paths.OFFLINE)                     # モードは残す
+        self.assertEqual(maint.line_reset()["removed"], [])               # 2 回目は消すものが無い
+
+
+class StorageInfoTest(MaintBase):
+    def test_every_editing_tab_has_store_and_log(self) -> None:
+        from ufkensa import trace
+        info = maint.storage_info()
+        for tab in ("master", "device", "term", "judge", "confi", "thresh", "rules", "kari", "dist", "qf"):
+            self.assertTrue(info[tab]["store"], tab)
+            self.assertTrue(info[tab]["log"], tab)
+        self.assertIn("伝送用ファイル.sqlite3 表「照合ルール」", info["rules"]["store"][0][1])
+        self.assertIn("表「寸法しきい値」", info["thresh"]["store"][0][1])
+        self.assertIn("表「公差外の確認行」", info["confi"]["store"][0][1])
+        self.assertIn(str(config.USER_CONFIG_PATH), info["term"]["store"][0][1])
+        self.assertIn(terminal.KEY_FACILITY, info["term"]["store"][0][1])
+        self.assertIn(str(trace.file_for()), [w for _, w in info["thresh"]["log"]])
+
+
+class QfTest(MaintBase):
+    def setUp(self) -> None:
+        super().setUp()
+        kensa_fixture.write_qf_book(self.tmp / "db")
+
+    def test_sheet(self) -> None:
+        d = maint.qf_sheet()
+        self.assertTrue(d["found"], d["problem"])
+        self.assertEqual([c["head"] for c in d["columns"]], list(kensa_fixture.QF_HEAD))
+        self.assertEqual([r["row"] for r in d["rows"]], [5, 6, 7, 8])
+        self.assertEqual(d["rows"][0]["cells"][:2], ["101", "H9022K1"])
+
+    def test_lot_hits(self) -> None:
+        r = maint.qf_test("h9022k1")
+        self.assertEqual((r["hits"], r["verdict"], r["label"]), ([5], "写真確認Noあり", "101"))
+        self.assertEqual(r["messages"], ["ハンドの場合、導電率測定が必要です。注意願います。"])
+        r = maint.qf_test("L8281G0", "75S", "T6")                         # 2 行当たれば最後の行(VBA と同じ)
+        self.assertEqual((r["hits"], r["used_row"], r["label"]), ([7, 8], 8, "103"))
+        r = maint.qf_test("N8061T0")                                       # 写真確認No が空
+        self.assertEqual(r["verdict"], "写真確認Noが空")
+        self.assertIn("指定ファイルに写真確認Noに入力がない\r\n品証連絡", r["messages"])
+        r = maint.qf_test("ZZZ0000")
+        self.assertEqual((r["hits"], r["verdict"]), ([], "LotNoなし"))
+        self.assertIn("指定ファイルにLotNo入力がない\r\n品証連絡", r["messages"])
+        r = maint.qf_test("H9022K1", "5NB", "H112")
+        self.assertEqual((r["target"], r["verdict"]), (False, "対象外"))
         with self.assertRaises(ValueError):
-            maint.apply_preset("XXX")
+            maint.qf_test(" ")
+
+    def test_missing_file(self) -> None:
+        (self.tmp / "db" / "75S・14S焼入れチェック" / "QF空冷時間チェックリスト.xlsx").unlink()
+        self.assertFalse(maint.qf_sheet()["found"])
+        r = maint.qf_test("H9022K1")
+        self.assertEqual(r["verdict"], "読めない")
+        self.assertTrue(r["messages"][0].endswith("がありません_Conductiv_Coolingtime_Check"))
 
 
 class MaintRouteTest(MaintBase):
@@ -261,13 +326,41 @@ class MaintRouteTest(MaintBase):
 
     def test_terminal_api_logs(self) -> None:
         from ufkensa import trace
-        with mock.patch.object(trace, "event", wraps=trace.event) as ev:
-            d = self.post("/api/maint/terminal", {"action": "AIM"}).get_json()
-        self.assertEqual(d["terminal"]["facility"], "Test")
-        self.assertTrue(any(c.args[0] == "proc.end" and c.kwargs.get("proc") == "maint.terminal" for c in ev.call_args_list))
+        self.assertEqual(self.post("/api/maint/terminal", {"action": "AIM"}).status_code, 400)   # プリセットは外した
         d = self.post("/api/maint/terminal", {"action": "clear"}).get_json()
         self.assertTrue(d["terminal"]["unset"])
         self.assertEqual(self.post("/api/maint/terminal", {"action": "x"}).status_code, 400)
+
+    def test_line_reset_api(self) -> None:
+        """ラインリセット: 鍵が要る・trace に残す・アクセス権限で決まればラインを当て直す。"""
+        from ufkensa import access_rights, trace
+        terminal.set_facility("丸徳", "A3")
+        auth.lock_master()
+        self.assertEqual(self.post("/api/maint/terminal", {"action": "line_reset"}).status_code, 403)
+        self.assertEqual(terminal.facility(), "丸徳")
+        auth.unlock_master(admin_password.DEFAULT_PASSWORD)
+        with mock.patch.object(trace, "event", wraps=trace.event) as ev:
+            d = self.post("/api/maint/terminal", {"action": "line_reset"}).get_json()
+        self.assertTrue(d["terminal"]["unset"])
+        ends = [c for c in ev.call_args_list if c.args[0] == "proc.end" and c.kwargs.get("proc") == "maint.terminal"]
+        self.assertTrue(ends)
+        # アクセス権限でこの PC のラインが HVC に決まるとき → 当て直す
+        terminal.set_facility("丸徳", "A3")
+        dec = mock.Mock()
+        with mock.patch.object(auth, "ensure", return_value=mock.Mock(rights=dec)), \
+                mock.patch.object(access_rights, "apply_line",
+                                  side_effect=lambda _d: (terminal.set_facility("HVC"), "HVC にしました")[1]):
+            d = self.post("/api/maint/terminal", {"action": "line_reset"}).get_json()
+        self.assertEqual((d["terminal"]["facility"], d["note"]), ("HVC", "HVC にしました"))
+
+    def test_storage_in_state_and_qf_api(self) -> None:
+        d = self.client.get("/api/maint/state", headers=self.h).get_json()
+        self.assertIn("rules", d["storage"])
+        kensa_fixture.write_qf_book(self.tmp / "db")
+        self.assertTrue(self.client.get("/api/maint/qf", headers=self.h).get_json()["found"])
+        r = self.post("/api/maint/qf/test", {"lot": "H9022K1"}).get_json()
+        self.assertEqual(r["label"], "101")
+        self.assertEqual(self.post("/api/maint/qf/test", {"lot": ""}).status_code, 400)
 
     def test_reads_open_to_everyone(self) -> None:
         """2026-11-02: 管理者でなくても、鍵を開けていなくても、読むだけの確かめは使える。"""

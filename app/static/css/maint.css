@@ -340,3 +340,13 @@
 .maint__thgroup legend { font-weight: 700; font-size: var(--fs-sm); padding: 0 4px; }
 .maint__thgroup .input--num { width: 8em; }
 .maint__thgroup [aria-invalid="true"] { outline: 2px solid var(--state-error); }
+
+/* 2026-11-12: 面ごとの「どこに入るか・記録はどこか」 */
+.maint__where { font-size: var(--fs-xs); color: var(--muted); margin: 0 0 8px; padding: 4px 8px;
+  border-left: 3px solid var(--rule); background: var(--info-bg); line-height: 1.5; }
+.maint__where b { font-weight: 600; margin-right: 4px; }
+.maint__where code { word-break: break-all; font-size: inherit; }
+/* QF空冷時間 */
+.maint__qfgrid { max-height: 52vh; overflow: auto; margin-top: 8px; }
+.maint__qfgrid tr.is-hit td { background: var(--warn-bg); font-weight: 600; }
+.maint__short { width: 6em; }

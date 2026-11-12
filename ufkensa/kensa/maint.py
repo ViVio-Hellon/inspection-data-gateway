@@ -266,12 +266,9 @@ def equipment_check(line: str, zai: str, atu: str, haba: str, take: str, wei: st
 # ------------------------------------------------------------------
 # 端末設定のセット(初期設定.AIM / HVC / DelSet / test取得)
 # ------------------------------------------------------------------
-#: 初期設定.AIM(初期設定:51-54)・HVC(初期設定:55-57)。モード None は「書かない」
-PRESETS = {
-    "AIM": {"facility": "Test", "mode": paths.ONLINE,
-            "label": "AIM(設備名 Test・オンライン)", "vba": "初期設定.AIM"},
-    "HVC": {"facility": "HVC", "mode": None, "label": "HVC(設備名 HVC。モードはそのまま)", "vba": "初期設定.HVC"},
-}
+#: 2026-11-12: プリセット「AIM(設備名 Test・オンライン)」「HVC」は保守から外した(現場で使わない・押し間違いのもと)。
+#: 代わりに「レジストリ消去(ラインリセット)」(line_reset)。VBA 初期設定.DelSet(DeleteSetting 設備名・モード)に当たる。
+PRESETS: dict[str, dict[str, Any]] = {}
 MISSING = "存在なし"     # GetSetting の既定値(初期設定:59, 70-71)
 
 
@@ -309,6 +306,77 @@ def clear_terminal() -> dict[str, Any]:
     user_settings.delete(terminal.KEY_LINE_NO)
     user_settings.delete(paths.KEY_MODE)
     return terminal_state()
+
+
+def line_keys() -> tuple[str, ...]:
+    """この PC のラインに関わる保存値(VBA ではレジストリ「起動設定」の 設備名)。user_config.json の鍵。"""
+    from .. import access_rights
+    return (terminal.KEY_FACILITY, terminal.KEY_LINE_NO, access_rights.KEY_LINE_OVERRIDE,
+            access_rights.KEY_LINE_APPLIED)
+
+
+def line_reset() -> dict[str, Any]:
+    """レジストリ消去(ラインリセット)。VBA 初期設定.DelSet の `DeleteSetting "UF検査判定システム", "起動設定", "設備名"`。
+
+    この PC のライン関係の保存値(設備名・号機・手で変えたライン・前に当てたライン)を消す。モードは残す。
+    消したあとアクセス権限マスタでこの PC のラインが決まれば、呼び出し側(ルート)が当て直す。
+    返り値: {"removed": [消した鍵], "before": {鍵: 値}}。
+    """
+    before = {k: user_settings.get(k, None) for k in line_keys()}
+    removed = [k for k in line_keys() if before[k] not in (None, "") and user_settings.delete(k)]
+    for k in line_keys():                      # 空の値で残っているものも消す(無いのと同じにする)
+        if k not in removed:
+            user_settings.delete(k)
+    return {"removed": removed, "before": {k: v for k, v in before.items() if v not in (None, "")}}
+
+
+# ------------------------------------------------------------------
+# 保守の各面: 変えた値がどこに入るか・変更の記録がどこに残るか(2026-11-12 のご依頼)
+# ------------------------------------------------------------------
+def _p(fn) -> str:
+    try:
+        return str(fn())
+    except Exception as e:                       # noqa: BLE001 - 場所の設定が壊れていても画面は出す
+        return f"(場所を決められません: {e})"
+
+
+def storage_info() -> dict[str, dict[str, Any]]:
+    """面ごとの {"store": [[何, 場所]], "log": [[何, 場所]]}。場所はこの PC で解決したフルパス。"""
+    import datetime
+    from .. import config, logging_utils, trace
+    from . import checks, store as storemod
+    denso = _p(lambda: datasource.resolve("伝送用ファイル"))
+    quality_db = _p(current_quality_db)
+    ucfg = str(config.USER_CONFIG_PATH)
+    tr = _p(trace.file_for)
+    txt = _p(lambda: logging_utils.log_path_for(datetime.date.today()))
+    logs = [["変更の記録(trace)", tr], ["テキストのログ", txt]]
+    no_access = ["Access.log", "書きません(Access.log は検査の操作だけ。保守の変更は上の記録に残ります)"]
+    t = lambda name: f"表「{name}」"           # noqa: E731
+    return {
+        "dist": {"store": [["読むだけ", f"{quality_db}(品質基準)"]], "log": [logs[0]]},
+        "kari": {"store": [["仮ロット", f"{_p(storemod.default_path)} シート「仮ロット」(この PC の手元DB)"]], "log": logs},
+        "master": {"store": [["品質基準", quality_db], ["伝送用ファイル", f"{denso}(理由選択・照合ルール なども)"],
+                             ["アクセス権限", _p(lambda: __import__("ufkensa.access_rights", fromlist=["x"]).master_path())
+                              + " " + t("アクセス権限")]],
+                   "log": [["変更の記録(trace。ev=master.change)", tr], logs[1], no_access]},
+        "device": {"store": [["測定機器ID", f"{denso} {t('測定機器ID')}"],
+                             ["受信機の設定", f"{ucfg} の鍵 com_receive / com_cards / com_kensa(この PC だけ)"]],
+                   "log": logs},
+        "term": {"store": [["端末設定", f"{ucfg} の鍵 {' / '.join(line_keys())} / {paths.KEY_MODE}(この PC だけ。VBA のレジストリ「起動設定」)"],
+                           ["管理者パスワード", f"{ucfg} の鍵 {config.KEY_ADMIN_PASSWORD}(値は伏せて保存)"]],
+                 "log": [["変更の記録(trace。proc=maint.terminal)", tr], logs[1]]},
+        "judge": {"store": [["表示時間・大きさ", f"{ucfg} の鍵 judge_display(この PC だけ)"],
+                            ["画像ファイル", f"{ucfg} の鍵 {paths.KEY_PATHS}(使用パス)"]], "log": logs},
+        "confi": {"store": [["公差外の確認行", f"{denso} {t('公差外の確認行')}"]], "log": logs},
+        "thresh": {"store": [["寸法のしきい値", f"{denso} {t('寸法しきい値')}"]],
+                   "log": [["変更の記録(trace。ev=thresholds.change)", tr], logs[1]]},
+        "rules": {"store": [["照合ルール", f"{denso} {t('照合ルール')}・{t('照合ルール群')}・{t('照合ルールの版')}"]],
+                  "log": [["変更の記録(trace。ev=match_rules.change。理由つき)", tr],
+                          ["版の番号", f"{denso} {t('照合ルールの版')}"]]},
+        "qf": {"store": [["読むだけ", _p(lambda: paths.to_local(checks.coolingtime_path())) + " シート「Sheet1」"]],
+               "log": [["変更しません(Excel を直接直す)", ""]]},
+    }
 
 
 # ------------------------------------------------------------------
@@ -404,3 +472,92 @@ def device_test(text: str, line: str, atu: str = "", hab: str = "", youto: str =
 def device_lines() -> list[str]:
     from . import lines
     return [ln.vba for ln in lines.LINES]
+
+
+# ------------------------------------------------------------------
+# QF空冷時間(2026-11-12): QF空冷時間チェックリスト.xlsx の Sheet1 を見る・LotNo で試す(読むだけ)
+# ------------------------------------------------------------------
+QF_SHEET = "Sheet1"
+QF_HEAD_ROW = 4          # 見出し(Conductiv_Coolingtime_Check: 4 行目の最後の列まで)
+QF_FIRST_ROW = 5         # 中身(5 行目〜B 列の最後の行。A=写真確認No、B=LotNo)
+
+
+def _qf_cell(v: object) -> str:
+    from .checks import _cell_text
+    return "" if v is None else _cell_text(v)
+
+
+def _col_name(n: int) -> str:
+    s = ""
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+
+def qf_sheet(path: Optional[Path] = None) -> dict[str, Any]:
+    """{"path", "found", "problem", "columns": [{"col", "head"}], "rows": [{"row", "cells": [...]}]}。
+
+    検査と同じ範囲(4 行目の最後の列まで、5 行目〜B 列の最後の行)。A=写真確認No、B=LotNo。
+    """
+    from . import checks
+    text_path = checks.coolingtime_path()
+    p = path or paths.to_local(text_path)
+    out: dict[str, Any] = {"path": str(p), "path_text": text_path, "sheet": QF_SHEET, "found": False, "problem": "",
+                           "columns": [], "rows": []}
+    if not p.is_file():
+        out["problem"] = text_path + "がありません"
+        return out
+    try:
+        cells = checks.read_xlsx_sheet(p, QF_SHEET)
+    except Exception as e:                                       # noqa: BLE001 - 壊れたファイルでも画面は出す
+        out["problem"] = f"読めません: {type(e).__name__}: {e}"
+        return out
+    if cells is None:
+        out["problem"] = "指定シートがありません(Sheet1)"
+        return out
+    out["found"] = True
+    end_r = max([r for (r, c), v in cells.items() if c == 2 and _qf_cell(v) != ""], default=1)
+    end_c = max([c for (r, c), v in cells.items() if r == QF_HEAD_ROW and _qf_cell(v) != ""], default=2)
+    end_c = max(end_c, 2)
+    out["columns"] = [{"col": _col_name(c), "head": _qf_cell(cells.get((QF_HEAD_ROW, c)))} for c in range(1, end_c + 1)]
+    out["rows"] = [{"row": r, "cells": [_qf_cell(cells.get((r, c))) for c in range(1, end_c + 1)]}
+                   for r in range(QF_FIRST_ROW, end_r + 1)]
+    return out
+
+
+def qf_test(lot: str, zai: str = "", tyu: str = "", path: Optional[Path] = None) -> dict[str, Any]:
+    """LotNo でチェックリストを引き、検査画面(SaveLoad:396-410)と同じ知らせを組み立てる。
+
+    材質・調質が空なら「導電率の測定が要る材質(75S/14S の T6・T651)」として見る。
+    """
+    from . import checks
+    lot = (lot or "").strip().upper()
+    if not lot:
+        raise ValueError("LotNo を入れてください")
+    zai, tyu = (zai or "").strip().upper(), (tyu or "").strip().upper()
+    target = True if not zai else (zai == "75S" and tyu in ("T651", "T6")) or (zai == "14S" and tyu in ("T6", "T651"))
+    sheet = qf_sheet(path)
+    hits = [r["row"] for r in sheet["rows"] if len(r["cells"]) > 1 and r["cells"][1] == lot]
+    res = checks.conductiv_coolingtime_check(lot, path=path or Path(sheet["path"]))
+    qf = res.value
+    msgs = [m.text for m in res.messages]
+    label = ""
+    if not target:
+        verdict = "対象外"
+        msgs = [f"材質/調質 {zai} {tyu} は導電率の測定が要らないので、検査ではこの表を引きません"]
+    else:
+        if res.messages:
+            verdict = "読めない"
+            msgs.append("指定ファイルに写真確認Noに入力がない\r\n品証連絡")
+        elif vbx.is_numeric(qf) or qf not in ("", "LotNoがない"):
+            verdict, label = "写真確認Noあり", qf
+        elif qf == "":
+            verdict = "写真確認Noが空"
+            msgs.append("指定ファイルに写真確認Noに入力がない\r\n品証連絡")
+        else:
+            verdict = "LotNoなし"
+            msgs.append("指定ファイルにLotNo入力がない\r\n品証連絡")
+        msgs.append("ハンドの場合、導電率測定が必要です。注意願います。")      # 検査では最後に MsgError で出る
+    return {"lot": lot, "zai": zai, "tyu": tyu, "target": target, "hits": hits, "used_row": hits[-1] if hits else None,
+            "value": qf, "verdict": verdict, "label": label, "messages": msgs, "path": sheet["path"]}

@@ -58,3 +58,35 @@ def copy_to(tmp: Path) -> Path:
     for p in src.glob("*.sqlite3"):
         shutil.copy2(p, tmp / p.name)
     return tmp
+
+
+QF_HEAD = ("写真確認No", "LotNo", "材質", "調質", "空冷時間(秒)", "記入者")
+QF_ROWS = (("101", "H9022K1", "75S", "T651", "12", "検査員A"),
+           ("", "N8061T0", "14S", "T6", "15", "検査員B"),
+           ("102", "L8281G0", "75S", "T6", "11", "検査員A"),
+           ("103", "L8281G0", "75S", "T6", "10", "検査員C"))
+
+
+def write_qf_book(folder: Path, rows=QF_ROWS, head=QF_HEAD) -> Path:
+    """`<品質基準>/75S・14S焼入れチェック/QF空冷時間チェックリスト.xlsx`(Sheet1: 4 行目が見出し、5 行目から A=写真確認No、B=LotNo)。"""
+    import zipfile
+    from xml.sax.saxutils import escape
+    m = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+    r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
+    def row(n: int, vals) -> str:
+        cells = "".join(f'<c r="{chr(65 + i)}{n}" t="inlineStr"><is><t>{escape(str(v))}</t></is></c>'
+                        for i, v in enumerate(vals) if v != "")
+        return f'<row r="{n}">{cells}</row>'
+
+    body = row(1, ["QF空冷時間チェックリスト"]) + row(4, head) + "".join(row(5 + i, v) for i, v in enumerate(rows))
+    p = Path(folder) / "75S・14S焼入れチェック" / "QF空冷時間チェックリスト.xlsx"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(p, "w") as z:
+        z.writestr("xl/workbook.xml", f'<workbook xmlns="{m}" xmlns:r="{r}"><sheets>'
+                                      f'<sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels",
+                   '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId1" Type="x" Target="worksheets/sheet1.xml"/></Relationships>')
+        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{m}"><sheetData>{body}</sheetData></worksheet>')
+    return p

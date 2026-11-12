@@ -156,6 +156,27 @@ const PTY = process.env.E2E_PTY || "-";
     check(/結果が変わるもの: 0 件/.test(await page.locator("#rReg").innerText()), S.step, "外観_厚板 既定のままなら 0 件");
     await shot(page, "maint_match_rules_appearance");
     check(await page.locator('#rGroups button:has-text("バーコール")').count() === 0, S.step, "バーコール の群は無い(表が無い)");
+    check(/伝送用ファイル\.sqlite3 表「照合ルール」/.test(await page.locator('[data-panel="rules"] .maint__where').innerText()),
+      S.step, "照合ルールの保存先を出す");
+
+    // ---- 保守 → QF空冷時間(2026-11-12)------------------------------------------
+    S.step = "maint_qf";
+    await page.click('#mTabs .tab[data-tab="qf"]'); await W(1200);
+    check(await page.locator("#qfTable tbody tr").count() === 4, S.step, "Sheet1 の 4 行を出す");
+    await page.fill("#qfLot", "L8281G0");
+    await page.click('#qfTest button[type="submit"]'); await W(1000);
+    const qfOut = await page.locator("#qfOut").innerText();
+    check(/103/.test(qfOut) && /7, 8/.test(qfOut), S.step, "L8281G0 → 7, 8 行目、写真確認No 103 " + qfOut.replace(/\s+/g, " "));
+    check(await page.locator("#qfTable tr.is-hit").count() === 2, S.step, "当たった行を光らせる");
+    await shot(page, "maint_qf");
+
+    // ---- 保守 → 端末設定(プリセットを外し、ラインリセット)----------------------------
+    S.step = "maint_term";
+    await page.click('#mTabs .tab[data-tab="term"]'); await W(800);
+    check(await page.locator("#mLineReset").isVisible(), S.step, "レジストリ消去(ラインリセット)がある");
+    check(await page.locator('button:has-text("AIM(設備名")').count() === 0, S.step, "AIM のプリセットは無い");
+    check(/user_config\.json/.test(await page.locator('[data-panel="term"] .maint__where').innerText()), S.step, "端末設定の保存先");
+    await shot(page, "maint_term");
   } catch (e) {
     check(false, S.step, "例外 " + (e && e.stack || e));
     await shot(page, "fatal_" + S.step).catch(() => {});
