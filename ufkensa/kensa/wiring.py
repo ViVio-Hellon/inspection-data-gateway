@@ -1001,9 +1001,8 @@ class RealHooks(Hooks):
             self.env.confi = reqs
 
     def loop_judg(self, state: KensaState, n: float = 0) -> None:
-        bh = quality.bh_search(state.zai, state.tyu) if state.zai != "" else 0
         try:
-            out = judge.loop_judg(to_judge_form(state), int(n), bh_lower=bh)
+            out = judge.loop_judg(to_judge_form(state), int(n))      # BH の下限値は引かない(表が無い。BH は判定しない)
         except judge.LoopJudgAborted as e:                  # VBA はそこまで塗った色が残って止まる
             apply_judge(state, e.outcome, self.env)
             raise Stop("実行時エラー '13': 型が一致しません。", messages=list(self.env.messages), source="Judg.LoopJudg")

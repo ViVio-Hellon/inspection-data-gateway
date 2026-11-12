@@ -512,13 +512,6 @@ class TransferTest(unittest.TestCase):
         self.assertEqual(q.straight_edge("丸徳"), ("", ""))
         self.assertEqual(q.straight_edge("無いライン"), "")
 
-    def test_bh_search(self) -> None:
-        self.assertEqual(q.bh_search("U74", "T4"), 78)
-        self.assertEqual(q.bh_search("XU74", "T6"), 80)          # 4文字以上は右3文字(QDB:1479)
-        self.assertEqual(q.bh_search("U74", "O"), 0)
-        # マスタの 75Ｓ は全角。ADO Filter を全角半角を区別するとみなすと一致しない(U3)
-        self.assertEqual(q.bh_search("75S", "T6"), 0)
-
 
 class TransferDbTest(_DbCopy):
     def test_equipment_last_work_flag(self) -> None:
@@ -533,10 +526,6 @@ class TransferDbTest(_DbCopy):
         self.sql("伝送用ファイル", 'INSERT INTO "校正ストレートエッヂ" ("番号","ライン名","長さ下","長さ上") VALUES (?,?,?,?)',
                  "8", "LVC", "1", "9")
         self.assertEqual(q.straight_edge("LVC"), ("2052.6", "9"))   # 先頭行の下・最終行の上
-
-    def test_bh_last_match(self) -> None:
-        self.sql("品質基準", 'INSERT INTO "Q_S_KE_ALL_053" VALUES (?,?,?,?)', "U74", "T4", "99", "0")
-        self.assertEqual(q.bh_search("U74", "T4"), 99)
 
     def test_shift_time_short(self) -> None:
         self.sql("伝送用ファイル", 'DELETE FROM "時間用" WHERE "直"=?', "昼")
@@ -750,52 +739,6 @@ class AppearanceSTest(unittest.TestCase):
         # R6550H0: オーダー厚 6.6(< 8)だが用途 K434 が別表1 に無い
         self.assertEqual(qv.display_appearance_s(q.read_lot("R6550H0"), "x", qv.QualityForm()).form.Upater,
                          "該当用途ｺｰﾄﾞなし")
-
-
-class DistortionViewTest(unittest.TestCase):
-    def test_122_B(self) -> None:
-        # H9022K1: K21S NP56 O 23×670×2700。DIM_122_B 先頭行の用途に K21S → 材質は右3文字 "P56" と調質 O で絞り
-        # 1–75 かつ 幅 0.1–9999 の最初の行 → 板幅 2.5 / 板丈 3.5、中耳4欄「不問」
-        f = qv.display_distortion(q.read_lot("H9022K1"), qv.QualityForm()).form
-        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Naka1, f.Mimi2), ("2.5", "3.5", "不問", "不問"))
-        self.assertEqual(f.Sansyou1, " Q-S-QA-DIM-122_B")
-
-    def test_122_A_and_boundary(self) -> None:
-        # H6083T1: H205 R 製造 85×1529×2502。白銅ではない → 50.01–100 の行(MG 1.2)。幅 1529 は (1254,1529] → 2
-        f = qv.display_distortion(q.read_lot("H6083T1"), qv.QualityForm()).form
-        self.assertEqual((f.MG1, f.HaHiz1, f.TaHiz1, f.Noun_BackColor), ("1.2", "2.0", "3.0", qv.WHITE))
-        self.assertEqual(f.Sansyou1, " Q-S-QA-DIM-122")
-        # H8401Z0: H283 15 → 12–50 の行(MG 0.4)、1528 → 1529 列 0.6、3053 → 3054 列 0.7
-        f = qv.display_distortion(q.read_lot("H8401Z0"), qv.QualityForm()).form
-        self.assertEqual((f.MG1, f.HaHiz1, f.TaHiz1), ("0.4", "0.6", "0.7"))
-
-    def test_naka_mimi_and_122_D(self) -> None:
-        # N7120E1: S139 1070 H18 オーダー 6.0×1150×800 等級4。6 以下 → 耳歪4級/中歪4級(5.01–12、800 → 4000 列 2)
-        # その後 DIM_122_D(1070 → "070"、H*8、S139、ｱｷﾀｾｲﾚﾝ、6.0)で 1.5/1(QDB:1322)。中耳は最後に「不問」で上書き
-        f = qv.display_distortion(q.read_lot("N7120E1"), qv.QualityForm()).form
-        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Naka1, f.Toukyu), ("1.5", "1.0", "不問", "4級"))
-        self.assertEqual(f.Sansyou1, " ﾌﾗｯﾄﾈｽ製品規格中耳歪(ｵｰﾀﾞｰ丈判定) Q-S-QA-DIM-122_D")
-        self.assertEqual(f.Noun_BackColor, qv.HX8_BLUE)
-
-    def test_grade3_and_dedupe(self) -> None:
-        # L8281G0: 0.3 等級3。4級 0.01–0.5、丈 0 → 最大列 4000 = 2。3級も同じく 4。参照元の重複は除く
-        f = qv.display_distortion(q.read_lot("L8281G0"), qv.QualityForm(Sansyou1="前回 前回")).form
-        self.assertEqual((f.Naka1, f.Mimi1, f.Naka2, f.Mimi2, f.Toukyu), ("2.0", "2.0", "4.0", "4.0", "3級"))
-        self.assertEqual(f.Sansyou1, "前回 ﾌﾗｯﾄﾈｽ製品規格中耳歪(ｵｰﾀﾞｰ丈判定)")
-
-    def test_122_C_match(self) -> None:
-        # H6540C0: R112 NP56 O 16 ｽﾐﾄﾓｾｲﾐﾂ → 管理番号1行目(0.1–999、すべて)と NP56 の行に一致、最後の一致 → 10/10、黄
-        f = qv.display_distortion(q.read_lot("H6540C0"), qv.QualityForm()).form
-        self.assertEqual((f.HaHiz1, f.TaHiz1, f.Noun_BackColor), ("10.0", "10.0", qv.O_YELLOW))
-
-class DistortionVcTest(_DbCopy):
-    def test_qa_022_01(self) -> None:
-        # H8401Z0(VC 01、受注 06023667)の VC_表 を 208PRNF に → QA_022_01。製造厚 15 → 12–50 の行
-        # MG1 は Format("0.4以下") = 文字のまま。幅 1525 → (1255,1530] → 0.6、丈 3050 → (2505,3055] → 0.7
-        self.sql("SIKAODRNOW", 'UPDATE "仕掛" SET "VC_表"=? WHERE "受注番号"=?', "208PRNF", "06023667")
-        f = qv.display_distortion(q.read_lot("H8401Z0"), qv.QualityForm(), odr_db="SIKAODRNOW").form
-        self.assertEqual((f.MG1, f.HaHiz1, f.TaHiz1, f.VcFlag), ("0.4以下", "0.6", "0.7", "あり"))
-        self.assertEqual(f.Sansyou1, " QA-022-01")
 
 
 # ------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 照合の結果そのものは test_kensa_quality が見ている。ここは「規格ごとのカード」への組み立て・参照元の添え方・
 いま検査中のロットとの受け渡しを見る。基準データ(tests/kensa_fixture.py)のロット:
-H7345B0(厚 15 の厚板)、L726M50(厚 2 の薄板、パターン 4)、H6083T1(DIM_122 別表A)。
+H7345B0(厚 15 の厚板)、L726M50(厚 2 の薄板、パターン 4)、H6083T1。
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ class QualityBuildTest(QualityBase):
         self.assertEqual((h["lot"], h["ken_no"], h["zai"], h["tyu"], h["youto"]), ("H7345B0", "H6X1355", "995", "R", "H165"))
         self.assertEqual(h["equipment"], "可")
         self.assertEqual([c["key"] for c in d["cards"]],
-                         ["distortion", "appearance", "bh", "diagonal", "lateral", "ratefuri", "distortion_ref"])
+                         ["distortion", "appearance", "diagonal", "lateral", "ratefuri"])
         for c in d["cards"]:
             self.assertTrue(c["sources"], c["key"])                     # 参照元は必ず添える
         dist = self.card(d, "distortion")
@@ -63,8 +63,6 @@ class QualityBuildTest(QualityBase):
         self.assertEqual(ap["sources"], ["Q-S-QA-124 別表1", "Q-S-QA-124 別表2"])
         self.assertEqual(ap["table"]["head"], ["欠陥名", "許容内容", "グレード"])
         self.assertEqual(ap["table"]["rows"][0][0], "飛込み")
-        bh = self.card(d, "bh")
-        self.assertEqual((bh["status"], dict(bh["rows"])["下限値"]), ("none", "不要"))
         self.assertEqual(dict(self.card(d, "lateral")["rows"])["等級からの公差"], "3.0")   # 等級 3 → ReLateralbow
         self.assertEqual(dict(self.card(d, "ratefuri")["rows"])["引当の出どころ"], "引当(SIKAHIKINOW)")
 
@@ -75,10 +73,13 @@ class QualityBuildTest(QualityBase):
         self.assertEqual(ap["table"]["rows"][0], ["トビコミ", "2㎜以下", "爪に掛らない", "ﾋﾟｯﾁ300㎜以上", "/"])
         self.assertIn("Q-S-QA-SRF-128 別表1", ap["sources"])
 
-    def test_distortion_ref_and_not_found(self) -> None:
-        ref = self.card(self.build("H6083T1"), "distortion_ref")
-        self.assertEqual(ref["sources"], ["Q-S-QA-DIM-122"])
-        self.assertEqual(dict(ref["rows"])["1M当りｹﾞｰｼﾞ"], "1.2")
+    def test_distortion_is_qp_only_and_not_found(self) -> None:
+        # 歪は判定と同じ 平坦度一覧QP追加 だけ(DBdisplay歪 の DIM_122 表引きは出さない)。BH のカードも無い
+        d = self.build("H6083T1")
+        keys = [c["key"] for c in d["cards"]]
+        self.assertNotIn("distortion_ref", keys)
+        self.assertNotIn("bh", keys)
+        self.assertIn("品質基準: 平坦度一覧QP追加", self.card(d, "distortion")["sources"])
         d = self.build("ZZZZZZZ")
         self.assertFalse(d["found"])
         self.assertEqual(d["status"], "not_found")
@@ -130,7 +131,7 @@ class QualityRouteTest(QualityBase):
         self.assertIn("qCards", r.get_data(as_text=True))
         d = self.client.get("/api/quality/lot?lot=H6083T1", headers=self.h).get_json()
         self.assertEqual(d["header"]["lot"], "H6083T1")
-        self.assertEqual(len(d["cards"]), 7)
+        self.assertEqual(len(d["cards"]), 5)
         self.assertEqual(self.client.get("/api/quality/lot", headers=self.h).get_json()["lot"], "")   # 検査中なし
         self.assertEqual(self.client.get("/api/quality/current", headers=self.h).get_json()["lot"], "")
         self.assertEqual(self.client.get("/api/quality/lot?lot=a'b", headers=self.h).status_code, 400)

@@ -1,4 +1,4 @@
-"""照合ルール 第4段: 外観_H(Q_S_QA_124)・外観_S(SRF_128)・ラテラル(DIM_179)・BH(Q_S_KE_ALL_053)の特性テスト(2026-11-11)。
+"""照合ルール 第4段: 外観_H(Q_S_QA_124)・外観_S(SRF_128)・ラテラル(DIM_179)の特性テスト(2026-11-11)。
 
 記録(tests/fixtures/match_rules/characterization_p4.json)は、照合ルールへ移す**前の**コードの結果。
 作り直しは `python -m tests.match_rules_p4_cases --write`(結果が変わるのを承知のときだけ)。
@@ -16,7 +16,7 @@ from tests import match_rules_p4_cases as mc
 
 def _p4() -> tuple[str, ...]:
     from ufkensa.kensa import match_rules as mr
-    return (mr.APPEAR_H, mr.APPEAR_S, mr.LATERAL_N, mr.LATERAL_H, mr.BH)
+    return (mr.APPEAR_H, mr.APPEAR_S, mr.LATERAL_N, mr.LATERAL_H)
 
 
 P4 = _p4()
@@ -76,7 +76,7 @@ class P4CharacterizationTest(unittest.TestCase):
 
 
 class P4RulesTest(unittest.TestCase):
-    """ルールを変えたときの動き(製造 ⇔ オーダーの切替・右3文字・列が無ければ通す・含む(Like)・保守の試し照合)。"""
+    """ルールを変えたときの動き(製造 ⇔ オーダーの切替・列が無ければ通す・含む(Like)・保守の試し照合)。"""
 
     def setUp(self) -> None:
         from ufkensa.kensa import match_rules as mr
@@ -88,15 +88,6 @@ class P4RulesTest(unittest.TestCase):
         from ufkensa.kensa import match_rules as mr
         g = replace(mr.BY_NAME[name], **kw)
         return mock.patch.object(mr, "group", lambda n: g if n == name else mr.BY_NAME[n])
-
-    def test_bh_right3_prep(self) -> None:
-        from dataclasses import replace
-        from ufkensa.kensa import match_rules as mr, quality as q
-        self.assertEqual(q.bh_search("XU74", "T6"), 80)
-        rules = tuple(replace(r, prep="なし") for r in mr.BY_NAME[mr.BH].rules)
-        with self._with(mr.BH, rules=rules):
-            self.assertEqual(q.bh_search("XU74", "T6"), 0)            # 右3文字にしないと XU74 を含む行は無い
-            self.assertEqual(q.bh_search("U74", "T6"), 80)
 
     def test_appear_h_switch_to_order_thickness(self) -> None:
         from ufkensa.kensa import match_rules as mr, quality_view as qv
@@ -130,16 +121,14 @@ class P4RulesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             kensa_fixture.use_offline(kensa_fixture.copy_to(Path(t)))
             try:
-                d = mm.trial(mr.BH, "", None, store.LocalStore(), {"材質": "U74", "調質": "T4"})
-                self.assertEqual([c["saved"]["result"] for c in d["cases"]], ["下限値 78"])
                 d = mm.trial(mr.APPEAR_S, "L726M50", None, store.LocalStore())
                 self.assertEqual(d["cases"][0]["saved"]["result"], "管理番号 13 → パターン1 = 4")
                 d = mm.trial(mr.LATERAL_N, "H8401Z0", None, store.LocalStore())
                 self.assertIn("ラテラルボー 4.0", d["cases"][0]["saved"]["result"])
-                for n in (mr.APPEAR_H, mr.BH):
+                for n in (mr.APPEAR_H,):
                     self.assertEqual(mm.regression(n, None, store.LocalStore())["changed_count"], 0)
                 st = {g["name"]: g for g in mm.state()["groups"]}
-                self.assertEqual(st[mr.BH]["field_sources"]["材質"], "画面")
+                self.assertNotIn("バーコール", st)                       # 表が無くなったので群も無い
                 self.assertEqual(st[mr.APPEAR_H]["field_sources"]["品質ｸﾞﾚｰﾄﾞ_表面処理"], "仕掛")
                 self.assertEqual(st[mr.APPEAR_H]["dim_swap"][0], ["製造板厚", "ｵｰﾀﾞｰ板厚"])
             finally:

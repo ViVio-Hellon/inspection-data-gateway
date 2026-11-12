@@ -70,9 +70,9 @@ class SinglePathTest(_Saved):
         paths.set_path("wav", str(self.root / "無い") + "/")
         self.assertEqual(paths.get("wav"), str(self.root / "無い") + "/")           # 無くても同じパス(落ち先なし)
         with self.assertRaises(datasource.DbMissing):
-            datasource.get_fields("品質基準", "QA_022_01", "")
+            datasource.get_fields("品質基準", "欠陥名", "")
         self.put(self.d1, "品質基準")
-        self.assertIsNotNone(datasource.get_fields("品質基準", "QA_022_01", ""))
+        self.assertIsNotNone(datasource.get_fields("品質基準", "欠陥名", ""))
 
 
 class LotFileTest(_Saved):

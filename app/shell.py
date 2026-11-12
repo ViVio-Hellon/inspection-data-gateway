@@ -49,7 +49,7 @@ PENDING_SCREENS: dict[str, tuple[str, str, str]] = {
     "zenkasho": ("工程 8e", "全ヵ所検査(一般・5N・三菱受託)。", "VBA の UF検査判定.xlsm"),
     "ainput": ("工程 8c", "梱包高さチェックとアイカスへの送信。", "VBA の UF検査判定.xlsm"),
     "calibration": ("工程 8c", "直尺の校正の記録と判定。", "VBA の UF検査判定.xlsm"),
-    "quality": ("工程 8c", "ロットの品質基準(外観・歪・BH・ラテラル)の表示。", "VBA の UF検査判定.xlsm"),
+    "quality": ("工程 8c", "ロットの品質基準(外観・歪・ラテラル)の表示。", "VBA の UF検査判定.xlsm"),
     "history": ("工程 8c", "保存した検査の一覧・復元・再印刷。", "VBA の UF検査判定.xlsm"),
     "import": ("工程 8a", "Access(.accdb)を SQLite に取り込み、各ラインの xlsm から過去のデータを1回取り込みます。", "設定"),
 }

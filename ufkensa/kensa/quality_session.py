@@ -7,9 +7,10 @@ VBA の流れ(UF1.CommandButton8_Click, UF1:3053-3111)と同じ部品を同じ�
     DistArray(Lot, KenNo) → FormReflectDist(UF品質基準 表示中)        … 歪(平坦度)カード
     FlagAtu(製造厚) >= 8 なら DBdisplay外観_H                          … 外観(厚板)カード
     B1〜B11 の DBdisplay外観_S(ボタンを全部押した結果を表にする)       … 外観(薄板)カード
-    手動検索(CommandButton1)の DBdisplay歪                             … 参考カード
-検査で使う規格のうち UF品質基準 に出ないもの(BH・ラテラルボー・直角度・対角・ラテフリ直角)も、
-検査画面と同じ部品(BhSearch / Lateralbow_J / Diagonal / DbReturnItem)で引いて並べる。
+手動検索(CommandButton1)の DBdisplay歪(DIM_122 / QA_022_01)は VBA で止め忘れの経路なので出さない。
+歪は判定と同じ 平坦度一覧QP追加 の結果だけ。BH(Q_S_KE_ALL_053)は品質基準 DB から無くなったので引かない。
+検査で使う規格のうち UF品質基準 に出ないもの(ラテラルボー・直角度・対角・ラテフリ直角)も、
+検査画面と同じ部品(Lateralbow_J / Diagonal / DbReturnItem)で引いて並べる。
 
 ロットの値は AccReflec(`lot.acc_reflec`。Lot情報履歴 は書かない)、引当は `lot.get_lot_info`(Lot情報履歴)、
 無ければ SIKAHIKINOW の引当(HikiArrCreate)。通常検査の状態は**読むだけ**(いまのロット・DBflag・画面の公差)。
@@ -171,26 +172,6 @@ def card_distortion(lv: LotView) -> Card:
     return _guard(c, run)
 
 
-def card_distortion_ref(lv: LotView) -> Card:
-    """参考: UF品質基準 の手動検索の DBdisplay歪(DIM-122 系の表引き)。QDB:700-1384。"""
-    c = Card("distortion_ref", "参考: 歪の表引き(手動検索)")
-
-    def run() -> None:
-        r = qv.display_distortion(lv.data, qv.QualityForm(), quiet=True)
-        f = r.form
-        c.messages += r.messages
-        c.sources = _source_tokens(f.Sansyou1) or ["品質基準: Q_S_QA_DIM_122_A〜D・QA_022_01(参照元の追記なし)"]
-        c.rows = [("1M当りｹﾞｰｼﾞ", f.MG1), ("巾歪", f.HaHiz1), ("丈歪", f.TaHiz1), ("中歪", f.Naka1), ("耳歪", f.Mimi1)]
-        if f.Toukyu:
-            c.rows += [("等級", f.Toukyu), ("中歪(2列目)", f.Naka2), ("耳歪(2列目)", f.Mimi2)]
-        if f.VcFlag:
-            c.rows.append(("VC", f.VcFlag))
-        c.note = "検査の判定に使うのは「歪(平坦度)」(平坦度一覧QP追加)。これは VBA の手動検索と同じ表引きです。"
-        if not any(v for _, v in c.rows):
-            c.status = "none"
-    return _guard(c, run)
-
-
 def card_appearance(lv: LotView, flag_atu: str) -> Card:
     """外観。FlagAtu >= 8 なら DBdisplay外観_H(UF1:3110)、それ以外は薄板の DBdisplay外観_S(B1〜B11)。"""
     thick = vbx.val(flag_atu) >= 8 if flag_atu != "" else False
@@ -228,21 +209,6 @@ def card_appearance(lv: LotView, flag_atu: str) -> Card:
             return
         c.table = {"head": ["異常名", "大きさ", "触感", "数", "素洗い"], "rows": rows}
     return _guard(c, run_s)
-
-
-def card_bh(lv: LotView) -> Card:
-    """BH(バーコール硬度の下限)。QDB.BhSearch(QDB:1454-1490)。0 は不要(Judg.BhJudg)。"""
-    c = Card("bh", "BH(バーコール硬度)", ["Q-S-KE-ALL-053"])
-
-    def run() -> None:
-        v = quality.bh_search(lv.form("Zai"), lv.form("Tyu"))
-        if v == 0:
-            c.status = "none"
-            c.rows = [("下限値", "不要")]
-        else:
-            c.rows = [("下限値", str(v))]
-        c.rows += [("材質・調質", f"{lv.form('Zai')} {lv.form('Tyu')}".strip())]
-    return _guard(c, run)
 
 
 def _dims(lv: LotView) -> tuple[float, float, float]:
@@ -424,8 +390,8 @@ def _build_lot(out: dict[str, Any], lot_no: str, st: Any, kensa: Any, store: Opt
         "line": lines.vba_name(fac) if fac else "",
     }
     out["cards"] = [c.to_dict() for c in (
-        card_distortion(lv), card_appearance(lv, flag_atu), card_bh(lv), card_diagonal(lv), card_lateral(lv),
-        card_ratefuri(kensa.store if store is None else store, lv), card_distortion_ref(lv))]
+        card_distortion(lv), card_appearance(lv, flag_atu), card_diagonal(lv), card_lateral(lv),
+        card_ratefuri(kensa.store if store is None else store, lv))]
     if current:
         out["kensa"] = [list(x) for x in _kensa_values(st)]
     return out

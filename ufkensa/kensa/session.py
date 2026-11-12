@@ -898,9 +898,9 @@ class Session:
         if len(name) == 3 and name.endswith("BH") and name[0] in st.bh:   # ?BH_Change → AfterUpdate
             v = value if vbx.is_numeric(value) else ""
             st.bh[name[0]].value = vbx.fmt(v, "0") if v != "" else ""
-            bh = quality.bh_search(st.zai, st.tyu)
+            # BH は値を持つだけ(下限値の表 Q_S_KE_ALL_053 は品質基準 DB から無くなった)。下限 0 = 「不要」
             wiring.apply_judge(st, judge.simply_judge(wiring.to_judge_form(st), name,
-                                                      judge.bh_judg(st.bh[name[0]].value, bh),
+                                                      judge.bh_judg(st.bh[name[0]].value, 0),
                                                       hooks.worker_name(st)), env)
             return
         if len(name) == 4 and name.endswith("Bad") and name[0] in st.bad:
@@ -1132,8 +1132,7 @@ class Session:
                 st.ctl(f"{posi}{knum}").value = temp
                 rp = "SUCDE".find(posi) + 1
                 if rp > 0:
-                    wiring.apply_judge(st, judge.loop_judg(wiring.to_judge_form(st), 0, rp, rp,
-                                                           bh_lower=quality.bh_search(st.zai, st.tyu)), env)
+                    wiring.apply_judge(st, judge.loop_judg(wiring.to_judge_form(st), 0, rp, rp), env)
             self._ng_posting(posi)
             self._ng_erase(posi, "板廃棄")
         env.log(legacy_log.line_entry(c.get("line_name", st.line_name),
