@@ -46,6 +46,7 @@
     <section class="card" id="tolCard">
       <header><h3>公差</h3><span class="lv lv--warn" id="resizeLv" hidden>サイズ修正中</span></header>
       <div class="pad">
+        <p class="lathit" id="latHit" role="status" hidden></p>
         <div class="tol-groups" id="tolKv"></div>
         <button class="btn btn--sm" type="button" id="resizeOpen" hidden>サイズ・公差の修正を開く</button>
         <p class="muted" id="tolNote"></p>
@@ -75,7 +76,7 @@
     <section class="card kmeasure ksub" id="subCard">
       <header class="subtabs-head">
         <div class="subtabs" role="tablist" id="subtabs">
-          <button type="button" role="tab" data-tab="grid" class="subtab--grid" title="画面が低いときだけ出ます。測定表に戻ります">測定表</button>
+          <button type="button" role="tab" data-tab="grid" class="subtab--grid" title="画面が低いとき・「表示: すべてタブ」のときに出ます。測定表に戻ります">測定表</button>
           <button type="button" role="tab" data-tab="strain" aria-selected="true">歪</button>
           <button type="button" role="tab" data-tab="visual">外観</button>
           <button type="button" role="tab" data-tab="bad">不良</button>
@@ -168,6 +169,8 @@
       <div class="pad">
         <button class="btn btn--sm who-toggle" type="button" id="whoToggle" aria-pressed="false"
                 title="測定値の下に、測った検査員と時刻を出します(VBA の WorkerTime シート)。欄にマウスを置いても出ます">測定者と時刻を表示</button>
+        <button class="btn btn--sm who-toggle" type="button" id="layoutToggle" aria-pressed="false"
+                title="測定表を上にずっと出す(測定+タブ)か、測定表も 歪・外観… と同じタブにして画面いっぱいに使う(すべてタブ)か。この PC で覚えます">表示: 測定+タブ</button>
 
         <div class="btn-row">
           <button class="btn" type="button" id="mmBtn">Min/Max</button>
@@ -201,7 +204,7 @@
     <dialog class="kpop" id="kAdd" aria-labelledby="kAddTitle">
       <header><h3 id="kAddTitle">検査員の追加・ロットの読み直し</h3><button class="btn btn--sm" type="button" id="kAddClose">閉じる</button></header>
       <div class="pad" id="kAddPad"></div>
-      <p class="muted kpop__hint">カード(13桁)・LotNo(7桁)は読み取ると自動で受け付けます。同じ LotNo を入れると読み直します。</p>
+      <p class="muted kpop__hint" id="kAddHint"></p>
     </dialog>
   </div>
   </div>

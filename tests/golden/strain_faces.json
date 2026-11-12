@@ -2915,6 +2915,12 @@
 "visible": true
 }
 },
+"lateral_hit": {
+"on": false,
+"source": [],
+"text": "",
+"who": ""
+},
 "lists": {
 "defect": [
 {
@@ -6620,6 +6626,12 @@
 "visible": true
 }
 },
+"lateral_hit": {
+"on": false,
+"source": [],
+"text": "",
+"who": ""
+},
 "lists": {
 "defect": [
 {
@@ -10322,6 +10334,12 @@
 "value": "",
 "visible": true
 }
+},
+"lateral_hit": {
+"on": false,
+"source": [],
+"text": "",
+"who": ""
 },
 "lists": {
 "defect": [
