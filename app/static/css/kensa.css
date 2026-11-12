@@ -381,5 +381,5 @@ li.is-stale { opacity: .6; }
 .kensa--alltab:not(.kensa--compact)[data-phase="measure"] .ksub .subpane { max-height: calc(100vh - 290px); overflow: auto; }
 /* ラテラルボー要(当たったときだけ)。公差のタブと測定表のラテラルボーの行に出す */
 .lathit { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; font-weight: 700;
-          background: var(--warn-bg, #fff3e0); color: var(--warn-ink, #8a4b00); border: 1px solid var(--warn, #f59e0b); }
+          background: var(--warn-bg); color: var(--warn-fg); border: 1px solid var(--state-warn); }
 .lathit--row { display: block; margin: 2px 0 0; padding: 1px 6px; font-size: var(--fs-sm, 12px); white-space: normal; }
