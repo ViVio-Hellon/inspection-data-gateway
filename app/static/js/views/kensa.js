@@ -415,7 +415,7 @@ function renderKenH(v) {
     if (c.visible === false) continue;
     const cap = c.no <= 6 ? ((hl[`HL${c.no}`] || {}).value || `${c.no}`) : "枚数";
     const unit = c.no <= 6 ? "mm" : "枚";
-    const t = el("table", { class: "mgrid" }, el("tr", {}, el("th", { class: "rowh", textContent: cap }), inputTd(c, `KenHBox${c.no}`), el("th", { textContent: unit })));
+    const t = el("table", { class: "mgrid" }, el("tr", {}, el("th", { class: "rowh", textContent: cap }), inputTd(c, `KenHBox${c.no}`, { sendOnChange: true }), el("th", { textContent: unit })));
     items.push(t);
   }
   // 2026-11-11: 検査回数は少枚数のときだけ(厚板 H など他の作業では出さない。現場の声)
@@ -425,7 +425,7 @@ function renderKenH(v) {
     const thick = (v.header.works || []).find((w) => w.key === "厚板") || {};
     const sheets = (v.ken_h.find((c) => c.no === 7) || {}).value || "";
     const required = v.header.work === "少枚数" && thick.caption === "H" && sheets !== "" && !(Number(v.ken_count) >= 1);
-    const td = inputTd({ value: v.ken_count, visible: true }, "KenCount");
+    const td = inputTd({ value: v.ken_count, visible: true }, "KenCount", { sendOnChange: true });
     if (required) {
       td.dataset.required = "1";
       const inp = td.querySelector("input");
@@ -438,6 +438,18 @@ function renderKenH(v) {
   $("kenhBoxes").replaceChildren(...items);
   text($("kenFormula"), [v.ken_h_label && `検入 ${v.ken_h_label}`, v.ken_formula].filter(Boolean).join("  "));
 }
+
+/* 2026-11-12: 検入高さは Enter を押さずに欄を離れても送る(sendOnChange)。サーバは送るたびに作業保存に書く。
+   欄に打ったまま読み込み直す・閉じるときは、離れる前に keepalive で送る(change が来ないため) */
+window.addEventListener("pagehide", () => {
+  const a = document.activeElement;
+  if (!a || !a.matches || !a.matches("#kenhBoxes input.cellin") || a.value === a.defaultValue) return;
+  try {
+    fetch(tokenUrl("/api/kensa/value"), { method: "POST", keepalive: true,
+      headers: { "Content-Type": "application/json", "X-Tool-Token": window.APP.token, "X-Screen-Id": window.APP.screenId || "" },
+      body: JSON.stringify({ name: a.dataset.name, value: a.value, answers: {} }) });
+  } catch (e) { /* 送れなくても閉じる */ }
+});
 
 function renderBh(v) {
   const bh = Object.fromEntries(v.bh.map((c) => [c.pos, c]));
@@ -812,6 +824,23 @@ function renderRange(v) {
     const want = cur ? String(cur) : "";
     if (sel.value !== want) sel.value = want;
   }
+  // 2026-11-12: VBA の OPS?/OPE?_Change は TB_BackColor だけ(開始・終了の位置の見出しに色を付ける)。
+  // Min/Max はボタンを押したときにこの範囲で求める。画面でも測定表の見出しに範囲を出し、何が起きたかを書く
+  const head = document.querySelector("#mgrid tr");
+  const ths = head ? [...head.children].slice(1, 7) : [];
+  ths.forEach((th, i) => {
+    const n = i + 1;
+    th.dataset.range = n === r.ops && n === r.ope ? "both" : n === r.ops ? "start" : n === r.ope ? "end"
+      : (r.ops && r.ope && r.ops < n && n < r.ope ? "in" : "");
+  });
+  const hint = $("rangeHint");
+  if (hint) {
+    const lab = (i) => r.labels[i - 1] || String(i);
+    text(hint, !r.ops || !r.ope ? "開始と終了を選び、「Min/Max」を押すと、その範囲の厚・巾・丈の最小〜最大を出します"
+      : r.ops > r.ope ? `開始(${lab(r.ops)})が終了(${lab(r.ope)})より後です。Min/Max は計算しません`
+        : `範囲 ${lab(r.ops)}〜${lab(r.ope)}(測定表の見出しに色)。「Min/Max」を押すと、この範囲で求めます`);
+    hint.dataset.bad = r.ops && r.ope && r.ops > r.ope ? "1" : "";
+  }
 }
 
 // 公差外の確認(UFConfi)。page 0 = 公差外(TB1 に入れて送信)、1 = 消去理由(List1)
@@ -913,7 +942,10 @@ function buildExtras() {
     lab.append(sel);
     rg.append(lab);
   }
-  mm.append(rg);
+  const mmRun = el("button", { type: "button", class: "btn btn--sm", textContent: "Min/Max", id: "mmBtn2" });
+  mmRun.addEventListener("click", () => op("minmax"));
+  rg.append(mmRun);
+  mm.append(rg, el("p", { class: "muted range-hint", id: "rangeHint" }));
   const dlg = el("dialog", { id: "confiDlg", class: "kpop kpop--confi" });
   dlg.setAttribute("aria-labelledby", "confiTitle");
   dlg.append(el("header", {}, el("h3", { id: "confiTitle", textContent: "確認" })),

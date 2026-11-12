@@ -157,6 +157,13 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     await page.selectOption("#opeSel", "5"); await W(400); await askAll(page);
     v = await state();
     check(String(v.range.ops) === "1" && String(v.range.ope) === "5", S.step, `範囲 ${v.range.ops}〜${v.range.ope}`);
+    // 2026-11-12: 選ぶと測定表の見出しに範囲の色(VBA の TB_BackColor)と、何をするかの一言
+    const rg = await page.evaluate(() => [...document.querySelectorAll("#mgrid tr:first-child th")].slice(1, 7).map((t) => t.dataset.range || ""));
+    check(rg[0] === "start" && rg[4] === "end" && rg[2] === "in", S.step, "測定表の見出しに範囲の色 " + JSON.stringify(rg));
+    check(/範囲/.test(await page.locator("#rangeHint").innerText()), S.step, "範囲の一言");
+    await shot(page, "kensa_minmax_range_1366x768");
+    await page.click("#mmBtn2"); await W(800); await askAll(page);
+    check(/\d/.test(await page.locator("#mmKv").innerText()), S.step, "Min/Max の札の中のボタンでも出す");
     await page.click('[data-rtab="ops"]'); await W(200);
     await page.click("#mmBtn"); await W(800); await askAll(page);
     await page.click('[data-rtab="mm"]'); await W(200);
@@ -276,6 +283,29 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     check(v.header.work !== "少枚数" && (await page.locator('#kenhBoxes input[data-name="KenCount"]').count()) === 0,
       S.step, "少枚数でなければ検査回数を出さない " + v.header.work);
     await shot(page, "kensa_kenh_H_dark");
+    // 2026-11-12: 検入高さは Enter を押さずに欄を離れても残る(タブを閉じる・読み込み直す)
+    {
+      if (!(await page.locator("#kenhBoxes input.cellin").count())) { await page.locator("#yamaLb button").first().click(); await W(600); }
+      const kb0 = page.locator("#kenhBoxes input.cellin").first();
+      const kname = (await kb0.count()) ? await kb0.getAttribute("data-name") : "";
+      note(S.step, "検入高さの欄 " + kname + " / " + (await page.locator("#kenhBoxes input.cellin").count()));
+      const kb = page.locator(`#kenhBoxes input[data-name="${kname}"]`);
+      if (kname) {
+        await kb.fill(kname === "KenHBox7" ? "12" : "12.3");
+        await page.click('#subtabs [data-tab="strain"]'); await W(600);
+        await page.click('#subtabs [data-tab="kenh"]'); await W(300);
+        const v1 = await kb.inputValue();
+        const want = kname === "KenHBox7" ? "12" : "12.3";
+        check(v1 === want, S.step, "検入高さ: タブを閉じても残る " + v1);
+        await page.reload(); await W(1500); await closeDialogs();
+        await page.click('#subtabs [data-tab="kenh"]').catch(() => {}); await W(300);
+        const v2 = await kb.inputValue().catch(() => "");
+        check(v2 === want, S.step, "検入高さ: 読み込み直しても残る " + v2);
+        await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark")); await W(200);
+      } else {
+        check(false, S.step, "検入高さの欄がない");
+      }
+    }
     // 包装仕様の注意・梱包保護材: 1 つの大きな窓。確認を押すまで閉じない
     await page.evaluate(async () => {
       const jb = await import("/static/js/judgebox.js");
@@ -291,6 +321,19 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     check(await page.locator("#packingBox[open]").count() === 1, S.step, "Esc では閉じない");
     await page.click("#packingBox .packbox__ok"); await W(200);
     check(await page.locator("#packingBox[open]").count() === 0, S.step, "確認で閉じる");
+    // 2026-11-12: QF空冷の品証連絡も同じ大きな窓(確認まで閉じない)
+    await page.evaluate(async () => {
+      const jb = await import("/static/js/judgebox.js");
+      jb.collectPacking({ kind: "qf_cooling", text: "指定ファイルに写真確認Noに入力がない\r\n品証連絡" });
+    });
+    await W(400);
+    const qhead = await page.evaluate(() => document.querySelector("#packingBox[open] .packbox__head")?.textContent);
+    check(qhead === "品証連絡", S.step, "QF空冷の品証連絡を大きな窓に " + qhead);
+    await shot(page, "kensa_qf_cooling_dark");
+    await page.keyboard.press("Escape"); await W(200);
+    check(await page.locator("#packingBox[open]").count() === 1, S.step, "QF: Esc では閉じない");
+    await page.click("#packingBox .packbox__ok"); await W(200);
+    check(await page.locator("#packingBox[open]").count() === 0, S.step, "QF: 確認で閉じる");
     await page.evaluate(() => { delete document.documentElement.dataset.theme; });
 
     // ---- 2026-11-12 現場の声: 検査員・ロットは別の入力欄 / 歪は欄を離れても判定 / 表示の選び方 / ラテラルボー要 ----

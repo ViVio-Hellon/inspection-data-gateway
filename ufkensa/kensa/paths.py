@@ -88,6 +88,10 @@ ITEMS: tuple[PathItem, ...] = (
              "VC の種類の画像(<品名ｺｰﾄﾞ>.JPG)。空なら 参照用ファイル\\VC種類画像"),
     PathItem("quality_photo", "品質写真", "QualityPath & \"品質写真\"", "",
              "品質基準画面の写真(フォルダごとにタブ、中の .jpg)。空なら 品証やり取り\\品質写真"),
+    # 2026-11-12: QF空冷時間チェックリストを使用パスに(検査の Conductiv_Coolingtime_Check と保守の QF空冷時間タブ)
+    PathItem("qf_cooling", "QF空冷時間チェックリスト", "QualityPath & \"75S・14S焼入れチェック\\QF空冷時間チェックリスト.xlsx\"",
+             "", "導電率の測定が要るロットの写真確認No を引く xlsx(Sheet1)。"
+             "空なら 品証やり取り\\75S・14S焼入れチェック\\QF空冷時間チェックリスト.xlsx", kind="file"),
     # 2026-11-09: 判定の画像はフォルダをやめ、絵ごとにファイルを決める(空なら同梱の VBA の絵)。
     # 前の「判定の画像」フォルダ(judge_images)は _saved で 1 回だけ枠へ読み替える
     PathItem("judge_ok", "合格の画像", "UFOK のフォームの絵", "",
@@ -373,11 +377,16 @@ def _lot_slot(key: str, slot: Optional[str]) -> str:
 #: 画像のフォルダ(2026-11-05 依頼で使用パスに出した)。決めていなければ VBA と同じく元のフォルダの下
 DERIVED = {"pack_spec": ("quality", "包装仕様書"), "vc_images": ("packing", "VC種類画像"),
            "quality_photo": ("quality", "品質写真")}
+#: ファイルの項目(末尾に \\ を付けない)。2026-11-12
+DERIVED_FILES = {"qf_cooling": ("quality", "75S・14S焼入れチェック\\QF空冷時間チェックリスト.xlsx")}
 
 
 def slot_default(key: str, slot: str = FIRST) -> str:
     """既定値。仕掛台帳は第1 / 第2、ほかは slot によらず 1 つ。画像のフォルダは元のフォルダの下。"""
     item = BY_KEY[_key(key)]
+    if item.key in DERIVED_FILES:
+        base, sub = DERIVED_FILES[item.key]
+        return join(slot_value(base), *sub.split("\\"))
     if item.key in DERIVED:
         base, sub = DERIVED[item.key]
         return join(slot_value(base), sub) + "\\"

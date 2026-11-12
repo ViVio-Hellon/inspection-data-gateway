@@ -40,7 +40,7 @@ function style() {
     .packbox__body { overflow: auto; padding: 8px 24px; }
     .packbox__sec { margin: 12px 0; }
     .packbox__sec h3 { margin: 0 0 6px; font-size: 22px; color: #e65100; border-bottom: 2px solid #ffcc80; }
-    .packbox__sec ul { margin: 0; padding-left: 28px; font-size: 24px; font-weight: 700; line-height: 1.5; }
+    .packbox__sec ul { margin: 0; padding-left: 28px; font-size: 24px; font-weight: 700; line-height: 1.5; white-space: pre-line; }
     .packbox__foot { display: flex; justify-content: flex-end; padding: 12px 24px 20px; }
     .packbox__ok { font-size: 24px; font-weight: 700; padding: 12px 48px; border-radius: 10px; border: 0;
                    background: #ef6c00; color: #fff; cursor: pointer; }
@@ -110,7 +110,8 @@ export function alarmBox(text) {
    MsgBox。トーストでは見落とすので、1 つの大きな窓にまとめ、「確認」を押すまで閉じない(Esc でも閉じない)。
    sections: [{title, lines: [文…]}](文はサーバの原文のまま) */
 let packQueue = Promise.resolve();
-export const PACKING_TITLES = { packing_spec: "包装仕様の注意", packing_material: "梱包保護材" };
+export const PACKING_TITLES = { packing_spec: "包装仕様の注意", packing_material: "梱包保護材",
+  qf_cooling: "品証連絡(QF空冷時間・導電率)" };   // 2026-11-12: QF空冷の品証連絡も同じ窓に(文は原文のまま)
 export function packingBox(sections) {
   const run = () => new Promise((resolve) => {
     style();
@@ -125,6 +126,9 @@ export function packingBox(sections) {
         <div class="packbox__foot"><button class="packbox__ok" type="button">確認</button></div>`;
       document.body.appendChild(d);
     }
+    const shown = sections.filter((s) => s.lines.length);
+    d.querySelector(".packbox__head").textContent =
+      shown.length && shown.every((s) => s.kind === "qf_cooling") ? "品証連絡" : "包装の注意";
     d.querySelector(".packbox__body").replaceChildren(...sections.filter((s) => s.lines.length).map((s) => {
       const sec = document.createElement("section");
       sec.className = "packbox__sec";
@@ -153,7 +157,7 @@ let packPending = null;
 export function collectPacking(m) {
   if (!m || !PACKING_TITLES[m.kind] || !m.text) return false;
   if (!packPending) {
-    packPending = { packing_spec: [], packing_material: [] };
+    packPending = Object.fromEntries(Object.keys(PACKING_TITLES).map((k) => [k, []]));
     setTimeout(() => {
       const p = packPending;
       packPending = null;

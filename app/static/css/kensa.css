@@ -77,6 +77,14 @@
 .defprev__box { border: 1px solid var(--rule); border-radius: var(--radius-xs); background: var(--paper); height: 280px; overflow: auto; position: relative; }
 .defprev__box iframe { border: 0; display: block; width: 100%; height: 100%; background: var(--paper); }
 .defprev__empty { margin: 0; padding: 12px; color: var(--hue-slate); }
+/* 2026-11-12: 見本の箱は空いている高さいっぱいに伸ばす(はみ出すときだけ箱の中でスクロール) */
+.subpane[data-pane="bad"]:not([hidden]) { display: flex; flex-direction: column; }
+.subpane[data-pane="bad"] > .badpane { flex: 1 1 auto; min-height: 0; grid-template-rows: auto minmax(0, 1fr); align-items: stretch; }
+.badpane > .defprev { min-height: 0; }
+.badpane .defprev__box { flex: 1 1 auto; height: auto; min-height: 220px; }
+.kensa--compact[data-phase="measure"] .ksub .subpane[data-pane="bad"] { height: calc(100vh - 300px); }
+.kensa--alltab:not(.kensa--compact)[data-phase="measure"] .ksub .subpane[data-pane="bad"] { height: calc(100vh - 290px); }
+.kensa:not(.kensa--compact):not(.kensa--alltab) .badpane .defprev__box { min-height: max(280px, calc(100vh - 560px)); }
 .kenh { display: flex; flex-wrap: wrap; gap: 6px; }
 .kenh table { width: auto; }
 .vc { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -383,3 +391,12 @@ li.is-stale { opacity: .6; }
 .lathit { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; font-weight: 700;
           background: var(--warn-bg); color: var(--warn-fg); border: 1px solid var(--state-warn); }
 .lathit--row { display: block; margin: 2px 0 0; padding: 1px 6px; font-size: var(--fs-sm, 12px); white-space: normal; }
+
+/* 2026-11-12: Min/Max の範囲(VBA の TB_BackColor: 開始 = 橙、終了 = 青緑)。間の位置は薄く */
+.mgrid th[data-range="start"], .mgrid th[data-range="both"] { background: var(--range-start); color: var(--range-start-fg); }
+.mgrid th[data-range="end"] { background: var(--range-end); color: var(--range-end-fg); }
+.mgrid th[data-range="both"] { box-shadow: inset 0 -4px 0 var(--range-end); }
+.mgrid th[data-range="in"] { background: var(--accent-soft); color: var(--accent); }
+.range-hint { font-size: var(--fs-sm); margin: 6px 0 0; }
+.range-hint[data-bad="1"] { color: var(--state-error); font-weight: 700; }
+.checks-note { font-size: var(--fs-sm); margin: 0 0 8px; line-height: 1.5; }

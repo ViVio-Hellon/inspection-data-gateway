@@ -74,12 +74,25 @@ def write_qf_book(folder: Path, rows=QF_ROWS, head=QF_HEAD) -> Path:
     m = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
     r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
-    def row(n: int, vals) -> str:
-        cells = "".join(f'<c r="{chr(65 + i)}{n}" t="inlineStr"><is><t>{escape(str(v))}</t></is></c>'
-                        for i, v in enumerate(vals) if v != "")
-        return f'<row r="{n}">{cells}</row>'
+    def row(n: int, vals, s: int = 0, ht: str = "") -> str:
+        cells = "".join(f'<c r="{chr(65 + i)}{n}" s="{s}" t="inlineStr"><is><t>{escape(str(v))}</t></is></c>'
+                        for i, v in enumerate(vals) if v != "" or s)
+        return f'<row r="{n}"{ht}>{cells}</row>'
 
-    body = row(1, ["QF空冷時間チェックリスト"]) + row(4, head) + "".join(row(5 + i, v) for i, v in enumerate(rows))
+    # 2026-11-12: 見本(xlsx_html)を試せるよう、題の結合・列の幅・見出しの太字/塗り/罫線を持たせる
+    body = (row(1, ["QF空冷時間チェックリスト"], 1, ' ht="24" customHeight="1"') + row(4, head, 2)
+            + "".join(row(5 + i, v, 3) for i, v in enumerate(rows)))
+    cols = '<cols><col min="1" max="1" width="12" customWidth="1"/><col min="2" max="2" width="14" customWidth="1"/>' \
+           '<col min="5" max="5" width="13" customWidth="1"/></cols>'
+    merge = f'<mergeCells count="1"><mergeCell ref="A1:{chr(64 + len(head))}1"/></mergeCells>'
+    styles = (f'<styleSheet xmlns="{m}"><fonts count="2"><font><sz val="11"/></font><font><b/><sz val="14"/></font></fonts>'
+              '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFDDEBF7"/></patternFill></fill></fills>'
+              '<borders count="2"><border/><border><left style="thin"/><right style="thin"/><top style="thin"/>'
+              '<bottom style="thin"/></border></borders><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>'
+              '<xf numFmtId="0" fontId="1" fillId="0" borderId="0"><alignment horizontal="center"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="2" borderId="1"><alignment horizontal="center"/></xf>'
+              '<xf numFmtId="0" fontId="0" fillId="0" borderId="1"/></cellXfs></styleSheet>')
     p = Path(folder) / "75S・14S焼入れチェック" / "QF空冷時間チェックリスト.xlsx"
     p.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(p, "w") as z:
@@ -88,5 +101,7 @@ def write_qf_book(folder: Path, rows=QF_ROWS, head=QF_HEAD) -> Path:
         z.writestr("xl/_rels/workbook.xml.rels",
                    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
                    '<Relationship Id="rId1" Type="x" Target="worksheets/sheet1.xml"/></Relationships>')
-        z.writestr("xl/worksheets/sheet1.xml", f'<worksheet xmlns="{m}"><sheetData>{body}</sheetData></worksheet>')
+        z.writestr("xl/styles.xml", styles)
+        z.writestr("xl/worksheets/sheet1.xml",
+                   f'<worksheet xmlns="{m}">{cols}<sheetData>{body}</sheetData>{merge}</worksheet>')
     return p

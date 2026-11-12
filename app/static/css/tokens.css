@@ -241,6 +241,11 @@
   --flag-hold:#7c4dff;  --flag-hold-fg:#ffffff;  --flag-hold-line:#4b2bb3;
   /* 画像の下地。図面・写真は白い紙の上で見るものなので、テーマで変えない */
   --paper:#ffffff;
+  /* 2026-11-12: xlsx の見本(保守 → QF空冷時間)。紙と同じく白地に黒で、テーマで変えない */
+  --paper-ink:#000000; --paper-grid:#e3e3e3; --paper-head:#f2f2f2; --paper-head-fg:#444444;
+  --paper-head-line:#c8c8c8; --paper-hit:#ffd54f;
+  /* 2026-11-12: Min/Max の範囲(VBA の TB_BackColor: 開始 26367 = 橙、終了 13421619 = 青緑)。明暗どちらでも同じ */
+  --range-start:#ff6600; --range-start-fg:#ffffff; --range-end:#33cccc; --range-end-fg:#000000;
   /* 受信機カードのネオン表示(all-tools 日報と同じ見た目)。**わざとテーマで変えない** */
   --neon-bg:#060a1e; --neon-fg:#00ffcc;
 }

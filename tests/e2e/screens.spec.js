@@ -168,7 +168,15 @@ const PTY = process.env.E2E_PTY || "-";
     const qfOut = await page.locator("#qfOut").innerText();
     check(/103/.test(qfOut) && /7, 8/.test(qfOut), S.step, "L8281G0 → 7, 8 行目、写真確認No 103 " + qfOut.replace(/\s+/g, " "));
     check(await page.locator("#qfTable tr.is-hit").count() === 2, S.step, "当たった行を光らせる");
+    // 2026-11-12: シートの見た目(セルの結合・列の幅・見出しの塗り)
+    check(await page.locator("#qfSheet").isVisible(), S.step, "既定はシートの見た目");
+    check(await page.locator('#qfSheet table.xl td[colspan="6"]').count() === 1, S.step, "題の A1:F1 の結合");
+    check(await page.locator("#qfSheet tr.is-hit").count() === 2, S.step, "見た目でも当たった行を光らせる");
     await shot(page, "maint_qf");
+    await page.click('[data-qfview="table"]'); await W(200);
+    check(await page.locator("#qfGrid").isVisible() && !(await page.locator("#qfSheet").isVisible()), S.step, "表に切り替え");
+    await shot(page, "maint_qf_table");
+    await page.click('[data-qfview="sheet"]'); await W(200);
 
     // ---- 保守 → 端末設定(プリセットを外し、ラインリセット)----------------------------
     S.step = "maint_term";
