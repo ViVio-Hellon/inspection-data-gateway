@@ -1,4 +1,6 @@
-"""UF品質基準 の表示内容(VBA `【UFKen_11】Quality_DB`: DBdisplay外観_H / DBdisplay外観_S / DBdisplay歪)
+"""UF品質基準 の表示内容(VBA `【UFKen_11】Quality_DB`: DBdisplay外観_H / DBdisplay外観_S)
+
+DBdisplay歪(DIM_122 / QA_022_01)は VBA で止め忘れの経路なので移植しない(品質基準画面の歪は平坦度一覧QP追加)。
 
 画面のコントロールは `QualityForm` のフィールドで受け取り、書き換えた写しを返す(元は変えない)。
 VBA はモードレスのフォームに書き足していくので、前回の値が残る所(Sansyou1 への追記、範囲外の厚で
@@ -12,17 +14,14 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from . import datasource, match_rules, paths, size_thresholds, vbx
+from . import datasource, match_rules, paths, vbx
 from .flow import ERROR, Message
 from .quality import (NUM, STR, VAR, LotData, VbaRuntimeError, cell, check_condition, check_thickness, check_width, clng, col_of,
-                      csng, find_indices, loop_array, rgb, sika_ctx, sori_array, vcmp, veq, vsplit, vstr, vtrim, _quality_db)
+                      csng, rgb, sika_ctx, veq, vstr, _quality_db)
 
 VBCRLF = "\r\n"
 SYSTEM_BUTTON_FACE = -2147483648           # &H80000000(Noun の既定色)
 WHITE = rgb(255, 255, 255)
-HAKUDO_RED = rgb(175, 15, 5)               # 白銅(DIM_122_A)
-O_YELLOW = rgb(255, 255, 153)              # O 材(DIM_122_C)
-HX8_BLUE = rgb(0, 102, 204)                # Hx8 材(DIM_122_D)
 
 
 @dataclass
@@ -53,10 +52,6 @@ class QualityForm:
     TaHiz1: str = ""
     Naka1: str = ""
     Mimi1: str = ""
-    Naka2: str = ""
-    Mimi2: str = ""
-    Toukyu: str = ""
-    VcFlag: str = ""                       # VcFlag.Caption
     Sansyou1: str = ""
     KousinL1: str = ""
     KousinL2: str = ""
@@ -83,21 +78,6 @@ class ViewResult:
     form: QualityForm
     messages: list[Message] = field(default_factory=list)
     grade_array: Optional[list[list[Any]]] = None        # DBdisplay外観_H の戻り値(GradeArray)
-
-
-def _set(form: QualityForm, name: str, value: Any) -> None:
-    setattr(form, name, vstr(value))
-
-
-def _zero_clear(form: QualityForm, name: str) -> None:
-    """`If UF品質基準.X = 0 Then UF品質基準.X = ""`(テキストボックスの文字と 0 の比較)。"""
-    if veq(getattr(form, name), 0, VAR, NUM):
-        setattr(form, name, "")
-
-
-def _dedupe(text: str) -> str:
-    """Sansyou1 の空白区切りの語を Scripting.Dictionary で重複除去(最初の位置を残す)して Join。"""
-    return " ".join(dict.fromkeys(vsplit(text, " ")))
 
 
 def _lot_head(lot: LotData) -> tuple[Sequence[Any], list[str]]:
@@ -443,328 +423,4 @@ def display_appearance_s(lot: Optional[LotData], out_name: str, form: QualityFor
     form.L2_visible = False
     if not vbx.like(form.Sansyou1, "* Q-S-QA-SRF-128*"):
         form.Sansyou1 = form.Sansyou1 + " Q-S-QA-SRF-128"
-    return res
-
-
-# ------------------------------------------------------------------
-# 歪(QDB L700-1384)。UF品質基準 の手動検索だけで使う
-# ------------------------------------------------------------------
-VC_TARGETS = ("208PRNF", "V325NNF", "V311PNF")
-
-
-def display_distortion(lot: Optional[LotData], form: QualityForm, *, odr_db: Any = "SIKAODRNOW",
-                       quiet: bool = False) -> ViewResult:
-    """QDB.DBdisplay歪 (QDB:700-1384)。歪公差を UF品質基準 に表示する(DIM_122 系)。
-
-    odr_db: Arrbox と同じ場所(Main/Next)の SIKAODRNOW(VC の確認に使う)。
-    流れ: オーダー厚 <= 6 なら中耳(4級。フラットネス 3 なら 3級も) → VC 指定銘柄なら QA_022_01 →
-    DIM_122_B(鉄道ボディ) → DIM_122_A(白銅優先) → DIM_122_C(O 材) → DIM_122_D(Hx8 材)。
-    """
-    form = copy.deepcopy(form)
-    res = ViewResult(form)
-    msgs = res.messages
-    if lot is None:
-        msgs.append(Message(paths.missing_text("SIKALOTNOW"), ERROR, source="QDB:716"))
-        return res
-    if lot.fields is None:
-        return res
-    if lot.records is None:
-        if not quiet:
-            msgs.append(Message("SIKALOTNOWに該当ロットがありません_DBdisplay歪", ERROR, source="QDB:769"))
-        return res
-    la, hf = _lot_head(lot)
-    o_atu = csng(_lv(la, hf, "ｵｰﾀﾞｰ板厚"))
-    o_haba = csng(_lv(la, hf, "ｵｰﾀﾞｰ板幅"))
-    o_take = csng(_lv(la, hf, "ｵｰﾀﾞｰ板丈"))
-    m_atu = csng(_lv(la, hf, "製造板厚"))
-    m_haba = csng(_lv(la, hf, "製造板幅"))
-    m_take = csng(_lv(la, hf, "製造板丈"))
-    grade = vstr(_lv(la, hf, "品質ｸﾞﾚｰﾄﾞ_表面処理"))
-    flat = clng(_lv(la, hf, "品質ｸﾞﾚｰﾄﾞ_ﾌﾗｯﾄﾈｽ"))
-    nou = vstr(_lv(la, hf, "納入先名"))
-    youto = vstr(_lv(la, hf, "用途ｺｰﾄﾞ"))
-    vstr(_lv(la, hf, "用途名"))
-    order_no = vstr(_lv(la, hf, "ｵｰﾀﾞｰ番号"))
-    zai = vstr(_lv(la, hf, "製造材質"))
-    tyo = vstr(_lv(la, hf, "製造調質"))
-    form.Uatu = vbx.fmt(m_atu, "0.000")
-    form.Uhaba = vbx.fmt(m_haba, "0.0")
-    form.Utake = vbx.fmt(m_take, "0.0")
-    form.Uzai, form.Utyou, form.UYoucode, form.Uhyou = zai, tyo, youto, grade
-    form.Noun = nou
-    form.Noun_BackColor = SYSTEM_BUTTON_FACE
-    atu_flag = o_atu <= size_thresholds.thin_atu()       # 保守 → 寸法のしきい値(既定 6.0)
-    vc_flag = vbx.val(_lv(la, hf, "VC")) == 1
-
-    use_flag = False
-    if vc_flag:
-        vf = datasource.get_fields(odr_db, "仕掛")
-        if vf is not None:
-            c_a, c_b = col_of(vf, "VC_表"), col_of(vf, "VC_裏")
-            vcr = datasource.get_records(odr_db, "仕掛", "[受注番号]='" + order_no + "'")
-            if vcr is not None:
-                vca, vcb = vstr(cell(vcr[0], c_a)), vstr(cell(vcr[0], c_b))
-                use_flag = vca in VC_TARGETS or vcb in VC_TARGETS
-
-    db = _quality_db()
-
-    def dedupe() -> None:
-        form.Sansyou1 = _dedupe(form.Sansyou1)
-
-    # A. 中耳歪(オーダー厚 <= 6)
-    if atu_flag:
-        form.Toukyu = "4級"
-        done = False
-        f = datasource.get_fields(db, "耳歪4級")
-        rows = datasource.get_records(db, "耳歪4級") if f is not None else None
-        if f is not None and rows is not None:
-            form.Mimi1 = vbx.fmt(loop_array(rows, f, o_take, o_atu), "0.0")
-            _zero_clear(form, "Mimi1")
-            f = datasource.get_fields(db, "中歪4級")
-            rows = datasource.get_records(db, "中歪4級") if f is not None else None
-            if f is not None and rows is not None:
-                form.Naka1 = vbx.fmt(loop_array(rows, f, o_take, o_atu), "0.0")
-                _zero_clear(form, "Naka1")
-                form.Sansyou1 = form.Sansyou1 + " ﾌﾗｯﾄﾈｽ製品規格中耳歪(ｵｰﾀﾞｰ丈判定)"
-                done = True
-                if flat == 3:
-                    # 3級も表を引く(列は中歪4級のものを使う。VBA どおり)
-                    rows = datasource.get_records(db, "耳歪3級")
-                    if rows is None:
-                        done = False
-                    else:
-                        form.Mimi2 = vbx.fmt(loop_array(rows, f, o_take, o_atu), "0.0")
-                        _zero_clear(form, "Mimi2")
-                        rows = datasource.get_records(db, "中歪3級")
-                        if rows is None:
-                            done = False
-                        else:
-                            form.Naka2 = vbx.fmt(loop_array(rows, f, o_take, o_atu), "0.0")
-                            _zero_clear(form, "Naka2")
-                            form.Toukyu = "3級"
-                            form.Sansyou1 = form.Sansyou1 + " ﾌﾗｯﾄﾈｽ製品規格中耳歪(ｵｰﾀﾞｰ丈判定)"
-        if done:
-            dedupe()
-
-    # B. VC 指定(QA_022_01)
-    goto = ""
-    if use_flag:
-        f = datasource.get_fields(db, "QA_022_01")
-        if f is None:
-            return res
-        c_lo, c_hi, c_mg = col_of(f, "板厚下"), col_of(f, "板厚上"), col_of(f, "1m当たり平坦度上限")
-        rows = datasource.get_records(db, "QA_022_01")
-        if rows is None:
-            goto = "skipO"
-        else:
-            for r in rows:
-                lo = vbx.single(vbx.val(cell(r, c_lo)))
-                hi = vbx.single(vbx.val(cell(r, c_hi)))
-                if lo <= m_atu and hi >= m_atu:
-                    form.MG1 = vbx.fmt(cell(r, c_mg), "0.0")
-                    break
-            form.HaHiz1 = vbx.fmt(loop_array(rows, f, o_haba, o_atu), "0.0")
-            _zero_clear(form, "HaHiz1")
-            form.TaHiz1 = vbx.fmt(loop_array(rows, f, o_take, o_atu), "0.0")
-            _zero_clear(form, "TaHiz1")
-            form.VcFlag = "あり"
-            form.Sansyou1 = form.Sansyou1 + " QA-022-01"
-            dedupe()
-            return res
-
-    # C. DIM_122_B(鉄道ボディ)
-    if goto == "":
-        f = datasource.get_fields(db, "Q_S_QA_DIM_122_B")
-        if f is None:
-            goto = "skipO"
-        else:
-            C = {n: col_of(f, n) for n in ("用途コード", "板厚下", "板厚上", "板幅下", "板幅上", "板幅", "板丈")}
-            rows = datasource.get_records(db, "Q_S_QA_DIM_122_B", "[用途コード] LIKE '*" + youto + "*'")
-            if rows is None:
-                goto = "skip122A"
-            else:
-                # B89(QDB:1023): LIKE で絞った先頭行の用途コードだけを完全一致で見る。直すと全行を見る
-                look = rows
-                found = any(vtrim(x) == youto for r0 in look for x in vsplit(vstr(cell(r0, C["用途コード"])), ","))
-                if found:
-                    if len(zai) >= 4:
-                        zai = vbx.right(zai, 3)
-                    rows = datasource.get_records(db, "Q_S_QA_DIM_122_B",
-                                                  "[材質] LIKE '*" + zai + "*' AND  [調質] LIKE  '*" + tyo + "*'")
-                    if rows is None:
-                        return res
-                    for r in rows:
-                        lo = vbx.single(vbx.val(cell(r, C["板厚下"])))
-                        hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
-                        wlo = vbx.single(vbx.val(cell(r, C["板幅下"])))
-                        whi = vbx.single(vbx.val(cell(r, C["板幅上"])))
-                        if lo <= o_atu and hi >= o_atu and wlo <= o_haba and whi >= o_haba:
-                            form.HaHiz1 = vbx.fmt(cell(r, C["板幅"]), "0.0")
-                            _zero_clear(form, "HaHiz1")
-                            form.TaHiz1 = vbx.fmt(cell(r, C["板丈"]), "0.0")
-                            _zero_clear(form, "TaHiz1")
-                            form.Sansyou1 = form.Sansyou1 + " Q-S-QA-DIM-122_B"
-                            form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
-                            break
-                    dedupe()
-                    return res
-                goto = "skip122A"
-
-    # D. DIM_122_A(白銅を優先)
-    if goto == "skip122A":
-        goto = "skipO"
-        f = datasource.get_fields(db, "Q_S_QA_DIM_122_A")
-        if f is not None:
-            C = {n: col_of(f, n) for n in ("板厚下", "板厚上", "1m当たり平坦度上限", "納入フラグ", "材質")}
-            rows = datasource.get_records(db, "Q_S_QA_DIM_122_A",
-                                          "[用途コード] LIKE '*" + youto + "*' AND  [調質] LIKE  '*" + tyo + "*'")
-            if rows is not None:
-                width = len(rows[0])
-                arr_h: list[list[Any]] = [[None] * width for _ in rows]
-                n = 0
-                if len(zai) >= 4:
-                    zai = vbx.right(zai, 3)
-                haku = False
-                for r in rows:
-                    lo = vbx.single(vbx.val(cell(r, C["板厚下"])))
-                    hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
-                    if vbx.like(vstr(cell(r, C["材質"])), "*" + zai + "*"):
-                        if lo <= m_atu and hi >= m_atu:
-                            if veq(cell(r, C["納入フラグ"]), "白銅", VAR, STR) and vbx.like(nou, "*ﾊｸﾄﾞｳ*"):
-                                arr_h[n] = list(r)
-                                n += 1
-                                form.MG1 = vbx.fmt(cell(r, C["1m当たり平坦度上限"]), "0.0")
-                                form.Noun_BackColor = HAKUDO_RED
-                                haku = True
-                                break
-                if not haku:
-                    for r in rows:
-                        lo = vbx.single(vbx.val(cell(r, C["板厚下"])))
-                        hi = vbx.single(vbx.val(cell(r, C["板厚上"])))
-                        if vbx.like(vstr(cell(r, C["材質"])), "*" + zai + "*"):
-                            if lo <= m_atu and hi >= m_atu:
-                                if not veq(cell(r, C["納入フラグ"]), "白銅", VAR, STR):
-                                    arr_h[n] = list(r)
-                                    n += 1
-                                    form.MG1 = vbx.fmt(cell(r, C["1m当たり平坦度上限"]), "0.0")
-                                    form.Noun_BackColor = WHITE
-                form.HaHiz1 = vbx.fmt(loop_array(arr_h, f, m_haba, m_atu), "0.0")
-                form.TaHiz1 = vbx.fmt(loop_array(arr_h, f, m_take, m_atu), "0.0")
-                _zero_clear(form, "HaHiz1")
-                _zero_clear(form, "TaHiz1")
-                if not (form.HaHiz1 == "" and form.TaHiz1 == ""):
-                    form.Sansyou1 = form.Sansyou1 + " Q-S-QA-DIM-122"
-                    dedupe()
-                    return res
-
-    # E. DIM_122_C(O 材)
-    f = datasource.get_fields(db, "Q_S_QA_DIM_122_C")
-    if f is None:
-        return res
-    C = {n: col_of(f, n) for n in ("製造材質", "用途コード", "板厚下", "板厚上", "オーダー板幅", "幅公差", "丈公差",
-                                   "納入先名", "パターン")}
-    rows = datasource.get_records(db, "Q_S_QA_DIM_122_C", "[調質] LIKE '*" + tyo + "*'")
-    if rows is not None:
-        if len(zai) >= 4:
-            zai = vbx.right(zai, 3)
-        matched = False
-        for r in rows:
-            if not vbx.like(vstr(cell(r, C["製造材質"])), "*" + zai + "*"):
-                continue
-            if not vbx.like(vstr(cell(r, C["用途コード"])), "*" + youto + "*"):
-                continue
-            if not vbx.like(nou, "*" + vstr(cell(r, C["納入先名"])) + "*"):
-                continue
-            # B71(QDB:1245-1247): 板厚下・上は Single、Val(オーダー厚) は Double。直すと下・上も Double
-            lo = vbx.val(cell(r, C["板厚下"]))
-            hi = vbx.val(cell(r, C["板厚上"]))
-            if not (lo <= vbx.val_single(o_atu) and hi >= vbx.val_single(o_atu)):
-                continue
-            # B71(QDB:1251・1257): DB の幅(文字列 → Double)と Single のオーダー幅を比べる。
-            # 直すとオーダー幅も Val(Single)(有効 7 桁の Double)にして同じ精度で比べる
-            w = vbx.val_single(o_haba)
-            pat = cell(r, C["パターン"])
-            hit = False
-            if vstr(pat) != "":
-                if veq(pat, 1, VAR, NUM):
-                    hit = vcmp(cell(r, C["オーダー板幅"]), w, VAR, NUM) >= 0
-                elif veq(pat, 2, VAR, NUM):
-                    hit = vcmp(cell(r, C["オーダー板幅"]), w, VAR, NUM) <= 0
-            else:
-                hit = True
-            if hit:
-                form.HaHiz1 = vbx.fmt(cell(r, C["幅公差"]), "0.0")
-                form.TaHiz1 = vbx.fmt(cell(r, C["丈公差"]), "0.0")
-                form.Noun_BackColor = O_YELLOW
-                matched = True                       # 最後に一致した行が残る
-        _zero_clear(form, "HaHiz1")
-        _zero_clear(form, "TaHiz1")
-        if matched:
-            # B27: 一致が無くても「不問」と参照元を付ける
-            form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
-            form.Sansyou1 = form.Sansyou1 + " Q-S-QA-DIM-122_O"
-        dedupe()
-        return res
-
-    # F. DIM_122_D(Hx8 材)
-    f = datasource.get_fields(db, "Q_S_QA_DIM_122_D")
-    if f is None:
-        return res
-    C = {n: col_of(f, n) for n in ("製造材質", "製造調質", "用途コード", "オーダー板厚", "幅公差", "丈公差", "納入先名",
-                                   "フラットネス品質等級")}
-    if len(zai) >= 4:
-        zai = vbx.right(zai, 3)
-    rows = datasource.get_records(db, "Q_S_QA_DIM_122_D", "[製造材質] LIKE '*" + zai + "*'")
-    if rows is None:
-        return res
-    tyo_a, tyo_k = vbx.left(tyo, 1), vbx.right(tyo, 1)
-    # VBA の For は上限を最初に決める。列番号(C)も最初の表のまま。配列だけ差し替わることがある(B27)
-    arr = rows
-    itti = False
-    hit_any = False                 # 条件(調質・用途・納入先・厚)に当たった行があった(B73)
-    for i in range(len(rows)):
-        r = arr[i] if i < len(arr) else None
-        if r is None:
-            raise VbaRuntimeError(9, "差し替えたソリ表の行が足りません")
-        if not vbx.like(vstr(cell(r, C["製造調質"])), tyo_a + "*" + tyo_k):
-            continue
-        if not vbx.like(vstr(cell(r, C["用途コード"])), "*" + youto + "*"):
-            continue
-        if not vbx.like(nou, "*" + vstr(cell(r, C["納入先名"])) + "*"):
-            continue
-        if vbx.val(cell(r, C["オーダー板厚"])) != vbx.val_single(o_atu):
-            continue
-        hit_any = True
-        if vstr(cell(r, C["フラットネス品質等級"])) == "":
-            form.HaHiz1 = vbx.fmt(cell(r, C["幅公差"]), "0.0")
-            _zero_clear(form, "HaHiz1")
-            form.TaHiz1 = vbx.fmt(cell(r, C["丈公差"]), "0.0")
-            _zero_clear(form, "TaHiz1")
-            form.Noun_BackColor = HX8_BLUE
-            form.Sansyou1 = form.Sansyou1 + " Q-S-QA-DIM-122_D"
-            itti = True
-        else:
-            sori = "ソリ4級" if flat == 4 else ("ソリ3級" if flat == 3 else "")
-            if sori:
-                sf = datasource.get_fields(db, sori)
-                if sf is None:
-                    return res
-                sr = datasource.get_records(db, sori)
-                if sr is None:
-                    return res
-                form.Sansyou1 = form.Sansyou1 + " 製品規格_" + sori
-            # 直す: ソリ表は DBQP と同じく FindIndices + SoriArray で引き、ここで止める
-            if sori:
-                form.HaHiz1 = vbx.fmt(sori_array(sr, sf, o_atu, find_indices(sf, "H", o_haba)[0]), "0.0")
-                form.TaHiz1 = vbx.fmt(sori_array(sr, sf, o_atu, find_indices(sf, "T", o_take)[0]), "0.0")
-            form.Noun_BackColor = HX8_BLUE
-            itti = True
-        if itti:
-            break
-    _zero_clear(form, "HaHiz1")
-    _zero_clear(form, "TaHiz1")
-    if hit_any:
-        # B73: VBA は一致が無くても中耳を「不問」で上書きする。直した場合は一致した行があったときだけ
-        form.Mimi1 = form.Naka1 = form.Mimi2 = form.Naka2 = "不問"
-    dedupe()
     return res

@@ -13,7 +13,8 @@ VBA は UF1 のラベル・テキストボックスの Caption/Text/BackColor/Ta
     "OK" = 13434828(薄い緑) / "NG" = 8421631(コーラル) / "" = 白(16777215) / "黄" = RGB(255,255,0)
 
 【他の担当に任せているもの(値を引数で受け取る)】
-- BhSearch(品質基準 Q_S_KE_ALL_053 のバーコール下限値。Quality_DB)→ `bh_lower`
+- BhSearch(品質基準 Q_S_KE_ALL_053 のバーコール下限値)→ `bh_lower`。2026-11: 表が品質基準 DB から無くなったので
+  呼び出し側は引かず 0(BH は値を持つだけで判定しない =「不要」)
 - GetWorkerName(Worker)→ `worker_name`
 - Arrbox / ReadCheck / TimeDesignation / FileDesignation(AccHIki・SaveLoad)→ 呼び出し可能な引数
 - MsgError(OutTolerance)→ `Outcome.msg_errors` に積む。表示・ログ・UF1.Hide は MsgError 側

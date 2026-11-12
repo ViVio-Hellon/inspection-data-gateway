@@ -1,5 +1,4 @@
-"""照合ルール 第4段(外観_H = Q_S_QA_124_別表2 / 外観_S = SRF_128_別表1 / ラテラル = DIM_179 日車・白銅滑川 /
-BH = Q_S_KE_ALL_053)の特性テストの入力と、いまの結果の記録(2026-11-11)。
+"""照合ルール 第4段(外観_H = Q_S_QA_124_別表2 / 外観_S = SRF_128_別表1 / ラテラル = DIM_179 日車・白銅滑川)の特性テストの入力と、いまの結果の記録(2026-11-11)。
 
 記録は `tests/fixtures/match_rules/characterization_p4.json`。作り直すとき(いまのコードの結果を正とする):
 
@@ -10,7 +9,6 @@ BH = Q_S_KE_ALL_053)の特性テストの入力と、いまの結果の記録(20
   含まない・空)、寸法(表の下限・上限ちょうど / ±0.01、空 = 型エラー)
 - 表: base(基準データ)/ syn(試験用の行を足した表。124 別表2 には 調質 の列も足す。空のセル・≠・*X*・
   厚フラグなし・同じ調質の重なり・Null の材質)
-- BH: 表の材質(右3文字・4 文字以上)× 調質 + 空・' (Filter の構文エラー)・*
 """
 from __future__ import annotations
 
@@ -25,8 +23,6 @@ RECORD = Path(__file__).resolve().parent / "fixtures" / "match_rules" / "charact
 H_BASE = ("H8401Z0", "L726M50", "L9150S0")       # 外観_H・外観_S・ラテラルで差し替えに使うロット
 S_BUTTONS = ("トビコミ", "キズ,スリキズ", "無いボタン")
 LATERAL = ("日車", "白銅滑川")
-BH_ZAI_EXTRA = ("", "U74", "XU74", "U7", "52S", "A5052S", "17Ｓ", "14Ｓ", "*", "'", "ZZZ")
-BH_TYO_EXTRA = ("", "T4", "T6", "O", "H112", "t6")
 
 
 def _float(t: Any) -> Any:
@@ -147,18 +143,6 @@ def lateral_cases() -> list[tuple[str, dict, str]]:
     return out
 
 
-def bh_cases() -> list[tuple[str, str]]:
-    from tests.match_rules_cases import lot_form
-    zai = list(BH_ZAI_EXTRA) + _tokens(_col("Q_S_KE_ALL_053", "材質"))
-    zai += ["X" + z for z in _col("Q_S_KE_ALL_053", "材質") if z]
-    tyo = list(BH_TYO_EXTRA) + [str(x) for x in _col("Q_S_KE_ALL_053", "調質")]
-    out = [(z, y) for z in dict.fromkeys(zai) for y in dict.fromkeys(tyo)]
-    for lot in _lots():
-        lv = lot_form(lot)
-        out.append((lv.form("Zai"), lv.form("Tyu")))
-    return list(dict.fromkeys(out))
-
-
 def _err(e: Exception) -> str:
     return "ERR:" + type(e).__name__
 
@@ -202,14 +186,6 @@ def run_lateral(case: tuple) -> Any:
     return [v, _msgs(msgs)]
 
 
-def run_bh(case: tuple) -> Any:
-    from ufkensa.kensa import quality as q
-    try:
-        return q.bh_search(*case)
-    except Exception as e:  # noqa: BLE001
-        return _err(e)
-
-
 #: 試験用に足す行(表 → (列, 行))
 SYN_ROWS: dict[str, tuple[tuple[str, ...], tuple[tuple[Any, ...], ...]]] = {
     "Q_S_QA_124_別表2": (
@@ -232,9 +208,6 @@ SYN_ROWS: dict[str, tuple[tuple[str, ...], tuple[tuple[Any, ...], ...]]] = {
     "Q_S_QA_DIM_179_白銅滑川": (
         ("管理番号", "材質", "板厚下", "板厚上", "厚", "板幅下", "板幅上", "幅", "1500", "2500", "9999"),
         ((901, "ZZ*", "0", "500", "", "0", "9999", "", "8", "8", "8"),)),
-    "Q_S_KE_ALL_053": (
-        ("材質", "調質", "バーコール下限値"),
-        (("U74", "T4", "99"), ("", "T6", "11"), (None, "O", "12"), ("XU74Y", "T4", "13"), ("52S", "", "14"))),
 }
 
 
@@ -256,7 +229,7 @@ def _key(c: tuple) -> str:
     return json.dumps(c, ensure_ascii=False, sort_keys=True)
 
 
-KINDS = ("h", "s", "lateral", "bh")
+KINDS = ("h", "s", "lateral")
 
 
 def each(tmp: Path) -> Iterator[tuple[str, str, Any, tuple]]:
@@ -268,8 +241,7 @@ def each(tmp: Path) -> Iterator[tuple[str, str, Any, tuple]]:
     for name, folder in (("base", base), ("syn", syn)):
         kensa_fixture.use_offline(folder)
         cache_registry.clear_all()
-        for kind, cases, fn in (("h", h_cases, run_h), ("s", s_cases, run_s), ("lateral", lateral_cases, run_lateral),
-                                ("bh", bh_cases, run_bh)):
+        for kind, cases, fn in (("h", h_cases, run_h), ("s", s_cases, run_s), ("lateral", lateral_cases, run_lateral)):
             for c in cases():
                 yield name, kind, fn, c
     kensa_fixture.use_offline()
