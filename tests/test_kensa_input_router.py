@@ -238,6 +238,15 @@ class InpChangeTest(QuirkCase):
         self.assertEqual([c[0] for c in h.calls], ["calculate_sheets", "loop_text", "posting", "out_tolerance"])
         self.assertEqual(h.calls[1], ("loop_text", "S1"))
 
+    def test_strain_target_does_not_take_reading(self) -> None:
+        # 2026-11-12: 歪の欄(ZS)を手で選んだまま DT が届いても止まらず、測定表の次に空いた厚の欄へ入る
+        s = ready()
+        h = FakeHooks()
+        s.inp_tag = "ZS"
+        s.auto = "off"
+        ir.receive(s, "DT10002+0000021.712M", h)
+        self.assertEqual(s.cells["S1"].value, "21.712")
+
     def test_manual_target_kind_mismatch(self) -> None:
         # I8(2026-11-11): 手で選んだ欄が届いた種類の行でなければ、その欄に入れず種類の行の次に空いた欄へ
         s = ready()
