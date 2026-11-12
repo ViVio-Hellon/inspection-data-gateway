@@ -293,6 +293,92 @@ const WL = { "5": "1252.3", "6": "1252.5", "7": "2502.4", "8": "2502.6", "9": "2
     check(await page.locator("#packingBox[open]").count() === 0, S.step, "確認で閉じる");
     await page.evaluate(() => { delete document.documentElement.dataset.theme; });
 
+    // ---- 2026-11-12 現場の声: 検査員・ロットは別の入力欄 / 歪は欄を離れても判定 / 表示の選び方 / ラテラルボー要 ----
+    S.step = "add-split";
+    await page.setViewportSize({ width: 1366, height: 768 }); await W(300);
+    await page.locator("#ksteps li").nth(0).click(); await W(300);
+    check(await page.locator("#kAdd[open]").count() === 1 && await page.locator("#cardIn").isVisible()
+      && await page.locator("#lotIn").isHidden(), S.step, "検査員の追加は社員カードの欄だけ");
+    await page.locator("#cardIn").fill("12345"); await page.keyboard.press("Escape"); await W(300);
+    await page.locator("#ksteps li").nth(2).click(); await W(300);
+    check(await page.locator("#lotIn").isVisible() && await page.locator("#cardIn").isHidden()
+      && await page.locator("#lotIn").inputValue() === "", S.step, "ロットの読み直しは LotNo の欄だけ・空");
+    await page.locator("#lotIn").fill("H73"); await page.click("#kAddClose"); await W(300);
+    await page.locator("#ksteps li").nth(0).click(); await W(300);
+    check(await page.locator("#cardIn").inputValue() === "", S.step, "やめたあと開き直すと打ちかけは残らない");
+    await page.click("#kAddClose"); await W(300);
+
+    S.step = "layout-mode";
+    const fits = async () => page.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight,
+      sw: document.documentElement.scrollWidth, iw: innerWidth }));
+    await page.click('[data-rtab="ops"]'); await W(200);
+    for (const [w, h] of [[1920, 1080], [1366, 768]]) {
+      await page.setViewportSize({ width: w, height: h }); await W(300);
+      await page.click("#layoutToggle"); await W(400);
+      const m = await page.evaluate(() => ({ all: document.getElementById("kensa").classList.contains("kensa--alltab"),
+        ctab: document.getElementById("kensa").dataset.ctab, gridTab: !!document.querySelector(".subtab--grid").offsetParent,
+        sub: !!document.getElementById("subCard").offsetParent, mg: !!document.getElementById("gridCard").offsetParent }));
+      check(m.all && m.ctab === "grid" && m.gridTab && m.mg, S.step, `${w}×${h} すべてタブ: 測定表がタブの 1 つ ` + JSON.stringify(m));
+      let f = await fits();
+      check(f.sh <= f.ih && f.sw <= f.iw, S.step, `${w}×${h} すべてタブでページがスクロールしない ` + JSON.stringify(f));
+      await shot(page, `kensa_layout_alltab_grid_${w}x${h}`);
+      await page.click('[data-tab="strain"]'); await W(300);
+      check(await page.locator("#gridCard").isHidden() && await page.locator("#strainGrid").isVisible(), S.step, `${w}×${h} 歪のタブで測定表は隠れる`);
+      f = await fits();
+      check(f.sh <= f.ih && f.sw <= f.iw, S.step, `${w}×${h} 歪タブでもスクロールしない ` + JSON.stringify(f));
+      await shot(page, `kensa_layout_alltab_strain_${w}x${h}`);
+      if (PTY !== "-") {
+        await feed("DT10001+0000015.010M"); await W(1500);
+        check(await page.evaluate(() => document.getElementById("kensa").dataset.ctab) === "grid", S.step, `${w}×${h} 測定値が来たら測定表のタブへ`);
+      }
+      await page.click("#layoutToggle"); await W(400);
+      const back = await page.evaluate(() => document.getElementById("kensa").classList.contains("kensa--alltab"));
+      check(!back, S.step, `${w}×${h} 測定+タブに戻せる`);
+      f = await fits();
+      check(f.sh <= f.ih && f.sw <= f.iw, S.step, `${w}×${h} 測定+タブでスクロールしない ` + JSON.stringify(f));
+      await shot(page, `kensa_layout_split_${w}x${h}`);
+    }
+    check(await page.evaluate(() => localStorage.getItem("kensa.layout")) === "split", S.step, "選んだ表示を覚える");
+
+    S.step = "strain-blur";
+    await page.click('[data-tab="strain"]'); await W(300);
+    const sent = [];
+    const onReq = (r) => { if (r.url().endsWith("/api/kensa/value")) { try { sent.push(JSON.parse(r.postData() || "{}").name); } catch { /* */ } } };
+    page.on("request", onReq);
+    const z = page.locator('#strainGrid input[data-name^="Z"]').first();
+    const zname = await z.getAttribute("data-name");
+    await z.click(); await z.fill("0.3"); await page.keyboard.press("Tab"); await W(800);
+    check(sent.filter((n) => n === zname).length === 1, S.step, "Enter なしで欄を離れると 1 回送る " + JSON.stringify(sent));
+    sent.length = 0;
+    const z2 = page.locator(`#strainGrid input[data-name="${zname}"]`);
+    await z2.click(); await z2.fill("0.4"); await page.keyboard.press("Enter"); await W(600);
+    await page.locator('[data-tab="visual"]').click(); await W(400);
+    check(sent.filter((n) => n === zname).length === 1, S.step, "Enter で送った値は離れても送り直さない " + JSON.stringify(sent));
+    page.off("request", onReq);
+    await page.click('[data-tab="strain"]'); await W(200);
+
+    S.step = "lateral-hit";
+    // 当たりのロットは手元の台帳に無いので、画面へ渡る view に当たりを足して描かせる(表示だけの確かめ)
+    const inject = async (route) => {
+      const r = await route.fetch(); const j = await r.json();
+      if (j && j.view) {
+        j.view.lateral_hit = { on: true, who: "ナメカワ", text: "3.0", source: ["製品規格のラテラルボー要", "DIM_179 日車/白銅滑川の表"] };
+        (j.view.grid.lateral || []).forEach((c) => { if (c.pos === "S" || c.pos === "U") c.visible = true; });
+      }
+      await route.fulfill({ response: r, json: j });
+    };
+    await page.route("**/api/kensa/state", inject);
+    await page.route("**/api/kensa/start", inject);
+    await page.reload(); await W(1800); await closeDialogs();
+    await page.click('[data-rtab="tol"]'); await W(300);
+    const lh = await page.locator("#latHit").innerText().catch(() => "");
+    check(/ラテラルボー要: ナメカワ/.test(lh) && /DIM_179/.test(lh), S.step, "公差のタブにラテラルボー要を出す " + lh);
+    const rowHit = await page.locator("#mgrid .lathit--row").innerText().catch(() => "");
+    check(/ナメカワ/.test(rowHit), S.step, "測定表のラテラルボーの行にも出す " + rowHit);
+    await shot(page, "kensa_lateral_hit_1366x768");
+    await page.unroute("**/api/kensa/state"); await page.unroute("**/api/kensa/start");
+    await page.click('[data-rtab="ops"]'); await W(200);
+
     // ---- 全ヵ所: 検入高さの欄(F5: 打っている途中の値を描き直しで消さない)-----------------
     S.step = "zenkasho";
     if (PTY !== "-") {

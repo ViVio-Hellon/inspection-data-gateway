@@ -161,7 +161,7 @@ function cellTd(c, cls, wt) {
 }
 
 /** 手入力の欄(VBA の TextBox)。Enter で送って測定値の欄へ戻る。 */
-function inputTd(c, name, { width = "5em", onFocus = null } = {}) {
+function inputTd(c, name, { width = "5em", onFocus = null, sendOnChange = false } = {}) {
   const td = document.createElement("td");
   td.className = "in";
   if (!c || c.visible === false) { td.dataset.hidden = "1"; return td; }
@@ -169,12 +169,22 @@ function inputTd(c, name, { width = "5em", onFocus = null } = {}) {
   const inp = el("input", { class: "cellin", value: c.value ?? "", autocomplete: "off", dataset: { name } });
   inp.style.width = width;
   if (c.enabled === false) inp.disabled = true;
+  let sentVal = inp.value;                      // 2 度送らないように、最後に送った値を覚える
   inp.addEventListener("keydown", async (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
+    sentVal = inp.value;
     await op("value", { name, value: inp.value });
     refocus();
   });
+  // 2026-11-12(歪): Enter を押さずに次の欄へ移っても判定する(欄を離れた = change)。Enter で送った値は送らない
+  if (sendOnChange) {
+    inp.addEventListener("change", () => {
+      if (inp.value === sentVal) return;
+      sentVal = inp.value;
+      op("value", { name, value: inp.value });
+    });
+  }
   if (onFocus) inp.addEventListener("focus", onFocus);
   td.append(inp);
   return td;
@@ -243,7 +253,10 @@ function renderGrid(g, v) {
     rows.push(rowOf(g.diag_kou_label, g.diag_kou.map((c) => inputTd(c, `Diag${c.pos}Kou`)), "sep", ""));
   }
   if (g.lateral.some((c) => c.visible !== false)) {
-    rows.push(rowOf(g.lateral_label, g.lateral.map((c) => inputTd(c, `Lateral${c.pos}`)), "sep", t.lateral_text || t.lateral_grade || ""));
+    const tr = rowOf(g.lateral_label, g.lateral.map((c) => inputTd(c, `Lateral${c.pos}`)), "sep", t.lateral_text || t.lateral_grade || "");
+    const hit = lateralHitText(v);
+    if (hit) { tr.lastChild.append(el("small", { class: "lathit lathit--row", textContent: hit })); tr.classList.add("is-lathit"); }
+    rows.push(tr);
   }
   if (g.ng.some((c) => c.visible !== false || NG_BADGE[String(c.value || "").trim()])) {
     const tr = rowOf("判定", g.ng.map((c) => {
@@ -284,7 +297,17 @@ function tolGroups(v) {
                                   ["フリー反り", t.flatnes_text || s.flatnes || ""]]],
   ];
 }
+/* 2026-11-12: ラテラルボー条件に当たった(VBA の Sumisei「ナメカワ」・LateralText.Tag="有")ことをずっと出す */
+function lateralHitText(v) {
+  const h = (v && v.lateral_hit) || {};
+  if (!h.on) return "";
+  const src = (h.source || []).join("・");
+  return `ラテラルボー要: ${h.who || "技術指示"}${h.text ? ` 公差 ${h.text}` : ""}${src ? `(${src})` : ""}`;
+}
 function renderTolGroups(v) {
+  const hit = lateralHitText(v);
+  $("latHit").hidden = !hit;
+  text($("latHit"), hit);
   $("tolKv").replaceChildren(...tolGroups(v).map(([title, pairs]) => {
     const dl = el("dl", { class: "kv-grid" });
     kv(dl, pairs.map(([k, x]) => [k, x || "-"]));
@@ -332,10 +355,10 @@ function renderStrain(v) {
     headRow(pos),
     rowOf(`${zLabel} 形状`, each((p) => selectTd(sc[`CB${p}1`], `CB${p}1`, (cb[p] || {})["1"]))),
     rowOf("上下・型", each((p) => selectTd(sc[`CB${p}2`], `CB${p}2`, (cb[p] || {})["2"]))),
-    rowOf(`${zLabel} 値`, each((p) => inputTd(zc[p], `Z${p}`, { width: "6.5em" }))),
+    rowOf(`${zLabel} 値`, each((p) => inputTd(zc[p], `Z${p}`, { width: "6.5em", sendOnChange: true }))),
     rowOf(`${gLabel} 形状`, each((p) => selectTd(sc[`CB${p}3`], `CB${p}3`, (cb[p] || {})["3"])), "sep"),
     rowOf("上下", each((p) => selectTd(sc[`CB${p}4`], `CB${p}4`, (cb[p] || {})["4"]))),
-    rowOf(`${gLabel} 値`, each((p) => inputTd(gc[p], `G${p}`, { width: "6.5em" }))),
+    rowOf(`${gLabel} 値`, each((p) => inputTd(gc[p], `G${p}`, { width: "6.5em", sendOnChange: true }))),
   );
   text($("faceLv"), v.strain.face === "Now_B" ? "B面" : "A面");
   $("aorbBtn").textContent = v.strain.face === "Now_B" ? "いま B面(A面へ)" : "いま A面(B面へ)";
@@ -621,10 +644,21 @@ async function watchLot() {
 }
 
 /* ---------- 検査員の追加・ロットの読み直し(上の帯の 1・3 を押す) ---------- */
+// 2026-11-12: 検査員とロットは別の窓(別の入力欄)。前に打ちかけた文字は開くとき・閉じるときに消す
+function clearAddInputs() { $("cardIn").value = ""; $("lotIn").value = ""; }
 function openAdd(id) {
   if (phase === "measure") {
     const d = $("kAdd");
-    if (!d.open) d.showModal();
+    const card = id === "cardIn";
+    $("cardBox").hidden = !card;
+    $("lotBox").hidden = card;
+    $("lotSrcRow").hidden = card;
+    text($("kAddTitle"), card ? "検査員の追加" : "ロットの読み直し");
+    text($("kAddHint"), card ? "社員カード(13桁)を読み取ると自動で受け付けます。"
+      : "LotNo(7桁)を読み取ると自動で受け付けます。同じ LotNo を入れると読み直します。");
+    if (d.open) d.close();
+    clearAddInputs();
+    d.showModal();
   }
   setTimeout(() => $(id).focus(), 0);
 }
@@ -648,6 +682,7 @@ function setPhase(p) {
   if (measure) add.append($("cardBox"), $("lotBox"), $("lotSrcRow"));
   else {
     if ($("kAdd").open) $("kAdd").close();
+    for (const id of ["cardBox", "lotBox", "lotSrcRow"]) $(id).hidden = false;
     $("workers").after($("cardBox"));
     $("lotEmpty").after($("lotBox"));
     $("lotBox").after($("lotSrcRow"));
@@ -978,26 +1013,56 @@ function initTabs() {
   // 「測定表」タブは そのときだけ出る。測定器から値が来たら測定表へ戻す
   const mq = window.matchMedia("(max-height: 900px)");
   const kensa = $("kensa");
+  // 2026-11-12: 表示の選び方(この PC で覚える)。all = 測定表も 歪・外観… と同じタブの 1 つにする
+  const tabbed = () => mq.matches || layoutMode() === "all";
   const apply = () => {
     kensa.classList.toggle("kensa--compact", mq.matches);
-    if (!mq.matches) { kensa.dataset.ctab = ""; return; }
+    kensa.classList.toggle("kensa--tabbed", tabbed());
+    kensa.classList.toggle("kensa--alltab", layoutMode() === "all");
+    if (!tabbed()) {
+      kensa.dataset.ctab = "";
+      if (tabs.some((t) => t.dataset.tab === "grid" && t.getAttribute("aria-selected") === "true")) show("strain");
+      return;
+    }
     const sel = tabs.find((t) => t.getAttribute("aria-selected") === "true");
     kensa.dataset.ctab = kensa.dataset.ctab || "grid";
     if (kensa.dataset.ctab === "grid") for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.tab === "grid"));
     else if (sel && sel.dataset.tab === "grid") kensa.dataset.ctab = "grid";
   };
   for (const t of tabs) t.addEventListener("click", () => {
-    if (!mq.matches) return;
+    if (!tabbed()) return;
     kensa.dataset.ctab = t.dataset.tab === "grid" ? "grid" : "sub";
     if (t.dataset.tab === "grid") for (const x of tabs) x.setAttribute("aria-selected", String(x === t));
   });
   showGridTab = () => {
-    if (!mq.matches || kensa.dataset.ctab === "grid") return;
+    if (!tabbed() || kensa.dataset.ctab === "grid") return;
     kensa.dataset.ctab = "grid";
     for (const x of tabs) x.setAttribute("aria-selected", String(x.dataset.tab === "grid"));
   };
   mq.addEventListener("change", apply);
+  const btn = $("layoutToggle");
+  const label = () => {
+    btn.setAttribute("aria-pressed", String(layoutMode() === "all"));
+    btn.textContent = layoutMode() === "all" ? "表示: すべてタブ" : "表示: 測定+タブ";
+  };
+  btn.addEventListener("click", () => {
+    try { localStorage.setItem(LAYOUT_KEY, layoutMode() === "all" ? "split" : "all"); } catch { /* 覚えられなくても動く */ }
+    layoutOverride = layoutOverride === "all" ? "split" : "all";
+    if (!tabbed()) kensa.dataset.ctab = "";
+    else kensa.dataset.ctab = "grid";
+    apply();
+    label();
+    refocus();
+  });
   apply();
+  label();
+}
+const LAYOUT_KEY = "kensa.layout";
+let layoutOverride = null;              // localStorage が使えないときも、この画面の間は切り替わる
+function layoutMode() {
+  if (layoutOverride) return layoutOverride;
+  try { layoutOverride = localStorage.getItem(LAYOUT_KEY) === "all" ? "all" : "split"; } catch { layoutOverride = "split"; }
+  return layoutOverride;
 }
 let showGridTab = () => {};
 
@@ -1074,6 +1139,7 @@ function init() {
   initReceiver();
   initDirect();
   $("kAddClose").addEventListener("click", () => { $("kAdd").close(); refocus(); });
+  $("kAdd").addEventListener("close", clearAddInputs);   // Esc・閉じる・受け付けのどれでも、打ちかけを残さない
   $("whoToggle").addEventListener("click", () => {
     try { localStorage.setItem(WHO_KEY, showWho() ? "0" : "1"); } catch { /* 覚えられなくても動く */ }
     $("whoToggle").setAttribute("aria-pressed", String(showWho()));

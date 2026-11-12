@@ -34,6 +34,7 @@ def _prepare() -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="ufkensa_e2e_"))
     db = kensa_fixture.copy_to(tmp / "db")
     kensa_fixture.use_offline(db)
+    kensa_fixture.write_qf_book(db)              # 保守 → QF空冷時間 の見本
     con = sqlite3.connect(db / "梱包資材マスタ.sqlite3")
     con.execute("CREATE TABLE 注意_包装仕様 (" + ",".join(f'"{c}"' for c in PACK_COLS) + ")")
     con.execute("INSERT INTO 注意_包装仕様 (包装仕様NO, 形状, コメント) VALUES ('ZZ', '板', '別の仕様')")

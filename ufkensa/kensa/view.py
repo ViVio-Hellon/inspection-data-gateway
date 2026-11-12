@@ -23,6 +23,7 @@ from .grid import KensaState
 #: BASE_KEYS は build が作る名前、EXTRA_KEYS は session(Session._extra / _extra_more)が足す名前
 BASE_KEYS = frozenset({
     "header", "tolerance", "grid", "strain", "bh", "bad", "ken_h", "ken_count", "visual", "next", "minmax", "blind",
+    "lateral_hit",
 })
 EXTRA_KEYS = frozenset({
     # Session._extra
@@ -101,7 +102,33 @@ def build(state: KensaState, extra: Optional[dict[str, Any]] = None) -> dict[str
         "minmax": {"amin": state.amin, "amax": state.amax, "hmin": state.hmin, "hmax": state.hmax,
                    "tmin": state.tmin, "tmax": state.tmax},
         "blind": state.blind_message,
+        "lateral_hit": lateral_hit(state),
     }
     if extra:
         out.update(extra)
     return out
+
+
+#: quality.ORANGE(RGB(255,153,0))。LateralText がこの色 = 公差を DIM_179 の表(日車 / 白銅滑川)から引いた
+_LATERAL_TABLE_COLOR = str(255 + 153 * 256)
+
+
+def lateral_hit(state: KensaState) -> dict[str, Any]:
+    """2026-11-12(現場の声): ラテラルボー条件に当たったことを画面にずっと出す。
+
+    VBA は Sumisei.Caption(ラテラル要の納入先。例「ナメカワ」)と LateralText(公差。Tag="有" は技術指示)で
+    知らせるだけで、どこから来たかは見えなかった。ここでは 当たり(on)・納入先・公差・出所 をまとめて渡す。表示だけ
+    """
+    tag = state.lateral_text_tag == "有"
+    on = state.sumisei != "" or tag
+    src = []
+    if state.sumisei != "":
+        src.append("製品規格のラテラルボー要")
+    lt = state.view.get("LateralText")
+    if lt is not None and lt.color == _LATERAL_TABLE_COLOR:
+        src.append("DIM_179 日車/白銅滑川の表")
+    if tag:
+        src.append("技術指示")
+    if "ﾗﾃﾗﾙﾎﾞ-追記公差あり" in state.additional:
+        src.append("追記公差あり")
+    return {"on": on, "who": state.sumisei, "text": state.lateral_text if on else "", "source": src}

@@ -234,11 +234,11 @@ li.is-stale { opacity: .6; }
 
 /* 低い画面(1366x768 など): 測定表と 歪・外観… を1つのタブ列にまとめる。「測定表」タブはこのときだけ */
 .subtab--grid { display: none; }
-.kensa--compact[data-phase="measure"] .subtab--grid { display: inline-block; }
-.kensa--compact[data-phase="measure"][data-ctab="grid"] .ksub .subpane { display: none !important; }
-.kensa--compact[data-phase="measure"][data-ctab="grid"] .ksub #faceLv { display: none; }
-.kensa--compact[data-phase="measure"][data-ctab="sub"] .kgrid { display: none !important; }
-.kensa--compact[data-phase="measure"] .ksub { order: -1; }
+.kensa--tabbed[data-phase="measure"] .subtab--grid { display: inline-block; }
+.kensa--tabbed[data-phase="measure"][data-ctab="grid"] .ksub .subpane { display: none !important; }
+.kensa--tabbed[data-phase="measure"][data-ctab="grid"] .ksub #faceLv { display: none; }
+.kensa--tabbed[data-phase="measure"][data-ctab="sub"] .kgrid { display: none !important; }
+.kensa--tabbed[data-phase="measure"] .ksub { order: -1; }
 .kensa--compact[data-phase="measure"] .kensa__center { gap: 6px; }
 .kensa--compact[data-phase="measure"] .mgrid-wrap { max-height: calc(100vh - 355px); }
 .kensa--compact[data-phase="measure"] .ksub .subpane { max-height: calc(100vh - 300px); overflow: auto; }
@@ -372,3 +372,14 @@ li.is-stale { opacity: .6; }
 /* 最近の操作は最新の 1 行だけ(広い画面では 8 行まで見える) */
 .kensa--compact[data-phase="measure"] [data-rpane="ops"] .log-lines { grid-column: 1 / -1; max-height: 1.3em; line-height: 1.3; overflow: hidden; }
 .kensa--compact[data-phase="measure"] [data-rpane="ops"] .log-lines li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 2026-11-12: 「表示: すべてタブ」— 測定表も 1 つのタブ。いま開いているタブが中央の高さいっぱいを使う */
+.kensa--alltab[data-phase="measure"] .kensa__center { display: flex; flex-direction: column; min-height: 0; }
+.kensa--alltab[data-phase="measure"][data-ctab="grid"] .kgrid { flex: 1 1 auto; min-height: 0; }
+.kensa--alltab:not(.kensa--compact)[data-phase="measure"] .mgrid-wrap { max-height: calc(100vh - 300px); overflow: auto; }
+.kensa--alltab[data-phase="measure"][data-ctab="sub"] .ksub { flex: 1 1 auto; min-height: 0; }
+.kensa--alltab:not(.kensa--compact)[data-phase="measure"] .ksub .subpane { max-height: calc(100vh - 290px); overflow: auto; }
+/* ラテラルボー要(当たったときだけ)。公差のタブと測定表のラテラルボーの行に出す */
+.lathit { margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; font-weight: 700;
+          background: var(--warn-bg); color: var(--warn-fg); border: 1px solid var(--state-warn); }
+.lathit--row { display: block; margin: 2px 0 0; padding: 1px 6px; font-size: var(--fs-sm, 12px); white-space: normal; }

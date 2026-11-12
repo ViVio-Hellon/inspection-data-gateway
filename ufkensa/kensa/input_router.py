@@ -356,7 +356,9 @@ def manual_target_mismatch(state: KensaState, pucket: str) -> bool:
         return False
     m = _CELL.match(state.inp_tag)
     if not m:
-        return False
+        # 2026-11-12: 歪(ZS 等)など測定表でない欄を手で選んだまま DT / #L が届くと、その欄の名前を位置として扱い
+        # 止まっていた。測定器の値は測定表の欄にしか入れない → 次に空いた欄へ回す
+        return True
     row = int(m.group(1))
     own = is_thick(row) if pucket == "DT" else not is_thick(row)
     return not own

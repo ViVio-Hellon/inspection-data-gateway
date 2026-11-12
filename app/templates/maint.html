@@ -22,6 +22,7 @@
       <button class="tab" role="tab" type="button" data-tab="confi">公差外の確認</button>
       <button class="tab" role="tab" type="button" data-tab="thresh">寸法のしきい値</button>
       <button class="tab" role="tab" type="button" data-tab="rules">照合ルール</button>
+      <button class="tab" role="tab" type="button" data-tab="qf">QF空冷時間</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -407,20 +408,53 @@
       </section>
     </section>
 
+    <!-- ================= QF空冷時間(読むだけ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="qf" id="pQf" hidden>
+      <div class="maint__two">
+        <section class="card">
+          <header><h3>QF空冷時間チェックリスト</h3><span class="lv" id="qfLv"></span></header>
+          <div class="pad">
+            <p class="muted maint__small">検査で 材質 75S/14S・調質 T6/T651 のロットを登録すると、このシート(Sheet1)の B 列で LotNo を引き、A 列の写真確認No を公差の下に出します(OutTolerance.Conductiv_Coolingtime_Check)。</p>
+            <div class="btn-row">
+              <label for="qfFilter">絞り込み</label>
+              <input class="input" id="qfFilter" placeholder="LotNo・写真確認No など" autocomplete="off">
+              <button class="btn" type="button" id="qfReload">読み直す</button>
+              <span class="muted maint__small" id="qfCount"></span>
+            </div>
+            <div class="maint__qfgrid"><table class="table table--dense" id="qfTable"></table></div>
+          </div>
+        </section>
+        <section class="card">
+          <header><h3>LotNo で試す</h3></header>
+          <div class="pad">
+            <form class="btn-row" id="qfTest" autocomplete="off">
+              <label for="qfLot">LotNo</label><input class="input" id="qfLot" maxlength="20" placeholder="例 H9022K1">
+              <label for="qfZai">材質</label><input class="input maint__short" id="qfZai" maxlength="6" placeholder="75S">
+              <label for="qfTyu">調質</label><input class="input maint__short" id="qfTyu" maxlength="6" placeholder="T651">
+              <button class="btn btn--run" type="submit">試す</button>
+            </form>
+            <p class="muted maint__small">材質・調質が空なら、導電率の測定が要る材質として見ます。</p>
+            <div id="qfOut"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
     <!-- ================= 端末設定・パスワード ================= -->
     <section class="tabpanel tabpanel--scroll" data-panel="term" id="pTerm" hidden>
       <div class="maint__two">
         <section class="card">
           <header><h3>端末設定のセット</h3><span class="lv" id="mTermLv"></span></header>
           <div class="pad">
-            <p class="muted maint__small">VBA のレジストリ「起動設定」(初期設定.AIM / HVC / DelSet)に当たります。</p>
+            <p class="muted maint__small">VBA のレジストリ「起動設定」(初期設定.DelSet)に当たります。</p>
             <dl class="maint__kv" id="mTerm"></dl>
-            <div class="btn-row maint__presets" id="mPresets"></div>
             <div class="btn-row">
+              <button class="btn btn--danger" type="button" id="mLineReset" title="VBA 初期設定.DelSet の DeleteSetting「設備名」に当たります">レジストリ消去(ラインリセット)</button>
               <button class="btn btn--danger" type="button" id="mClear">端末設定を消す</button>
               <a class="btn" href="/settings?tab=terminal" id="mToSettings">設定「この端末」を開く</a>
             </div>
-            <p class="muted maint__small">消すと、次に検査画面を開いたとき VBA の初期設定(SF3)と同じく「この端末」の設定を求めます。</p>
+            <p class="muted maint__small">ラインリセット: この PC のライン(設備名・号機・手で変えたライン・前に当てたライン)を消し、アクセス権限マスタで決まるラインを当て直します(決まらなければ未設定)。モードは残します。</p>
+            <p class="muted maint__small">端末設定を消す: 設備名・号機・モードを消し、次に検査画面を開いたとき VBA の初期設定(SF3)と同じく「この端末」の設定を求めます。</p>
           </div>
         </section>
         <section class="card">

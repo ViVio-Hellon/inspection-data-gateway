@@ -140,6 +140,7 @@ function showTab(name) {
   if (name === "judge") openJudge();
   if (name === "confi") openConfi();
   if (name === "thresh") openThresh();
+  if (name === "qf") openQf();
   if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -516,13 +517,6 @@ function renderTerm(t) {
   kv($("mTerm"), [["設備名", t.facility_text, t.unset ? "is-warn" : ""], ["号機", t.line_no], ["モード", t.mode_text]]);
   $("mTermLv").textContent = t.unset ? "未設定" : t.label;
   $("mTermLv").className = "lv " + (t.unset ? "lv--warn" : "lv--ok");
-  $("mPresets").replaceChildren(...t.presets.map((p) => {
-    const b = el("button", "btn btn--select", p.label);
-    b.type = "button";
-    b.title = p.vba;
-    b.addEventListener("click", () => setTerm(p.key, `端末設定を「${p.label}」にします。よろしいですか？`));
-    return b;
-  }));
 }
 
 async function setTerm(action, question) {
@@ -531,9 +525,11 @@ async function setTerm(action, question) {
     const d = await withUnlock(() => api.post("/api/maint/terminal", { action }));
     if (!d) return;                                           // 鍵の窓で「やめる」
     renderTerm(d.terminal);
-    toast("端末設定を変えました", "ok");
+    toast(d.note || "端末設定を変えました", "ok");
   } catch (err) { toastError(err); }
 }
+$("mLineReset").addEventListener("click", () => setTerm("line_reset",
+  "この PC のラインの保存値(設備名・号機・手で変えたライン・前に当てたライン)を消します(レジストリ消去)。消したあと、アクセス権限マスタで決まるラインを当て直します(決まらなければ未設定)。よろしいですか？"));
 $("mClear").addEventListener("click", () => setTerm("clear", "設備名・号機・モードを消します。次に検査画面を開くと、この端末の設定を求めます。よろしいですか？"));
 
 /* ---------- 判定の画像: 表示時間・大きさ(PC ごと。2026-11-09) ---------- */
@@ -925,6 +921,74 @@ $("rsForm").addEventListener("submit", (e) => {
 $("rsClear").addEventListener("click", () => rsSend("/api/remote_stop/clear", {}, ""));
 $("rsReload").addEventListener("click", loadRStop);
 
+/* ---------- 面ごと: 変えた値がどこに入るか・記録はどこか ---------- */
+function renderWhere(storage) {
+  for (const [tab, info] of Object.entries(storage)) {
+    const panel = document.querySelector(`[data-panel="${tab}"]`);
+    if (!panel) continue;
+    let box = panel.querySelector(":scope > .maint__where");
+    if (!box) { box = el("div", "maint__where"); panel.prepend(box); }
+    box.dataset.where = tab;
+    const line = (title, items) => {
+      const p = el("div");
+      p.append(el("b", "", title));
+      items.forEach(([what, where], i) => {
+        if (i) p.append("　");
+        p.append(where ? `${what}: ` : what);
+        if (where) p.append(el("code", "", where));
+      });
+      return p;
+    };
+    box.replaceChildren(line("保存先", info.store || []), line("記録", info.log || []));
+  }
+}
+
+/* ---------- QF空冷時間チェックリスト(読むだけ) ---------- */
+const QF = { data: null, hits: [] };
+function qfRender() {
+  const d = QF.data;
+  const t = $("qfTable");
+  if (!d) return;
+  $("qfLv").textContent = d.found ? `${d.rows.length} 行` : "読めません";
+  $("qfLv").className = "lv " + (d.found ? "lv--ok" : "lv--ng");
+  if (!d.found) { t.replaceChildren(); $("qfCount").textContent = d.problem; return; }
+  const q = $("qfFilter").value.trim().toUpperCase();
+  const rows = d.rows.filter((r) => !q || r.cells.some((c) => String(c).toUpperCase().includes(q)));
+  const head = el("tr");
+  head.append(el("th", "", "行"), ...d.columns.map((c) => el("th", "", `${c.col} ${c.head}`.trim())));
+  const body = rows.slice(0, 1000).map((r) => {
+    const tr = el("tr", QF.hits.includes(r.row) ? "is-hit" : "");
+    tr.append(el("td", "", String(r.row)), ...r.cells.map((c) => el("td", "", c)));
+    return tr;
+  });
+  const th = el("thead"); th.append(head);
+  const tb = el("tbody"); tb.append(...body);
+  t.replaceChildren(th, tb);
+  $("qfCount").textContent = `${rows.length} / ${d.rows.length} 行` + (rows.length > 1000 ? "(先頭 1000 行を表示)" : "");
+}
+async function openQf(force) {
+  if (QF.data && !force) return;
+  try { QF.data = await api.get("/api/maint/qf"); qfRender(); } catch (err) { toastError(err); }
+}
+$("qfFilter").addEventListener("input", qfRender);
+$("qfReload").addEventListener("click", () => openQf(true));
+$("qfTest").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try {
+    const r = await api.post("/api/maint/qf/test", { lot: $("qfLot").value, zai: $("qfZai").value, tyu: $("qfTyu").value });
+    QF.hits = r.hits;
+    const dl = el("dl", "maint__kv");
+    kv(dl, [["判定", r.verdict, r.label ? "" : "is-warn"],
+      ["当たった行", r.hits.length ? r.hits.join(", ") + (r.hits.length > 1 ? `(使うのは最後の ${r.used_row} 行目)` : "") : "なし"],
+      ["公差の下に出る写真確認No", r.label || "(出ない)"]]);
+    const ul = el("ul", "maint__small");
+    for (const m of r.messages) ul.append(el("li", "", m.replace(/\r\n/g, " ")));
+    $("qfOut").replaceChildren(dl, el("h4", "", "検査画面に出る知らせ"), ul);
+    if (r.hits.length) { $("qfFilter").value = r.lot; }
+    qfRender();
+  } catch (err) { toastError(err); }
+});
+
 async function init() {
   mountLockBadge($("mLock"));
   let tab = "dist";
@@ -937,6 +1001,7 @@ async function init() {
     $("mELine").replaceChildren(...d.facilities.map((f) => { const o = el("option", "", f); o.value = f; return o; }));
     if (d.terminal.facility) $("mELine").value = d.terminal.facility;
     renderTerm(d.terminal);
+    renderWhere(d.storage || {});
     await loadKari();
     renderPw(await adminState());
   } catch (err) { toastError(err); }

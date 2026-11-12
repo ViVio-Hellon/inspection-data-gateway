@@ -19,7 +19,7 @@ from typing import Optional
 
 from flask import Blueprint, jsonify, render_template, request
 
-from ufkensa import auth, trace
+from ufkensa import access_rights, auth, trace
 from ufkensa.kensa import kari_lot, maint, master_admin, store as st, terminal
 from ufkensa.kensa.flow import Stop
 from ufkensa.logging_utils import get_logger
@@ -75,7 +75,8 @@ def page():
 def state():
     return jsonify({"admin": auth.can_edit(), "lock": _lock_state(), "terminal": maint.terminal_state(),
                     "quality_db": str(maint.current_quality_db()), "facilities": list(terminal.FACILITIES),
-                    "labels": maint.DIST_LABELS, "keys": list(maint.DIST_KEYS)})
+                    "labels": maint.DIST_LABELS, "keys": list(maint.DIST_KEYS),
+                    "storage": maint.storage_info()})
 
 
 @bp.post("/api/maint/dist")
@@ -156,21 +157,52 @@ def equipment():
 
 @bp.post("/api/maint/terminal")
 def set_terminal():
-    """端末設定のセット(初期設定.AIM / HVC / DelSet)。"""
+    """端末設定のセット: 端末設定を消す(初期設定.DelSet)・レジストリ消去(ラインリセット)。"""
     if (d := _need_edit()) is not None:
         return d
     action = str(_body().get("action", ""))
     before = maint.terminal_state()
-    desc = {"AIM": "AIM のセット", "HVC": "HVC のセット", "clear": "端末設定を消す(DelSet)"}.get(action)
+    desc = {"clear": "端末設定を消す(DelSet)", "line_reset": "レジストリ消去(ラインリセット)"}.get(action)
     if desc is None:
         return _err("bad_value", f"知らない操作です: {action}")
+    note = ""
     with trace.timed("maint.terminal", f"保守: {desc}", expected=(ValueError,), action=action,
                      before={"設備名": before["facility_text"], "号機": before["line_no"], "モード": before["mode_text"]}) as info:
-        after = maint.clear_terminal() if action == "clear" else maint.apply_preset(action)
+        if action == "clear":
+            after = maint.clear_terminal()
+        else:
+            r = maint.line_reset()
+            info["removed"] = r["removed"]
+            info["removed_values"] = r["before"]
+            rights = auth.ensure().rights          # アクセス権限でこの PC のラインが決まれば当て直す(決まらなければ未設定のまま)
+            if rights is not None:
+                try:
+                    note = access_rights.apply_line(rights)
+                except Exception:                  # noqa: BLE001 - 当てられなくても消したことは返す
+                    log.warning("ラインリセットのあと、アクセス権限のラインを当てられませんでした", exc_info=True)
+            after = maint.terminal_state()
+            info["reapplied"] = note
         info["after"] = {"設備名": after["facility_text"], "号機": after["line_no"], "モード": after["mode_text"]}
-    log.info("保守: %s 設備名 %s → %s、モード %s → %s", desc, before["facility_text"], after["facility_text"],
-             before["mode_text"], after["mode_text"])
-    return jsonify({"terminal": after})
+    log.info("保守: %s 設備名 %s → %s、モード %s → %s %s", desc, before["facility_text"], after["facility_text"],
+             before["mode_text"], after["mode_text"], note)
+    return jsonify({"terminal": after, "note": note})
+
+
+# ------------------------------------------------------------------
+# QF空冷時間チェックリスト(読むだけ。誰でも)
+# ------------------------------------------------------------------
+@bp.get("/api/maint/qf")
+def qf_sheet():
+    return jsonify(maint.qf_sheet())
+
+
+@bp.post("/api/maint/qf/test")
+def qf_test():
+    b = _body()
+    try:
+        return jsonify(maint.qf_test(str(b.get("lot", "")), str(b.get("zai", "")), str(b.get("tyu", ""))))
+    except ValueError as e:
+        return _err("bad_value", str(e), field="lot")
 
 
 # ------------------------------------------------------------------
