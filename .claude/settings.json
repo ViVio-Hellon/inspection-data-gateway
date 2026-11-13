@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto|manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-c",
+              "import os,runpy,sys\ntry:\n d=os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd();sys.argv=['session_state','precompact'];runpy.run_path(os.path.join(d,'.claude','hooks','session_state.py'),run_name='__main__')\nexcept SystemExit:\n pass\nexcept BaseException:\n pass"
+            ],
+            "timeout": 30,
+            "statusMessage": "SESSION_STATE.md を控えています"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": [
+              "-c",
+              "import os,runpy,sys\ntry:\n d=os.environ.get('CLAUDE_PROJECT_DIR') or os.getcwd();sys.argv=['session_state','sessionstart'];runpy.run_path(os.path.join(d,'.claude','hooks','session_state.py'),run_name='__main__')\nexcept SystemExit:\n pass\nexcept BaseException:\n pass"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
