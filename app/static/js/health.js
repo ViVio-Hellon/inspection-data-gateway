@@ -6,7 +6,7 @@
   黙って古い表示を出し続けるほうが危険。
 */
 
-import { api } from "./api.js";
+import { api, abortAll } from "./api.js";
 import * as nav from "./nav.js";
 import * as unsaved from "./unsaved.js";
 
@@ -22,9 +22,25 @@ function setOffline(offline) {
   if (banner) banner.hidden = !offline;
 }
 
+// 2026-11-13: 切れたままこの回数続いたら、画面を読み込み直す(詰まった通り道ごと作り直す)。
+// 15秒ごとなので おおよそ1分。読み込み直しは2分に1回まで
+const MISSES_BEFORE_RELOAD = 4;
+const RELOAD_KEY = "ufkensa.health.reloadAt";
+let beating = false;
+
+function reloadIfStuck() {
+  let last = 0;
+  try { last = Number(sessionStorage.getItem(RELOAD_KEY) || 0); } catch { /* 使えない */ }
+  if (Date.now() - last < 120000) return;
+  try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch { /* 使えない */ }
+  location.reload();
+}
+
 async function beat() {
+  if (beating) return;                // 前の確認が返っていないのに重ねない
+  beating = true;
   try {
-    const body = await api.get("/api/health");
+    const body = await api.get("/api/health", { timeoutMs: 8000 });
     if (misses >= MISSES_BEFORE_OFFLINE) setOffline(false);
     misses = 0;
     // 保存していない図。タブを閉じるときに聞くため(`unsaved.js`)
@@ -34,7 +50,14 @@ async function beat() {
     // 画面ごとの見張りに渡す(一覧は `db_mtime` で「他の端末で更新」を出す)
     document.dispatchEvent(new CustomEvent("app:health", { detail: body || {} }));
   } catch {
-    if (++misses === MISSES_BEFORE_OFFLINE) setOffline(true);
+    ++misses;
+    if (misses >= MISSES_BEFORE_OFFLINE) {
+      setOffline(true);
+      abortAll();                     // 返ってこない問い合わせで通り道が埋まっていれば空ける
+    }
+    if (misses >= MISSES_BEFORE_RELOAD) reloadIfStuck();
+  } finally {
+    beating = false;
   }
 }
 
@@ -167,5 +190,6 @@ export function startHeartbeat() {
   startAlive();
 
   const reconnect = document.getElementById("reconnect");
-  if (reconnect) reconnect.addEventListener("click", () => { misses = 0; beat(); });
+  // 2026-11-13: 再接続は、詰まりごと消すため読み込み直す
+  if (reconnect) reconnect.addEventListener("click", () => { abortAll(); location.reload(); });
 }
