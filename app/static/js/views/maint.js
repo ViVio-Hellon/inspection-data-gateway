@@ -1210,7 +1210,8 @@ function rxRows() {
     const who = el("td"); who.append(el("span", "rx__dot " + kindClass(ln.port)), document.createTextNode(ln.port.startsWith("FTDI:") ? "U-WAVE-R" : ln.port));
     const ver = el("td"); ver.append(el("span", "lv " + v[1], v[0]));
     tr.append(el("td", "", ln.at), who, el("td", "rx__mono", ln.text), el("td", "rx__mono", ln.test?.value || ""), ver);
-    tr.addEventListener("click", () => rxSelect(ln));
+    // 2026-11-13: 文字をなぞって選んだ(コピーしたい)ときは選び直さない。選び直しても行は作り直さない
+    tr.addEventListener("click", () => { if (String(window.getSelection() || "")) return; rxSelect(ln); });
     tr.addEventListener("keydown", (e) => { if (e.key === "Enter") rxSelect(ln); });
     return tr;
   }));
@@ -1220,7 +1221,8 @@ function kindClass(port) { return (KIND[(RX.kinds || {})[port]] || KIND.com)[1];
 /** 案A: 受信機 → 文字列 → 入る値 → 測定機器ID の行 → 検査の判定。止まった段を赤く */
 function rxSelect(ln) {
   RX.selected = ln;
-  rxRows();
+  const i = RX.lines.indexOf(ln);
+  [...$("rxRows").children].forEach((tr, j) => tr.classList.toggle("is-sel", j === i));
   const t = ln.test || {};
   const v = rxVerdict(t);
   $("rxDetailTitle").textContent = `判定の流れ(${ln.at})`;

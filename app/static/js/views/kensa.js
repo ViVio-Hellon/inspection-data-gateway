@@ -943,7 +943,7 @@ function buildExtras() {
     rg.append(lab);
   }
   const mmRun = el("button", { type: "button", class: "btn btn--sm", textContent: "Min/Max", id: "mmBtn2" });
-  mmRun.addEventListener("click", () => op("minmax"));
+  mmRun.addEventListener("click", runMinMax);
   rg.append(mmRun);
   mm.append(rg, el("p", { class: "muted range-hint", id: "rangeHint" }));
   const dlg = el("dialog", { id: "confiDlg", class: "kpop kpop--confi" });
@@ -1098,6 +1098,18 @@ function layoutMode() {
 }
 let showGridTab = () => {};
 
+// 2026-11-13: Min/Max を押したら結果の見える Min/Max のタブへ移り、結果を短く知らせる(「押しても何も起きない」)
+async function runMinMax() {
+  const d = await op("minmax");
+  const tab = document.querySelector('#rtabBar [data-rtab="mm"]');
+  if (tab) tab.click();
+  const m = (d && d.view && d.view.minmax) || (V && V.minmax);
+  if (m && (m.amin || m.hmin || m.tmin)) {
+    toast([m.amin && `厚 ${m.amin}〜${m.amax}`, m.hmin && `巾 ${m.hmin}〜${m.hmax}`, m.tmin && `丈 ${m.tmin}〜${m.tmax}`]
+      .filter(Boolean).join(" / "), "ok");
+  }
+}
+
 // 右の列のタブ(操作・公差・チェック・Min/Max)
 function initRailTabs() {
   const tabs = [...document.querySelectorAll("#rtabBar [data-rtab]")];
@@ -1200,7 +1212,7 @@ function init() {
   $("atBtn").addEventListener("click", () => op("at"));
   $("inspeBtn").addEventListener("click", () => op("inspe"));
   $("byousyaChk").addEventListener("change", () => op("value", { name: "Byousya", value: $("byousyaChk").checked ? "True" : "False" }));
-  $("mmBtn").addEventListener("click", () => op("minmax"));
+  $("mmBtn").addEventListener("click", runMinMax);
   $("printBtn").addEventListener("click", async () => {
     // 2 度押しで保存用・測定DB に二重に登録しないよう、終わるまで押せなくする(VBA の PrintB.Enabled = False)
     const b = $("printBtn");
@@ -1243,6 +1255,16 @@ function init() {
     if (!td || !td.textContent) return;
     await op("dblclick", { name: td.dataset.name });
     refocus();
+  });
+  // 2026-11-13: 外観の欠陥名は複数選べる。Ctrl を押さなくても、押すたびに選ぶ/外すを切り替える
+  $("visualList").addEventListener("mousedown", (e) => {
+    const o = e.target.closest("option");
+    if (!o) return;
+    e.preventDefault();
+    const top = $("visualList").scrollTop;
+    o.selected = !o.selected;
+    $("visualList").focus();
+    $("visualList").scrollTop = top;
   });
   // 外観: 欠陥名を選んで LC を押す(LcColor)。ダブルクリックで白に戻して選択を外す(LC?_DblClick)
   $("visualGrid").addEventListener("click", async (e) => {
