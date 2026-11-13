@@ -15,16 +15,19 @@
     </div>
   </section>
 
-  <div class="ain__body" id="body" hidden>
+  <div class="ain__wrap" id="body" hidden>
+  <!-- 2026-11-13: VBA の UFAinput と同じく、上 = Auto(読み込んだ情報。打てない)/ 下 = Manual(入力) -->
+  <section class="card ain__auto" aria-label="ロットの情報">
+    <header><h3>Auto <small class="muted">ロットの情報(読み込んだ値・入力はできません)</small></h3><span class="lv lv--info" id="kenLv"></span></header>
+    <div class="pad">
+      <div class="ain__autogrid" id="lotKv"></div>
+      <p class="ain__warn" id="lotWarn" hidden></p>
+    </div>
+  </section>
+  <h3 class="ain__manualh">Manual <small class="muted">入力</small></h3>
+  <div class="ain__body">
     <!-- 左: ロットと、送る値(引当・梱包・枚数・包数) -->
     <div class="ain__col">
-      <section class="card">
-        <header><h3>ロット</h3><span class="lv lv--info" id="kenLv"></span></header>
-        <div class="pad">
-          <dl class="kv-grid" id="lotKv"></dl>
-          <p class="ain__warn" id="lotWarn" hidden></p>
-        </div>
-      </section>
       <section class="card">
         <header><h3>引当・梱包</h3></header>
         <div class="pad">
@@ -119,7 +122,7 @@
             <p class="muted" id="received"></p>
           </div>
           <table class="ain__heights" id="heights" aria-label="山ごとの高さ">
-            <thead><tr><th>山</th><th>理論値</th><th>実測</th><th></th></tr></thead>
+            <thead><tr><th>山</th><th>理論値</th><th>実測</th><th>前回</th><th></th></tr></thead>
             <tbody></tbody>
             <tfoot></tfoot>
           </table>
@@ -129,6 +132,11 @@
         <header><h3>梱包高さチェック</h3><span class="lv" id="checkLv"></span></header>
         <div class="pad">
           <p class="ain__checkmsg" id="checkMsg"></p>
+          <div class="ain__redo" id="redoBox" hidden>
+            <p><b>高さが理論値と合いません。山高さを測り直してください。</b><br>
+              <small>測り直しても合わないときは、枚数・包数・合紙/VC/外装紙の入れ間違い、Min/Max(検査画面)を確かめてください。</small></p>
+            <button class="btn btn--commit" type="button" id="redoBtn">山高さを測り直す(全山を消す)</button>
+          </div>
           <dl class="kv-grid" id="checkKv"></dl>
           <table class="ain__heights" id="checkRows" aria-label="山ごとの外れ">
             <thead><tr><th>山</th><th>実測</th><th>目安からの外れ</th></tr></thead>
@@ -183,6 +191,7 @@
         </div>
       </section>
     </div>
+  </div>
   </div>
 </div>
 {% endblock %}

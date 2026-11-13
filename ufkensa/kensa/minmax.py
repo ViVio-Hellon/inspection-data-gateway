@@ -9,7 +9,7 @@ from typing import Any
 
 from . import vbx
 from .model import kou_name, lateral_name
-from .flow import WARN, Message, Stop
+from .flow import INFO, WARN, Message, Stop
 from .grid import COLOR_DEFAULT, POSITIONS, Hooks, KensaState, remove_underline, small_count_th
 from .grid import typed_cmp, variant_eq
 
@@ -140,10 +140,11 @@ def min_max(state: KensaState, hooks: Hooks) -> list[Message]:
     値が 0(数が無い)なら "" にする。
     """
     s, e = state.ops, state.ope
+    # 2026-11-13: VBA は黙って抜けるが、現場で「押しても何も起きない」と言われた。抜ける理由を知らせる(値は変えない)
     if s == 0 or e == 0:
-        return []
+        return [Message("Min/Max の開始と終了を選んでください(Min/Max のタブ)", INFO, title="Min/Max")]
     if s > e:
-        return []
+        return [Message("Min/Max の開始が終了より後です。選び直してください", WARN, title="Min/Max")]
     if ngrange_check(state, s, e):
         text = "許容でない公差外が存在します"
         raise Stop(text, messages=[Message(text, WARN, title="警告", source="FormRelat:5683")], level=WARN,

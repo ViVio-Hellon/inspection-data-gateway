@@ -88,6 +88,11 @@ const PTY = process.env.E2E_PTY || "-";
     v = (await json("GET", "/api/ainput/state")).view;
     check(v.ready && v.send.stage !== "reset", S.step, "キャンセル → 書き直さない " + v.send.stage);
     await shot(page, "ainput");
+    // 2026-11-13: 上 = Auto(情報)/ 下 = Manual(入力)。Min/Max が出ている
+    check(await page.locator(".ain__auto").isVisible(), S.step, "Auto(情報)の枠がある");
+    check(!(await page.locator('.ain__ai[data-missing="1"]').count()), S.step, "Min/Max が Auto に出ている");
+    await page.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll("main, .content, .app__main").forEach((e) => { e.scrollTop = 0; }); });
+    await shot(page, "ainput_top");
 
     // ---- 校正 -------------------------------------------------------------------
     S.step = "calibration";

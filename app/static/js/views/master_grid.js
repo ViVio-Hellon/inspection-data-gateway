@@ -126,7 +126,15 @@ export function createMasterGrid(root, { compact = false, onChanged = null } = {
       tbody.append(tr);
     }
     tbl.replaceChildren(thead, tbody);
-    if (first && scroll_mark) { first.scrollIntoView({ block: "nearest" }); scroll_mark = false; }
+    // 2026-11-13: 表の枠の中だけを動かす(scrollIntoView は画面ごと下へ飛ばしていた。受信記録を押すたびに飛んで不便)
+    if (first && scroll_mark) {
+      const box = tbl.closest(".grid-wrap, .tbl-wrap") || tbl.parentElement;
+      if (box && box.scrollHeight > box.clientHeight) {
+        const d = first.getBoundingClientRect().top - box.getBoundingClientRect().top;
+        box.scrollTop = Math.max(0, box.scrollTop + d - box.clientHeight / 2);
+      }
+      scroll_mark = false;
+    }
   }
 
   async function load() {
