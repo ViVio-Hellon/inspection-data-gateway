@@ -177,7 +177,7 @@ li.is-stale { opacity: .6; }
 .kbar__works #atCount { margin: 0; }
 
 /* 測定表の公差の列 */
-.mgrid th.tolh { text-align: left; white-space: nowrap; }
+.mgrid th.tolh { text-align: left; white-space: nowrap; width: 30%; }   /* 2026-11-13: 測定:公差 = 70:30 */
 .mgrid td.tol { background: transparent; cursor: default; text-align: left; white-space: nowrap; color: var(--accent); font-size: var(--fs-sm); }
 
 /* 測定表: 厚・幅・丈のまとまり(色と区切り)。公差はまとまりの最初の行だけ */
