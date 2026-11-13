@@ -1,7 +1,7 @@
 {
   "app_id": "nlm.uf-kensa",
   "display_name": "UF検査判定",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "monitor_level": 2,
 
   "local_dir_name": "UFKensa",
