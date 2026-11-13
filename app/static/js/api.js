@@ -41,6 +41,21 @@ export class ApiError extends Error {
   }
 }
 
+/* 2026-11-13: 問い合わせに時間の上限を付ける。Edge で最小化して長く放っておくと、返ってこない問い合わせが
+   同じ相手への通り道(6本)を埋め、戻しても「バックエンドに接続できません」のまま戻らなかった。
+   上限を過ぎたら打ち切り、切れたと分かったら残っているものもまとめて打ち切る(abortAll)。 */
+export const DEFAULT_TIMEOUT_MS = 60000;          // 読むだけ(GET)
+export const WRITE_TIMEOUT_MS = 300000;           // 書く操作は長めに待つ(保存・印刷の途中で切らない)
+const inflight = new Set();
+export function abortAll() {
+  // 読むだけの問い合わせだけ打ち切る(書く操作は上限まで待つ)
+  for (const c of [...inflight]) {
+    if (c.write) continue;
+    try { c.abort(); } catch { /* 済み */ }
+    inflight.delete(c);
+  }
+}
+
 async function request(path, options = {}) {
   /*
     **押した本人に、いま待っていることを伝える。**
@@ -55,9 +70,16 @@ async function request(path, options = {}) {
   */
   const done = busy.mark(busy.pressed());
   const prog = progress.begin(path, TOKEN);           // 少しでも待つときは進み具合を出す(progress.js)
+  const ctrl = new AbortController();
+  const { timeoutMs, ...opts } = options;
+  ctrl.write = !!opts.method && opts.method !== "GET";
+  inflight.add(ctrl);
+  const timer = setTimeout(() => ctrl.abort(),
+                           timeoutMs || (ctrl.write ? WRITE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS));
   try {
     const res = await fetch(path, {
-      ...options,
+      ...opts,
+      signal: ctrl.signal,
       cache: "no-store",
       headers: {
         "X-Tool-Token": TOKEN,
@@ -67,7 +89,7 @@ async function request(path, options = {}) {
         ...(window.APP.screenPrev ? { "X-Screen-Prev": window.APP.screenPrev } : {}),
         // ファイルを送るとき(FormData)は、ブラウザに区切りごと決めさせる
         ...(typeof options.body === "string" ? { "Content-Type": "application/json" } : {}),
-        ...(options.headers || {}),
+        ...(opts.headers || {}),
       },
     });
 
@@ -84,6 +106,8 @@ async function request(path, options = {}) {
     }
     return body;
   } finally {
+    clearTimeout(timer);
+    inflight.delete(ctrl);
     done();
     prog();
   }
@@ -103,7 +127,7 @@ export function tokenUrl(path) {
 }
 
 export const api = {
-  get: (path) => request(path),
+  get: (path, opts) => request(path, opts || {}),
   post: (path, data) => request(path, { method: "POST", body: JSON.stringify(data ?? {}) }),
   // ファイルを送る(「表を持ってくる」のドラッグ&ドロップ)
   postForm: (path, form) => request(path, { method: "POST", body: form }),
