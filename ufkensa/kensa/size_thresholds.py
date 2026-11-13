@@ -62,7 +62,7 @@ ITEMS: tuple[Item, ...] = (
     Item("op_notthin_hi", "op", "薄板不可 上限", 800.0, "mm", 0, 10000),
     Item("op_heavy_lo", "op", "厚板不可(重い) 下限", 200.1, "mm", 0, 10000),
     Item("op_heavy_hi", "op", "厚板不可(重い) 上限", 299.0, "mm", 0, 10000),
-    Item("op_heavy_weight", "op", "厚板不可(重い) 重量がこれを超える", 1500.0, "g", 0, 1e9),
+    Item("op_heavy_weight", "op", "厚板不可(重い) 重量がこれを超える", 1500.0, "kg", 0, 1e9),
     Item("op_notthick_lo", "op", "厚板不可 下限", 300.0, "mm", 0, 10000),
     Item("op_notthick_hi", "op", "厚板不可 上限", 800.0, "mm", 0, 10000),
     Item("op_notgoku_lo", "op", "極厚不可 下限", 1.0, "mm", 0, 10000),
