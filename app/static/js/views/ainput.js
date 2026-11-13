@@ -63,6 +63,8 @@ function renderOpen(v) {
       b.append(last);
     }
     b.setAttribute("aria-pressed", String(v.ken_m === m));
+    // 2026-11-13: Min/Max が済んでいなければ開けない(キャスク・全ヵ所から来たときは呼び元のシートの値)
+    if (!FROM && !v.kensa.minmax) { b.disabled = true; b.title = "検査画面で「Min/Max」を押してから"; }
     b.addEventListener("click", () => op("open", { ken_m: m, source: V ? V.source : FROM }));
     return b;
   }));
@@ -70,6 +72,10 @@ function renderOpen(v) {
   kv($("openKv"), [["検査中のロット", k.lot || "(なし)"], ["ライン", k.line || "-"], ["Min/Max", k.minmax ? "済み" : "まだ"]]);
   const mm = $("openKv").querySelectorAll("dd")[2];
   if (mm) mm.dataset.state = k.minmax ? "ok" : "ng";
+  if (!FROM && !k.minmax) {
+    $("openNote").textContent = "厚・巾・丈の Min/Max がまだです。検査画面で開始・終了を選んで「Min/Max」を押してから開いてください。";
+    $("openNote").dataset.ng = "1";
+  }
 }
 
 /** 検査法ボタンの説明(画面の違いだけ。決まりは VBA の UF1 Inspection1〜4 のまま) */
@@ -83,13 +89,29 @@ const KEN_NOTE = {
 function renderLeft(v) {
   const l = v.lot;
   text($("kenLv"), `検査法 ${l.ken_law}`);
-  kv($("lotKv"), [["ライン", l.line], ["Lot", l.lot], ["検査No", l.ken_no], ["材質/調質", [l.zai, l.tyo].filter(Boolean).join(" ")],
-                  ["寸法", [l.atu, l.haba, l.take].filter(Boolean).join(" × ")], ["用途", l.youto],
-                  ["ｵｰﾀﾞｰNo", l.order_no], l.adjust_visible ? [l.adjust_label, l.adjust_no] : null,
-                  ["厚 Min〜Max", l.amin && `${l.amin} 〜 ${l.amax}`], ["巾 Min〜Max", l.hmin && `${l.hmin} 〜 ${l.hmax}`],
-                  ["丈 Min〜Max", l.tmin && `${l.tmin} 〜 ${l.tmax}`]]);
+  // 2026-11-13: Auto(情報)。VBA の並び(ロットNO・検査NO・材質・調質・厚・巾・丈 / ｵｰﾀﾞｰNO・調整NO・Min/Max / 検査法)
+  const mm = (a, b) => (a !== "" && b !== "" ? `${a} 〜 ${b}` : "");
+  const items = [
+    ["ロットNO", l.lot], ["検査NO", l.ken_no], ["材質", l.zai], ["調質", l.tyo],
+    ["厚", l.atu], ["巾", l.haba], ["丈", l.take],
+    ["ｵｰﾀﾞｰNO", l.order_no], l.adjust_visible ? [l.adjust_label, l.adjust_no] : null, ["用途", l.youto], ["ライン", l.line],
+    ["厚 Min〜Max", mm(l.amin, l.amax), true], ["巾 Min〜Max", mm(l.hmin, l.hmax), true], ["丈 Min〜Max", mm(l.tmin, l.tmax), true],
+    ["検査法", l.ken_law],
+  ].filter(Boolean);
+  $("lotKv").replaceChildren(...items.map(([k, val, need]) => {
+    const d = document.createElement("div");
+    d.className = "ain__ai" + (need ? " ain__ai--wide" : "");
+    if (need && !val && !l.db_flag) d.dataset.missing = "1";
+    const a = document.createElement("span"); a.textContent = k;
+    const b = document.createElement("b"); b.textContent = val || (need && !l.db_flag ? "なし(検査画面で Min/Max)" : "");
+    d.append(a, b);
+    return d;
+  }));
   const warns = [];
   if (l.db_flag) warns.push("Lot情報履歴に履歴が無いため A_input転送は使用できません。");
+  if (!l.db_flag && ![l.amin, l.amax, l.hmin, l.hmax, l.tmin, l.tmax].every((x) => x !== "")) {
+    warns.push("厚・巾・丈の Min/Max がありません。検査画面で「Min/Max」を押してから「開き直す」を押してください。山高さ・送信はできません。");
+  }
   if (l.other_lot) warns.push(`検査画面のロット(${v.kensa.lot})と違います。「開き直す」で写し直せます。`);
   $("lotWarn").hidden = warns.length === 0;
   text($("lotWarn"), warns.join("\n"));
@@ -137,14 +159,16 @@ function renderCenter(v) {
     x.hidden = !h.value;
     x.addEventListener("click", () => op("clear-height", { n: h.n }));
     const last = document.createElement("td"); last.append(x);
-    tr.append(cell(`${h.n} 山目`), cell(m.per_mount), cell(h.value, "val"), last);
+    const prev = ((v.check && v.check.rows) || []).find((r) => r.n === h.n);
+    tr.append(cell(`${h.n} 山目`), cell(m.per_mount), cell(h.value, "val"), cell(prev ? prev.value : "", "prev"), last);
     return tr;
   }));
   const foot = $("heights").tFoot;
   foot.replaceChildren();
   if (m.visible && m.heights.length) {
     const tr = document.createElement("tr");
-    tr.append(cell(`合計 ${m.filled}/${m.heights.length}`), cell(""), cell(m.total, "val"), cell(""));
+    tr.append(cell(`合計 ${m.filled}/${m.heights.length}`), cell(""), cell(m.total, "val"),
+              cell(v.check && v.check.judged ? v.check.hei : "", "prev"), cell(""));
     foot.append(tr);
   }
 
@@ -164,6 +188,7 @@ function renderCenter(v) {
            : ["外れ", `${c.diff} mm(許容 ${c.allow})`],
       ["1山の目安", `${c.lo} 〜 ${c.hi} mm(理論値 ÷ 山数。判定は合計だけ)`],
     ] : []);
+    $("redoBox").hidden = !(c.judged && !c.ok);
     const tb = $("checkRows").tBodies[0];
     $("checkRows").hidden = !c.judged || c.ok;
     tb.replaceChildren(...(c.rows || []).map((r) => {
@@ -267,6 +292,10 @@ function init() {
     if (V && V.ready && V.mount.visible && V.mount.next > 0) $("measIn").focus();
   });
   $("unlockBtn").addEventListener("click", () => op("unlock"));
+  $("redoBtn").addEventListener("click", async () => {
+    await op("clear-height", { n: "all" });
+    $("measIn").focus();
+  });
   $("resetBtn").addEventListener("click", () => op("reset"));
   $("reopenBtn").addEventListener("click", () => op("open", { ken_m: V ? V.ken_m : "", source: V ? V.source : FROM }));
   api.get("/api/ainput/state").then((res) => {

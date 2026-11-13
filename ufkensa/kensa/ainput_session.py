@@ -198,8 +198,7 @@ class AinputSession:
         self.ken_m = ken_m
         if st.load == Switch.OFF:                                            # VBA は何もせず抜ける(UF1:461)
             raise Stop("検査画面の処理中です。終わってからもう一度開いてください。", level=INFO, source="UF1:461")
-        ln = lines.find(st.line_name)
-        test = st.line_option == "Test" or (ln is not None and ln.official == "Test")
+        # (試験ライン Test でも Min/Max は要る。2026-11-13)
         store = k.store
         source = source if source in ("Cask", "Mitsubishi") else ""
         self.source = source
@@ -212,8 +211,11 @@ class AinputSession:
         else:
             mm = {"amin": st.amin, "hmin": st.hmin, "tmin": st.tmin, "amax": st.amax, "hmax": st.hmax,
                   "tmax": st.tmax}
-            if not (test or st.dbflag != "" or all(v != "" for v in mm.values())):
-                raise Stop("MinMax処理を行ってください", level=INFO, source="UF1:474")
+            # 2026-11-13: VBA は試験ライン(Test)なら Min/Max 無しでも開けたが、現場の声で Test でも止める
+            # (Min/Max が無いと梱包高さの理論値が 0 になり、高さの判定が意味を持たない)
+            if not (st.dbflag != "" or all(v != "" for v in mm.values())):
+                raise Stop("MinMax処理を行ってください",
+                           level=INFO, source="UF1:474")
             reg = wiring.registry(st)
             day_max = wiring.worker_day_max(store, st.lname)
             res = ainput.startup("UF1", ken_m, history, working_lot=st.lot, lname=st.lname, uf1_line=st.line_name,
@@ -346,9 +348,18 @@ class AinputSession:
     def receive(self, text: str) -> Any:
         return self._run(self._receive, text)
 
+    def _need_minmax(self, f: Any) -> None:
+        """2026-11-13: 厚・巾・丈の Min/Max が無いまま山高さ・送信へ進ませない(理論値が 0 になる)。"""
+        if f.db_flag == "true":
+            return
+        if any(getattr(f, a) == "" for a in ("amin", "amax", "hmin", "hmax", "tmin", "tmax")):
+            raise Stop("厚・巾・丈の Min/Max がありません。検査画面で「Min/Max」を押してから、Aインプットを開き直してください",
+                       level=WARN)
+
     def _receive(self, text: str) -> None:
         """StartTB_KeyDown(Tab)(UFAinput:697-746)。≤300 はデプス(機器番号が測定機器ID と同じ)、>300 は #L。"""
         f = self._form()
+        self._need_minmax(f)
         text = "" if text is None else str(text)
         self.received = _Received(text)
         if f.start_tb_tag != "" or f.mount_count == "":
@@ -383,6 +394,10 @@ class AinputSession:
     def _clear_height(self, n: Any) -> None:
         """clsDynLabel.m_lbl_Click: その山の高さを消す。"""
         f = self._form()
+        if n == "all":                                   # 2026-11-13: 高さNG のあと全部の山を測り直す
+            f.heights = [""] * MAX_MOUNT
+            self.received = _Received()
+            return
         try:
             i = int(n)
         except (TypeError, ValueError):
@@ -399,6 +414,7 @@ class AinputSession:
     def _press(self, answers: dict[str, bool]) -> Optional[Question]:
         """UFAinput.AinButt_Click (UFAinput:932-1137)。判断は ainput.ain_button。"""
         f = self._form()
+        self._need_minmax(f)
         k = self.kensa
         st = k.state
         store = k.store

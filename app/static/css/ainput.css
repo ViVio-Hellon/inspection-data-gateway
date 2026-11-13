@@ -101,3 +101,21 @@
 .ain__codes dd { font-family: var(--sans); color: var(--muted); }
 
 @media (max-width: 1400px) { .ain__body { grid-template-columns: 290px minmax(0, 1fr) 280px; } }
+
+/* 2026-11-13: 上 = Auto(情報)、下 = Manual(入力)。VBA の UFAinput の 2 枠に寄せる */
+.ain__wrap { display: flex; flex-direction: column; gap: 10px; }
+.ain__wrap[hidden] { display: none; }
+.ain__auto { border-left: 4px solid var(--muted); }
+.ain__auto h3 small, .ain__manualh small { font-weight: 400; font-size: var(--fs-sm); }
+.ain__autogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 10px; }
+.ain__autogrid .ain__ai { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ain__autogrid .ain__ai span { color: var(--muted); font-size: var(--fs-xs); }
+.ain__autogrid .ain__ai b { font-family: var(--mono); font-weight: 600; padding: 4px 8px; border: 1px solid var(--rule);
+  border-radius: var(--radius-xs); background: var(--sunken); min-height: 2em; overflow-wrap: anywhere; }
+.ain__autogrid .ain__ai[data-missing="1"] b { border-color: var(--state-error); background: var(--warn-bg); color: var(--state-error); }
+.ain__autogrid .ain__ai--wide { grid-column: span 2; }
+.ain__manualh { margin: 4px 0 -4px; font-size: var(--fs-md); border-left: 4px solid var(--accent); padding-left: 8px; }
+.ain__redo { border: 2px solid var(--state-error); background: var(--warn-bg); border-radius: var(--radius); padding: 8px; }
+.ain__redo p { margin: 0 0 6px; color: var(--state-error); }
+.ain__heights td.prev { color: var(--muted); font-size: var(--fs-sm); }
+.ain__method:disabled { opacity: .45; cursor: not-allowed; }
