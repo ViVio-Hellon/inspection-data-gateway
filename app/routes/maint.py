@@ -808,3 +808,115 @@ def history_nippou():
     if p is None:
         return jsonify({"files": [], "messages": [{"text": "いまの直の日報に行がありません", "level": "warn"}]})
     return jsonify({"files": [str(p)], "messages": []})
+
+
+# ----------------------------------------------------------------------
+# 出力の確認(2026-11-14): Aインプットの CSV・検査結果の PDF / CSV・測定DB への追記を見るだけ
+# ----------------------------------------------------------------------
+OUTPUT_KINDS = ("ainput", "pdf", "csv", "db")
+
+
+def _output_places(kind: str) -> tuple[list, dict]:
+    from datetime import datetime
+
+    from ufkensa.kensa import output_check as oc
+    lname, line = _kensa_line()
+    now = datetime.now()
+    if kind == "ainput":
+        return oc.ainput(line, now), {"line": line, "lname": lname}
+    if kind == "pdf":
+        return oc.pdf(line, now), {"line": line, "lname": lname}
+    if kind == "csv":
+        return oc.result_csv(line, lname, _store().path.parent), {"line": line, "lname": lname}
+    return [], {"line": line, "lname": lname, "db": oc.measure_db(line)}
+
+
+@bp.get("/api/maint/outputs")
+def outputs_list():
+    kind = request.args.get("kind", "")
+    if kind not in OUTPUT_KINDS:
+        return _err("bad_request", "kind が正しくありません")
+    try:
+        places, extra = _output_places(kind)
+    except Stop as e:
+        return _stop_json(e)
+    return jsonify({"kind": kind, "places": places, **extra})
+
+
+def _output_file(kind: str, path: str):
+    places, _ = _output_places(kind)
+    from ufkensa.kensa import output_check as oc
+    return path if oc.allowed(path, places) else None
+
+
+@bp.get("/api/maint/outputs/text")
+def outputs_text():
+    from ufkensa.kensa import output_check as oc
+    kind, path = request.args.get("kind", ""), request.args.get("path", "")
+    if kind not in ("ainput", "csv"):
+        return _err("bad_request", "kind が正しくありません")
+    try:
+        ok = _output_file(kind, path)
+    except Stop as e:
+        return _stop_json(e)
+    if not ok:
+        return _err("not_found", "そのファイルは一覧にありません(一覧を読み直してください)", 404)
+    try:
+        return jsonify(oc.read_text(ok))
+    except OSError as e:
+        return _err("read", f"読めませんでした: {e}", 500)
+
+
+@bp.get("/api/maint/outputs/file")
+def outputs_file():
+    """PDF・HTML をそのまま画面に出す(一覧に並べたものだけ)。"""
+    import mimetypes
+
+    from flask import send_file
+    path = request.args.get("path", "")
+    try:
+        ok = _output_file("pdf", path)
+    except Stop as e:
+        return _stop_json(e)
+    if not ok:
+        return _err("not_found", "そのファイルは一覧にありません(一覧を読み直してください)", 404)
+    try:
+        return send_file(ok, mimetype=mimetypes.guess_type(ok)[0] or "application/octet-stream", max_age=0)
+    except OSError as e:
+        return _err("read", f"読めませんでした: {e}", 500)
+
+
+# ----------------------------------------------------------------------
+# アイカスのラインコード(2026-11-14)。伝送用ファイルの共有マスタ。見るのは誰でも、変えるのは編集の鍵
+# ----------------------------------------------------------------------
+def _icas_payload(rows: list) -> dict:
+    from ufkensa.kensa import icas_lines as il
+    from ufkensa.kensa import lines as ln
+    hist = il.history()
+    return {"rows": [{"line": a, "code": b, "note": c} for a, b, c in rows], "other": il.OTHER,
+            "defaults": [{"line": a, "code": b, "note": c} for a, b, c in il.DEFAULTS],
+            "known": [x.vba for x in ln.LINES], "max_len": il.MAX_LEN, "history": hist}
+
+
+@bp.get("/api/maint/icas_lines")
+def icas_lines_get():
+    from ufkensa.kensa import icas_lines as il
+    il.ensure_table()
+    return jsonify(_icas_payload(il.rows(fresh=True)))
+
+
+@bp.post("/api/maint/icas_lines")
+def icas_lines_set():
+    if (d := _need_edit()) is not None:
+        return d
+    from ufkensa.kensa import icas_lines as il
+    rows = _body().get("rows")
+    if not isinstance(rows, list):
+        return _err("bad_request", "rows がありません")
+    try:
+        after = il.save(rows)
+    except il.Invalid as e:
+        return _err("invalid", str(e), 400, field=e.line)
+    except (OSError, sqlite3.Error) as e:
+        return _err("not_saved", f"保存できませんでした: {e}", 500)
+    return jsonify(_icas_payload(after))

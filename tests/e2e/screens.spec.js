@@ -181,6 +181,22 @@ const PTY = process.env.E2E_PTY || "-";
     await page.click('[data-qfview="table"]'); await W(200);
     check(await page.locator("#qfGrid").isVisible() && !(await page.locator("#qfSheet").isVisible()), S.step, "表に切り替え");
     await shot(page, "maint_qf_table");
+
+    // ---- 保守: 出力の確認・アイカスのライン(2026-11-14) ----------------------------
+    S.step = "maint_outputs";
+    await page.click('[data-tab="outputs"]'); await W(1200);
+    check(/ライン/.test(await page.locator("#oLine").innerText()), S.step, "出力の確認: この端末のライン");
+    check(await page.locator("#oList .out__place").count() > 0, S.step, "Aインプットの置き場所が並ぶ");
+    await shot(page, "maint_outputs_ainput");
+    await page.click('[data-okind="db"]'); await W(1200);
+    check(/検査ﾃﾞｰﾀ/.test(await page.locator("#oView").innerText()), S.step, "測定DB の行を出す");
+    await shot(page, "maint_outputs_db");
+    await page.click('[data-okind="csv"]'); await W(1200);
+    const csvBtn = page.locator(".out__file").first();
+    if (await csvBtn.count()) { await csvBtn.click(); await W(800); await shot(page, "maint_outputs_csv"); }
+    await page.click('[data-tab="icas"]'); await W(1000);
+    check(await page.locator("#iTbl tbody tr").count() >= 9, S.step, "アイカスのラインコード(既定 9 行)");
+    await shot(page, "maint_icas");
     await page.click('[data-qfview="sheet"]'); await W(200);
 
     // ---- 保守 → 端末設定(プリセットを外し、ラインリセット)----------------------------

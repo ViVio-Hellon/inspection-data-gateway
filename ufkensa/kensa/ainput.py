@@ -572,11 +572,11 @@ def st_con(temp: Any, pits: str) -> str:
 
 
 def lin_conv(line: str) -> str:
-    """Input.LinConv (Input:1320-1333)。ライン名 → NIS コード。それ以外は "Maru"(4 文字)。"""
-    if line == "":
-        return ""
-    return {"L-1": "05", "LVC": "03", "HVC": "04", "ﾊﾞﾗﾝｻｰ": "01", "ﾄｯﾄ": "01", "LS4": "06", "NS1": "07",
-            "Test": "AA"}.get(line, "Maru")
+    """Input.LinConv (Input:1320-1333)。ライン名 → NIS コード。それ以外は "Maru"(4 文字)。
+
+    2026-11-14: 対応は 伝送用ファイル の表「アイカスラインコード」(保守で直せる)。表が無ければ VBA と同じ既定。"""
+    from . import icas_lines
+    return icas_lines.code_for(line)
 
 
 def _converted(form: AinputForm) -> dict[str, str]:
