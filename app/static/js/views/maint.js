@@ -142,6 +142,7 @@ function showTab(name) {
   if (name === "thresh") openThresh();
   if (name === "qf") openQf();
   if (name === "outputs") openOutputs();
+  if (name === "nippou") openNippou();
   if (name === "icas") openIcas();
   if (name === "rstop") openRStop(); else stopRStop();
 }
@@ -1462,3 +1463,47 @@ $("iSave").addEventListener("click", async () => {
     toastError(err);
   }
 });
+
+
+/* ---------- 日報(2026-11-14。all-tools の日報の紙と同じ見せ方) ---------- */
+const NP = { src: "src=now" };
+function npShow(src, btn) {
+  NP.src = src;
+  for (const b of document.querySelectorAll("#nList .out__file")) b.setAttribute("aria-pressed", String(b === btn));
+  $("nPaper").src = tokenUrl(`/maint/nippou/paper?${src}&_=${Date.now()}`);
+}
+async function openNippou() {
+  const list = $("nList");
+  list.replaceChildren(el("p", "muted", "読み込んでいます…"));
+  try {
+    const d = await api.get("/api/maint/nippou");
+    const now = d.now || {};
+    $("nNow").textContent = now.problem ? "" : `${now.line} ${now.date} ${now.shift}`;
+    const box = el("div", "out__place");
+    box.append(el("h5", "", "いまの日報"));
+    if (now.problem) box.append(el("p", "out__prob", now.problem));
+    else {
+      const b = el("button", "out__file");
+      b.type = "button";
+      b.append(el("span", "", `${now.date} ${now.shift}`), el("small", "", `${now.rows} 行`));
+      b.addEventListener("click", () => npShow("src=now", b));
+      box.append(b);
+    }
+    const box2 = el("div", "out__place");
+    box2.append(el("h5", "", "書き出した日報"), el("div", "out__dir", d.dir));
+    if (!d.files.length) box2.append(el("p", "muted", "まだありません(検査の印刷・保存のたびに書き出します)"));
+    for (const f of d.files) {
+      const b = el("button", "out__file");
+      b.type = "button";
+      b.append(el("span", "", f.name.replace(/^集計明細_/, "").replace(/\.csv$/, "")), el("small", "", f.mtime.slice(5)));
+      b.title = f.name;
+      b.addEventListener("click", () => npShow(`src=file&name=${encodeURIComponent(f.name)}`, b));
+      box2.append(b);
+    }
+    list.replaceChildren(box, box2);
+    const first = list.querySelector(".out__file");
+    if (first) first.click(); else npShow("src=now", null);
+  } catch (err) { list.replaceChildren(el("p", "out__prob", err.message || String(err))); }
+}
+$("nReload").addEventListener("click", () => openNippou());
+$("nOpen").addEventListener("click", () => window.open(tokenUrl(`/maint/nippou/paper?${NP.src}`), "_blank"));

@@ -116,8 +116,8 @@ def export(store: LocalStore, lname: str, line: str, business_date: str, shift: 
     return target
 
 
-def export_now(store: LocalStore, state: Any, env: Any, now: Optional[datetime] = None) -> Optional[Path]:
-    """いまの直の日報を書き出す(検査画面の状態から ライン・直・検査員 を決める)。"""
+def current(state: Any, env: Any, now: Optional[datetime] = None) -> tuple[str, str, str]:
+    """いまの直の (営業日 yyyy.mm.dd 等, 直, 作業者)。検査画面の状態から決める。"""
     from . import wiring, workers
     now = now or env.now()
     fac = env.facility() or workers.DEFAULT_FACILITY
@@ -126,4 +126,19 @@ def export_now(store: LocalStore, state: Any, env: Any, now: Optional[datetime] 
     shift = workers.time_check(workers.hhmmss(now), facility=fac, shifts=shifts)
     reg = wiring.registry(state)
     who = {"1直": reg.t1, "2直": reg.t2, "3直": reg.t3}.get(shift, "") or reg.t1
-    return export(store, state.lname, state.line_name, day, shift, worker=who.replace("_", "・"))
+    return day, shift, who.replace("_", "・")
+
+
+def export_now(store: LocalStore, state: Any, env: Any, now: Optional[datetime] = None) -> Optional[Path]:
+    """いまの直の日報を書き出す(検査画面の状態から ライン・直・検査員 を決める)。"""
+    day, shift, who = current(state, env, now)
+    return export(store, state.lname, state.line_name, day, shift, worker=who)
+
+
+def out_dir() -> Path:
+    """書き出した日報 CSV の置き場所(使用パス「日報の受け渡し先」、空なら手元の logs)。"""
+    base = paths.get("nippou_out") or paths.write_dir()
+    p = paths.to_local(str(base))
+    if os.sep == "/" and "\\" in str(p):
+        p = Path(str(p).replace("\\", "/"))
+    return p

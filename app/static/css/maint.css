@@ -388,3 +388,5 @@
 .icas__tbl th, .icas__tbl td { padding: 3px 6px; text-align: left; }
 .icas__tbl .input { min-height: 32px; }
 .icas__tbl tr[data-bad="1"] .input { border-color: var(--state-error); }
+.nip__view { display: flex; flex-direction: column; gap: 6px; }
+.nip__view iframe { width: 100%; flex: 1; min-height: 66vh; border: 1px solid var(--rule); background: var(--surface); }
