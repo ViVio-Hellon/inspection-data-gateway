@@ -365,3 +365,26 @@
 .xl tr.is-hit td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--paper-hit) 55%, transparent); font-weight: 700; }
 .xl tr.is-hit th { background: var(--paper-hit); color: var(--paper-ink); }
 .maint__short { width: 6em; }
+
+/* 出力の確認(2026-11-14) */
+.out__body { display: grid; grid-template-columns: minmax(280px, 34%) minmax(0, 1fr); gap: 10px; margin-top: 8px; min-height: 60vh; }
+.out__list { display: flex; flex-direction: column; gap: 8px; max-height: 72vh; overflow: auto; }
+.out__place { border: 1px solid var(--rule); border-radius: var(--radius-xs); padding: 6px 8px; }
+.out__place h5 { margin: 0 0 2px; font-size: var(--fs-sm); }
+.out__place .out__dir { font-family: var(--mono); font-size: var(--fs-xs); color: var(--muted); overflow-wrap: anywhere; }
+.out__place .out__prob { color: var(--state-error); font-size: var(--fs-sm); margin: 4px 0 0; }
+.out__file { display: flex; justify-content: space-between; gap: 6px; width: 100%; text-align: left; padding: 4px 6px; margin-top: 2px;
+  border: 1px solid transparent; border-radius: var(--radius-xs); background: var(--sunken); color: var(--ink); font: inherit;
+  font-size: var(--fs-sm); cursor: pointer; }
+.out__file:hover, .out__file[aria-pressed="true"] { border-color: var(--focus); background: var(--accent-soft); }
+.out__file small { color: var(--muted); white-space: nowrap; }
+.out__view { min-width: 0; border: 1px solid var(--rule); border-radius: var(--radius-xs); padding: 8px; overflow: auto; max-height: 72vh; }
+.out__view iframe { width: 100%; height: 68vh; border: 0; background: var(--surface); }
+.out__view table { border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-xs); }
+.out__view th, .out__view td { border: 1px solid var(--rule); padding: 2px 6px; white-space: nowrap; text-align: left; }
+.out__view th { background: var(--sunken); position: sticky; top: 0; }
+.out__meta { font-size: var(--fs-xs); color: var(--muted); margin: 0 0 6px; overflow-wrap: anywhere; }
+.icas__tbl { border-collapse: collapse; margin: 6px 0; }
+.icas__tbl th, .icas__tbl td { padding: 3px 6px; text-align: left; }
+.icas__tbl .input { min-height: 32px; }
+.icas__tbl tr[data-bad="1"] .input { border-color: var(--state-error); }

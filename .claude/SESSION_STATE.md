@@ -8,9 +8,10 @@
 - 本番ではまだ使わない(仕上がるまで)。ユーザーがライン PC で試し、気づいたことを直していく段階。
 
 ## 完了した作業
-- PR #63〜#111 まで main に入れた(最新 版 0.3.3)。
+- PR #63〜#113 まで main に入れた(最新 版 0.3.4)。
 - 0.3.2: 最小化して放置→「バックエンドに接続できません」から戻らない件(Edge の同じ相手 6 本の通り道が詰まる)。api.js に時間の上限・abortAll、health.js で約1分で読み込み直し。
 - 0.3.3: 測定:公差 80:20/外観は押すだけで複数選択(不良は1つ)/Min/Max が何もしない時に理由を出しタブへ移る/保守 測定機器ID の受信記録で画面が飛ばない/Aインプットを Min/Max 無しでは開けない(Test でも)・上 Auto(情報)/下 Manual(入力)・高さNG で測り直しを促す・「前回」列。
+- 0.3.4: 保守「出力の確認」(Aインプット CSV・hostsend / 検査結果 PDF / 検査結果 CSV / 梱包検査ﾃﾞｰﾀ の最後の行。見るだけ。output_check.py)と「アイカスのライン」(伝送用ファイル 表「アイカスラインコード」。既定 = VBA の LinConv。icas_lines.py)。
 - Claude Code の圧縮対策(この SESSION_STATE.md と .claude/hooks/session_state.py、.claude/settings.json の PreCompact / SessionStart hook)。
 
 ## 未完了の作業

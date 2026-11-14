@@ -23,6 +23,8 @@
       <button class="tab" role="tab" type="button" data-tab="thresh">寸法のしきい値</button>
       <button class="tab" role="tab" type="button" data-tab="rules">照合ルール</button>
       <button class="tab" role="tab" type="button" data-tab="qf">QF空冷時間</button>
+      <button class="tab" role="tab" type="button" data-tab="outputs">出力の確認</button>
+      <button class="tab" role="tab" type="button" data-tab="icas">アイカスのライン</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
     <div class="maint__lock" title="見る・引く・テストに鍵は要りません。直す・保存・消すには管理者パスワードとアクセス権限の「管理者」が要ります。">
@@ -337,6 +339,49 @@
             <button class="btn btn--commit" type="button" id="mConfiSave">保存する</button>
             <button class="btn" type="button" id="mConfiReset">既定に戻す(VBA と同じ)</button>
           </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 出力の確認(2026-11-14。見るだけ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="outputs" id="pOutputs" hidden>
+      <section class="card">
+        <header><h3>出力の確認</h3><span class="lv" id="oLine"></span></header>
+        <div class="pad">
+          <p class="muted maint__small">書き出したものを見るだけです(書き換え・消すことはしません)。並ぶのは、この端末のラインの、
+            決まった置き場所の新しいものからです。届かない場所は理由を出します。</p>
+          <div class="seg maint__seg" role="group" aria-label="出力の種類" id="oKinds">
+            <button class="seg__btn" type="button" data-okind="ainput" aria-pressed="true">Aインプットの CSV</button>
+            <button class="seg__btn" type="button" data-okind="pdf" aria-pressed="false">検査結果の PDF(印刷)</button>
+            <button class="seg__btn" type="button" data-okind="csv" aria-pressed="false">検査結果の CSV</button>
+            <button class="seg__btn" type="button" data-okind="db" aria-pressed="false">梱包検査ﾃﾞｰﾀ への追記</button>
+            <button class="btn btn--sm" type="button" id="oReload">読み直す</button>
+          </div>
+          <div class="out__body">
+            <div class="out__list" id="oList"></div>
+            <div class="out__view" id="oView"><p class="muted">左の一覧からファイルを選ぶと、中身をここに出します。</p></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= アイカスのラインコード(共有マスタ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="icas" id="pIcas" hidden>
+      <section class="card">
+        <header><h3>アイカスのライン(Aインプットの紐付けコード)</h3><span class="lv">全 PC 共通(伝送用ファイル)</span></header>
+        <div class="pad">
+          <p class="muted maint__small">Aインプットの電文・CSV の最後に付ける、ラインごとのアイカス(NIS)のコードです
+            (VBA の LinConv の直書きに当たります。既定は VBA と同じ値)。ラインは検査画面のライン名(VBA の LineName)で書きます。
+            「(その他)」は表に無いライン(丸徳など)のコードです。コードは英数字 1〜4 文字。変えるには編集の鍵が要ります。</p>
+          <table class="tbl icas__tbl" id="iTbl"><thead><tr><th>ライン</th><th>コード</th><th>説明</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="btn-row">
+            <button class="btn btn--sm" type="button" id="iAdd">行を足す</button>
+            <button class="btn btn--commit" type="button" id="iSave">保存する</button>
+            <button class="btn" type="button" id="iReset">既定に戻す(VBA と同じ)</button>
+          </div>
+          <p class="muted maint__small" id="iNote"></p>
+          <h4>変更履歴</h4>
+          <ul class="muted maint__small" id="iHist"></ul>
         </div>
       </section>
     </section>

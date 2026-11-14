@@ -141,6 +141,8 @@ function showTab(name) {
   if (name === "confi") openConfi();
   if (name === "thresh") openThresh();
   if (name === "qf") openQf();
+  if (name === "outputs") openOutputs();
+  if (name === "icas") openIcas();
   if (name === "rstop") openRStop(); else stopRStop();
 }
 for (const t of document.querySelectorAll("#mTabs .tab")) t.addEventListener("click", () => showTab(t.dataset.tab));
@@ -1296,4 +1298,167 @@ $("mDevFromKensa").addEventListener("click", async () => {
     rxFillCond(RX.defaults);
     toast(RX.defaults.lot ? `検査中のロット ${RX.defaults.lot} の値を入れました` : "検査中のロットがありません(この端末のラインだけ入れました)", RX.defaults.lot ? "ok" : "warn");
   } catch (err) { toastError(err); }
+});
+
+
+/* ---------- 出力の確認(2026-11-14。見るだけ) ---------- */
+const OUT = { kind: "ainput", data: null };
+function outKind(k) {
+  OUT.kind = k;
+  for (const b of document.querySelectorAll("[data-okind]")) b.setAttribute("aria-pressed", String(b.dataset.okind === k));
+  openOutputs();
+}
+for (const b of document.querySelectorAll("[data-okind]")) b.addEventListener("click", () => outKind(b.dataset.okind));
+$("oReload").addEventListener("click", () => openOutputs());
+
+function kb(n) { return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n >= 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`; }
+
+function outTable(cols, rows) {
+  const t = el("table");
+  if (cols && cols.length) {
+    const tr = el("tr");
+    for (const c of cols) tr.append(el("th", "", c));
+    t.append(el("thead"));
+    t.tHead.append(tr);
+  }
+  const tb = el("tbody");
+  for (const r of rows) {
+    const tr = el("tr");
+    for (const c of r) tr.append(el("td", "", c));
+    tb.append(tr);
+  }
+  t.append(tb);
+  return t;
+}
+
+async function outShow(f, btn) {
+  for (const b of document.querySelectorAll(".out__file")) b.setAttribute("aria-pressed", String(b === btn));
+  const v = $("oView");
+  const meta = el("p", "out__meta", `${f.path}(${kb(f.size)}・${f.mtime})`);
+  if (OUT.kind === "pdf") {
+    const fr = el("iframe");
+    fr.title = f.name;
+    fr.src = tokenUrl(`/api/maint/outputs/file?path=${encodeURIComponent(f.path)}`);
+    v.replaceChildren(meta, fr);
+    return;
+  }
+  v.replaceChildren(meta, el("p", "muted", "読み込んでいます…"));
+  try {
+    const d = await api.get(`/api/maint/outputs/text?kind=${OUT.kind}&path=${encodeURIComponent(f.path)}`);
+    const note = el("p", "out__meta", `文字コード ${d.encoding}・${d.total} 行${d.cut ? "(最後の 300 行だけ)" : ""}`);
+    v.replaceChildren(meta, note, outTable(null, d.rows));
+  } catch (err) { v.replaceChildren(meta, el("p", "out__prob", err.message || String(err))); }
+}
+
+function outDb(db) {
+  const v = $("oView");
+  if (db.problem) { v.replaceChildren(el("p", "out__meta", db.path), el("p", "out__prob", db.problem)); return; }
+  const parts = [el("p", "out__meta", `${db.path}(更新 ${db.mtime})。このラインの行を新しい順に最大 30 行`)];
+  for (const t of db.tables) {
+    parts.push(el("h4", "", `${t.table}(全 ${t.count} 行)`));
+    if (t.problem) { parts.push(el("p", "out__prob", t.problem)); continue; }
+    parts.push(t.rows.length ? outTable(t.columns, t.rows) : el("p", "muted", "このラインの行はまだありません"));
+  }
+  v.replaceChildren(...parts);
+}
+
+async function openOutputs() {
+  const list = $("oList");
+  list.replaceChildren(el("p", "muted", "読み込んでいます…"));
+  try {
+    const d = await api.get(`/api/maint/outputs?kind=${OUT.kind}`);
+    OUT.data = d;
+    $("oLine").textContent = `ライン ${d.line}(${d.lname})`;
+    if (OUT.kind === "db") {
+      list.replaceChildren(el("p", "muted", "測定DB(梱包検査ﾃﾞｰﾀ)の、このラインの最後の行を右に出しています。"));
+      outDb(d.db);
+      return;
+    }
+    $("oView").replaceChildren(el("p", "muted", "左の一覧からファイルを選ぶと、中身をここに出します。"));
+    list.replaceChildren(...d.places.map((pl) => {
+      const box = el("div", "out__place");
+      box.append(el("h5", "", pl.label), el("div", "out__dir", pl.folder));
+      if (pl.problem) box.append(el("p", "out__prob", pl.problem));
+      for (const f of pl.files) {
+        const b = el("button", "out__file");
+        b.type = "button";
+        b.append(el("span", "", f.name), el("small", "", `${f.mtime.slice(5, 16)}・${kb(f.size)}`));
+        b.title = f.path;
+        b.addEventListener("click", () => outShow(f, b));
+        box.append(b);
+      }
+      if (pl.more) box.append(el("small", "muted", `ほか ${pl.more} 件(古いもの)`));
+      return box;
+    }));
+  } catch (err) {
+    list.replaceChildren(el("p", "out__prob", err.message || String(err)));
+  }
+}
+
+/* ---------- アイカスのラインコード(2026-11-14。共有マスタ) ---------- */
+let IC = null;
+function icRow(r) {
+  const tr = el("tr");
+  tr.dataset.line = r.line;
+  const mk = (key, val, ph) => {
+    const i = el("input", "input");
+    i.value = val || "";
+    i.placeholder = ph || "";
+    i.dataset.k = key;
+    if (key === "code") { i.maxLength = IC.max_len; i.size = 6; }
+    if (key === "line" && r.line === IC.other) i.readOnly = true;
+    const td = el("td");
+    td.append(i);
+    return td;
+  };
+  const x = el("button", "btn btn--sm", "消す");
+  x.type = "button";
+  x.disabled = r.line === IC.other;
+  x.addEventListener("click", () => tr.remove());
+  const td = el("td");
+  td.append(x);
+  tr.append(mk("line", r.line, "例 HVC"), mk("code", r.code, "例 04"), mk("note", r.note, ""), td);
+  return tr;
+}
+function icRender(rows) {
+  $("iTbl").tBodies[0].replaceChildren(...rows.map(icRow));
+  $("iNote").textContent = `検査画面のライン名: ${IC.known.join("・")}(ここに無いラインは「${IC.other}」のコード)`;
+  $("iHist").replaceChildren(...(IC.history.length ? IC.history.map((h) =>
+    el("li", "", `${h.t} ${h.user || ""}@${h.pc || ""}: ` + h.changes.map((c) => `${c.line} ${c.before || "(なし)"}→${c.after || "(なし)"}`).join("、")))
+    : [el("li", "", "(まだ変更はありません)")]));
+}
+async function openIcas() {
+  try {
+    IC = await api.get("/api/maint/icas_lines");
+    icRender(IC.rows);
+  } catch (err) { toastError(err); }
+}
+function icRead() {
+  return [...$("iTbl").tBodies[0].rows].map((tr) => Object.fromEntries(
+    [...tr.querySelectorAll("input[data-k]")].map((i) => [i.dataset.k, i.value.trim()])));
+}
+$("iAdd").addEventListener("click", () => {
+  if (!IC) return;
+  const tr = icRow({ line: "", code: "", note: "" });
+  const body = $("iTbl").tBodies[0];
+  body.insertBefore(tr, [...body.rows].find((r) => r.dataset.line === IC.other) || null);
+  tr.querySelector("input").focus();
+});
+$("iReset").addEventListener("click", () => { if (IC) icRender(IC.defaults); });
+$("iSave").addEventListener("click", async () => {
+  if (!IC) return;
+  for (const tr of $("iTbl").tBodies[0].rows) tr.dataset.bad = "";
+  try {
+    const d = await withUnlock(() => api.post("/api/maint/icas_lines", { rows: icRead() }));
+    if (!d) return;
+    IC = d;
+    icRender(IC.rows);
+    toast("アイカスのラインコードを保存しました(全 PC 共通)", "ok");
+  } catch (err) {
+    if (err && err.field) {
+      const tr = [...$("iTbl").tBodies[0].rows].find((r) => r.querySelector('[data-k="line"]').value.trim() === err.field);
+      if (tr) { tr.dataset.bad = "1"; tr.querySelector('[data-k="code"]').focus(); }
+    }
+    toastError(err);
+  }
 });
