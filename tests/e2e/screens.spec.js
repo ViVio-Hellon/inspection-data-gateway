@@ -181,6 +181,7 @@ const PTY = process.env.E2E_PTY || "-";
     await page.click('[data-qfview="table"]'); await W(200);
     check(await page.locator("#qfGrid").isVisible() && !(await page.locator("#qfSheet").isVisible()), S.step, "表に切り替え");
     await shot(page, "maint_qf_table");
+    await page.click('[data-qfview="sheet"]'); await W(200);
 
     // ---- 保守: 出力の確認・アイカスのライン(2026-11-14) ----------------------------
     S.step = "maint_outputs";
@@ -197,7 +198,6 @@ const PTY = process.env.E2E_PTY || "-";
     await page.click('[data-tab="icas"]'); await W(1000);
     check(await page.locator("#iTbl tbody tr").count() >= 9, S.step, "アイカスのラインコード(既定 9 行)");
     await shot(page, "maint_icas");
-    await page.click('[data-qfview="sheet"]'); await W(200);
 
     // ---- 保守 → 端末設定(プリセットを外し、ラインリセット)----------------------------
     S.step = "maint_term";
