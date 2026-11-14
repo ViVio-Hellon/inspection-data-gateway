@@ -195,6 +195,12 @@ const PTY = process.env.E2E_PTY || "-";
     await page.click('[data-okind="csv"]'); await W(1200);
     const csvBtn = page.locator(".out__file").first();
     if (await csvBtn.count()) { await csvBtn.click(); await W(800); await shot(page, "maint_outputs_csv"); }
+    S.step = "maint_nippou";
+    await page.click('[data-tab="nippou"]'); await W(2000);
+    const paper = page.frameLocator("#nPaper");
+    check(/梱　包　実　績　日　報　表/.test(await paper.locator("body").innerText()), S.step, "日報の紙(all-tools と同じ題)");
+    check(await paper.locator(".sheet > table").first().locator("tbody tr").count() >= 12, S.step, "12 行の紙");
+    await shot(page, "maint_nippou");
     await page.click('[data-tab="icas"]'); await W(1000);
     check(await page.locator("#iTbl tbody tr").count() >= 9, S.step, "アイカスのラインコード(既定 9 行)");
     await shot(page, "maint_icas");

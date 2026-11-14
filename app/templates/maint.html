@@ -24,6 +24,7 @@
       <button class="tab" role="tab" type="button" data-tab="rules">照合ルール</button>
       <button class="tab" role="tab" type="button" data-tab="qf">QF空冷時間</button>
       <button class="tab" role="tab" type="button" data-tab="outputs">出力の確認</button>
+      <button class="tab" role="tab" type="button" data-tab="nippou">日報</button>
       <button class="tab" role="tab" type="button" data-tab="icas">アイカスのライン</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
@@ -360,6 +361,25 @@
           <div class="out__body">
             <div class="out__list" id="oList"></div>
             <div class="out__view" id="oView"><p class="muted">左の一覧からファイルを選ぶと、中身をここに出します。</p></div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 日報(2026-11-14。all-tools の日報の紙と同じ見せ方。見るだけ) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="nippou" id="pNippou" hidden>
+      <section class="card">
+        <header><h3>日報</h3><span class="lv" id="nNow"></span></header>
+        <div class="pad">
+          <p class="muted maint__small">all-tools の日報の紙(梱包実績日報表)と同じ姿で出します。上の「印刷する」で刷れます。
+            「いまの日報」は検査を保存するたびに増える日報シート、その下は書き出した日報(all-tools の日報モードへ渡した CSV)です。</p>
+          <div class="out__body">
+            <div class="out__list" id="nList"></div>
+            <div class="out__view nip__view">
+              <div class="btn-row"><button class="btn btn--sm" type="button" id="nOpen">別の窓で開く</button>
+                <button class="btn btn--sm" type="button" id="nReload">読み直す</button></div>
+              <iframe id="nPaper" title="日報の紙"></iframe>
+            </div>
           </div>
         </div>
       </section>

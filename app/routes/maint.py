@@ -920,3 +920,86 @@ def icas_lines_set():
     except (OSError, sqlite3.Error) as e:
         return _err("not_saved", f"保存できませんでした: {e}", 500)
     return jsonify(_icas_payload(after))
+
+
+# ----------------------------------------------------------------------
+# 日報を見る(2026-11-14)。見せ方は all-tools の日報の紙(ufkensa/kensa/nippou_print.py)。見るだけ
+# ----------------------------------------------------------------------
+def _nippou_now():
+    """いまの日報シートの (ページ, 説明)。"""
+    from ufkensa.kensa import nippou_export as ne
+    from ufkensa.kensa import nippou_print as npr
+    from ufkensa.kensa import session
+    s = session.get()
+    r = s.start()
+    if r.stop is not None:
+        raise Stop(r.stop.text, source="日報")
+    with s._lock:                                                     # noqa: SLF001
+        day, shift, who = ne.current(s.state, s._env())             # noqa: SLF001
+        rows = ne.rows_of(s.store, s.state.lname)
+    pages = npr.paginate(rows, report_date=ne.nippou_date(day), line=ne.nippou_line(s.state.line_name),
+                         shift=shift, worker=who)
+    return pages, {"date": ne.nippou_date(day), "shift": shift, "line": ne.nippou_line(s.state.line_name),
+                   "rows": len(rows)}
+
+
+def _nippou_files() -> list:
+    from datetime import datetime
+
+    from ufkensa.kensa import nippou_export as ne
+    d = ne.out_dir()
+    out = []
+    try:
+        for p in d.glob("集計明細_*.csv"):
+            try:
+                st_ = p.stat()
+            except OSError:
+                continue
+            out.append({"name": p.name, "mtime": datetime.fromtimestamp(st_.st_mtime).strftime("%Y-%m-%d %H:%M"),
+                        "_t": st_.st_mtime})
+    except OSError:
+        pass
+    out.sort(key=lambda f: f["_t"], reverse=True)
+    for f in out:
+        f.pop("_t")
+    return out[:100]
+
+
+@bp.get("/api/maint/nippou")
+def nippou_list():
+    from ufkensa.kensa import nippou_export as ne
+    try:
+        _, now = _nippou_now()
+    except Stop as e:
+        now = {"problem": e.text}
+    return jsonify({"now": now, "dir": str(ne.out_dir()), "files": _nippou_files()})
+
+
+@bp.get("/maint/nippou/paper")
+def nippou_paper():
+    """日報の紙(印刷用 HTML)。src=now(いまの日報シート)/ file(書き出した 集計明細_*.csv。一覧にある名前だけ)。"""
+    from datetime import datetime
+
+    from flask import Response
+
+    from ufkensa.kensa import nippou_export as ne
+    from ufkensa.kensa import nippou_print as npr
+    gen = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    src = request.args.get("src", "now")
+    try:
+        if src == "file":
+            name = request.args.get("name", "")
+            if name not in {f["name"] for f in _nippou_files()}:
+                return Response(npr.build_html([], note="そのファイルは一覧にありません(読み直してください)"),
+                                mimetype="text/html")
+            rows = npr.read_csv(ne.out_dir() / name)
+            pages = npr.paginate(rows, report_date="", line="", shift="", worker="")
+            note = f"書き出した日報: {name}"
+        else:
+            pages, info = _nippou_now()
+            note = f"いまの日報({info['date']} {info['line']} {info['shift']})。検査を保存するたびに行が増えます"
+    except Stop as e:
+        return Response(npr.build_html([], note=e.text), mimetype="text/html")
+    except OSError as e:
+        return Response(npr.build_html([], note=f"読めませんでした: {e}"), mimetype="text/html")
+    return Response(npr.build_html(pages, generated_at=gen, note=note), mimetype="text/html")
