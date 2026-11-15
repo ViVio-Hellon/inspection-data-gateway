@@ -293,30 +293,254 @@ def main(argv: Optional[list[str]] = None) -> int:
                       f"ready={health['ready']} 起動={lock['started']}")
         return 0
 
-    failed = False
-    # **止めなかった理由を先に出す**(python-web-tools と同じ)。「起動していません」が先に来ると、
-    # デスクトップ版が動いているのに止めたように読める
-    if desktop is not None:
-        print(DESKTOP_MESSAGE)
-        failed = True
     # 管理者以外停止モード中は止めない(管理者が帯で知らせて5分で強制する。同時には使わない)
-    refusal = remote_stop_refusal(lambda: any(launch_guard.read_lock(m) is not None for m in targets))
+    refusal = remote_stop_refusal(lambda: desktop is not None
+                                  or any(launch_guard.read_lock(m) is not None for m in targets))
     if refusal:
         print(f"止めませんでした: {refusal}")
         return 1
+    failed = busy = False
     for mode in targets:
         result = stop(mode, force=args.force)
         print(result)
         failed = failed or not result.stopped
-    # プレビューで起こした隠れた Excel・Word が残っていれば止める(PID・作成時刻が合うものだけ)
+    # デスクトップ版(exe の窓)も止める(0.3.8。python-web-tools と同じ): 窓に「閉じて」と頼む(× と同じ確認を通る)。
+    # 窓が実行中の処理を訊いて残っていれば「処理中」(3)。--force なら窓と Python をまとめて止める
+    for window in desktop_targets(desktop):
+        result = stop_desktop(window, force=args.force)
+        print(result)
+        if not result.stopped:
+            busy = busy or bool(result.busy_jobs)
+            failed = failed or not result.busy_jobs
+    return 1 if failed else (3 if busy else 0)
+
+
+# 窓に「閉じて」と頼んでから、消えるのを待つ上限(秒)。実行中の処理があれば
+# 窓が訊いて残るので、待ちきれなければ「処理中」とみなす
+DESKTOP_WAIT_SEC = 10.0
+
+
+def stop_desktop(desktop: dict, *, force: bool = False) -> StopResult:
+    """デスクトップ版の窓を止める(VER4.8.125)。
+
+    ふだんは窓に「閉じて」と頼む(**見えている窓にだけ WM_CLOSE**。窓の × と同じで、ランチャーの［ツール停止］・
+    CI の確かめ `scripts/desktop_smoke.py` と同じ頼み方)。窓は閉じる前に、実行中の処理を訊く ──
+    そのあいだ窓は残るので「処理中」。`force` なら窓とその子(Python)をまとめて止める(保存していないものは捨てる)。
+
+    止める相手は**この窓だと確かめられたものだけ**(番号は使い回されるので、別のプロセスを止めない):
+      - 外枠が環境変数で渡した窓の番号(`exe_pid_from` = env)・このツールのフォルダの exe として見つけたもの(path)・
+        確かめ済みのもの(checked)はそのまま
+      - 親の番号しか無いとき(前の版の外枠。py.exe のこともある)は、コマンドラインがこのツールの exe のときだけ
+    """
+    import launch_guard
+
+    result = StopResult("デスクトップ版")
+    py_pid = int(desktop.get("pid") or 0)
+    exe_pid = int(desktop.get("exe_pid") or 0)
+    if not _exe_alive(desktop):
+        if _python_alive(desktop):
+            # 窓が居ないのに Python だけ残っている(外枠が落ちた)。Python を止める(bridge.py だと確かめ済み)
+            return _stop_lone_python(py_pid, result)
+        result.stopped = True
+        result.method = "already-gone"
+        result.message = "すでに終了していました"
+        if desktop.get("started_at"):
+            launch_guard.remove_desktop_marker(expect=desktop)
+            result.message = "すでに終了していました(残っていた印を片付けました)"
+        return result
+    if desktop.get("exe_pid_from") not in ("env", "path", "checked") and not _looks_like_our_exe(exe_pid):
+        result.message = (f"窓(pid {exe_pid})がこのツールのものか確かめられないので止めません。"
+                          "窓の × で閉じてください")
+        return result
+    if force:
+        _kill_tree(exe_pid)
+        if _wait_pid_gone(exe_pid, FORCE_WAIT_SEC):
+            _finish_python(desktop)
+            result.stopped = True
+            result.method = "force"
+            result.message = "強制終了しました"
+            return result
+        result.message = (f"強制終了を頼みましたが、pid {exe_pid} がまだ残っています。"
+                          "タスクマネージャーで UF検査判定.exe を確かめてください")
+        return result
+    sent = _ask_windows_to_close({exe_pid})
+    if sent == 0:
+        result.message = ("窓が見つからないので、閉じてと頼めませんでした。"
+                          "窓の × で閉じるか、--force を付けてください")
+        return result
+    if _wait_pid_gone(exe_pid, DESKTOP_WAIT_SEC):
+        _finish_python(desktop)
+        result.stopped = True
+        result.method = "close"
+        result.message = "窓を閉じました"
+        return result
+    result.busy_jobs = ["デスクトップ版の窓で、実行中の処理を確かめています"]
+    result.message = ("窓が閉じませんでした(実行中の処理を窓で訊いています)。\n"
+                      "    窓で答えるか、捨てて・中断して止めるには --force を付けてください")
+    return result
+
+
+EXE_NAMES = ("uf検査判定", "ufkensa", "ufkensa-desktop")
+# このツールのフォルダに置く exe の名前(配るとき `UF検査判定.exe`、CI が作る名前 `UFKensa.exe`)
+EXE_FILES = ("UF検査判定.exe", "UFKensa.exe")
+
+
+def desktop_targets(desktop: Optional[dict]) -> list[dict]:
+    """止めるデスクトップ版の窓(VER4.8.125)。
+
+    1. 中の Python が置いた印(`desktop_running`。Python が生きていて bridge.py を動かしている)
+    2. 印はあるが Python が居ない(落ちた): 窓(exe)だけ残っていれば。**このツールの exe だと確かめられたときだけ**
+    3. 印が無くても、**このツールのフォルダの exe** が動いていれば(Python が見つからず理由の画面のまま、など)。
+       窓が残っていると exe のファイルを掴んだままで、更新の上書きが止まる
+    """
+    import launch_guard
+
+    found: list[dict] = []
+    if desktop is not None:
+        found.append(desktop)
+    else:
+        raw = launch_guard.read_desktop_marker()
+        exe_pid = int((raw or {}).get("exe_pid") or 0)
+        if (exe_pid > 0 and launch_guard.is_process_alive(exe_pid)
+                and launch_guard.desktop_exe_alive(raw) is not False and _looks_like_our_exe(exe_pid)):
+            found.append({**raw, "pid": 0, "exe_pid_from": "checked"})
+        elif raw is not None:
+            # 窓も Python も居ない(PC の終了・再起動のあと、など)。残った印を片付ける(VER4.8.127)
+            launch_guard.remove_desktop_marker(expect=raw)
+    known = {int(d.get("exe_pid") or 0) for d in found}
+    for pid in _our_exe_pids():
+        if pid not in known:
+            found.append({"pid": 0, "exe_pid": pid, "exe_pid_from": "path"})
+    return found
+
+
+def _our_exe_pids() -> set[int]:
+    """**このツールのフォルダにある exe** で動いているプロセスの番号(Windows だけ。取れなければ空)。"""
+    if os.name != "nt":
+        return set()
+    import subprocess
+    root = str(APP_ROOT).replace("'", "''")
+    names = " -or ".join(f"$_.Name -ieq '{n}'" for n in EXE_FILES)
+    script = ("Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and "
+              f"([IO.Path]::GetDirectoryName($_.ExecutablePath) -ieq '{root}') -and ({names}) }} | "
+              "ForEach-Object { $_.ProcessId }")
     try:
-        from ufkensa.office_bridge import procs as office_procs
-        n = office_procs.cleanup_leftovers(log)
-        if n:
-            print(f"[済] プレビューで起こした Excel・Word が {n} 個残っていたので止めました")
-    except Exception:                              # noqa: BLE001 - 片付けられなくても止める処理は終える
-        log.warning("残った Excel・Word を確かめられませんでした", exc_info=True)
-    return 1 if failed else 0
+        out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+                             capture_output=True, text=True, timeout=20,
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.SubprocessError) as exc:
+        log.warning("このツールの exe を探せませんでした: %s", exc)
+        return set()
+    return {int(t) for t in (out.stdout or "").split() if t.strip().isdigit()}
+
+
+def _looks_like_our_exe(pid: int) -> bool:
+    """そのプロセスがこのツールの exe か(コマンドラインで見る。取れなければ違うとみなす)。"""
+    import launch_guard
+    command = (launch_guard.process_command_line(pid) or "").lower()
+    return bool(command) and any(name in command for name in EXE_NAMES)
+
+
+def _exe_alive(desktop: dict) -> bool:
+    """止める相手の窓(exe)がまだ動いているか。印から来たものは**番号と起動時刻で**本人か見る(VER4.8.127)。"""
+    import launch_guard
+    exe_pid = int(desktop.get("exe_pid") or 0)
+    if exe_pid <= 0 or not launch_guard.is_process_alive(exe_pid):
+        return False
+    if desktop.get("started_at") and launch_guard.desktop_exe_alive(desktop) is False:
+        log.info("印の窓 pid=%s は動いていますが、別のプログラムです(番号の使い回し)", exe_pid)
+        return False
+    return True
+
+
+def _python_alive(desktop: dict) -> bool:
+    """印を書いた Python(bridge.py)がまだ動いているか。番号と起動時刻、取れなければコマンドラインで見る。"""
+    import launch_guard
+    py_pid = int(desktop.get("pid") or 0)
+    if py_pid <= 0 or not launch_guard.is_process_alive(py_pid):
+        return False
+    same = launch_guard.desktop_python_alive(desktop) if desktop.get("started_at") else None
+    if same is not None:
+        return same
+    # 起動時刻が取れない: `desktop_running` と同じ確かめ方(取れたコマンドラインが bridge.py でなければ別物)
+    command = launch_guard.process_command_line(py_pid)
+    return not command or "bridge.py" in command
+
+
+def _finish_python(desktop: dict) -> None:
+    """窓が終わったあと、中の Python も終わるのを待つ(外枠は終わるとき子をまとめて止める。VER4.8.84)。
+    残っていれば止める(フォルダを掴んだままにしない)。本人と確かめられたときだけ。"""
+    py_pid = int(desktop.get("pid") or 0)
+    if py_pid > 0 and not _wait_pid_gone(py_pid, FORCE_WAIT_SEC) and _python_alive(desktop):
+        _kill_tree(py_pid)
+        _wait_pid_gone(py_pid, FORCE_WAIT_SEC)
+
+
+def _stop_lone_python(py_pid: int, result: StopResult) -> StopResult:
+    _kill_tree(py_pid)
+    if _wait_pid_gone(py_pid, FORCE_WAIT_SEC):
+        result.stopped = True
+        result.method = "python"
+        result.message = "窓は終わっていて、残っていた Python を止めました"
+    else:
+        result.message = f"残っていた Python(pid {py_pid})を止められませんでした"
+    return result
+
+
+def _kill_tree(pid: int) -> None:
+    """そのプロセスと子をまとめて止める(Windows は taskkill /T /F)。"""
+    import subprocess
+    if os.name == "nt":
+        try:
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, timeout=15,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except (OSError, subprocess.SubprocessError) as exc:
+            log.warning("強制終了を頼めませんでした: %s", exc)
+        return
+    try:
+        os.kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))
+    except OSError as exc:
+        log.warning("強制終了を頼めませんでした: %s", exc)
+
+
+def _ask_windows_to_close(pids: set[int]) -> int:
+    """そのプロセスの**見えている最上位の窓**(持ち主のいる窓は除く)に WM_CLOSE を送る。送った窓の数。
+
+    ランチャーの `desktop._windows_of`・`scripts/desktop_smoke.py` の `ask_to_close` と同じ選び方。
+    見えない窓(外枠の中の仕組みの窓)には送らない。Windows 以外では SIGTERM(試験・開発用)。
+    """
+    if os.name != "nt":
+        sent = 0
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGTERM)
+                sent += 1
+            except OSError:
+                pass
+        return sent
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.GetWindow.argtypes = [wintypes.HWND, wintypes.UINT]
+    user32.GetWindow.restype = wintypes.HWND
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    found: list = []
+
+    def visit(hwnd, _param):
+        if user32.IsWindowVisible(hwnd) and not user32.GetWindow(hwnd, 4):   # 4 = GW_OWNER
+            owner = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+            if owner.value in pids:
+                found.append(hwnd)
+        return True
+
+    user32.EnumWindows(callback_type(visit), 0)
+    return sum(1 for hwnd in found if user32.PostMessageW(hwnd, 0x0010, 0, 0))   # 0x0010 = WM_CLOSE
 
 
 def remote_stop_refusal(running) -> str:
@@ -328,10 +552,6 @@ def remote_stop_refusal(running) -> str:
         return ""
 
 
-# デスクトップ版(exe の窓)は止めない。窓の × か画面の「終了」で閉じる
-# (閉じるときに実行中の処理を訊くため)。**「起動していません」で 0 を返さない**
-DESKTOP_MESSAGE = ("[--] デスクトップ版(exe の窓)が動いています。stop.bat では止めません。\n"
-                   "    窓の × か画面の「終了」で閉じてください(実行中の処理があれば訊きます)")
 
 
 if __name__ == "__main__":
