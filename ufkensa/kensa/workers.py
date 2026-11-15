@@ -790,7 +790,32 @@ def _daily_a1(now: datetime, ctx: DailyContext) -> str:
             + time_check(t, facility=ctx.facility, shifts=ctx.shifts))
 
 
-def daily_create(ctx: DailyContext) -> DailyCreateResult:
+def daily_lot_start(ctx: DailyContext) -> list[CellWrite]:
+    """ロット登録の時刻を、日報のいまの行の開始(F・G 列)に書く(2026-11-15 のご判断。VBA には無い)。
+
+    現場の決まり: 開始 = ロット登録の時刻。ただし前の梱包を Aインプットへ送ったあとの行は、送った時刻が
+    次の行の開始として入っている(Daily_Report(4))ので、**開始が入っていれば書かない**(次の梱包の開始 =
+    前回の Aインプットの送信時刻)。行のロット情報が空なら Daily_Report(2) と同じに入れる。
+    """
+    writes: list[CellWrite] = []
+    if not ctx.exists or ctx.history_rows is None:
+        return writes
+    cells = ctx.cells
+    lr = last_row(cells, 4) + 1
+    if not (_empty(cells.get((lr, 6))) and _empty(cells.get((lr, 7)))):
+        return writes
+    if not any(_veq(_hist(row, 3), ctx.working_lot) for row in ctx.history_rows):
+        return writes                                  # Lot情報履歴 にまだ無い(VBA の (2)(3) と同じく何もしない)
+    if _empty(cells.get((lr, 1))):
+        writes += daily_report(2, ctx)
+    now = ctx.now
+    for c, v in ((6, _two(now.hour)), (7, _two(now.minute))):
+        writes.append(CellWrite(lr, c, v))
+        cells[(lr, c)] = v
+    return writes
+
+
+def daily_create(ctx: DailyContext, *, start: bool = True) -> DailyCreateResult:
     """Worker.Daily_Create (Worker:719-743)。直が変わっていたら日報シートを作り直し、見出しと (1)(3) を書く。
 
     A1 との比較は YeaDayrCheck("hh:mm") と TimeCheck("hh:mm:ss") の組み合わせ(7:00 台の 1 分間は
@@ -804,7 +829,8 @@ def daily_create(ctx: DailyContext) -> DailyCreateResult:
     for w in writes:
         ctx.cells[(w.row, w.col)] = w.value
     writes += daily_report(1, ctx)
-    writes += daily_report(3, ctx)
+    if start:            # 2026-11-15: 通常検査は開始をロット登録で書く(daily_lot_start)ので start=False
+        writes += daily_report(3, ctx)
     return DailyCreateResult(recreate, writes)
 
 

@@ -780,13 +780,13 @@ def time_posting(state: KensaState, env: Env, position: str, each_t: Optional[da
         sh.set(i + 14, x, None)
 
 
-def daily_context(state: KensaState, env: Env) -> workers.DailyContext:
+def daily_context(state: KensaState, env: Env, now: Optional[datetime] = None) -> workers.DailyContext:
     name = line_sheet(records.DAILY, state.lname)
     cells = sheet_cells(env.store, name)
     hist = sheet_rows(env.store, LOT_HISTORY)
     return workers.DailyContext(exists=cells is not None, cells=dict(cells or {}),
                                 history_rows=hist[1:] if hist is not None else None, working_lot=state.lot,
-                                now=env.now(), facility=env.facility() or workers.DEFAULT_FACILITY,
+                                now=now or env.now(), facility=env.facility() or workers.DEFAULT_FACILITY,
                                 shifts=env.shift_times(), registry=registry(state), uf1_line=state.line_name)
 
 
@@ -794,6 +794,18 @@ def daily_report(state: KensaState, env: Env, n: int) -> None:
     """Worker.Daily_Report(n)(日報 Daily_<L> に書く)。"""
     ctx = daily_context(state, env)
     writes = workers.daily_report(n, ctx)
+    if writes:
+        write_cells(env.store, line_sheet(records.DAILY, state.lname), writes)
+
+
+def daily_lot_start(state: KensaState, env: Env) -> None:
+    """ロット登録の時刻を日報の開始に(workers.daily_lot_start。日報シートが無ければ何もしない)。"""
+    if not env.store.exists(line_sheet(records.DAILY, state.lname)):
+        return
+    # 時計は読み進めない(直前に読んだ時刻を使う)。試験の時計は呼ぶたびに進むので、ここで 1 回増やすと
+    # 以後の時刻がすべてずれる。本番の時計(datetime.now)は直前の値を持たないので、そのときだけ読む
+    seen = getattr(env.now, "t", None)
+    writes = workers.daily_lot_start(daily_context(state, env, now=seen if isinstance(seen, datetime) else None))
     if writes:
         write_cells(env.store, line_sheet(records.DAILY, state.lname), writes)
 
