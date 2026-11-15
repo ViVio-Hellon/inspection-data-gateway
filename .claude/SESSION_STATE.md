@@ -8,12 +8,13 @@
 - 本番ではまだ使わない(仕上がるまで)。ユーザーがライン PC で試し、気づいたことを直していく段階。
 
 ## 完了した作業
-- PR #63〜#115 まで main に入れた(最新 版 0.3.6)。
+- PR #63〜#116 まで main に入れた(最新 版 0.3.7)。
 - 0.3.2: 最小化して放置→「バックエンドに接続できません」から戻らない件(Edge の同じ相手 6 本の通り道が詰まる)。api.js に時間の上限・abortAll、health.js で約1分で読み込み直し。
 - 0.3.3: 測定:公差 80:20/外観は押すだけで複数選択(不良は1つ)/Min/Max が何もしない時に理由を出しタブへ移る/保守 測定機器ID の受信記録で画面が飛ばない/Aインプットを Min/Max 無しでは開けない(Test でも)・上 Auto(情報)/下 Manual(入力)・高さNG で測り直しを促す・「前回」列。
 - 0.3.4: 保守「出力の確認」(Aインプット CSV・hostsend / 検査結果 PDF / 検査結果 CSV / 梱包検査ﾃﾞｰﾀ の最後の行。見るだけ。output_check.py)と「アイカスのライン」(伝送用ファイル 表「アイカスラインコード」。既定 = VBA の LinConv。icas_lines.py)。
 - 0.3.5: 保守「日報」= all-tools の日報の紙(print_format)を写した nippou_print.py。いまの日報シートと書き出した 集計明細_*.csv を紙で出す(集計の段は出さない)。
 - 0.3.6: 日報の開始 = ロット登録の時刻(workers.daily_lot_start。開始が入っている行=Aインプット送信後の次行は触らない)。検査員登録の Daily_Create は見出しだけ(start=False)。golden は Daily 3 行目だけ差(説明済み)。
+- 0.3.7: キャスクに不良要因の登録(窓。不良要因印刷_<ライン> の 3 行目「ｷｬｽｸ」)・印刷で不良要因票も開く・ｻｰﾊﾞｰ保存で <Lot>_不良要因 の PDF を手元と工場共有へ(通常検査と同じ)。
 - Claude Code の圧縮対策(この SESSION_STATE.md と .claude/hooks/session_state.py、.claude/settings.json の PreCompact / SessionStart hook)。
 
 ## 未完了の作業

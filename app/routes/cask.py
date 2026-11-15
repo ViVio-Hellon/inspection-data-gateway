@@ -36,6 +36,8 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "close": ("close", ()),
     "pack-select": ("pack_select", ("i",)),
     "pack-close": ("pack_close", ("confirmed",)),
+    "defect-reflect": ("defect_reflect", ("item", "count")),     # 2026-11-15: キャスクの不良要因
+    "defect-clear": ("defect_clear", ()),
 }
 
 @bp.get("/cask")
@@ -52,6 +54,16 @@ def state():
 def report(name: str):
     """印刷した帳票(D8: ブラウザで開いて印刷する HTML)。手元のデータフォルダの print にあるものだけ。"""
     return screen_common.report_file(cask_session.get().store.print_dir, name)
+
+
+@bp.get("/api/cask/defect_preview")
+def defect_preview():
+    """不良要因票の見本(2026-11-15)。そのまま印刷できる帳票の HTML。まだ無ければ 204。"""
+    from flask import Response
+    h = cask_session.get().defect_preview_html()
+    if h is None:
+        return Response(status=204)
+    return Response(h, mimetype="text/html")
 
 
 @bp.get("/api/cask/pack_image")

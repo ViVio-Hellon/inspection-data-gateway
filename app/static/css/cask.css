@@ -76,3 +76,23 @@
 .cask__top .btn { min-height: 32px; padding: 4px 10px; }
 .cask__top .req label { font-size: var(--fs-2xs); }
 .read-row { gap: 6px; margin-top: 4px; }
+
+/* 不良要因(2026-11-15) */
+.cdef { width: min(1280px, 96vw); max-width: 96vw; height: min(820px, 92vh); padding: 0; border: 1px solid var(--rule);
+  border-radius: var(--radius); background: var(--surface); color: var(--ink); }
+.cdef[open] { display: flex; flex-direction: column; }
+.cdef__head { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.cdef__head h3 { margin: 0; font-size: var(--fs-md); }
+.cdef__head .btn { margin-left: auto; }
+.cdef__body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 34%) minmax(0, 1fr); gap: 10px; padding: 10px; }
+.cdef__left { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.cdef__list { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-content: start; }
+.cdef__item { display: flex; justify-content: space-between; gap: 6px; padding: 8px; border: 1px solid var(--rule);
+  border-radius: var(--radius-xs); background: var(--sunken); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.cdef__item[aria-selected="true"] { border-color: var(--focus); background: var(--accent-soft); outline: 2px solid var(--focus); }
+.cdef__item b { font-family: var(--mono); color: var(--state-error); }
+.cdef__in { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.cdef__in .input { width: 6em; min-height: 40px; font-size: var(--fs-lg); }
+.cdef__warn { margin: 0; padding: 6px 8px; border-radius: var(--radius-xs); background: var(--warn-bg); color: var(--state-error); font-size: var(--fs-sm); }
+.cdef__right { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.cdef__right iframe { flex: 1; width: 100%; border: 1px solid var(--rule); background: var(--surface); }
