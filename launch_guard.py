@@ -857,6 +857,37 @@ def desktop_marker_path() -> Path:
     return _app_runtime(DESKTOP_MARKER)
 
 
+def is_same_process(pid: int, proc_started: float = 0.0, written_at: float = 0.0) -> Optional[bool]:
+    """その番号のプロセスが、**印を書いた本人か**(python-web-tools VER4.8.127 と同じ)。分からなければ None。
+
+        居ない → False / 起動時刻を書いてある → 番号と起動時刻が合えば True /
+        書いていない → 書いた時刻より後に起動したプロセスは本人ではない(False)
+    """
+    pid = int(pid or 0)
+    if not is_process_alive(pid):
+        return False
+    started = process_start_time(pid)
+    if started is None:
+        return None
+    if proc_started:
+        return abs(started - float(proc_started)) <= START_SLACK_SEC
+    if written_at:
+        return started <= float(written_at) + START_SLACK_SEC
+    return None
+
+
+def _env_exe_pid() -> int:
+    """外枠(exe)が自分の番号を渡す(`UFKENSA_EXE_PID`)。Python の親は py.exe のこともあるので。"""
+    try:
+        return int(os.environ.get("UFKENSA_EXE_PID", "") or 0)
+    except ValueError:
+        return 0
+
+
+def _exe_pid() -> int:
+    return _env_exe_pid() or os.getppid()
+
+
 def write_desktop_marker(mode: str) -> None:
     """デスクトップ版の Python が動き始めた。書けなくても起動は止めない。"""
     path = desktop_marker_path()
@@ -864,31 +895,61 @@ def write_desktop_marker(mode: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({
             "app_id": app_config.app_id(), "mode": mode, "pid": os.getpid(),
-            "exe_pid": os.getppid(), "started_at": time.time(),
+            # 窓(exe)の番号。stop.bat が窓に「閉じて」と頼む相手(env = 外枠が渡した番号)
+            "exe_pid": _exe_pid(), "exe_pid_from": "env" if _env_exe_pid() else "parent",
+            # 番号は使い回されるので、起動時刻も書いて本人か確かめる
+            "proc_started": process_start_time(os.getpid()) or 0.0,
+            "exe_started": process_start_time(_exe_pid()) or 0.0,
+            "started_at": time.time(),
             "app_root": str(app_config.APP_ROOT)}, ensure_ascii=False), encoding="utf-8")
     except OSError as exc:
         log.warning("デスクトップ版の印を書けませんでした (%s): %s", path, exc)
 
 
-def remove_desktop_marker() -> None:
-    """自分の印だけを消す(あとから起動した別の Python の印は消さない)。"""
+def remove_desktop_marker(expect: Optional[dict] = None) -> None:
+    """自分の印だけを消す。`expect` を渡したら残った印の片付け(stop.bat): 同じ pid・書いた時刻のときだけ。"""
     path = desktop_marker_path()
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-        if int(raw.get("pid", 0)) == os.getpid():
+        if expect is not None:
+            mine = (int(raw.get("pid", 0)) == int(expect.get("pid", 0))
+                    and raw.get("started_at") == expect.get("started_at"))
+        else:
+            mine = int(raw.get("pid", 0)) == os.getpid()
+        if mine:
             path.unlink()
-    except (OSError, ValueError):
+    except (OSError, ValueError, TypeError):
         pass
 
 
+def desktop_python_alive(raw: dict) -> Optional[bool]:
+    return is_same_process(int(raw.get("pid") or 0), float(raw.get("proc_started") or 0),
+                           float(raw.get("started_at") or 0))
+
+
+def desktop_exe_alive(raw: dict) -> Optional[bool]:
+    return is_same_process(int(raw.get("exe_pid") or 0), float(raw.get("exe_started") or 0),
+                           float(raw.get("started_at") or 0))
+
+
+def read_desktop_marker() -> Optional[dict]:
+    try:
+        raw = json.loads(desktop_marker_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return raw if isinstance(raw, dict) else None
+
+
 def desktop_running() -> Optional[dict]:
-    """デスクトップ版が動いていれば、その印の中身。動いていなければ `None`。"""
+    """デスクトップ版が動いていれば、その印の中身。動いていなければ `None`(落ちたあと・番号の使い回しを見分ける)。"""
     try:
         raw = json.loads(desktop_marker_path().read_text(encoding="utf-8"))
         pid = int(raw.get("pid", 0))
     except (OSError, ValueError, TypeError):
         return None
     if not is_process_alive(pid):
+        return None
+    if desktop_python_alive(raw) is False:
         return None
     command = process_command_line(pid)
     if command and "bridge.py" not in command:
