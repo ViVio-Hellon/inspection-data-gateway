@@ -50,6 +50,14 @@ const PTY = process.env.E2E_PTY || "-";
     await W(300);
     check(/ｷｬﾝｾﾙ処理/.test(await toasts()), S.step, "いいえ → 答えを付けて送り直し、ｷｬﾝｾﾙ処理を出す");
     await shot(page, "cask");
+    // 2026-11-15: キャスクの不良要因
+    await page.click("#defBtn"); await W(600);
+    const dItems = page.locator("#defList .cdef__item");
+    check(await dItems.count() > 3, S.step, "不良要因の一覧");
+    await dItems.first().click(); await page.fill("#defCount", "2"); await page.press("#defCount", "Enter"); await W(1200);
+    check(/2/.test(await dItems.first().innerText()), S.step, "不良要因の枚数が入る");
+    await shot(page, "cask_defect");
+    await page.click("#defClose"); await W(200);
 
     // ---- 全ヵ所 -----------------------------------------------------------------
     S.step = "zenkasho";

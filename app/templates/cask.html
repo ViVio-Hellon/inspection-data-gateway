@@ -100,6 +100,7 @@
           </div>
           <a class="btn wide" id="reportLink" target="_blank" rel="noopener" hidden>帳票を開く(印刷)</a>
           <p class="muted small" id="savedNote"></p>
+          <button class="btn wide" type="button" id="defBtn">不良要因 <span class="lv" id="defLv"></span></button>
           <div class="btn-row"><button class="btn btn--sm" type="button" id="closeBtn">閉じる(検査へ戻る)</button></div>
         </div>
       </section>
@@ -119,6 +120,29 @@
     </div>
   </div>
 </div>
+
+<!-- 不良要因(2026-11-15。通常検査と同じ 不良要因票。キャスクは位置が無いので 1 行「ｷｬｽｸ」に書く) -->
+<dialog class="cdef" id="defDlg" aria-labelledby="defTitle">
+  <header class="cdef__head"><h3 id="defTitle">不良要因の登録(キャスク)</h3><span class="muted" id="defLot"></span>
+    <button class="btn btn--sm" type="button" id="defClose">閉じる</button></header>
+  <div class="cdef__body">
+    <div class="cdef__left">
+      <p class="muted small">不良要因を 1 つ選び、枚数を入れて「反映」。同じ要因にもう一度入れると枚数を置き換えます。</p>
+      <div class="cdef__list" id="defList" role="listbox" aria-label="不良要因"></div>
+      <div class="cdef__in">
+        <label for="defCount">枚数</label>
+        <input class="input input--num" id="defCount" inputmode="numeric" autocomplete="off">
+        <button class="btn btn--commit" type="button" id="defReflect">反映</button>
+        <button class="btn" type="button" id="defClear">クリア(全部消す)</button>
+      </div>
+      <p class="cdef__warn" id="defWarn" hidden></p>
+    </div>
+    <div class="cdef__right">
+      <div class="btn-row"><a class="btn btn--sm" id="defOpen" target="_blank" rel="noopener">不良要因票を開く(印刷)</a></div>
+      <iframe id="defPrev" title="不良要因票の見本"></iframe>
+    </div>
+  </div>
+</dialog>
 {% endblock %}
 
 {% block scripts %}

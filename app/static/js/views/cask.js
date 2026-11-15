@@ -207,7 +207,11 @@ function renderSide(v) {
   if (rep) {
     const url = tokenUrl(`/api/cask/report/${encodeURIComponent(rep.name)}`);
     $("reportLink").href = url;
-    if (lastReport && lastReport !== rep.html + rep.name) window.open(url, "_blank", "noopener");
+    if (lastReport && lastReport !== rep.html + rep.name) {
+      window.open(url, "_blank", "noopener");
+      // 2026-11-15: 不良要因票も一緒に開く(通常検査と同じく 2 枚刷る)
+      if (rep.defect) window.open(tokenUrl(`/api/cask/report/${encodeURIComponent(rep.defect)}`), "_blank", "noopener");
+    }
   }
   lastReport = rep ? rep.html + rep.name : "none";
   text($("savedNote"), v.saved ? `${v.saved.name}: ${v.saved.files.length} ファイル` : "");
@@ -240,6 +244,45 @@ function render(v) {
   renderGrid(v);
   renderSide(v);
   if (pack) pack.render(v.pack);
+  renderDefect(v);
+}
+
+/* ---------- 不良要因(2026-11-15) ---------- */
+let defSel = -1;
+function renderDefect(v) {
+  const d = v.defect || { items: [], total: 0 };
+  $("defLv").textContent = d.total ? `${d.total}枚` : "";
+  $("defLot").textContent = d.lot ? `Lot ${d.lot}` : "ロット未登録";
+  $("defWarn").hidden = !d.other_lot;
+  $("defWarn").textContent = d.other_lot
+    ? `いまの不良要因票は別のロット(${d.other_lot})のものです。反映すると、このロットの票を作り直します。` : "";
+  $("defList").replaceChildren(...d.items.map((it) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "cdef__item";
+    b.setAttribute("role", "option");
+    b.setAttribute("aria-selected", String(it.i === defSel));
+    const n = document.createElement("span"); n.textContent = it.name;
+    const c = document.createElement("b"); c.textContent = it.count ? it.count : "";
+    b.append(n, c);
+    b.addEventListener("click", () => {
+      defSel = it.i;
+      for (const x of $("defList").children) x.setAttribute("aria-selected", String(x === b));
+      $("defCount").focus();
+    });
+    return b;
+  }));
+}
+function defPreview() {
+  $("defPrev").src = tokenUrl(`/api/cask/defect_preview?_=${Date.now()}`);
+  $("defOpen").href = tokenUrl("/api/cask/defect_preview");
+}
+async function defReflect() {
+  const count = $("defCount").value.trim();
+  await op("defect-reflect", { item: defSel, count }, undefined, { refocus: false });
+  $("defCount").value = "";
+  defPreview();
+  $("defCount").focus();
 }
 
 function remember(line) {
@@ -258,7 +301,19 @@ function onEnter(id, fn) {
   });
 }
 
+function initDefect() {
+  $("defBtn").addEventListener("click", () => { defPreview(); $("defDlg").showModal(); });
+  $("defClose").addEventListener("click", () => { $("defDlg").close(); focusInput(); });
+  $("defReflect").addEventListener("click", defReflect);
+  $("defCount").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); defReflect(); } });
+  $("defClear").addEventListener("click", async () => {
+    await op("defect-clear", {}, undefined, { refocus: false });
+    defPreview();
+  });
+}
+
 function init() {
+  initDefect();
   pack = packDialog({ imageUrl: "/api/cask/pack_image", send: (name, body) => op(name, body) });
   onEnter("measIn", (t) => { remember(t); receive(t); });
   onEnter("zeroIn", (t) => op("zero", { text: t }));

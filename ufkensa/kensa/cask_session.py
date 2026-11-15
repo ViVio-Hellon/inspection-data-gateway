@@ -55,6 +55,7 @@ from .report_model import ReportModel, format_cell
 from .session import Result
 from .special_common import SubInspectionCommon
 from .store import HOZON, HOZON_HEADERS, LOT_HISTORY, LocalStore
+from .store import line_sheet as line_sheet_name
 
 log = get_logger("kensa.cask_session")
 
@@ -549,13 +550,53 @@ class CaskSession(SubInspectionCommon):
             p.write_text(render_html(print_model(job, ws), stem), encoding="utf-8")
             trace.note_used(p, "save")
         self.report = {"html": str(p), "name": p.name}
+        # 2026-11-15: 通常検査と同じく、不良要因票も一緒に刷る(このロットの票があるときだけ)
+        model = self._defect_model()
+        if model is not None:
+            dstem = "不良要因印刷_キャスク_" + re.sub(r'[\\/:*?"<>|]', "_", lot)
+            with trace.timed("db.save", "キャスクの不良要因票(HTML)", path=str(folder), table=dstem):
+                files = report_html.save_html_and_pdf(model, folder, dstem, None)
+                trace.note_used(files["html"], "save")
+            self.report["defect"] = Path(files["html"]).name
         return []
+
+    def _defect_model(self) -> Optional[ReportModel]:
+        """このロットの不良要因票(合計・ページ設定をして帳票に)。票が無い・別ロットなら None。"""
+        from . import report_model
+        lname, lot = self._defect_lname(), self._defect_lot()
+        name = line_sheet_name(report_model.DEFECT_SHEET, lname)
+        if not lname or not lot or not self.store.exists(name):
+            return None
+        if cell_text(self.store.sheet(name).get(1, 2)) != lot:
+            return None
+        shifts = self.env().shift_times()
+        try:
+            report_model.defect_print_range(self.store, lname, self.book.cask.kname, lot, now=self.now(),
+                                            uf1_visible=False, start1=shifts.start1, end3=shifts.end3, mitsubishi=True)
+        except vbx.TypeMismatch:
+            pass                                           # 直の時間が読めなくても票は出す(合計は反映時に足してある)
+        return report_model.render_defect_sheet(self.store, lname)
 
     def _save(self, plan: sh.SavePlan) -> list[Message]:
         """SavePlan の実行: 1 つの xlsx(シートを並べる)と、シートごとの見せる用 HTML(Windows で Edge があれば PDF)。"""
         edge = paths.to_local(paths.get("edge"))
         edge_s = str(edge) if edge.is_file() else None
         files, msgs = self._run_save_plan(plan, lambda folder, stem: self._write_sheets(plan, folder, stem, edge_s))
+        # 2026-11-15: 通常検査の 履歴保存 と同じく、不良要因票の PDF を手元(C:\検査履歴)と工場共有へ
+        model = self._defect_model()
+        if model is not None:
+            stem = self._defect_lot() + "_不良要因"
+            for folder in wiring.pdf_folders(self.book.cask.line_name, self.now()):
+                local = legacy_log.local_path(folder)
+                try:
+                    with trace.timed("db.save", "キャスクの不良要因票(保存)", path=str(local), table=stem):
+                        out = report_html.save_html_and_pdf(model, local, stem, edge_s)
+                    files.extend(out.values())
+                    for f in out.values():
+                        trace.note_used(f, "save")
+                except (OSError, report_html.PdfError) as e:
+                    msgs.append(Message("不良要因票を保存できませんでした: " + str(local / (stem + ".pdf")) + "\r\n" + str(e),
+                                        WARN, source="cask.defect"))
         self.saved = {"name": plan.name, "files": files}
         return msgs
 
@@ -783,6 +824,119 @@ class CaskSession(SubInspectionCommon):
     # ------------------------------------------------------------------
     # 画面の値
     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 不良要因(2026-11-15 のご依頼。VBA のキャスクには無い)。通常検査と同じ 不良要因印刷_<ライン> のシートに、
+    # 位置の行の代わりに 3 行目(見出し「ｷｬｽｸ」)へ書く。選択肢は原紙の C2:X2 / C9:X9(+ ｽﾎﾟｯﾄ処理)
+    # ------------------------------------------------------------------
+    DEFECT_ROW_LABEL = "ｷｬｽｸ"
+
+    def _defect_items(self) -> list[tuple[str, str]]:
+        if getattr(self, "_defect_items_cache", None) is None:
+            from . import checks
+            from .report_model import XSheet
+            t = XSheet.from_template("不良要因印刷原紙", "不良要因印刷原紙")
+            cell = lambda r, c: t.cells[(r, c)].value if (r, c) in t.cells else None   # noqa: E731
+            self._defect_items_cache = checks.defect_factor_items([cell(2, c) for c in range(3, 25)],
+                                                                  [cell(9, c) for c in range(3, 25)])
+        return self._defect_items_cache
+
+    def _defect_lot(self) -> str:
+        book = self.book
+        return (book.cask.lot_box or cell_text(book.ws(sh.CASK).get(2, 4))).strip() if book is not None else ""
+
+    def _defect_lname(self) -> str:
+        return self.book.cask.line_name if self.book is not None else ""
+
+    def defect_reflect(self, item: Any, count: Any) -> Result:
+        return self._run(self._defect_reflect, item, count)
+
+    def _defect_reflect(self, item: Any, count: Any) -> None:
+        from . import checks, report_model
+        self._need_open()
+        items = self._defect_items()
+        try:
+            i = int(item)
+        except (TypeError, ValueError):
+            i = -1
+        if not 0 <= i < len(items) or items[i][0] == "":
+            raise Stop("不良要因が選択されていません", level=ERROR, source="UF1:1552")
+        text = str(count if count is not None else "").strip()
+        if text == "" or not vbx.is_numeric(text):
+            raise Stop("枚数入力がありません", level=ERROR, source="UF1:1558")
+        n = vbx.clng(vbx.val(text))
+        name, code = items[i]
+        if name != checks.SPOT and n > 50:
+            raise Stop("すみません、50枚以上は分けて入力してください", level=INFO, source="UF1:1572")
+        lot = self._defect_lot()
+        if lot == "":
+            raise Stop("ロットを入れてから不良要因を登録してください", level=WARN, source="cask.defect")
+        lname = self._defect_lname()
+        trace.note_used(self.store.path, "save")
+        with trace.timed("db.save", "キャスクの不良要因の枚数", path=str(self.store.path),
+                         table=report_model.DEFECT_SHEET + "_" + lname):
+            sheet = report_model.ensure_defect_sheet(self.store, lname, lot)
+            code_row = [sheet.get(9, c) for c in range(3, 25)]
+            temps = checks.get_selected_items(items, [i], defect=True)
+            try:
+                w = checks.selection_input(temps, "S", text, code_row, None, lot=lot)
+            except checks.VbaRuntimeError as e:
+                raise Stop(f"不良要因「{name}」の列が不良要因票にありません", source="SelectionInput") from e
+            if w is None:
+                return
+            for r, c, v in w.cells:
+                sheet.write(r, c, v)
+            sheet.write(3, 2, "'" + self.DEFECT_ROW_LABEL)
+            report_model.calculate_column_sums(sheet)
+        self.book.fx.messages.append(Message(f"不良要因 {name} {text}枚 を登録しました", INFO, source="cask.defect"))
+
+    def defect_clear(self) -> Result:
+        return self._run(self._defect_clear)
+
+    def _defect_clear(self) -> None:
+        """通常検査の Cle と同じ(C3:X8・C10:X10・C11 を消す)。"""
+        from . import report_model
+        name = line_sheet_name(report_model.DEFECT_SHEET, self._defect_lname())
+        if not self.store.exists(name):
+            return
+        ws = self.store.sheet(name)
+        for r1, c1, r2, c2 in ((3, 3, 8, 24), (10, 3, 10, 24), (11, 3, 11, 3)):
+            for r in range(r1, r2 + 1):
+                for c in range(c1, c2 + 1):
+                    ws.set(r, c, None)
+
+    def defect_preview_html(self) -> Optional[str]:
+        """不良要因票の見本(印刷にもそのまま使う)。シートが無ければ None。"""
+        from . import report_model
+        with self._lock:
+            lname = self._defect_lname()
+            if not lname:
+                return None
+            model = report_model.render_defect_sheet(self.store, lname)
+            return None if model is None else report_html.render(model, title="不良要因票(キャスク)")
+
+    def _defect_view(self) -> dict[str, Any]:
+        from . import report_model
+        lname, lot = self._defect_lname(), self._defect_lot()
+        name = line_sheet_name(report_model.DEFECT_SHEET, lname)
+        counts: dict[str, str] = {}
+        spot = ""
+        other_lot = ""
+        if lname and self.store.exists(name):
+            ws = self.store.sheet(name)
+            b1 = cell_text(ws.get(1, 2))
+            if b1 and lot and b1 != lot:
+                other_lot = b1
+            else:
+                for c in range(3, 25):
+                    v = cell_text(ws.get(3, c))
+                    if v:
+                        counts[cell_text(ws.get(9, c))] = v
+                spot = cell_text(ws.get(11, 3))
+        items = [{"i": i, "name": n, "code": c, "count": (spot if n == "ｽﾎﾟｯﾄ処理" else counts.get(c, ""))}
+                 for i, (n, c) in enumerate(self._defect_items()) if n]
+        return {"items": items, "lot": lot, "other_lot": other_lot,
+                "total": sum(int(vbx.val(v)) for v in counts.values() if vbx.is_numeric(v))}
+
     def view(self) -> dict[str, Any]:
         book = self.book
         assert book is not None
@@ -868,6 +1022,7 @@ class CaskSession(SubInspectionCommon):
             "ainput": self.ainput,
             "focus": "zero" if f.visible and (f.micro == "" or f.convex == "") else "meas",
             "pack": self.pack.to_dict() if self.pack is not None else None,
+            "defect": self._defect_view(),
         }
 
 

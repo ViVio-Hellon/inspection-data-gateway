@@ -102,6 +102,29 @@ class CaskScreenTest(SessionBase):
         self.assertEqual(d["view"]["form"]["ken_no"], "T6X1913")                 # 仕掛から検査番号を読んだ
         self.assertEqual(d["view"]["form"]["count_st"], "3")                     # 製造板厚から検査回数を決めた
 
+    def test_defect_registration(self) -> None:          # 2026-11-15: キャスクにも不良要因の登録
+        self.post("open")
+        d = self.post("lot", lot="rx021t0")
+        items = d["view"]["defect"]["items"]
+        self.assertTrue(items and items[-1]["name"] == "ｽﾎﾟｯﾄ処理")
+        first = items[0]
+        d = self.c.post("/api/cask/defect-reflect", json={"item": first["i"], "count": ""}, headers=self.h).get_json()
+        self.assertEqual(d["stop"]["text"], "枚数入力がありません")
+        d = self.c.post("/api/cask/defect-reflect", json={"item": first["i"], "count": "60"}, headers=self.h).get_json()
+        self.assertIn("50枚以上", d["stop"]["text"])
+        d = self.post("defect-reflect", item=first["i"], count="3")
+        dv = d["view"]["defect"]
+        self.assertEqual(({x["i"]: x["count"] for x in dv["items"]}[first["i"]], dv["total"], dv["lot"]), ("3", 3, "RX021T0"))
+        ws = self.store.sheet("不良要因印刷_" + self.cs.book.cask.line_name)
+        self.assertEqual((ws.get(1, 2), ws.get(3, 2)), ("RX021T0", "ｷｬｽｸ"))
+        r = self.c.get("/api/cask/defect_preview", headers=self.h)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("不良要因票", r.get_data(as_text=True))
+        d = self.post("defect-reflect", item=items[-1]["i"], count="7")         # ｽﾎﾟｯﾄ処理 は C11
+        self.assertEqual(ws.get(11, 3), "7枚")
+        d = self.post("defect-clear")
+        self.assertEqual(d["view"]["defect"]["total"], 0)
+
     def test_ainput_from_cask_uses_cask_lot(self) -> None:
         """キャスクの「Aインプットへ」: Aインプットは通常検査ではなく、キャスクのシートのロットで開く(Input:247-252)。"""
         from ufkensa.kensa import ainput_session
@@ -189,6 +212,8 @@ class CaskScreenTest(SessionBase):
         self.post("select", row=7, col=2)
         for v in ("36.0", "36.1", "36.2"):
             d = self.post("receive", text="DT10002+00000" + v + "00M")
+        items = d["view"]["defect"]["items"]
+        self.post("defect-reflect", item=items[0]["i"], count="4")       # 2026-11-15: 不良要因票も刷る・保存する
         before = self.store.sheet(store.HOZON).last_row(1)
         d = self.post("print")
         self.assertEqual(d["question"]["key"], "cask_print", d["messages"])
@@ -200,11 +225,14 @@ class CaskScreenTest(SessionBase):
         self.assertIn("厚公差：35.600～36.400", html)                                 # 右ヘッダー
         self.assertIn("梱包No1_1～1", html)                                          # 左フッター
         self.assertEqual(self.c.get("/api/cask/report/none.html", headers=self.h).status_code, 404)
+        dh = self.c.get(f"/api/cask/report/{rep['defect']}", headers=self.h).get_data(as_text=True)
+        self.assertIn("不良要因", dh)
         # キャスク専用保存(D7: シートごとの CSV + HTML、サーバ・工場共有へ写す)
         files = [Path(p) for p in d["view"]["saved"]["files"]]
         self.assertIn("品証ｺﾋﾟ-用", _xlsx_sheets(files))
         self.assertTrue(any("キャスク_履歴" in str(p) for p in files))
         self.assertTrue(all(p.is_file() for p in files))
+        self.assertTrue(any(p.name.endswith("_不良要因.html") for p in files), files)   # 手元・工場共有へ
         self.assertEqual(self.store.sheet(store.HOZON).last_row(1), before + 1)      # 保存用に履歴行
         self.assertEqual(self.store.sheet(store.HOZON).get(before + 1, 83), "ｷｬｽｸ")
         # 同じ日にもう一度保存すると連番(.002)
