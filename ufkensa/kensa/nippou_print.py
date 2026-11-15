@@ -233,6 +233,8 @@ def _doc(title: str, body: str, pages: int, note: str) -> str:
     bar = ""
     if pages:
         bar = (f'<div class="toolbar"><button type="button" onclick="window.print()">{PRINT_LABEL}</button>'
+               '<button type="button" onclick="var d=window.__TAURI__&&window.__TAURI__.core;'
+               'if(d){d.invoke(\'close_window\')}else{window.close()}">閉じる</button>'
                f'<span class="hint">{_e(hint)}</span></div>\n')
     if note:
         bar += f'<div class="toolbar"><span class="hint">{_e(note)}</span></div>\n'

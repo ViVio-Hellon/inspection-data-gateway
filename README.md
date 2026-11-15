@@ -18,7 +18,11 @@ python-web-tools の基盤に載せた Web システムへ移植しています�
 
 ## 起動
 
-ほかの業務ツールと同じく、業務ツール統合ランチャーに `Start.vbs` を登録して起動します(ポート 8800)。
+**デスクトップ版(0.3.8〜)**: `UF検査判定.exe` を開きます。専用の窓で動き、**ポートを使いません**(Rust/Tauri の窓 + Python。`docs/09_デスクトップ版.md`)。
+
+**ブラウザ版(予備)**: 今までどおり `Start.vbs` / `start.bat`(ポート 8800)。業務ツール統合ランチャーにも登録できます。
+
+ブラウザ版とデスクトップ版は同時に動きません。どちらを後から開いても、理由を出して止まります。
 必要なもの: Python 3.12、`pip install -r requirements.txt`(Flask・waitress。判断事項 D1)。
 Access からの取り込みには Microsoft Access Database Engine(ACE OLE DB 12.0)が要ります。
 

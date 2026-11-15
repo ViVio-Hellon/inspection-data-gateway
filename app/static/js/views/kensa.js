@@ -11,6 +11,7 @@
   入力先を測定値の欄(measIn)へ戻す。描き直しの前に焦点のあった欄は、描き直した後も同じ欄に戻す。
 */
 
+import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { playMessage } from "../sound.js";
@@ -95,7 +96,7 @@ function announceReport(v) {
   if (key === lastReport) return;
   lastReport = key;
   toast(v.report.reprint ? "帳票を作り直しました" : "帳票を作りました", "ok",
-        { label: "帳票を開く", onClick: () => window.open(url, "_blank", "noopener") });
+        { label: "帳票を開く", onClick: () => openWindow(url, "帳票") });
 }
 
 const refocus = () => $("measIn")?.focus({ preventScroll: true });   // 画面を移ったあと(入れ替え式)でも落ちない

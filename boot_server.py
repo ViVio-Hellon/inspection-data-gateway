@@ -64,6 +64,8 @@ class BootApp:
         self._page: Optional[bytes] = None
         # 止める道(`AppServer.stop`)。本体ができる前でも同じ道で止める
         self.stop_hook: Optional[Callable[[], None]] = None
+        #: デスクトップ版(bridge.py)。要求は外枠(exe)からしか来ないので、止める合図にトークンを求めない
+        self.trusted = False
         # 画面からの最後の問い合わせ(待機画面は数百 ms ごとに /api/health を読む)
         self.last_seen = time.monotonic()
 
@@ -144,7 +146,7 @@ class BootApp:
     def _shutdown(self, environ: dict, start_response: Callable) -> list:
         """止める合図(stop.bat・失敗の画面の「終了する」)。本体の `/api/shutdown` と同じ答え方。"""
         supplied = environ.get("HTTP_X_TOOL_TOKEN", "") or (parse_qs(environ.get("QUERY_STRING", "")).get("t") or [""])[0]
-        if not secrets.compare_digest(supplied.encode("utf-8"), self.token.encode("utf-8")):
+        if not self.trusted and not secrets.compare_digest(supplied.encode("utf-8"), self.token.encode("utf-8")):
             return _json(start_response, {"error": {"code": "bad_token", "message": "この画面は無効になりました"}},
                          status="401 Unauthorized")
         if self.stop_hook is None:

@@ -9,6 +9,7 @@
     stop     … 止めた理由。状態は保ったまま(D10)
 */
 
+import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
 import { promptBox } from "../askbox.js";
@@ -211,7 +212,7 @@ function renderRight(v) {
       return li;
     }), ...(v.saved.length ? [el("li", "muted", `保存 ${v.saved.length} ファイル: ${v.saved[0]}`)] : []));
     const first = v.reports[0];
-    window.open(tokenUrl(`/api/zenkasho/report/${encodeURIComponent(first.name)}`), "_blank", "noopener");
+    openWindow(tokenUrl(`/api/zenkasho/report/${encodeURIComponent(first.name)}`), "全ヵ所");
   }
   const notes = [];
   if (v.pending.length) notes.push(`未結合の呼び出し: ${v.pending.join("・")}`);
