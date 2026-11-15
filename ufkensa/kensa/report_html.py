@@ -51,6 +51,38 @@ def _width_px(chars: float) -> int:
     return int(round(chars * 7 + 5))
 
 
+#: 帳票の窓の上の帯(2026-11-15。デスクトップ版の帳票の窓には印刷・閉じるが無いので)。紙と PDF には出ない
+#: (@media print)。画面の中の見本(iframe)でも出さない。デスクトップ版は外枠に閉じてもらう(python-web-tools と同じ)
+PRINT_BAR = """<style>
+.printbar { display: flex; gap: 8px; align-items: center; padding: 6px 8px; margin: 0 0 8px; background: #f4f4f4;
+  border-bottom: 1px solid #ccc; position: sticky; top: 0; z-index: 1; font-family: "Meiryo UI", sans-serif; font-size: 12px; }
+.printbar button { font: inherit; font-size: 14px; padding: 4px 16px; cursor: pointer; }
+.printbar span { color: #555; }
+@media print { .printbar { display: none !important; } }
+</style>
+<div class="printbar" id="printbar" role="toolbar" aria-label="印刷">
+  <button type="button" id="printNow">印刷する</button>
+  <button type="button" id="printClose">閉じる</button>
+  <span id="printNote">Ctrl+P でも印刷できます</span>
+</div>
+<script>
+(function () {
+  var bar = document.getElementById("printbar");
+  if (window.self !== window.top) { bar.style.display = "none"; return; }
+  document.getElementById("printNow").addEventListener("click", function () { window.print(); });
+  document.getElementById("printClose").addEventListener("click", function () {
+    var desk = window.__TAURI__ && window.__TAURI__.core;
+    if (desk) { desk.invoke("close_window"); return; }
+    window.close();
+    window.setTimeout(function () {
+      if (!window.closed) document.getElementById("printNote").textContent = "この窓はブラウザの × で閉じてください";
+    }, 300);
+  });
+}());
+</script>
+"""
+
+
 def render(model: ReportModel, *, title: str = "") -> str:
     """帳票 1 枚の HTML(完全な文書)。"""
     if model.print_area:
@@ -127,7 +159,7 @@ body {{ margin: 0; font-family: "Meiryo UI", "MS PGothic", sans-serif; color: #0
 table {{ border-collapse: collapse; table-layout: fixed; }}
 td {{ padding: 0 2px; overflow: hidden; white-space: nowrap; }}
 </style></head>
-<body><div class="sheet">
+<body>{PRINT_BAR}<div class="sheet">
 <div class="hf"><span>{hf('header_left')}</span><span>{hf('header_center')}</span><span>{hf('header_right')}</span></div>
 <table><colgroup>{cols}</colgroup>{''.join(rows)}</table>
 <div class="hf"><span>{hf('footer_left')}</span><span>{hf('footer_center')}</span><span>{hf('footer_right')}</span></div>

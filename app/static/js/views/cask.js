@@ -6,6 +6,7 @@
   表は 700 行のうち入力のある所 +α だけ届く。行ごとに中身が変わった所だけ描き直し、次に入力する行が見えるようにスクロールする。
 */
 
+import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
 import { screenOp } from "../screen_op.js";
@@ -208,9 +209,9 @@ function renderSide(v) {
     const url = tokenUrl(`/api/cask/report/${encodeURIComponent(rep.name)}`);
     $("reportLink").href = url;
     if (lastReport && lastReport !== rep.html + rep.name) {
-      window.open(url, "_blank", "noopener");
+      openWindow(url, "キャスク検査");
       // 2026-11-15: 不良要因票も一緒に開く(通常検査と同じく 2 枚刷る)
-      if (rep.defect) window.open(tokenUrl(`/api/cask/report/${encodeURIComponent(rep.defect)}`), "_blank", "noopener");
+      if (rep.defect) openWindow(tokenUrl(`/api/cask/report/${encodeURIComponent(rep.defect)}`), "不良要因票");
     }
   }
   lastReport = rep ? rep.html + rep.name : "none";

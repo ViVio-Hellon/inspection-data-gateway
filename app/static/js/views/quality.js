@@ -3,6 +3,7 @@
   カードの中身・参照元・該当の有無はサーバ(ufkensa/kensa/quality_session.py)が決める。ここは並べるだけ。
 */
 
+import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
 
@@ -146,7 +147,7 @@ async function loadPhotos() {
       img.loading = "lazy"; img.alt = n;
       img.src = tokenUrl("/api/quality/photo?dir=" + encodeURIComponent(t.name) + "&name=" + encodeURIComponent(n));
       img.title = "押すと元の大きさで開きます";
-      img.addEventListener("click", () => window.open(img.src, "_blank"));
+      img.addEventListener("click", () => { const u = new URL(img.src, location.href); openWindow(u.pathname + u.search, "品質写真"); });
       const cap = document.createElement("figcaption"); cap.textContent = n;
       fig.append(img, cap);
       return fig;

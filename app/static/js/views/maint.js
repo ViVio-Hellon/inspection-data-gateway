@@ -5,6 +5,7 @@
   ここは描いて送るだけ。
 */
 
+import { openWindow } from "../desktop.js";
 import { api } from "../api.js";
 import { confirmBox } from "../askbox.js";
 import { adminState, mountLockBadge, withUnlock } from "../admin_unlock.js";
@@ -1506,4 +1507,4 @@ async function openNippou() {
   } catch (err) { list.replaceChildren(el("p", "out__prob", err.message || String(err))); }
 }
 $("nReload").addEventListener("click", () => openNippou());
-$("nOpen").addEventListener("click", () => window.open(tokenUrl(`/maint/nippou/paper?${NP.src}`), "_blank"));
+$("nOpen").addEventListener("click", () => openWindow(tokenUrl(`/maint/nippou/paper?${NP.src}`), "日報"));
