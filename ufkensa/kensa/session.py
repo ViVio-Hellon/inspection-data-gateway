@@ -373,7 +373,7 @@ class Session:
                 return None
         if hooks.register_check(st):                                    # Daily_Create
             ctx = wiring.daily_context(st, env)
-            res = workers.daily_create(ctx)
+            res = workers.daily_create(ctx, start=False)   # 2026-11-15: 開始はロット登録の時刻(下の daily_lot_start)
             wiring.write_cells(self.store, line_sheet(records.DAILY, st.lname), res.writes, recreate=res.recreate)
         # Worker_Change
         if st.flag_label != 1:
@@ -491,7 +491,11 @@ class Session:
             self._log("Lot登録:" + text + ":" + st.lname)
             st.machin = ""
             self._log("Lot登録:" + text + ":" + st.lname, legacy_log.MEASURED_LOG)
-        return self._cb_change(answers, tol_before)
+        q = self._cb_change(answers, tol_before)
+        if st.lot == text:
+            # 2026-11-15: 日報の開始 = ロット登録の時刻(前の梱包を Aインプットへ送った行は、送った時刻のまま)
+            wiring.daily_lot_start(st, self._env())
+        return q
 
     def _cb_change(self, answers: dict[str, bool], before: Optional[dict[str, str]] = None) -> Optional[Question]:
         """CB_Change の後、公差が変わっていれば測定済みの値を新しい公差で判定し直す(2026-11-11 のご依頼)。

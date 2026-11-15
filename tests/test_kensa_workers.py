@@ -206,6 +206,24 @@ def ctx(now: datetime, cells=None, lot: str = "N456J52", **kw) -> workers.DailyC
 class DailyTest(unittest.TestCase):
     def tearDown(self) -> None:
         pass
+    def test_lot_start_then_ainput_end_and_next_start(self) -> None:
+        """2026-11-15: 開始 = ロット登録の時刻 / 終了 = Aインプット送信 / 次の開始 = 前の送信時刻 / 枚数・包数 = 送った値。"""
+        from ufkensa.kensa.workers import AinputValues
+        c = ctx(at(10, 5))
+        w = workers.daily_lot_start(c)
+        self.assertIn(CellWrite(3, 1, "N456J52"), w)
+        self.assertIn(CellWrite(3, 6, "10"), w)
+        self.assertIn(CellWrite(3, 7, "05"), w)
+        c.now = at(10, 40)
+        c.ainput = AinputValues("N456J52", "1", "20", "3", "", "")
+        w = workers.daily_report(4, c)
+        for cw in (CellWrite(3, 4, "1"), CellWrite(3, 8, "10"), CellWrite(3, 9, "40"), CellWrite(3, 12, 20),
+                   CellWrite(3, 13, 3), CellWrite(4, 6, "10"), CellWrite(4, 7, "40")):
+            self.assertIn(cw, w)
+        c.now = at(10, 45)
+        self.assertEqual(workers.daily_lot_start(c), [])                 # 次の行は送信時刻が開始のまま
+        self.assertEqual(workers.daily_lot_start(ctx(at(10, 5), lot="NOLOT")), [])
+
     def test_report_1_and_2(self) -> None:
         c = ctx(at(10, 5))
         w = workers.daily_report(1, c)
