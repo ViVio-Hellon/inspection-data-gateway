@@ -47,10 +47,18 @@ function unlock() {
   } catch (e) { /* 音が使えない端末。文言だけで動く */ }
 }
 
+/* 鳴っている音(2026-11-16: 画面を移るとき、鳴り終わるまで待つため) */
+const playing = new Set();
+
 async function playUrl(url) {
   try {
     // 1回ごとに新しく作る(VBA の mciSendString "Play" と同じく、続けて来た音を重ねて鳴らす)
     const a = new Audio(url);
+    playing.add(a);
+    const done = () => playing.delete(a);
+    a.addEventListener("ended", done);
+    a.addEventListener("error", done);
+    a.addEventListener("pause", done);
     await a.play();
     return true;
   } catch (e) {
@@ -74,6 +82,23 @@ export async function playKey(key, text = "") {
     }
   }
   return ok;
+}
+
+/**
+ * 鳴っている音が鳴り終わるまで待つ(最長 `maxMs`)。2026-11-16(現場の声): 検査員登録 → 校正、校正 → 検査 と
+ * 画面が自動で移るとき、鳴っている途中の音が切れていた。移る前にこれを待つ。
+ */
+export function waitSounds(maxMs = 8000) {
+  if (!playing.size) return Promise.resolve();
+  return new Promise((resolve) => {
+    const until = Date.now() + maxMs;
+    const tick = () => {
+      for (const a of [...playing]) if (a.ended || a.paused) playing.delete(a);
+      if (!playing.size || Date.now() >= until) resolve();
+      else setTimeout(tick, 100);
+    };
+    tick();
+  });
 }
 
 /** サーバの知らせ(`{text, sound, sound_text}`)の音を鳴らす。 */

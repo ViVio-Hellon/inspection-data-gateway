@@ -77,6 +77,17 @@
             <button class="btn btn--commit" type="button" id="reloadPaths" title="読んだ DB・表・公差表の覚えを捨て、検査中のロットがあれば新しいパスから読み直します">読み込む</button>
             <small class="muted">「読み込む」= いまの使用パスで DB を読み直します(検査中のロットも読み直し、測定値はそのまま)。既定 = VBA のオンラインの値(本番のフォルダ)。仕掛台帳は 第1・第2のパスと名前をまとめて戻します。ログの出力パスとモードは変えません。</small>
           </div>
+          <style>
+            /* 2026-11-16: 使用パスを 入力 / 出力(検査で使う)/ 出力(その他)/ 道具 に分け、枠で囲む */
+            #pathsTable { border-collapse: separate; border-spacing: 0 0; }
+            #pathsTable tbody.pgroup tr.pgroup__sec th { text-align: left; font-size: var(--fs-md); padding: 14px 8px 4px;
+              background: var(--surface); color: var(--ink); border-bottom: 2px solid var(--accent); }
+            #pathsTable tbody.pgroup tr.pgroup__frame th { text-align: left; font-size: var(--fs-sm); font-weight: 700;
+              padding: 6px 10px; background: var(--accent-soft); color: var(--ink); border-left: 4px solid var(--accent); }
+            #pathsTable tbody.pgroup tr[data-key] td:first-child { border-left: 4px solid var(--accent-soft); }
+            #pathsTable tbody.pgroup[data-section^="入力"] tr.pgroup__frame th { border-left-color: var(--state-ok); }
+            #pathsTable tbody.pgroup[data-section^="入力"] tr[data-key] td:first-child { border-left-color: var(--ok-bg); }
+          </style>
           <div class="tablewrap">
             <table class="table" id="pathsTable">
               <thead><tr><th>項目</th><th>パス</th><th>状態</th><th></th></tr></thead>

@@ -4,6 +4,7 @@
   返り値: { view, messages, question, stop }(検査画面と同じ形。question は使わない)
 */
 
+import { waitSounds } from "../sound.js";
 import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
 import { screenOp } from "../screen_op.js";
@@ -29,7 +30,8 @@ async function backToKensa() {
   leaving = true;
   try { await api.post("/api/kensa/calibrated", { answers: {} }); } catch (e) { /* 検査画面が開いていなければ何もしない */ }
   toast("校正が終わりました。検査画面へ戻ります", "success");
-  setTimeout(() => { location.href = "/kensa"; }, 1200);
+  // 2026-11-16: 合格の音を鳴り終わるまで待ってから戻る(移ると音が切れる)
+  setTimeout(async () => { await waitSounds(); location.href = "/kensa"; }, 1200);
 }
 
 function renderStatus(v) {

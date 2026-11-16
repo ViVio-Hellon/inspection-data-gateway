@@ -77,10 +77,9 @@ def _months(now: datetime, n: int = 2) -> list[str]:
 # ------------------------------------------------------------------
 def ainput(line: str, now: datetime) -> list[dict[str, Any]]:
     from . import ainput as ain
-    folder = ain.ainput_folder(line)
     places = []
     for m in _months(now):
-        base = _local(paths.join(paths.get("history"), folder, folder + "_Ainput", m))
+        base = _local(paths.join(ain.ainput_csv_root(line), m))
         places.append(_scan(f"Aインプットの CSV({m})", base, ("*.csv",), recursive=True))
     host = _local(ain.hostsend_path())
     s = _stat(host)

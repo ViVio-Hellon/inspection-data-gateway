@@ -11,6 +11,7 @@
   入力先を測定値の欄(measIn)へ戻す。描き直しの前に焦点のあった欄は、描き直した後も同じ欄に戻す。
 */
 
+import { waitSounds } from "../sound.js";
 import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toast, toastError } from "../toast.js";
@@ -111,7 +112,8 @@ function toCalibrationAfterWorker(res) {
   const v = res && res.view;
   if (!v || !v.calibration_required || res.stop || res.question) return false;
   toast("この直の校正が済んでいません。校正画面へ移ります", "warn");
-  setTimeout(() => { location.href = `/calibration?from=${CALIB_FROM_WORKER}`; }, 900);
+  // 2026-11-16: 鳴っている音(検査員登録の音など)を鳴り終わるまで待ってから移る(移ると音が切れる)
+  setTimeout(async () => { await waitSounds(); location.href = `/calibration?from=${CALIB_FROM_WORKER}`; }, 900);
   return true;
 }
 
