@@ -106,6 +106,10 @@ ITEMS: tuple[PathItem, ...] = (
     PathItem("history", "検査履歴", "HistoryPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
+    # 2026-11-16: Aインプットの CSV の置き場所(VBA は 検査履歴\<L>\<L>_Ainput の直書き)
+    PathItem("ainput_csv", "Aインプットの CSV", "HistoryPath & L & \"\\\" & L & \"_Ainput\"", "",
+             "Aインプットで送った値の CSV(この下に yyyy.mm\\<Lot>\\yyyymmdd_<検査No>.csv)。"
+             "空なら 検査履歴\\<ライン>\\<ライン>_Ainput", need="write"),
     PathItem("remote_stop", "管理者以外停止の置き場所", "(新規。all-tools と同じ管理者以外停止モード)", "",
              "管理者が「ほかの PC を止める」お願い(お願い.json)と、各 PC の稼働中の知らせを置くフォルダ。"
              "この下に 管理者以外停止\\ を作る。空なら 検査履歴(その下の 管理者以外停止\\)", need="write"),
@@ -145,6 +149,20 @@ ITEMS: tuple[PathItem, ...] = (
              "帳票の PDF をヘッドレス印刷で作る", need="exe", kind="file"),
 )
 BY_KEY = {i.key: i for i in ITEMS}
+
+#: 2026-11-16(現場の声「使用パスが多い」): 設定画面での分け方。(大きな分け, 枠)。並びもこの順
+#: 入力(読むもの)/ 出力のうち検査で使うもの(検査履歴は中身ごとに枠を分ける)/ 出力のその他 / 道具
+SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("入力(読むもの)", "台帳・マスタ", ("lot", "quality", "packing", "access_master", "qf_cooling")),
+    ("入力(読むもの)", "画像・音", ("pack_spec", "vc_images", "quality_photo", "judge_ok", "judge_ng",
+                              "judge_diag1", "judge_diag2", "judge_diag3", "judge_diag4", "judge_diag5", "wav")),
+    ("出力(検査で使う)", "検査履歴 — 測定データ(履歴 CSV・Lot情報履歴・ライン別ログ)", ("history", "lot_history_share")),
+    ("出力(検査で使う)", "検査履歴 — Aインプット(送った値の CSV・アイカスへの送信)", ("ainput_csv", "nis")),
+    ("出力(検査で使う)", "検査結果 — 測定DB・帳票 PDF", ("factory", "local_history", "csv_local")),
+    ("出力(その他)", "日報・ログ・ほかのツール", ("nippou_out", "app_log", "remote_stop", "nps_mitsubishi")),
+    ("道具", "PDF を作る", ("edge",)),
+)
+SECTION_OF = {k: (sec, frame) for sec, frame, keys in SECTIONS for k in keys}
 
 #: 仕掛台帳の 3 ファイル(第2はファイル名を変えられる)
 LOT_DBS = ("SIKALOTNOW", "SIKAHIKINOW", "SIKAODRNOW")
@@ -862,8 +880,9 @@ def overview(m: Optional[str] = None) -> list[dict[str, Any]]:
     """設定画面の一覧。仕掛台帳は第1 / 第2 / 2つ目の名前、ほかはパス 1 つ。"""
     rows = []
     for i in ITEMS:
+        sec, frame = SECTION_OF.get(i.key, ("出力(その他)", "そのほか"))
         row: dict[str, Any] = {"key": i.key, "label": i.label, "vba": i.vba, "use": i.use, "need": i.need,
-                               "kind": i.kind, "single": i.key != LOT}
+                               "kind": i.kind, "single": i.key != LOT, "section": sec, "frame": frame}
         if i.key == LOT:
             row.update({
                 "first": slot_value(LOT, FIRST), "second": slot_value(LOT, SECOND),
@@ -889,4 +908,6 @@ def overview(m: Optional[str] = None) -> list[dict[str, Any]]:
                 if i.key in judge_images.SLOTS:
                     row["image"] = judge_images.slot_info(i.key)
         rows.append(row)
+    order = {k: n for n, k in enumerate(k for _, _, keys in SECTIONS for k in keys)}
+    rows.sort(key=lambda r: order.get(r["key"], len(order)))
     return rows

@@ -660,14 +660,23 @@ def ainput_folder(uf1_line: str) -> str:
     return ln.folder if ln else "Test"
 
 
+def ainput_csv_root(uf1_line: str) -> str:
+    """Aインプットの CSV の置き場所(この下に yyyy.mm\\<Lot>)。2026-11-16: 使用パス「Aインプットの CSV」があればそこ、
+    空なら VBA と同じ 検査履歴\\<L>\\<L>_Ainput。"""
+    own = paths.get("ainput_csv")
+    if own:
+        return own
+    folder = ainput_folder(uf1_line)
+    return paths.join(paths.get("history"), folder, folder + "_Ainput")
+
+
 def save_ainput_csv(form: AinputForm, lot: str, ken: str, *, now: datetime) -> str:
     """Input.A_CsvSave (Input:876-936)。`<検査履歴>\\<L>\\<L>_Ainput\\yyyy.mm\\<Lot>\\yyyymmdd_<Ken>(.nn).csv`。
 
     日付は暦日(夜勤の前日扱いをしない)。.99 まで埋まっていたら「連番をこれ以上付けることが出来ません。」で止める。
     書いたファイルのパス(Windows の書き方)を返す。
     """
-    folder = ainput_folder(form.uf1_line)
-    month_path = paths.join(paths.get("history"), folder, folder + "_Ainput", now.strftime("%Y.%m"))
+    month_path = paths.join(ainput_csv_root(form.uf1_line), now.strftime("%Y.%m"))
     legacy_log.local_path(month_path).mkdir(parents=True, exist_ok=True)
     set_path = paths.join(month_path, lot)
     legacy_log.local_path(set_path).mkdir(parents=True, exist_ok=True)

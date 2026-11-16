@@ -8,7 +8,7 @@
 - 本番ではまだ使わない(仕上がるまで)。ユーザーがライン PC で試し、気づいたことを直していく段階。
 
 ## 完了した作業
-- PR #63〜#118 まで main に入れた(最新 版 0.3.8)。
+- PR #63〜#119 まで main に入れた(最新 版 0.3.9)。
 - 0.3.2: 最小化して放置→「バックエンドに接続できません」から戻らない件(Edge の同じ相手 6 本の通り道が詰まる)。api.js に時間の上限・abortAll、health.js で約1分で読み込み直し。
 - 0.3.3: 測定:公差 80:20/外観は押すだけで複数選択(不良は1つ)/Min/Max が何もしない時に理由を出しタブへ移る/保守 測定機器ID の受信記録で画面が飛ばない/Aインプットを Min/Max 無しでは開けない(Test でも)・上 Auto(情報)/下 Manual(入力)・高さNG で測り直しを促す・「前回」列。
 - 0.3.4: 保守「出力の確認」(Aインプット CSV・hostsend / 検査結果 PDF / 検査結果 CSV / 梱包検査ﾃﾞｰﾀ の最後の行。見るだけ。output_check.py)と「アイカスのライン」(伝送用ファイル 表「アイカスラインコード」。既定 = VBA の LinConv。icas_lines.py)。
@@ -16,6 +16,7 @@
 - 0.3.6: 日報の開始 = ロット登録の時刻(workers.daily_lot_start。開始が入っている行=Aインプット送信後の次行は触らない)。検査員登録の Daily_Create は見出しだけ(start=False)。golden は Daily 3 行目だけ差(説明済み)。
 - 0.3.7: キャスクに不良要因の登録(窓。不良要因印刷_<ライン> の 3 行目「ｷｬｽｸ」)・印刷で不良要因票も開く・ｻｰﾊﾞｰ保存で <Lot>_不良要因 の PDF を手元と工場共有へ(通常検査と同じ)。
 - 0.3.8: デスクトップ版(Tauri。src-tauri/・bridge.py は python-web-tools から写して改名。UFKENSA_* の環境変数)。Rust は窓・起動・多重起動・Python 見張りだけ、業務は Python のまま。ブラウザ版は予備で残す。同時起動は launch_guard.hold_app_lock(両方向確認済み)。帳票 HTML に印刷/閉じる帯(report_html.PRINT_BAR)。window.open → desktop.openWindow。CI: .github/workflows/desktop-windows.yml(Windows exe)。docs/09_デスクトップ版.md。#118 で stop.bat がデスクトップ版の窓も止める(Windows CI 通過、成果物 UFKensa-windows)。実機確認待ち: 音・印刷・読み上げ・ドラッグ&ドロップ・受信機。
+- 0.3.9: 画面が自動で移る(検査員登録→校正、校正→検査)前に鳴っている音を待つ(sound.waitSounds)。使用パス「Aインプットの CSV」(ainput_csv。空なら 検査履歴\<L>\<L>_Ainput。ainput.ainput_csv_root)。使用パスを 入力/出力(検査で使う)/出力(その他)/道具 と枠で分ける(paths.SECTIONS、設定画面は tbody ごと)。
 - Claude Code の圧縮対策(この SESSION_STATE.md と .claude/hooks/session_state.py、.claude/settings.json の PreCompact / SessionStart hook)。
 
 ## 未完了の作業

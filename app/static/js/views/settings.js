@@ -194,8 +194,46 @@ function renderPaths() {
   const changed = S.paths.filter((p) => p.key !== "log" && (p.single ? p.changed : (p.first_changed || p.second_changed || (p.second_names.some((n) => n.value) || (p.first_names || []).some((n) => n.value)))));
   $("resetAll").disabled = !me.possible || !changed.length;
   $("resetAll").title = changed.length ? `既定から変わっている項目: ${changed.map((p) => p.label).join("・")}` : "すべて既定のままです";
-  const body = $("pathsTable").tBodies[0];
-  body.replaceChildren(...S.paths.map((p) => {
+  // 2026-11-16(現場の声「使用パスが多い」): 入力 / 出力(検査で使う)/ 出力(その他)/ 道具 に分け、
+  // その中を枠(tbody)で分ける。分け方はサーバ(paths.SECTIONS)が決める。ログの出力パスは 出力(その他)へ
+  const table = $("pathsTable");
+  for (const tb of [...table.tBodies]) tb.remove();
+  const groups = new Map();
+  for (const p of S.paths) {
+    const sec = p.section || "出力(その他)";
+    const frame = p.frame || (p.key === "log" ? "日報・ログ・ほかのツール" : "そのほか");
+    const id = sec + "\u0000" + frame;
+    if (!groups.has(id)) groups.set(id, { sec, frame, rows: [] });
+    groups.get(id).rows.push(p);
+  }
+  let lastSec = "";
+  for (const g of groups.values()) {
+    const tb = document.createElement("tbody");
+    tb.className = "pgroup";
+    tb.dataset.section = g.sec;
+    if (g.sec !== lastSec) {
+      const htr = document.createElement("tr");
+      htr.className = "pgroup__sec";
+      const th = document.createElement("th");
+      th.colSpan = 4;
+      th.textContent = g.sec;
+      htr.append(th);
+      tb.append(htr);
+      lastSec = g.sec;
+    }
+    const ftr = document.createElement("tr");
+    ftr.className = "pgroup__frame";
+    const fth = document.createElement("th");
+    fth.colSpan = 4;
+    fth.textContent = g.frame;
+    ftr.append(fth);
+    tb.append(ftr, ...g.rows.map(pathRow));
+    table.append(tb);
+  }
+}
+
+function pathRow(p) {
+  {
     const tr = document.createElement("tr");
     tr.dataset.key = p.key;
     const name = document.createElement("td");
@@ -266,7 +304,7 @@ function renderPaths() {
     }
     tr.append(name, pathTd, status, act);
     return tr;
-  }));
+  }
 }
 
 /* ---- 音(D29)。出来事ごとに「鳴らさない」か音声フォルダのファイル。選ぶとすぐ保存(管理者パスワードは要らない) ---- */
@@ -706,7 +744,7 @@ function init() {
     if (row) { row.scrollIntoView({ block: "center" }); const i = row.querySelector("input"); if (i && !i.disabled) i.focus(); }
   });
   $("checkAll").addEventListener("click", () => {
-    for (const tr of $("pathsTable").tBodies[0].rows) checkOne(tr.dataset.key, tr.querySelector(".path-status"));
+    for (const tr of $("pathsTable").querySelectorAll("tbody tr[data-key]")) checkOne(tr.dataset.key, tr.querySelector(".path-status"));
   });
   $("saveLog").addEventListener("click", async () => {
     try {
