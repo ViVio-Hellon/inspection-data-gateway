@@ -400,3 +400,15 @@ li.is-stale { opacity: .6; }
 .range-hint { font-size: var(--fs-sm); margin: 6px 0 0; }
 .range-hint[data-bad="1"] { color: var(--state-error); font-weight: 700; }
 .checks-note { font-size: var(--fs-sm); margin: 0 0 8px; line-height: 1.5; }
+
+/* 2026-11-17: VC の貼る面(A面のみ・B面のみ を取り違えない) */
+.vcface { grid-column: 1 / -1; padding: 6px 10px; border-radius: var(--radius-xs); font-weight: 800; font-size: var(--fs-md);
+  text-align: center; border: 3px solid currentColor; }
+.vcface--ab { color: var(--ink); background: var(--sunken); border-width: 1px; }
+.vcface--a { color: var(--accent); background: var(--accent-soft); }
+.vcface--b { color: var(--state-warn); background: var(--warn-bg); }
+.vcskip { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--rule);
+  opacity: .8; min-height: 44px; }
+.vcskip b { font-size: var(--fs-lg); color: var(--muted); }
+#vcRail[data-face="a"] { box-shadow: inset 0 0 0 3px var(--accent); }
+#vcRail[data-face="b"] { box-shadow: inset 0 0 0 3px var(--state-warn); }

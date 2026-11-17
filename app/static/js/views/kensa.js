@@ -475,7 +475,26 @@ function renderOrder(v) {
   renderVcRail(v);
   if (!vc) { box.replaceChildren(); return; }
   const side = (s) => (s.visible ? el("figure", {}, s.image ? el("img", { src: vcUrl(s.image), alt: s.label }) : null, el("figcaption", { textContent: s.label })) : null);
-  box.replaceChildren(...[side(vc.a), side(vc.b), vc.nothing ? el("p", { class: "muted", textContent: vc.nothing }) : null].filter(Boolean));
+  box.replaceChildren(...[vcFaceBadge(vc), side(vc.a), side(vc.b), vc.nothing ? el("p", { class: "muted", textContent: vc.nothing }) : null].filter(Boolean));
+}
+
+/* 2026-11-17(現場の声): A面のみ・B面のみ は写真が 1 つしか出ず取り違えやすい(B面のみなのに A面に貼る)。
+   どちらの面かを大きな札で出し、貼らない面には「貼らない」の空き枠を並べる */
+function vcFace(vc) {
+  const k = vc && vc.face;
+  const a = k === "ab" || k === "a", b = k === "ab" || k === "b";
+  if (a && b) return { kind: "ab", text: "AB面(両面)に貼る" };
+  if (a) return { kind: "a", text: "A面のみ(表)に貼る ─ B面(裏)は貼らない" };
+  if (b) return { kind: "b", text: "B面のみ(裏)に貼る ─ A面(表)は貼らない" };
+  return null;
+}
+function vcFaceBadge(vc) {
+  const f = vcFace(vc);
+  return f ? el("div", { class: "vcface vcface--" + f.kind, textContent: f.text }) : null;
+}
+function vcSkip(label) {
+  return el("figure", { class: "vcrail__fig vcskip" }, el("figcaption", { textContent: label }),
+    el("b", { textContent: "貼らない" }));
 }
 
 const vcUrl = (name) => tokenUrl(`/api/kensa/picture/vc/${encodeURIComponent(name)}`);
@@ -507,13 +526,22 @@ function renderVcRail(v) {
     }
     return f;
   };
-  box.replaceChildren(...sides.map(fig), ...(vc.nothing ? [el("p", { class: "vcrail__why", textContent: vc.nothing })] : []));
-  box.dataset.count = String(sides.length);
+  const face = vcFace(vc);
+  const figs = [];
+  if (face && face.kind === "b") figs.push(vcSkip("A面(表)"));
+  figs.push(...sides.filter((s) => s.visible).map(fig));
+  if (face && face.kind === "a") figs.push(vcSkip("B面(裏)"));
+  if (!face) figs.push(...sides.map(fig));
+  box.replaceChildren(...[vcFaceBadge(vc)].filter(Boolean), ...figs,
+    ...(vc.nothing ? [el("p", { class: "vcrail__why", textContent: vc.nothing })] : []));
+  box.dataset.count = String(figs.length);
+  $("vcRail").dataset.face = face ? face.kind : "";
 }
 
 function openVc(vc) {
   const items = [vc.a, vc.b].filter((s) => s && s.visible && s.image);
-  $("kVcBody").replaceChildren(...items.map((s) => el("figure", {}, el("figcaption", { textContent: s.label }), el("img", { src: vcUrl(s.image), alt: s.label }))));
+  $("kVcBody").replaceChildren(...[vcFaceBadge(vc)].filter(Boolean),
+    ...items.map((s) => el("figure", {}, el("figcaption", { textContent: s.label }), el("img", { src: vcUrl(s.image), alt: s.label }))));
   $("kVcBody").dataset.count = String(items.length);
   if (!$("kVc").open) $("kVc").showModal();
 }
