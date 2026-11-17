@@ -87,7 +87,7 @@
         <span class="lv lv--info" id="faceLv"></span>
       </header>
       <div class="pad subpane" data-pane="strain">
-        <div class="btn-row"><button class="btn" type="button" id="aorbBtn">A/B 面</button><span class="strain-tol" id="strainTol" aria-label="歪の公差"></span><span class="muted" id="strainNote"></span></div>
+        <div class="btn-row"><button class="btn faceflip" type="button" id="aorbBtn">A/B 面</button><span class="strain-tol" id="strainTol" aria-label="歪の公差"></span><span class="muted" id="strainNote"></span></div>
         <div style="overflow-x:auto"><table class="mgrid strain" id="strainGrid" aria-label="歪"></table></div>
       </div>
       <div class="pad subpane" data-pane="visual" hidden>
@@ -148,6 +148,15 @@
       <header><h3>VC</h3><span class="muted vcrail__hint" id="vcRailHint">画像を押すと大きく</span></header>
       <div class="pad"><div class="vcrail__imgs" id="vcRailImgs"></div></div>
     </section>
+    <!-- 2026-11-17(現場の声): 検査からの一連の流れに必須の操作は、タブの外に順に並べる(ほかの操作と分ける) -->
+    <section class="card flowbtns" aria-label="検査の流れ(必須)">
+      <span class="flowbtns__label">検査の流れ</span>
+      <div class="flowbtns__row">
+        <button class="btn flowbtn" type="button" id="mmBtn"><small>1</small>Min/Max</button>
+        <a class="btn flowbtn" href="/ainput" id="ainBtn"><small>2</small>Aインプット</a>
+        <button class="btn btn--primary flowbtn" type="button" id="printBtn"><small>3</small>印刷・保存</button>
+      </div>
+    </section>
     <!-- 右の列の残り(操作・公差・チェック・Min/Max)はタブ。縦に並べると 1366x768 で画面からはみ出す -->
     <section class="card rtabs" id="rtabs">
       <header class="subtabs-head">
@@ -173,9 +182,6 @@
                 title="測定表を上にずっと出す(測定+タブ)か、測定表も 歪・外観… と同じタブにして画面いっぱいに使う(すべてタブ)か。この PC で覚えます">表示: 測定+タブ</button>
 
         <div class="btn-row">
-          <button class="btn" type="button" id="mmBtn">Min/Max</button>
-          <a class="btn" href="/ainput" id="ainBtn">Aインプット</a>
-          <button class="btn btn--primary" type="button" id="printBtn">印刷・保存</button>
           <button class="btn" type="button" id="printResetBtn" hidden>印刷履歴クリア</button>
           <button class="btn" type="button" id="newBtn">新規検査</button>
         </div>

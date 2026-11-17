@@ -170,14 +170,17 @@
         <header><h3>送信</h3><span class="lv" id="sendLv"></span></header>
         <div class="pad">
           <ol class="ain__steps" id="steps"></ol>
-          <p class="ain__result" id="sendLabel"></p>
+          <div class="ain__resultbox" id="sendResult" hidden>
+            <small>今回の送信の結果(result.txt)</small>
+            <p class="ain__result" id="sendLabel"></p>
+          </div>
           <dl class="kv-grid" id="sendKv"></dl>
         </div>
       </section>
-      <section class="card">
-        <header><h3>結果コード</h3></header>
+      <details class="card ain__codecard">
+        <summary><h3>結果コードの一覧(参考。今回の結果ではありません)</h3></summary>
         <div class="pad"><dl class="kv-grid ain__codes" id="codes"></dl></div>
-      </section>
+      </details>
       <section class="card">
         <header><h3>この画面での送信</h3></header>
         <div class="pad">
