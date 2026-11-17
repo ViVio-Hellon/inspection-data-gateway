@@ -1192,7 +1192,10 @@ class Session:
                       "image": _picture_name(vc.a_picture)},
                 "b": {"label": vc.l_b_caption, "visible": vc.l_b_visible and vc.b_visible,
                       "image": _picture_name(vc.b_picture)},
-                "nothing": vc.nothing_text if vc.nothing_visible else ""},
+                "nothing": vc.nothing_text if vc.nothing_visible else "",
+                # 2026-11-17: 貼る面(写真の有無に関係なく、VC の種類で決まる)。"ab" / "a" / "b" / ""
+                "face": ("ab" if vc.l_a_tag_on and vc.l_b_tag_on else "a" if vc.l_a_tag_on
+                         else "b" if vc.l_b_tag_on else "")},
             "buttons": {"abno": st.v("Abno").value, "aorb": st.strain_face,
                         "izyou": st.v("IzyouFl").color == "255",
                         "print": "再印刷" if printed else "印刷", "print_reset": printed,
