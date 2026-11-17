@@ -154,6 +154,8 @@ function renderCenter(v) {
   body.replaceChildren(...(m.visible ? m.heights : []).map((h) => {
     const tr = document.createElement("tr");
     tr.dataset.next = h.next ? "1" : "";
+    // 2026-11-17: いま測った山(最後に入った山)を色で
+    tr.dataset.just = r.index && r.index === h.n && !r.reason ? "1" : "";
     const x = document.createElement("button");
     x.type = "button"; x.className = "x"; x.textContent = "×"; x.title = `${h.n} 山目を消す`;
     x.hidden = !h.value;
@@ -231,6 +233,8 @@ function renderRight(v) {
   const res = $("sendLabel");
   res.dataset.state = s.stage === "sent" ? (s.result_missing ? "" : "ok") : (["stopped", "height_ng", "input_error"].includes(s.stage) ? "ng" : "");
   text(res, s.label);
+  $("sendResult").hidden = !s.label;
+  $("sendResult").dataset.state = res.dataset.state;
   kv($("sendKv"), [
     s.at ? ["時刻", s.at] : null,
     s.csv_path ? ["梱包課CSV", s.csv_path] : null,

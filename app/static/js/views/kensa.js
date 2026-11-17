@@ -364,7 +364,12 @@ function renderStrain(v) {
     rowOf(`${gLabel} 値`, each((p) => inputTd(gc[p], `G${p}`, { width: "6.5em", sendOnChange: true }))),
   );
   text($("faceLv"), v.strain.face === "Now_B" ? "B面" : "A面");
-  $("aorbBtn").textContent = v.strain.face === "Now_B" ? "いま B面(A面へ)" : "いま A面(B面へ)";
+  // 2026-11-17: いまの面を色で強く分ける(VBA も色で出していた)。A = 青、B = 橙。歪の札全体も同じ色で囲む
+  const isB = v.strain.face === "Now_B";
+  $("aorbBtn").replaceChildren(el("b", { textContent: isB ? "B面" : "A面" }), el("small", { textContent: isB ? "を入力中(押すと A面へ)" : "を入力中(押すと B面へ)" }));
+  $("aorbBtn").dataset.face = isB ? "b" : "a";
+  const sp = $("aorbBtn").closest(".subpane, section");
+  if (sp) sp.dataset.face = isB ? "b" : "a";
   text($("strainNote"), v.strain_note || "");
 }
 
@@ -821,7 +826,7 @@ function renderRight(v) {
   text($("blind"), v.blind);
   text($("workLv"), [v.header.work, v.header.yama && `${v.header.yama}山`].filter(Boolean).join(" "));
   const b = v.buttons;
-  $("printBtn").textContent = b.print === "再印刷" ? "再印刷" : "印刷・保存";
+  $("printBtn").replaceChildren(el("small", { textContent: "3" }), b.print === "再印刷" ? "再印刷" : "印刷・保存");
   $("printBtn").dataset.printed = b.print === "再印刷" ? "1" : "";
   $("printResetBtn").hidden = !b.print_reset;
   $("abnoBtn").textContent = b.abno || "異常値on";
