@@ -106,6 +106,10 @@ ITEMS: tuple[PathItem, ...] = (
     PathItem("history", "検査履歴", "HistoryPath",
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
+    # 2026-11-18: 測定DB のファイル(VBA は 工場共有 検査データ\【測定DB】梱包\梱包検査ﾃﾞｰﾀ の直書き)
+    PathItem("measure_db", "測定DB(梱包検査ﾃﾞｰﾀ)", "FactoryyPath & \"【測定DB】梱包\\梱包検査ﾃﾞｰﾀ\"", "",
+             "印刷・保存のたびに検査結果を 1 行足す DB のファイル(.sqlite3)。"
+             "空なら 工場共有 検査データ\\【測定DB】梱包\\梱包検査ﾃﾞｰﾀ.sqlite3", need="write", kind="file"),
     # 2026-11-16: Aインプットの CSV の置き場所(VBA は 検査履歴\<L>\<L>_Ainput の直書き)
     PathItem("ainput_csv", "Aインプットの CSV", "HistoryPath & L & \"\\\" & L & \"_Ainput\"", "",
              "Aインプットで送った値の CSV(この下に yyyy.mm\\<Lot>\\yyyymmdd_<検査No>.csv)。"
@@ -158,7 +162,7 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
                               "judge_diag1", "judge_diag2", "judge_diag3", "judge_diag4", "judge_diag5", "wav")),
     ("出力(検査で使う)", "検査履歴 — 測定データ(履歴 CSV・Lot情報履歴・ライン別ログ)", ("history", "lot_history_share")),
     ("出力(検査で使う)", "検査履歴 — Aインプット(送った値の CSV・アイカスへの送信)", ("ainput_csv", "nis")),
-    ("出力(検査で使う)", "検査結果 — 測定DB・帳票 PDF", ("factory", "local_history", "csv_local")),
+    ("出力(検査で使う)", "検査結果 — 測定DB・帳票 PDF", ("factory", "measure_db", "local_history", "csv_local")),
     ("出力(その他)", "日報・ログ・ほかのツール", ("nippou_out", "app_log", "remote_stop", "nps_mitsubishi")),
     ("道具", "PDF を作る", ("edge",)),
 )
@@ -655,6 +659,8 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
     SIKACOMP / SIKATWOYEAR(next)はいつも第2。ほかの DB はその項目のパス 1 つ。`write` は前の呼び方の名残。
     """
     where, file = DB_FILES[name]
+    if name == "梱包検査ﾃﾞｰﾀ" and base_key is None and slot_value("measure_db"):
+        return slot_value("measure_db")            # 2026-11-18: 使用パス「測定DB(梱包検査ﾃﾞｰﾀ)」
     key = base_key or where
     if key == "next":
         return join(slot_value(LOT, SECOND), second_name(name))

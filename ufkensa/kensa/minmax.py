@@ -163,12 +163,15 @@ def min_max(state: KensaState, hooks: Hooks) -> list[Message]:
 
     atu = vbx.val(state.atu)
     first = 0 < atu <= 74.0
-    if first:
-        state.amin = vbx.fmt(_ws_min(aran), "0.000")
-        state.amax = vbx.fmt(_ws_max(aran), "0.000")
-    elif atu > 74:
+    if atu > 74:
         state.amin = vbx.fmt(_ws_min(aran), "0.00")
         state.amax = vbx.fmt(_ws_max(aran), "0.00")
+    else:
+        # 2026-11-18: ロットの厚が読めない(0・空)ときも厚の Min/Max を出す(前は空のまま残り、下の 0 との比較で
+        # TypeMismatch になって Min/Max が止まっていた)。0〜74 と同じ書式
+        state.amin = vbx.fmt(_ws_min(aran), "0.000")
+        state.amax = vbx.fmt(_ws_max(aran), "0.000")
+    del first
     state.hmin = vbx.fmt(_ws_min(hran), "0.0")
     state.hmax = vbx.fmt(_ws_max(hran), "0.0")
     state.tmin = vbx.fmt(_ws_min(tran), "0.0")
@@ -176,7 +179,7 @@ def min_max(state: KensaState, hooks: Hooks) -> list[Message]:
 
     # `If UF1.AMin = 0 Then UF1.AMin = ""`(Label.Caption は String。空なら型エラー)
     for attr in ("amin", "amax", "hmin", "hmax", "tmin", "tmax"):
-        if typed_cmp(getattr(state, attr), 0) == 0:
+        if getattr(state, attr) == "" or typed_cmp(getattr(state, attr), 0) == 0:
             setattr(state, attr, "")
 
     remove_underline(state)

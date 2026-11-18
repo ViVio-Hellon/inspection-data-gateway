@@ -6,7 +6,7 @@
 - 検査結果の CSV    … 手元の <L>_履歴CSV.csv・検査履歴\\<ライン>_履歴\\<L>_File.csv・工場共有(export_history_csv)
 - 測定DB(梱包検査ﾃﾞｰﾀ)… 検査ﾃﾞｰﾀ / 耳付検査ﾃﾞｰﾀ の最後に足された行
 
-**何も書かない・作らない。** 届かない場所は「見られません」と理由を出すだけ。開けるファイルは、ここで並べた
+**書き換えない・消さない。**(Aインプットの今月の yyyy.mm フォルダだけは無ければ作る。2026-11-18) 届かない場所は「見られません」と理由を出すだけ。開けるファイルは、ここで並べた
 場所の中だけ(画面から来たパスはここで並べ直したものと突き合わせる)。
 """
 from __future__ import annotations
@@ -78,6 +78,11 @@ def _months(now: datetime, n: int = 2) -> list[str]:
 def ainput(line: str, now: datetime) -> list[dict[str, Any]]:
     from . import ainput as ain
     places = []
+    # 2026-11-18(現場の声): 今月の yyyy.mm フォルダは無ければ作る(送信のときにも作る。届かない共有には作らない)
+    try:
+        safe_io.mkdir_reachable(_local(paths.join(ain.ainput_csv_root(line), now.strftime("%Y.%m"))))
+    except OSError:
+        pass
     for m in _months(now):
         base = _local(paths.join(ain.ainput_csv_root(line), m))
         places.append(_scan(f"Aインプットの CSV({m})", base, ("*.csv",), recursive=True))

@@ -394,11 +394,20 @@ class SaveIntegrityTest(FlowBase):
         self.s.measure_db = None                                 # 本番と同じく使用パスの測定DB を見る
         from ufkensa.kensa import paths
         from unittest import mock
-        with mock.patch.object(paths, "db_file", return_value=str(self.tmp / "無い" / "梱包検査ﾃﾞｰﾀ.sqlite3")):
+        target = self.tmp / "無い" / "梱包検査ﾃﾞｰﾀ.sqlite3"
+        self.answers = {**getattr(self, "answers", {}), "measure_db_create": False}
+        with mock.patch.object(paths, "db_file", return_value=str(target)):
             d = self.op("print-commit")
         self.assertIn("測定DB", d["stop"]["text"])
-        self.assertFalse((self.tmp / "無い").exists())           # 黙って作らない
+        self.assertFalse((self.tmp / "無い").exists())           # 「いいえ」なら作らない
         self.assertEqual(self.store.sheet(store.HOZON).last_row(1), 1)
+        # 2026-11-18: 「はい」なら作って保存する(黙っては作らない。聞いてから)
+        self.answers["measure_db_create"] = True
+        with mock.patch.object(paths, "db_file", return_value=str(target)):
+            d = self.op("print-commit")
+        self.assertIsNone(d.get("stop"), d.get("stop"))
+        self.assertTrue(target.is_file())
+        self.assertEqual(self.store.sheet(store.HOZON).last_row(1), 2)
 
 
 class AbnormalInputTest(FlowBase):

@@ -41,7 +41,12 @@ export function screenOp(screen, {
   after = () => {},
 } = {}) {
   async function handle(res, name, body = {}, answers = {}, opts = {}) {
-    for (const m of res.messages || []) showMessage(m);
+    // 2026-11-18(現場の声): 「お待ちください」と次の音(「印刷する？」など)が同時に鳴る。VBA は処理が遅く
+    // 「お待ちください」の間に待っていたが、ここでは処理がすぐ終わり、同じ返事に両方が入る。
+    // ほかの音と一緒に届いた「お待ちください」(*_wait)は鳴らさない(文言はそのまま出す)
+    const msgs = res.messages || [];
+    const others = msgs.some((m) => m && m.sound && !/_wait$/.test(m.sound));
+    for (const m of msgs) showMessage(others && m && m.sound && /_wait$/.test(m.sound) ? { ...m, sound: "" } : m);
     if (res.view) render(res.view);
     if (res.question) {
       const q = res.question;
