@@ -1811,10 +1811,22 @@ class Session:
             return None
         db = self.measure_db or paths.to_local(paths.db_file("梱包検査ﾃﾞｰﾀ"))
         if self.measure_db is None and not Path(db).is_file():
-            # 前は無いと黙って新しく作り、取り違えたパスの空の DB に登録が溜まった。VBA と同じく止める
-            raise Stop(f"測定DB(梱包検査ﾃﾞｰﾀ)が見つからないので保存できません: {db}\r\n"
-                       "設定 → 使用パス の「梱包検査データ」を確かめてください(印刷・保存はしていません)",
-                       source="SQL_追加")
+            # 前は無いと黙って新しく作り、取り違えたパスの空の DB に登録が溜まった。黙っては作らない。
+            # 2026-11-18(現場の声): 止めるだけだと印刷・保存ができない。場所を見せて「作りますか」と聞く
+            make = answers.get("measure_db_create")
+            if make is None:
+                self._print_pending = (st.lot, res)
+                return Question("measure_db_create",
+                                f"測定DB(梱包検査ﾃﾞｰﾀ)がありません:\r\n{db}\r\n\r\n"
+                                "ここに新しく作って保存しますか?\r\n"
+                                "(場所が違うときは「いいえ」→ 設定 → 使用パス の「測定DB(梱包検査ﾃﾞｰﾀ)」を直してください)",
+                                title="確認", source="SQL_追加")
+            if not make:
+                raise Stop(f"測定DB(梱包検査ﾃﾞｰﾀ)が見つからないので保存できません: {db}\r\n"
+                           "設定 → 使用パス の「測定DB(梱包検査ﾃﾞｰﾀ)」を確かめてください(印刷・保存はしていません)",
+                           source="SQL_追加")
+            records.ensure_measure_db(db)                # 届かない場所なら作らずに止まる
+            env.messages.append(Message(f"測定DB を新しく作りました: {db}", INFO, source="SQL_追加"))
         reg = wiring.registry(st)
         self._log("*UFKen:" + "印刷" + " T1:" + reg.t1 + " T2:" + reg.t2 + " T3:" + reg.t3)
         self.report = self._report_files(res.report, res.defect)          # 印刷(画面で開く HTML)
