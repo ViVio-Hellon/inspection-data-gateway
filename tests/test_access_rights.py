@@ -488,6 +488,8 @@ class IsolationTest(unittest.TestCase):
         self.assertTrue(guard)
         tmp = Path(tempfile.gettempdir()).resolve()
         for i in paths.ITEMS:
+            if i.kind == "name":                  # ファイル名だけの項目(測定DB のファイル名)はパスではない
+                continue
             for text in filter(None, (i.path, i.second)):
                 local = paths.to_local(text).resolve()
                 self.assertTrue(str(local).startswith(str(Path(guard).resolve())), (i.key, local))

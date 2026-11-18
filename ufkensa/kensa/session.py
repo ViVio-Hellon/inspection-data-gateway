@@ -1819,11 +1819,11 @@ class Session:
                 return Question("measure_db_create",
                                 f"測定DB(梱包検査ﾃﾞｰﾀ)がありません:\r\n{db}\r\n\r\n"
                                 "ここに新しく作って保存しますか?\r\n"
-                                "(場所が違うときは「いいえ」→ 設定 → 使用パス の「測定DB(梱包検査ﾃﾞｰﾀ)」を直してください)",
+                                "(場所が違うときは「いいえ」→ 設定 → 使用パス の「測定DB のフォルダ」「測定DB のファイル名」を直してください)",
                                 title="確認", source="SQL_追加")
             if not make:
                 raise Stop(f"測定DB(梱包検査ﾃﾞｰﾀ)が見つからないので保存できません: {db}\r\n"
-                           "設定 → 使用パス の「測定DB(梱包検査ﾃﾞｰﾀ)」を確かめてください(印刷・保存はしていません)",
+                           "設定 → 使用パス の「測定DB のフォルダ」「測定DB のファイル名」を確かめてください(印刷・保存はしていません)",
                            source="SQL_追加")
             records.ensure_measure_db(db)                # 届かない場所なら作らずに止まる
             env.messages.append(Message(f"測定DB を新しく作りました: {db}", INFO, source="SQL_追加"))
