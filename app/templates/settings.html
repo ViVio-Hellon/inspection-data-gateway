@@ -88,6 +88,10 @@
             #pathsTable tbody.pgroup[data-section^="入力"] tr.pgroup__frame th { border-left-color: var(--state-ok); }
             #pathsTable tbody.pgroup[data-section^="入力"] tr[data-key] td:first-child { border-left-color: var(--ok-bg); }
           </style>
+          <p class="muted" style="font-size:var(--fs-sm);margin:6px 0">出力のパスは<b>置き場所の根元</b>だけを決めます。
+            その下の <code>年.月</code>・<code>ロット</code>・<code>日</code> などのフォルダは、書くときに自動で作ります
+            (例: Aインプットの CSV は <code>&lt;パス&gt;\2026.11\&lt;ロット&gt;\</code>、帳票の PDF は <code>&lt;パス&gt;\&lt;ライン&gt;\2026.11\18日\</code>)。
+            共有に届かないときは作りません。</p>
           <div class="tablewrap">
             <table class="table" id="pathsTable">
               <thead><tr><th>項目</th><th>パス</th><th>状態</th><th></th></tr></thead>
