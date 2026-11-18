@@ -107,9 +107,13 @@ ITEMS: tuple[PathItem, ...] = (
              r"\\nlmsrvngy03\各課共有\0130_日軽稲沢\梱包課\梱包課共有\検査履歴" "\\",
              "ライン別ログ・Aインプット CSV・履歴のコピー", need="write"),
     # 2026-11-18: 測定DB のファイル(VBA は 工場共有 検査データ\【測定DB】梱包\梱包検査ﾃﾞｰﾀ の直書き)
-    PathItem("measure_db", "測定DB(梱包検査ﾃﾞｰﾀ)", "FactoryyPath & \"【測定DB】梱包\\梱包検査ﾃﾞｰﾀ\"", "",
-             "印刷・保存のたびに検査結果を 1 行足す DB のファイル(.sqlite3)。"
-             "空なら 工場共有 検査データ\\【測定DB】梱包\\梱包検査ﾃﾞｰﾀ.sqlite3", need="write", kind="file"),
+    PathItem("measure_db", "測定DB のフォルダ", "FactoryyPath & \"【測定DB】梱包\"", "",
+             "印刷・保存のたびに検査結果を 1 行足す DB(測定DB)を置くフォルダ。"
+             "空なら 工場共有 検査データ\\【測定DB】梱包。ファイル名は下の「測定DB のファイル名」", need="write"),
+    # 2026-11-18(現場の声): フォルダとファイル名を分けて決める(パスだけ変えるとファイル名で躓いた)
+    PathItem("measure_db_name", "測定DB のファイル名", "\"梱包検査ﾃﾞｰﾀ\"", "梱包検査ﾃﾞｰﾀ.sqlite3",
+             "測定DB のファイルの名前(拡張子を省くと .sqlite3)。上の「測定DB のフォルダ」の中のこのファイルに書く",
+             need="write", kind="name"),
     # 2026-11-16: Aインプットの CSV の置き場所(VBA は 検査履歴\<L>\<L>_Ainput の直書き)
     PathItem("ainput_csv", "Aインプットの CSV", "HistoryPath & L & \"\\\" & L & \"_Ainput\"", "",
              "Aインプットで送った値の CSV(この下に yyyy.mm\\<Lot>\\yyyymmdd_<検査No>.csv)。"
@@ -162,7 +166,7 @@ SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
                               "judge_diag1", "judge_diag2", "judge_diag3", "judge_diag4", "judge_diag5", "wav")),
     ("出力(検査で使う)", "検査履歴 — 測定データ(履歴 CSV・Lot情報履歴・ライン別ログ)", ("history", "lot_history_share")),
     ("出力(検査で使う)", "検査履歴 — Aインプット(送った値の CSV・アイカスへの送信)", ("ainput_csv", "nis")),
-    ("出力(検査で使う)", "検査結果 — 測定DB・帳票 PDF", ("factory", "measure_db", "local_history", "csv_local")),
+    ("出力(検査で使う)", "検査結果 — 測定DB・帳票 PDF", ("factory", "measure_db", "measure_db_name", "local_history", "csv_local")),
     ("出力(その他)", "日報・ログ・ほかのツール", ("nippou_out", "app_log", "remote_stop", "nps_mitsubishi")),
     ("道具", "PDF を作る", ("edge",)),
 )
@@ -398,7 +402,7 @@ def _lot_slot(key: str, slot: Optional[str]) -> str:
 # ------------------------------------------------------------------
 #: 画像のフォルダ(2026-11-05 依頼で使用パスに出した)。決めていなければ VBA と同じく元のフォルダの下
 DERIVED = {"pack_spec": ("quality", "包装仕様書"), "vc_images": ("packing", "VC種類画像"),
-           "quality_photo": ("quality", "品質写真")}
+           "quality_photo": ("quality", "品質写真"), "measure_db": ("factory", "【測定DB】梱包")}
 #: ファイルの項目(末尾に \\ を付けない)。2026-11-12
 DERIVED_FILES = {"qf_cooling": ("quality", "75S・14S焼入れチェック\\QF空冷時間チェックリスト.xlsx")}
 
@@ -651,6 +655,18 @@ def join(base: str, *parts: str) -> str:
     return out
 
 
+def measure_db_file(folder: Optional[str] = None, name: Optional[str] = None) -> str:
+    """測定DB のファイル = 「測定DB のフォルダ」\\「測定DB のファイル名」。0.3.12 でフォルダの欄に
+    ファイルまで書いた設定(.sqlite3 で終わる)はそのまま使う。"""
+    d = slot_value("measure_db") if folder is None else str(folder).strip().strip('"')
+    if d.lower().endswith((".sqlite3", ".sqlite", ".db")):
+        return d
+    n = (slot_value("measure_db_name") if name is None else str(name).strip().strip('"')) or "梱包検査ﾃﾞｰﾀ.sqlite3"
+    if "." not in n:
+        n += ".sqlite3"
+    return join(d, n)
+
+
 def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = None, write: bool = False) -> str:
     """DB の場所。`base_key` で別の場所(例 仕掛の控え "next"・"packing")から引ける。
 
@@ -659,8 +675,8 @@ def db_file(name: str, m: Optional[str] = None, *, base_key: Optional[str] = Non
     SIKACOMP / SIKATWOYEAR(next)はいつも第2。ほかの DB はその項目のパス 1 つ。`write` は前の呼び方の名残。
     """
     where, file = DB_FILES[name]
-    if name == "梱包検査ﾃﾞｰﾀ" and base_key is None and slot_value("measure_db"):
-        return slot_value("measure_db")            # 2026-11-18: 使用パス「測定DB(梱包検査ﾃﾞｰﾀ)」
+    if name == "梱包検査ﾃﾞｰﾀ" and base_key is None:
+        return measure_db_file()                   # 2026-11-18: 使用パス「測定DB のフォルダ」+「ファイル名」
     key = base_key or where
     if key == "next":
         return join(slot_value(LOT, SECOND), second_name(name))
@@ -802,6 +818,19 @@ def check(key: str, slot: Optional[str] = None, *, text: Optional[str] = None,
         if k.startswith("judge_"):
             out["ok"] = True
             out["message"] = "空なので同梱の VBA の絵を出します"   # 2026-11-09
+        return out
+    if item.kind == "name":
+        f = measure_db_file(name=text)
+        out["path"] = text
+        try:
+            there = to_local(f).is_file()
+        except OSError as e:
+            out["message"] = f"確かめられません: {e}"
+            return out
+        out["exists"] = out["readable"] = out["writable"] = there
+        out["ok"] = True
+        out["message"] = (f"あります: {f}" if there
+                          else f"まだありません: {f}(印刷・保存のときに、作るか聞きます)")
         return out
     p = to_local(text)
     try:

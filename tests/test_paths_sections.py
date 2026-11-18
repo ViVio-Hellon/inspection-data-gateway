@@ -40,3 +40,16 @@ class AinputCsvRootTest(SessionBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MeasureDbFileTest(SessionBase):
+    def test_folder_and_name(self) -> None:
+        paths.set_path("measure_db", str(self.tmp / "off"))
+        self.assertTrue(paths.db_file("梱包検査ﾃﾞｰﾀ").endswith("梱包検査ﾃﾞｰﾀ.sqlite3"))
+        paths.set_path("measure_db_name", "測定")
+        self.assertTrue(paths.db_file("梱包検査ﾃﾞｰﾀ").replace("\\", "/").endswith("off/測定.sqlite3"))
+        paths.set_path("measure_db", str(self.tmp / "x" / "a.sqlite3"))      # 0.3.12 の書き方(ファイルまで)
+        self.assertTrue(paths.db_file("梱包検査ﾃﾞｰﾀ").endswith("a.sqlite3"))
+        c = paths.check("measure_db_name")
+        self.assertTrue(c["ok"])
+        self.assertIn("まだありません", c["message"])
