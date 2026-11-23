@@ -122,7 +122,7 @@ class IcasOutputsRouteTest(MaintRouteTest):
         f = folder / "HVC_履歴CSV.csv"
         f.write_bytes(b"a,b\r\n")
         places = [oc._one("x", folder, ("HVC_履歴CSV.csv",))]
-        with mock.patch.object(m, "_output_places", lambda kind: (places, {"line": "HVC", "lname": "HVC"})):
+        with mock.patch.object(m, "_output_places", lambda kind, rels=None: (places, {"line": "HVC", "lname": "HVC"})):
             d = self.client.get("/api/maint/outputs?kind=csv", headers=self.h).get_json()
             self.assertEqual(d["places"][0]["files"][0]["name"], "HVC_履歴CSV.csv")
             r = self.client.get(f"/api/maint/outputs/text?kind=csv&path={f}", headers=self.h)
@@ -139,3 +139,30 @@ del MaintRouteTest
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OutputBrowseTest(unittest.TestCase):
+    """2026-11-23: 使用パス(根)から下のフォルダを選んで見る。"""
+
+    def setUp(self) -> None:
+        import tempfile
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(__import__("shutil").rmtree, self.tmp, True)
+
+    def test_falls_back_to_existing_folder_and_lists_dirs(self) -> None:
+        (self.tmp / "2026.10" / "LOT1").mkdir(parents=True)
+        (self.tmp / "2026.10" / "LOT1" / "20261031_1.csv").write_text("a", encoding="cp932")
+        pl = oc._browse("x", str(self.tmp), ["2026.11"], ("*.csv",))
+        self.assertEqual((pl["rel"], [d["name"] for d in pl["dirs"]]), ([], ["2026.10"]))
+        self.assertIn("まだありません", pl["note"])
+        self.assertFalse((self.tmp / "2026.11").exists())                 # 見るだけでは作らない
+        pl = oc._browse("x", str(self.tmp), ["2026.11"], ("*.csv",), ["2026.10", "LOT1"])
+        self.assertEqual([f["name"] for f in pl["files"]], ["20261031_1.csv"])
+        f = pl["files"][0]["path"]
+        self.assertTrue(oc.allowed(f, [oc._browse("x", str(self.tmp), [], ("*.csv",))]))   # 根の下は開ける
+        (self.tmp.parent / "soto.csv").write_text("a")
+        self.addCleanup((self.tmp.parent / "soto.csv").unlink)
+        self.assertFalse(oc.allowed(str(self.tmp / ".." / "soto.csv"), [pl]))
+
+    def test_clean_rel(self) -> None:
+        self.assertEqual(oc._clean_rel("../a/./b\\c/C:"), ["a", "b", "c"])

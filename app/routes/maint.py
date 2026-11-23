@@ -816,16 +816,16 @@ def history_nippou():
 OUTPUT_KINDS = ("ainput", "pdf", "csv", "db")
 
 
-def _output_places(kind: str) -> tuple[list, dict]:
+def _output_places(kind: str, rels: Optional[dict] = None) -> tuple[list, dict]:
     from datetime import datetime
 
     from ufkensa.kensa import output_check as oc
     lname, line = _kensa_line()
     now = datetime.now()
     if kind == "ainput":
-        return oc.ainput(line, now), {"line": line, "lname": lname}
+        return oc.ainput(line, now, rels), {"line": line, "lname": lname}
     if kind == "pdf":
-        return oc.pdf(line, now), {"line": line, "lname": lname}
+        return oc.pdf(line, now, rels), {"line": line, "lname": lname}
     if kind == "csv":
         return oc.result_csv(line, lname, _store().path.parent), {"line": line, "lname": lname}
     return [], {"line": line, "lname": lname, "db": oc.measure_db(line)}
@@ -836,8 +836,11 @@ def outputs_list():
     kind = request.args.get("kind", "")
     if kind not in OUTPUT_KINDS:
         return _err("bad_request", "kind が正しくありません")
+    from ufkensa.kensa import output_check as oc
+    # 2026-11-23: 選んだフォルダ(rel0=…&rel1=…。置き場所ごと、根の下の道を / 区切りで)
+    rels = {int(k[3:]): oc._clean_rel(v) for k, v in request.args.items() if k[:3] == "rel" and k[3:].isdigit()}
     try:
-        places, extra = _output_places(kind)
+        places, extra = _output_places(kind, rels)
     except Stop as e:
         return _stop_json(e)
     return jsonify({"kind": kind, "places": places, **extra})
