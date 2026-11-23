@@ -1202,11 +1202,15 @@ def pdf_folders(line: str, now: datetime) -> list[str]:
     手元(C:\\検査履歴 = 使用パス local_history)と工場共有(FactoryyPath & "【梱包】" & LN)。
     ファイル名は成績票 `<C2 の Lot>.pdf`、不良要因票 `<B1 の Lot>_不良要因.pdf`(PDFCREATE 補助:717-741)。
     """
+    month, day = now.strftime("%Y.%m"), now.strftime("%d") + "日"
+    return [paths.join(r, month, day) for r in pdf_roots(line)]
+
+
+def pdf_roots(line: str) -> list[str]:
+    """PDF の置き場所の根(この下に yyyy.mm\\dd日)。手元・工場共有の順。"""
     ln = lines.find(line)
     big = ln.big if ln else "Test"
-    month, day = now.strftime("%Y.%m"), now.strftime("%d") + "日"
-    return [paths.join(paths.get("local_history"), big, month, day),
-            paths.join(paths.get("factory"), "【梱包】" + big, month, day)]
+    return [paths.join(paths.get("local_history"), big), paths.join(paths.get("factory"), "【梱包】" + big)]
 
 
 # ------------------------------------------------------------------

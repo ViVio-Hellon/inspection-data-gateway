@@ -66,6 +66,56 @@ def _scan(label: str, folder: Path, patterns: tuple[str, ...], *, recursive: boo
         return _place(label, folder, [], f"見られません: {e}")
 
 
+MAX_DIRS = 60
+
+
+def _clean_rel(rel: Any) -> list[str]:
+    """画面から来た「根の下の道」(/ 区切り)。.. や絶対パスは捨てる。"""
+    parts = [p for p in str(rel or "").replace("\\", "/").split("/") if p and p not in (".", "..")]
+    return [p for p in parts if ":" not in p]
+
+
+def _browse(label: str, root: str, start: list[str], patterns: tuple[str, ...],
+            rel: Optional[list[str]] = None) -> dict[str, Any]:
+    """2026-11-23(現場の声): 使用パス(根)から下のフォルダを選んで見る。
+    初めは今月・今日のフォルダ(start)、無ければ在る所までさかのぼる。配下のフォルダとファイルを並べる。"""
+    base = _local(root)
+    want = list(start if rel is None else rel)
+    note = ""
+    while want and not base.joinpath(*want).is_dir():
+        if rel is None and not note:
+            note = f"「{'\\'.join(start)}」はまだありません(書いたときに作ります)。在るところを出しています"
+        want.pop()
+    folder = base.joinpath(*want) if want else base
+    dirs: list[dict[str, Any]] = []
+    files: list[dict[str, Any]] = []
+    problem = ""
+    try:
+        if not folder.is_dir():
+            problem = "使用パスのフォルダがありません(届かないか、まだありません)"
+        else:
+            for p in folder.iterdir():
+                if p.is_dir():
+                    try:
+                        t = p.stat().st_mtime
+                    except OSError:
+                        continue
+                    dirs.append({"name": p.name, "mtime": datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M"), "_t": t})
+                elif p.is_file() and any(p.match(pat) for pat in patterns):
+                    s = _stat(p)
+                    if s:
+                        files.append(s)
+    except OSError as e:
+        problem = f"見られません: {e}"
+    dirs.sort(key=lambda d: (d["_t"], d["name"]), reverse=True)
+    for d in dirs:
+        d.pop("_t", None)
+    out = _place(label, folder, files, problem)
+    out.update({"browse": True, "root": str(base), "rel": want, "dirs": dirs[:MAX_DIRS],
+                "dirs_more": max(0, len(dirs) - MAX_DIRS), "note": note, "patterns": list(patterns)})
+    return out
+
+
 def _months(now: datetime, n: int = 2) -> list[str]:
     out, d = [], now.replace(day=1)
     for _ in range(n):
@@ -75,7 +125,7 @@ def _months(now: datetime, n: int = 2) -> list[str]:
 
 
 # ------------------------------------------------------------------
-def ainput(line: str, now: datetime) -> list[dict[str, Any]]:
+def ainput(line: str, now: datetime, rels: Optional[dict[int, list[str]]] = None) -> list[dict[str, Any]]:
     from . import ainput as ain
     places = []
     # 2026-11-18(現場の声): 今月の yyyy.mm フォルダは無ければ作る(送信のときにも作る。届かない共有には作らない)
@@ -83,9 +133,8 @@ def ainput(line: str, now: datetime) -> list[dict[str, Any]]:
         safe_io.mkdir_reachable(_local(paths.join(ain.ainput_csv_root(line), now.strftime("%Y.%m"))))
     except OSError:
         pass
-    for m in _months(now):
-        base = _local(paths.join(ain.ainput_csv_root(line), m))
-        places.append(_scan(f"Aインプットの CSV({m})", base, ("*.csv",), recursive=True))
+    rels = rels or {}
+    places.append(_browse("Aインプットの CSV", ain.ainput_csv_root(line), [now.strftime("%Y.%m")], ("*.csv",), rels.get(0)))
     host = _local(ain.hostsend_path())
     s = _stat(host)
     places.append(_place("hostsend.txt(送信アプリへ渡す電文)", host.parent, [s] if s else [],
@@ -93,13 +142,11 @@ def ainput(line: str, now: datetime) -> list[dict[str, Any]]:
     return places
 
 
-def pdf(line: str, now: datetime) -> list[dict[str, Any]]:
-    places = []
-    for day in (now, now - timedelta(days=1)):
-        for i, folder in enumerate(wiring.pdf_folders(line, day)):
-            where = "手元" if i == 0 else "工場共有"
-            places.append(_scan(f"検査結果の PDF {where}({day:%m/%d})", _local(folder), ("*.pdf", "*.html")))
-    return places
+def pdf(line: str, now: datetime, rels: Optional[dict[int, list[str]]] = None) -> list[dict[str, Any]]:
+    rels = rels or {}
+    start = [now.strftime("%Y.%m"), now.strftime("%d") + "日"]
+    return [_browse(f"検査結果の PDF {'手元' if i == 0 else '工場共有'}", root, start, ("*.pdf", "*.html"), rels.get(i))
+            for i, root in enumerate(wiring.pdf_roots(line))]
 
 
 def result_csv(line: str, lname: str, store_dir: Path) -> list[dict[str, Any]]:
@@ -154,7 +201,23 @@ def measure_db(line: str, db: Optional[Path] = None) -> dict[str, Any]:
 
 # ------------------------------------------------------------------
 def allowed(path: str, places: list[dict[str, Any]]) -> bool:
-    return any(f["path"] == path for pl in places for f in pl["files"])
+    """一覧に出したファイル、または選べるフォルダ(根)の下で決まった種類のファイルだけ。"""
+    if any(f["path"] == path for pl in places for f in pl["files"]):
+        return True
+    p = Path(path)
+    if ".." in p.parts:
+        return False
+    for pl in places:
+        if not pl.get("browse"):
+            continue
+        root = Path(pl["root"])
+        try:
+            inside = p.resolve().is_relative_to(root.resolve())
+        except OSError:
+            continue
+        if inside and p.is_file() and any(p.match(pat) for pat in pl["patterns"]):
+            return True
+    return False
 
 
 def read_text(path: str) -> dict[str, Any]:

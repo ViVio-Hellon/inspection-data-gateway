@@ -1037,7 +1037,6 @@ async function init() {
   } catch (err) { toastError(err); }
 }
 
-init();
 
 
 
@@ -1304,9 +1303,10 @@ $("mDevFromKensa").addEventListener("click", async () => {
 
 
 /* ---------- 出力の確認(2026-11-14。見るだけ) ---------- */
-const OUT = { kind: "ainput", data: null };
+const OUT = { kind: "ainput", data: null, rels: {} };
 function outKind(k) {
   OUT.kind = k;
+  OUT.rels = {};
   for (const b of document.querySelectorAll("[data-okind]")) b.setAttribute("aria-pressed", String(b.dataset.okind === k));
   openOutputs();
 }
@@ -1368,7 +1368,8 @@ async function openOutputs() {
   const list = $("oList");
   list.replaceChildren(el("p", "muted", "読み込んでいます…"));
   try {
-    const d = await api.get(`/api/maint/outputs?kind=${OUT.kind}`);
+    const q = Object.entries(OUT.rels).map(([i, r]) => `&rel${i}=${encodeURIComponent(r.join("/"))}`).join("");
+    const d = await api.get(`/api/maint/outputs?kind=${OUT.kind}${q}`);
     OUT.data = d;
     $("oLine").textContent = `ライン ${d.line}(${d.lname})`;
     if (OUT.kind === "db") {
@@ -1377,10 +1378,23 @@ async function openOutputs() {
       return;
     }
     $("oView").replaceChildren(el("p", "muted", "左の一覧からファイルを選ぶと、中身をここに出します。"));
-    list.replaceChildren(...d.places.map((pl) => {
+    list.replaceChildren(...d.places.map((pl, idx) => {
       const box = el("div", "out__place");
-      box.append(el("h5", "", pl.label), el("div", "out__dir", pl.folder));
+      box.append(el("h5", "", pl.label));
+      if (pl.browse) box.append(outCrumbs(pl, idx)); else box.append(el("div", "out__dir", pl.folder));
+      if (pl.note) box.append(el("p", "out__note", pl.note));
       if (pl.problem) box.append(el("p", "out__prob", pl.problem));
+      if (pl.browse) {
+        for (const dd of pl.dirs) {
+          const b = el("button", "out__file out__subdir");
+          b.type = "button";
+          b.append(el("span", "", `📁 ${dd.name}`), el("small", "", dd.mtime.slice(5)));
+          b.addEventListener("click", () => outGo(idx, [...pl.rel, dd.name]));
+          box.append(b);
+        }
+        if (pl.dirs_more) box.append(el("small", "muted", `ほか ${pl.dirs_more} フォルダ(古いもの)`));
+        if (!pl.dirs.length && !pl.files.length && !pl.problem) box.append(el("small", "muted", "この中は空です"));
+      }
       for (const f of pl.files) {
         const b = el("button", "out__file");
         b.type = "button";
@@ -1395,6 +1409,26 @@ async function openOutputs() {
   } catch (err) {
     list.replaceChildren(el("p", "out__prob", err.message || String(err)));
   }
+}
+
+function outGo(idx, rel) {
+  OUT.rels[idx] = rel;
+  openOutputs();
+}
+
+// 根(使用パス)から今のフォルダまでの道。押すとそこへ戻る
+function outCrumbs(pl, idx) {
+  const nav = el("div", "out__dir out__crumbs");
+  const step = (text, rel) => {
+    const b = el("button", "out__crumb", text);
+    b.type = "button";
+    b.title = "このフォルダへ";
+    b.addEventListener("click", () => outGo(idx, rel));
+    return b;
+  };
+  nav.append(step(pl.root, []));
+  pl.rel.forEach((name, i) => nav.append(el("span", "", " \\ "), step(name, pl.rel.slice(0, i + 1))));
+  return nav;
 }
 
 /* ---------- アイカスのラインコード(2026-11-14。共有マスタ) ---------- */
@@ -1508,3 +1542,7 @@ async function openNippou() {
 }
 $("nReload").addEventListener("click", () => openNippou());
 $("nOpen").addEventListener("click", () => openWindow(tokenUrl(`/maint/nippou/paper?${NP.src}`), "日報"));
+
+// 2026-11-23: 一番最後で始める(前の保守タブを開き直すとき、後ろで決めた OUT・IC がまだ無くて
+// 「Cannot access 'OUT' before initialization」で止まっていた)
+init();

@@ -390,3 +390,9 @@
 .icas__tbl tr[data-bad="1"] .input { border-color: var(--state-error); }
 .nip__view { display: flex; flex-direction: column; gap: 6px; }
 .nip__view iframe { width: 100%; flex: 1; min-height: 66vh; border: 1px solid var(--rule); background: var(--surface); }
+
+/* 出力の確認: フォルダを選ぶ(2026-11-23) */
+.out__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px; }
+.out__crumb { border: 0; background: none; padding: 0 2px; font: inherit; color: var(--focus); cursor: pointer; text-decoration: underline; overflow-wrap: anywhere; text-align: left; }
+.out__note { font-size: var(--fs-xs); color: var(--muted); margin: 4px 0 0; }
+.out__subdir span { font-weight: 600; }
