@@ -228,6 +228,7 @@ class PerLotTest(_Saved):
         self.use(paths.OFFLINE, second_names={"SIKALOTNOW": "LOT2"})
         (self.d2 / "SIKALOT.sqlite3").rename(self.d2 / "LOT2.sqlite3")
         self.rename_columns(self.d2 / "LOT2.sqlite3", {"ﾛｯﾄ番号": "ロット番号", "ｵｰﾀﾞｰ板丈": "オーダー板丈"})
+        (self.d1 / "SIKALOT.sqlite3").unlink()                   # 2026-11-23: 第1にあれば第1を読むので、第1を外す
         r = lot.acc_reflec(screen, check_equipment=_ok)
         self.assertEqual((r.status, r.db_path), ("ok", str(self.d2) + "/LOT2.sqlite3"))
         self.assertEqual(r.past_hiki, base.past_hiki)

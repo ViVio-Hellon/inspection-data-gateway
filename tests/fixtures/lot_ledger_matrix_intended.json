@@ -1,4 +1,19 @@
 {
+ "both|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
+ },
  "first_file_missing|dbflag|sika_atu_create": {
   "value": [
    "9.5",
@@ -74,6 +89,21 @@
   ],
   "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
  },
+ "hiki_extra_first|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
+ },
  "hiki_extra_first|offline|grid.atu_hiki_records": {
   "value": {
    "found": true,
@@ -147,6 +177,21 @@
    ]
   ],
   "why": "HikiArrCreate は DBflag を見ない(前と同じ)。オンラインの決まり 4(第2にだけある引当を足す)にそろえた"
+ },
+ "hiki_extra_second|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
  },
  "hiki_extra_second|online|grid.atu_hiki_records": {
   "value": {
@@ -274,6 +319,21 @@
   ],
   "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
  },
+ "hiki_lot_only_first|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
+ },
  "hiki_lot_only_first|offline|grid.atu_hiki_records": {
   "value": {
    "found": true,
@@ -346,6 +406,21 @@
    ]
   ],
   "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_lot_only_second|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
  },
  "hiki_lot_only_second|online|grid.atu_hiki_records": {
   "value": {
@@ -743,6 +818,21 @@
   },
   "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
  },
+ "odr_missing_first|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
+ },
  "odr_missing_first|online|judge.materials_msgbox": {
   "value": {
    "args": [
@@ -817,6 +907,21 @@
    "引当": "b0620f4c4ad2eb7d6d0cefbd54757c2e1cf0fcdd"
   },
   "why": "見張りのオーダーは、まず読む側のファイルが無いと読めず(DbMissing)、オフラインは第1を見なかった。決まり 1・5(検査画面と同じ)"
+ },
+ "odr_missing_second|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
  },
  "odr_missing_second|offline|history_save": {
   "value": {
@@ -1129,5 +1234,20 @@
    "50"
   ],
   "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "second_missing_columns|offline|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-23(現場の声): 第1パスにロットがあればオフラインでも第1を元にし、空の欄だけ第2で補う(第2の SIKALOT は圧縮版で公差の列が無い)"
  }
 }

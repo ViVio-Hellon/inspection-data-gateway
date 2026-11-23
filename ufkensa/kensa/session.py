@@ -89,6 +89,15 @@ def _calibration_skip_right() -> bool:
         return False
 
 
+def _admin_right() -> bool:
+    """2026-11-23: 管理者(Administrator)か。新規検査で保存の有無を見ないのに使う。"""
+    try:
+        from .. import auth
+        return auth.can_edit()
+    except Exception:                                  # noqa: BLE001 - 読めなければ管理者でない扱い
+        return False
+
+
 class Session:
     """プロセスに 1 つの検査セッション。操作は `_lock` で 1 つずつ通す。
 
@@ -2057,6 +2066,10 @@ class Session:
                 if any(records.cell_text(r[1]) == st.lot for r in rows[1:] if len(r) > 1):
                     found = True
                     break
+            if not found and _admin_right():
+                # 2026-11-23(現場の声): 管理者は途中ロットの保存の有無を見ずに新規へ
+                self._log("UFKen" + "*新規検査: 保存なし・管理者なので続ける")
+                found = True
             if not found:
                 wiring._msg_error(env, st, "該当LotNoが保存されていません"
                                   + (f"\r\n(測定値があります: {'・'.join(hits[:5])})" if hits else ""), 2, "END")

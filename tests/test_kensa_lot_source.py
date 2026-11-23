@@ -77,9 +77,10 @@ class MatrixTest(_TwoSlots):
         self.assertEqual(self.s.state.lot_source, "second")
 
     def test_off_offline_reads_second(self) -> None:
+        # 2026-11-23(現場の声): オフラインでも第1にロットがあれば第1の値を元にする(第2は空の所を補うだけ)
         paths.set_mode(paths.OFFLINE)
         self.register()
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)
 
     def test_on_offline_reads_second(self) -> None:
         paths.set_mode(paths.OFFLINE)
@@ -101,7 +102,7 @@ class MatrixTest(_TwoSlots):
         """選んでいなければ D26 どおり(オンラインは第1)。"""
         paths.set_mode(paths.OFFLINE)
         self.register()
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)                 # 2026-11-23: 第1にあれば第1
         paths.set_mode(paths.ONLINE)
         self.reregister()
         self.assertEqual(self.ken_h(), KEN_FIRST)

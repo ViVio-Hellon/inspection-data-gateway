@@ -495,6 +495,43 @@ def _select_lot(file_path: str, cb_text: str) -> tuple[list[str], Optional[tuple
         return cols, tuple(rows[0])
 
 
+def _same_file(a: str, b: str) -> bool:
+    try:
+        return paths.to_local(a).resolve() == paths.to_local(b).resolve()
+    except (OSError, ValueError):
+        return a == b
+
+
+def _pick_lot_row(cb_text: str, file_path: str, second: str, first: str, out: "LotReflect"):
+    """ロットの行を選ぶ(2026-11-23)。第1パス → まず読む側 → 次に見る側 の順で、最初に見つかった行を元にし、
+    その行で空の列だけ、後の台帳の同じロットの行で補う(第1で取れた値は変えない)。"""
+    order: list[str] = []
+    if first and read_check(first, 1):
+        order.append(first)
+    for f in (file_path, second):
+        if f and not any(_same_file(f, o) for o in order) and (f == file_path or read_check(f, 1)):
+            order.append(f)
+    cols: list[str] = []
+    values = None
+    for f in order:
+        c2, v2 = _select_lot(f, cb_text)
+        if values is None:
+            cols = c2
+            if v2 is None:
+                continue
+            values, out.db_path = list(v2), f
+            if all(v not in (None, "") for v in values):
+                break
+            continue
+        if v2 is None:
+            continue
+        other = dict(zip(c2, v2))
+        for i, c in enumerate(cols):
+            if values[i] in (None, "") and other.get(c) not in (None, ""):
+                values[i] = other[c]
+    return cols, (tuple(values) if values is not None else None)
+
+
 def acc_reflec_path(dbflag: str) -> str:
     """AccReflec の参照先 (SaveLoad:101-112)。DBflag > MainPath(D26 改: PLEASE WAIT.txt は見ない)。"""
     if dbflag != "":
@@ -529,8 +566,13 @@ def acc_reflec(screen: LotScreen, *,
         return out
     # まず読む側にロットが無ければ、次に見る側の SIKALOT も見る(オンラインは第2、オフラインは第1)
     second = lot_ledger.other_file("SIKALOTNOW", screen.dbflag) if p.on_primary else ""
+    # 2026-11-23(現場の声): 第1パスにロットがあれば第1を元にする(第2の SIKALOT は圧縮版で公差の列が無い)。
+    # 第1で空の所だけ、ほかの台帳で補う。DBflag(NextPath だけ)・「控え(第2)から読む」(D28)のときは第1を元にしない
+    first = ""
+    if not lot_ledger.sides(screen.dbflag).explicit and not paths.lot_second_forced():
+        first = lot_ledger.db_path(paths.slot_value(paths.LOT, paths.FIRST), "SIKALOTNOW")
     try:
-        _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env, second)
+        _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env, second, first)
     except flow.Stop:
         raise
     except (vbx.TypeMismatch, SubscriptOutOfRange, DbReadError, sqlite3.Error) as e:
@@ -543,16 +585,11 @@ def acc_reflec(screen: LotScreen, *,
 def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
                      check_equipment: Callable[[str, str, float, float, float, float], str],
                      history_rows: Optional[Sequence[Sequence[Any]]],
-                     history_env: Optional["HistoryEnv"], second: str = "") -> None:
+                     history_env: Optional["HistoryEnv"], second: str = "", first: str = "") -> None:
     if "'" in screen.cb_text:
         # VBA は SQL に値をそのまま埋める(SaveLoad:120)→ 構文エラーで ErrHandler
         raise DbReadError("クエリ式の構文エラー")
-    cols, values = _select_lot(file_path, screen.cb_text)
-    if values is None and second and read_check(second, 1):
-        # D26: ロットごとの第2(列は名前で読むので並びが違っても同じ)
-        cols, values = _select_lot(second, screen.cb_text)
-        if values is not None:
-            out.db_path = second
+    cols, values = _pick_lot_row(screen.cb_text, file_path, second, first, out)
     if values is None:
         out.status = "not_found"
         for k in CLEAR_ON_NOT_FOUND:
