@@ -166,14 +166,39 @@ class AccReflecTest(_Base):
 
     def test_zero_tolerance_names_missing_columns(self) -> None:
         # 2026-11-09: 読んだ台帳に公差の列が無いと公差 0(下限 = 上限)になる → 無い列を知らせる
-        f = self.d.main / kensa_fixture.file_name("SIKALOTNOW")
-        with sqlite3.connect(f) as c:
-            for k in ("ｵｰﾀﾞｰ_ﾌﾟﾗｽ", "ｵｰﾀﾞｰ_ﾏｲﾅｽ", "製造_ﾌﾟﾗｽ", "製造_ﾏｲﾅｽ"):
-                c.execute(f'ALTER TABLE "仕掛" DROP COLUMN "板厚公差_{k}"')
+        # 2026-11-23: 第1に無い値は第2で補うので、どちらの台帳からも消す
+        for f in (self.d.main / kensa_fixture.file_name("SIKALOTNOW"), self.d.next / kensa_fixture.file_name("SIKALOTNOW")):
+            if not f.exists():
+                continue
+            with sqlite3.connect(f) as c:
+                for k in ("ｵｰﾀﾞｰ_ﾌﾟﾗｽ", "ｵｰﾀﾞｰ_ﾏｲﾅｽ", "製造_ﾌﾟﾗｽ", "製造_ﾏｲﾅｽ"):
+                    c.execute(f'ALTER TABLE "仕掛" DROP COLUMN "板厚公差_{k}"')
         r = self.reflect("N9170B0")
         texts = " ".join(m.text for m in r.messages)
         self.assertIn("板厚の公差が 0 になります", texts)
         self.assertIn("列 板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ", texts)
+
+    def test_first_kept_blanks_filled_from_second(self) -> None:
+        # 2026-11-23(現場の声): 第1にロットがあれば第1の値を元にし、第1で空の所だけ第2で補う
+        main = self.d.main / kensa_fixture.file_name("SIKALOTNOW")
+        nxt = self.d.next / kensa_fixture.file_name("SIKALOTNOW")
+        if not nxt.exists():
+            self.skipTest("第2の台帳が無い")
+        base = self.reflect("N9170B0")
+        with sqlite3.connect(nxt) as c:
+            c.execute('UPDATE "仕掛" SET "板厚公差_製造_ﾌﾟﾗｽ"=\'9\', "板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ"=\'9\', "板幅公差_製造_ﾌﾟﾗｽ"=\'7\', '
+                      '"板幅公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ"=\'7\' WHERE "ﾛｯﾄ番号"=\'N9170B0\'')
+        with sqlite3.connect(main) as c:
+            c.execute('UPDATE "仕掛" SET "板幅公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ"=\'\', "板幅公差_製造_ﾌﾟﾗｽ"=\'\' WHERE "ﾛｯﾄ番号"=\'N9170B0\'')
+        datasource._table_cache.clear()
+        for mode in (paths.ONLINE, paths.OFFLINE):
+            paths.set_mode(mode)
+            try:
+                r = self.reflect("N9170B0")
+            finally:
+                paths.set_mode(paths.ONLINE)
+            self.assertEqual(r.form["Ap"], base.form["Ap"], mode)             # 第1の値はそのまま
+            self.assertEqual(r.form["Hp"], "7.0", mode)                       # 第1で空 → 第2で補う
 
     def test_offline_fills_missing_columns_from_first(self) -> None:
         # 2026-11-09: 第2(控え)に公差の列が無くても、第1の同じロットで補う(オフラインでも第1に届けば)

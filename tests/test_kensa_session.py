@@ -45,6 +45,9 @@ class SessionBase(unittest.TestCase):
 
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp(prefix="ufkensa_session_"))
+        _adm = mock.patch.object(session, "_admin_right", lambda: False)    # 既定は一般の人(2026-11-23)
+        _adm.start()
+        self.addCleanup(_adm.stop)
         self.db_dir = kensa_fixture.copy_to(self.tmp / "db")
         kensa_fixture.use_offline(self.db_dir)
         # 梱包資材マスタは未受領なので、注意_包装仕様 に別の仕様の 1 行だけの合成 DB を置く(test_kensa_judge と同じ)
@@ -309,6 +312,15 @@ class EndToEndTest(SessionBase):
         r = self.s.new_inspection({"new": True})
         self.assertIsNotNone(r.stop)
         self.assertIn("該当LotNoが保存されていません", r.stop.text)
+
+    def test_new_admin_skips_history_check(self) -> None:
+        """2026-11-23: 管理者(Administrator)は保存が無くても新規検査へ進める。"""
+        self.register()
+        self.s.state.cells["S1"].value = "15.012"
+        with mock.patch.object(session, "_admin_right", lambda: True):
+            r = self.s.new_inspection({"new": True})
+        self.assertIsNone(r.stop)
+        self.assertEqual(self.s.state.lot, "")
 
 
     def test_new_with_zero_only_cells_counts_as_unmeasured(self) -> None:
