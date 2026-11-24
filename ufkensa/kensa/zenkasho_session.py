@@ -110,6 +110,8 @@ MITSU_COLS: tuple[tuple[int, str, str, str], ...] = (
     (31, "元板NO", "t", "三菱"), (33, "切断ﾌﾞﾛｯｸNO", "t", "三菱"), (34, "ﾌﾞﾛｯｸ", "l", "三菱"),
 )
 SHEET_ROWS = {ZEN: (7, 76)}
+#: 2026-11-24: ロットが無いときに測定値を断る文言
+NO_LOT_TEXT = "ロットが登録されていません(LotNo・寸法・公差がありません)。先にロットを選んでください。測定値は入れていません"
 DEFECT_PREFIX = "不良要因印刷_"                            # 不良要因印刷 & "_" & Lname
 TYPE_MISMATCH = "型が一致しません。"
 SHEET_COLS = {ZEN: 35}
@@ -1029,6 +1031,11 @@ class ZenkashoSession(SubInspectionCommon):
             b.activate_sheet(name)
         r, c = self._check_cell(*b.active_cell)
         text = "" if text is None else str(text).rstrip("\r\n")
+        if r >= SHEET_ROWS[name][0] and text.strip() != "":
+            # 2026-11-24(現場の声): LotNo・寸法・公差が無いまま測定値が入っていた → ロットが無い間は表に入れない
+            ws = b.ws(name)
+            if str(b.mit.combo or "").strip() == "" or not sh.is_numeric(ws.get(3, 2)):
+                raise Stop(NO_LOT_TEXT, level=WARN, source="zenkasho_session")
         self._call(b.user_edit, r, c, text, name)
         if enter and ENTER_MOVES_DOWN and b.active_name == name and b.active_cell == (r, c) \
                 and r < SHEET_ROWS[name][1]:

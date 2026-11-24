@@ -651,20 +651,19 @@ def _nn(v: Any, null_raises: bool) -> str:
 def read_lot_row(lot: str) -> Optional[dict[str, Any]]:
     """`SELECT * FROM 仕掛 WHERE ﾛｯﾄ番号 = '{lot}' AND ｵｰﾀﾞｰ板丈 <> '0'` の先頭 1 件(UFCask:426 / UFMit:629)。
 
-    値は SQLite のまま(Null は None)。Access の文字の比較は大文字小文字を区別しないので NOCASE で比べる。
+    2026-11-24(現場の声): 検査画面のロット登録と同じ読み方(`lot.read_lot_row`)。第1パスにあれば第1の行を元にし、
+    空の所だけ第2(圧縮版)で補う。第2だけ読んで公差の列が無く「コレクションに見つかりません」で止まっていた。
+    値は SQLite のまま(Null は None)。
     """
-    from .. import lot_columns
-    with datasource.open_ro(_db_path("SIKALOTNOW")) as conn:
-        # 2つ目のファイルは列名の書き方が違うことがある。実際の列名で引き、第1の名前で返す
-        actual = [r[1] for r in conn.execute('PRAGMA table_info("仕掛")')]
-        real = dict(zip(lot_columns.canonical(actual), actual))
-        lc = real.get("ﾛｯﾄ番号", "ﾛｯﾄ番号").replace('"', '""')
-        tc = real.get("ｵｰﾀﾞｰ板丈", "ｵｰﾀﾞｰ板丈").replace('"', '""')
-        cur = conn.execute(f'SELECT * FROM "仕掛" WHERE "{lc}" = ? COLLATE NOCASE AND "{tc}" <> \'0\' '
-                           'ORDER BY rowid LIMIT 1', (lot,))
-        cols = lot_columns.canonical([d[0] for d in cur.description])
-        r = cur.fetchone()
-    return dict(zip(cols, r)) if r else None
+    from .. import lot as lot_mod
+    if "'" in lot:
+        raise VbaError(-2147217900, "クエリ式の構文エラー", "rs.Open")
+    r = lot_mod.read_lot_row(lot)
+    if r.values is None:
+        if not r.path and not any(lot_mod.read_check(f, 1) for f in (lot_mod.first_lot_file(), paths.db_file("SIKALOTNOW"))):
+            raise datasource.DbMissing("DBファイルが見つかりません: " + paths.db_file("SIKALOTNOW"))
+        return None
+    return dict(zip(r.cols, r.values))
 
 
 def tolerance_pair(order_p: float, order_m: float, made_p: float, made_m: float) -> tuple[float, float]:

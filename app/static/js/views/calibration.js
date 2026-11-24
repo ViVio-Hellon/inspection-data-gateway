@@ -4,6 +4,7 @@
   返り値: { view, messages, question, stop }(検査画面と同じ形。question は使わない)
 */
 
+import { mayRefocus } from "../focus_guard.js";
 import { waitSounds } from "../sound.js";
 import { api } from "../api.js";
 import { toast, toastError } from "../toast.js";
@@ -119,7 +120,7 @@ function render(v) {
 /** 測定器の入力を止めない: 受信欄にいつもフォーカスを戻す(D6)。 */
 function focusIn() {
   const el = $("calIn");
-  if (!el.disabled && document.activeElement !== el) el.focus();
+  if (!el.disabled && document.activeElement !== el && mayRefocus()) el.focus();
 }
 
 $("calIn").addEventListener("keydown", async (e) => {

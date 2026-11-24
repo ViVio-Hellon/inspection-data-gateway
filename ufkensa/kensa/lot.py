@@ -405,6 +405,7 @@ class LotReflect:
     """
     status: str = "ok"
     db_path: str = ""
+    lot_notes: list[str] = field(default_factory=list)            # 第1パスを元にできなかった理由(2026-11-24)
     row: dict[str, Optional[str]] = field(default_factory=dict)   # 採用した 1 行(None = Null)
     messages: list[Message] = field(default_factory=list)
     g_flag: bool = False                    # 外注(GFS/GCT/GSS)
@@ -502,34 +503,67 @@ def _same_file(a: str, b: str) -> bool:
         return a == b
 
 
-def _pick_lot_row(cb_text: str, file_path: str, second: str, first: str, out: "LotReflect"):
-    """ロットの行を選ぶ(2026-11-23)。第1パス → まず読む側 → 次に見る側 の順で、最初に見つかった行を元にし、
-    その行で空の列だけ、後の台帳の同じロットの行で補う(第1で取れた値は変えない)。"""
+@dataclass
+class LotRow:
+    """仕掛台帳から読んだロットの 1 行(2026-11-24。ロット登録・キャスク・全ヵ所で同じ読み方)。"""
+    cols: list[str]
+    values: Optional[tuple]
+    path: str                                # 元にした台帳("" = 見つからない)
+    notes: list[str] = field(default_factory=list)   # 第1パスを元にできなかった理由など(画面の知らせに足す)
+
+
+def first_lot_file() -> str:
+    """第1パスの SIKALOT。フォルダが第2と同じでも、ファイル名は必ず「第1の名前」(2026-11-24)。
+    (lot_ledger.db_path はフォルダの文字列で第1/第2の名前を選ぶので、同じフォルダだと圧縮版を指していた)"""
+    return paths.join(paths.slot_value(paths.LOT, paths.FIRST), paths.first_name("SIKALOTNOW"))
+
+
+def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
+    """ロットの行を選ぶ(2026-11-23/24 現場の声)。
+
+    第1パス → まず読む側 → 次に見る側 の順で、最初に見つかった行を元にする。**元の行で取れた値は変えない。**
+    元の行で空・列が無い所だけ、後の台帳の同じロットの行で補う。どれにも無い列は空(列を足すので
+    「コレクションに見つかりません」で止まらない)。DBflag(NextPath だけ)・「控え(第2)から読む」(D28)のときは
+    第1を元にしない。
+    """
+    p = lot_ledger.pick("SIKALOTNOW", dbflag, check_explicit=True)
+    second = lot_ledger.other_file("SIKALOTNOW", dbflag) if p.on_primary else ""
+    first = ""
+    if not lot_ledger.sides(dbflag).explicit and not paths.lot_second_forced():
+        first = first_lot_file()
+    notes: list[str] = []
     order: list[str] = []
-    if first and read_check(first, 1):
-        order.append(first)
-    for f in (file_path, second):
-        if f and not any(_same_file(f, o) for o in order) and (f == file_path or read_check(f, 1)):
+    if first:
+        if read_check(first, 1):
+            order.append(first)
+        else:
+            notes.append(f"第1パスの台帳を読めません({first})")
+    for f in (p.file if p.found else "", second):
+        if f and not any(_same_file(f, o) for o in order) and read_check(f, 1):
             order.append(f)
     cols: list[str] = []
-    values = None
+    values: Optional[list] = None
+    path = ""
     for f in order:
         c2, v2 = _select_lot(f, cb_text)
-        if values is None:
-            cols = c2
-            if v2 is None:
-                continue
-            values, out.db_path = list(v2), f
-            if all(v not in (None, "") for v in values):
-                break
-            continue
         if v2 is None:
+            if f == first:
+                notes.append(f"第1パスの台帳({first})にこのロットがありません")
+            if values is None:
+                cols = list(c2)
+            continue
+        if values is None:
+            cols, values, path = list(c2), list(v2), f
             continue
         other = dict(zip(c2, v2))
         for i, c in enumerate(cols):
             if values[i] in (None, "") and other.get(c) not in (None, ""):
                 values[i] = other[c]
-    return cols, (tuple(values) if values is not None else None)
+        for c in c2:                                     # 元の台帳に無い列は足す
+            if c not in cols:
+                cols.append(c)
+                values.append(other[c])
+    return LotRow(cols, tuple(values) if values is not None else None, path, notes)
 
 
 def acc_reflec_path(dbflag: str) -> str:
@@ -564,15 +598,8 @@ def acc_reflec(screen: LotScreen, *,
         out.status = "db_missing"
         out.messages.append(Message("DBファイルが見つかりません:" + "\r\n" + file_path, ERROR, source="SaveLoad:116"))
         return out
-    # まず読む側にロットが無ければ、次に見る側の SIKALOT も見る(オンラインは第2、オフラインは第1)
-    second = lot_ledger.other_file("SIKALOTNOW", screen.dbflag) if p.on_primary else ""
-    # 2026-11-23(現場の声): 第1パスにロットがあれば第1を元にする(第2の SIKALOT は圧縮版で公差の列が無い)。
-    # 第1で空の所だけ、ほかの台帳で補う。DBflag(NextPath だけ)・「控え(第2)から読む」(D28)のときは第1を元にしない
-    first = ""
-    if not lot_ledger.sides(screen.dbflag).explicit and not paths.lot_second_forced():
-        first = lot_ledger.db_path(paths.slot_value(paths.LOT, paths.FIRST), "SIKALOTNOW")
     try:
-        _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env, second, first)
+        _acc_reflec_body(screen, out, file_path, check_equipment, history_rows, history_env)
     except flow.Stop:
         raise
     except (vbx.TypeMismatch, SubscriptOutOfRange, DbReadError, sqlite3.Error) as e:
@@ -585,11 +612,15 @@ def acc_reflec(screen: LotScreen, *,
 def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
                      check_equipment: Callable[[str, str, float, float, float, float], str],
                      history_rows: Optional[Sequence[Sequence[Any]]],
-                     history_env: Optional["HistoryEnv"], second: str = "", first: str = "") -> None:
+                     history_env: Optional["HistoryEnv"]) -> None:
     if "'" in screen.cb_text:
         # VBA は SQL に値をそのまま埋める(SaveLoad:120)→ 構文エラーで ErrHandler
         raise DbReadError("クエリ式の構文エラー")
-    cols, values = _pick_lot_row(screen.cb_text, file_path, second, first, out)
+    lr = read_lot_row(screen.cb_text, screen.dbflag)
+    cols, values = lr.cols, lr.values
+    out.lot_notes = lr.notes
+    if lr.path:
+        out.db_path = lr.path
     if values is None:
         out.status = "not_found"
         for k in CLEAR_ON_NOT_FOUND:
@@ -682,7 +713,7 @@ def _acc_reflec_body(screen: LotScreen, out: LotReflect, file_path: str,
             why = (f"読んだ台帳({out.db_path or file_path})に列 {'・'.join(gone)} がありません"
                    + (f"(台帳にあって読めない列: {'・'.join(lot_columns.last_unknown.get('SIKALOTNOW', [])[:8])})"
                       if lot_columns.last_unknown.get("SIKALOTNOW") else "")
-                   if gone else f"読んだ台帳: {out.db_path or file_path}")
+                   if gone else f"読んだ台帳: {out.db_path or file_path}") + "".join(f"。{n}" for n in out.lot_notes)
             out.messages.append(Message(
                 f"{key}の公差が 0 になります(下限と上限が同じ)。仕掛台帳の値: "
                 f"ｵｰﾀﾞｰ +{raw[0]!r} -{raw[1]!r} / 製造 +{raw[2]!r} -{raw[3]!r}。{why}", WARN, source="SaveLoad:227"))

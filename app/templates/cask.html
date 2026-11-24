@@ -6,6 +6,11 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cask.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pack_dialog.css') }}">
 <div class="cask" id="cask">
+  <!-- 2026-11-24(現場の声): ゼロ校正がまだの間は大きく出す(測定値は表に入れない) -->
+  <div class="cask__zero-alert" id="zeroAlert" role="alert" hidden>
+    <strong>ゼロ校正を実行してください！！</strong>
+    <span id="zeroAlertNeed"></span>
+  </div>
   <!-- 上: ロット・寸法と公差・測定点数・ゼロ校正・対角公差と入力必須欄 -->
   <div class="cask__top">
     <section class="card">

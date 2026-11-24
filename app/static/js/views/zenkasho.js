@@ -10,6 +10,7 @@
 */
 
 import { openWindow } from "../desktop.js";
+import { mayRefocus } from "../focus_guard.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
 import { promptBox } from "../askbox.js";
@@ -47,7 +48,7 @@ function focusMeas() {
   // 画面は入れ替え式(nav.js)なので、ほかの画面へ移ったあとも document の click から呼ばれる。入力欄が無ければ何もしない
   if (!$("measIn")) return;
   const a = document.activeElement;
-  if (document.querySelector("dialog[open]")) return;
+  if (document.querySelector("dialog[open]") || !mayRefocus()) return;
   if (!a || !a.matches("input, select, textarea") || a === $("measIn")) $("measIn").focus();
 }
 

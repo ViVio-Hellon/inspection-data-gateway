@@ -85,6 +85,30 @@ class CaskScreenTest(SessionBase):
         self.assertEqual((tol["size"], tol["lo"], tol["hi"]), ("36.000", "35.600", "36.400"))   # Q2:S2 の数式
         return d
 
+    def test_measure_refused_without_lot_or_zero(self) -> None:
+        """2026-11-24(現場の声): ロットが無い・ゼロ校正がまだの間は、測定値を表に入れない。
+        ゼロ校正がまだなら、受信機の値(測定の欄に来る)はゼロ校正へ回す。"""
+        d = self.post("open")
+        self.post("select", row=7, col=2)
+        d = self.post("receive", text="DT10002+0000036.000M")
+        self.assertIn("ロットが登録されていません", d["stop"]["text"])
+        self.post("lot", lot="zzzzzzz")
+        for (r, c), v in {(3, 2): "36", (3, 4): "1528", (3, 6): "3053"}.items():
+            self.post("select", row=r, col=c)
+            self.post("receive", text=v)
+        self.post("select", row=7, col=2)
+        d = self.post("receive", text="DT10002+0000000.000M")                     # → ゼロ校正(マイクロ)
+        self.assertIsNone(d.get("stop"))
+        self.assertEqual(d["view"]["form"]["micro"], "0.000")
+        self.assertEqual(self.cell(d, 7, 2)[:1], [""])                              # 表には入れない
+        d = self.post("receive", text="DT10002+0000036.000M")                     # コンベックスがまだ
+        self.assertIn("ゼロ校正を実行してください！！", d["stop"]["text"])
+        self.assertEqual(self.cell(d, 7, 2)[:1], [""])
+        d = self.post("receive", text="#L0.0")                                     # → ゼロ校正(コンベックス)
+        self.assertEqual((d["view"]["form"]["convex"], d["view"]["focus"]), ("0.0", "meas"))
+        d = self.post("receive", text="DT10002+0000036.000M")
+        self.assertEqual(self.cell(d, 7, 2)[:1], ["36"])
+
     def test_page_and_state(self) -> None:
         r = self.c.get("/cask", headers=self.h)
         self.assertEqual(r.status_code, 200)
