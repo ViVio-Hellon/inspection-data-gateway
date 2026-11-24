@@ -96,3 +96,10 @@
 .cdef__warn { margin: 0; padding: 6px 8px; border-radius: var(--radius-xs); background: var(--warn-bg); color: var(--state-error); font-size: var(--fs-sm); }
 .cdef__right { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 .cdef__right iframe { flex: 1; width: 100%; border: 1px solid var(--rule); background: var(--surface); }
+
+/* ゼロ校正がまだ(2026-11-24) */
+.cask__zero-alert { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 0 0 8px; padding: 12px 16px;
+  border: 3px solid var(--state-error); border-radius: var(--radius-xs); background: color-mix(in srgb, var(--state-error) 10%, var(--surface)); }
+.cask__zero-alert[hidden] { display: none; }
+.cask__zero-alert strong { font-size: 2rem; line-height: 1.2; color: var(--state-error); }
+.cask__zero-alert span { font-size: 1.2rem; font-weight: 700; }

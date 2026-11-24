@@ -11,6 +11,7 @@
   入力先を測定値の欄(measIn)へ戻す。描き直しの前に焦点のあった欄は、描き直した後も同じ欄に戻す。
 */
 
+import { mayRefocus } from "../focus_guard.js";
 import { waitSounds } from "../sound.js";
 import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
@@ -100,7 +101,7 @@ function announceReport(v) {
         { label: "帳票を開く", onClick: () => openWindow(url, "帳票") });
 }
 
-const refocus = () => $("measIn")?.focus({ preventScroll: true });   // 画面を移ったあと(入れ替え式)でも落ちない
+const refocus = () => { if (mayRefocus()) $("measIn")?.focus({ preventScroll: true }); };   // 画面を移ったあと(入れ替え式)でも落ちない
 
 /**
  * 2026-11-10(現場の声): 検査員を登録して、この直の校正が済んでいなければ、そのまま校正画面へ移る。
@@ -1177,7 +1178,7 @@ function initReceiver() {
     // 2026-11-11: 入力欄でない所(表・ボタンなど)へ焦点が移ったら、受け取る欄へ戻す(測定中だけ。窓が開いていれば戻さない)
     const a = document.activeElement;
     const other = a && a !== document.body && a.matches("input, select, textarea, [contenteditable]");
-    if (phase === "measure" && !other && !document.querySelector("dialog[open]")) box.focus({ preventScroll: true });
+    if (phase === "measure" && !other && !document.querySelector("dialog[open]") && mayRefocus()) box.focus({ preventScroll: true });
     show();
   }, 0));
   document.addEventListener("focusin", () => setTimeout(show, 0));

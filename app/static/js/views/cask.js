@@ -6,6 +6,7 @@
   表は 700 行のうち入力のある所 +α だけ届く。行ごとに中身が変わった所だけ描き直し、次に入力する行が見えるようにスクロールする。
 */
 
+import { mayRefocus } from "../focus_guard.js";
 import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
@@ -30,7 +31,7 @@ const op = screenOp("cask", {
 
 function focusInput() {
   if (!V || !V.visible) return;
-  if (document.querySelector("dialog[open]")) return;
+  if (document.querySelector("dialog[open]") || !mayRefocus()) return;
   const el = V.focus === "zero" ? $("zeroIn") : $("measIn");
   el.focus();
 }
@@ -88,6 +89,10 @@ function renderTop(v) {
   const zeroOk = f.micro !== "" && f.convex !== "";
   text($("zeroLv"), zeroOk ? "校正済" : "未");
   $("zeroLv").className = "lv " + (zeroOk ? "lv--ok" : "lv--ng");
+  // 2026-11-24: ゼロ校正がまだなら画面の上に大きく(測ると、測定ではなくゼロ校正に入る)
+  const need = [[f.l1 || "マイクロ/ノギス", f.micro], ["コンベックス", f.convex]].filter(([, v]) => v === "").map(([n]) => n);
+  $("zeroAlert").hidden = zeroOk || !V.visible;
+  text($("zeroAlertNeed"), need.length ? `まだ: ${need.join("・")}。いま測ると、ゼロ校正に入ります(測定値は表に入りません)` : "");
   kv($("zeroKv"), [[f.l1 || "ﾏｲｸﾛｾﾞﾛ点", f.micro || "未"], ["ｺﾝﾍﾞｯｸｽｾﾞﾛ点", f.convex || "未"],
                    ["ｺﾝﾍﾞｯｸｽ1000mm", f.convex_1000 || "未"]]);
 }

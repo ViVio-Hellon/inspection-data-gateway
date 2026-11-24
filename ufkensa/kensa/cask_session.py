@@ -76,6 +76,9 @@ COLUMNS: tuple[tuple[int, int], ...] = (
     (2, 3), (4, 5), (6, 7), (8, 9), (11, 12), (13, 14), (15, 16), (17, 18), (19, 0), (20, 0), (21, 0), (22, 0),
     (23, 0), (24, 0), (25, 0), (26, 0), (27, 0), (28, 0))
 FIRST_ROW, LAST_ROW = 7, 706
+#: 2026-11-24: ロットが無い・ゼロ校正がまだのときに測定値を断る文言
+NO_LOT_TEXT = "ロットが登録されていません(LotNo・寸法・公差がありません)。先にロットを選んでください。測定値は入れていません"
+ZERO_TEXT = "ゼロ校正を実行してください！！"
 #: シート上部の手入力できる欄(ロットが読めないときは「Text.データなし　手入力よろしく」でここに打つ)
 HEADER_CELLS = {(3, 2): "寸法 厚", (3, 4): "寸法 巾", (3, 6): "寸法 丈", (2, 13): "厚公差 −", (2, 15): "厚公差 +",
                 (3, 13): "巾公差 −", (3, 15): "巾公差 +", (4, 13): "丈公差 −", (4, 15): "丈公差 +"}
@@ -722,6 +725,22 @@ class CaskSession(SubInspectionCommon):
         book = self.book
         book.activate_sheet(sh.CASK)
         r, c = book.active_cell
+        text = str(text or "")
+        if r >= FIRST_ROW:
+            # 2026-11-24(現場の声): ロット(寸法・公差)が無い・ゼロ校正が済んでいない間は、測定値を表に入れない
+            ws = book.ws(sh.CASK)
+            # LotNo を選んでいて、寸法(B3)がある(仕掛に無いロットの手入力も含む)
+            if str(book.cask.lot_box or "").strip() == "" or not sh.is_numeric(ws.get(3, 2)):
+                raise Stop(NO_LOT_TEXT, level=WARN, source="cask_session")
+            f = book.cask
+            if f.visible and (f.micro == "" or f.convex == ""):
+                kind = sh.maker(text)
+                # 受信機の値は測定の欄に来る → ゼロ校正がまだならゼロ校正へ回す(前はゼロ校正に入らなかった)
+                if (kind == "DT" and f.micro == "") or (kind == "#L" and f.convex == ""):
+                    return cask.start_tb_after_update(book, text)
+                need = "・".join(n for n, v in (((f.l1 or "ﾏｲｸﾛ/ﾉｷﾞｽ") + "ゼロ点", f.micro),
+                                                ("ｺﾝﾍﾞｯｸｽゼロ点", f.convex)) if v == "")
+                raise Stop(ZERO_TEXT + f"\r\n(まだ: {need}。測定値は入れていません)", level=WARN, source="Cask:1041")
         if not book.user_editable(r, c):
             book.fx.messages.append(Message(PROTECTED_TEXT, WARN, title="Microsoft Excel", source="Excel(シート保護)"))
             return None
