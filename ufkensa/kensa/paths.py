@@ -630,7 +630,8 @@ def readable(path: Union[str, Path]) -> bool:
     try:
         p = path if isinstance(path, Path) else to_local(path)
         if is_copied(p):
-            return p.is_file() and lot_usable(str(path))
+            # 2026-11-26: 共有に一時的に届かなくても、前に写した姿があれば読める(lot_copy が決める)
+            return lot_usable(str(path))
         return p.is_file()
     except (OSError, ValueError):
         return False
