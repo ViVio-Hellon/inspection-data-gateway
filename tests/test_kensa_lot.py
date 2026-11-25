@@ -178,8 +178,8 @@ class AccReflecTest(_Base):
         self.assertIn("板厚の公差が 0 になります", texts)
         self.assertIn("列 板厚公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ", texts)
 
-    def test_first_kept_blanks_filled_from_second(self) -> None:
-        # 2026-11-23(現場の声): 第1にロットがあれば第1の値を元にし、第1で空の所だけ第2で補う
+    def test_online_first_kept_blanks_filled_from_second(self) -> None:
+        # 2026-11-25(現場の決まり): オンラインは第1が正。第1の値はそのまま、第1で空の所だけ第2で補う
         main = self.d.main / kensa_fixture.file_name("SIKALOTNOW")
         nxt = self.d.next / kensa_fixture.file_name("SIKALOTNOW")
         if not nxt.exists():
@@ -191,14 +191,9 @@ class AccReflecTest(_Base):
         with sqlite3.connect(main) as c:
             c.execute('UPDATE "仕掛" SET "板幅公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ"=\'\', "板幅公差_製造_ﾌﾟﾗｽ"=\'\' WHERE "ﾛｯﾄ番号"=\'N9170B0\'')
         datasource._table_cache.clear()
-        for mode in (paths.ONLINE, paths.OFFLINE):
-            paths.set_mode(mode)
-            try:
-                r = self.reflect("N9170B0")
-            finally:
-                paths.set_mode(paths.ONLINE)
-            self.assertEqual(r.form["Ap"], base.form["Ap"], mode)             # 第1の値はそのまま
-            self.assertEqual(r.form["Hp"], "7.0", mode)                       # 第1で空 → 第2で補う
+        r = self.reflect("N9170B0")
+        self.assertEqual(r.form["Ap"], base.form["Ap"])                  # 第1の値はそのまま
+        self.assertEqual(r.form["Hp"], "7.0")                            # 第1で空 → 第2で補う
 
     def test_offline_fills_missing_columns_from_first(self) -> None:
         # 2026-11-09: 第2(控え)に公差の列が無くても、第1の同じロットで補う(オフラインでも第1に届けば)

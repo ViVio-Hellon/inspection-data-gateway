@@ -1,4 +1,6 @@
-"""2026-11-24(現場の声): 第1パスで取れた値は保持し、無いものだけ第2パス(圧縮版 SIKALOT)で補う。
+"""仕掛台帳 SIKALOT の行の読み方(2026-11-25 現場の決まり)。
+オンライン = 第1が正、第1で空・無い所だけ第2で補う。オフライン(控え・DBflag も) = 第2が正、第2(圧縮版)で
+空・無い所(公差など)だけ第1で補う。どちらでも公差は第1の値になる。
 
 ライン PC の設定と同じ形: 第1・第2 が同じフォルダ、オフライン、第2 は 2つ目の名前(SIKALOT_圧縮)で公差の列が無い。
 前の版はこの形で第1も「2つ目の名前」になり、圧縮版だけを読んで公差が 0、キャスク・全ヵ所は列が無くて止まった。
@@ -53,14 +55,20 @@ class LotRowFirstTest(unittest.TestCase):
     def test_first_file_uses_first_name_even_in_same_folder(self) -> None:
         self.assertTrue(lot.first_lot_file().endswith("SIKALOT.sqlite3"))
 
-    def test_lot_registration_keeps_first(self) -> None:
+    def test_offline_second_is_base_tolerance_from_first(self) -> None:
         r = self.reflect()
-        self.assertTrue(r.db_path.endswith("/SIKALOT.sqlite3"), r.db_path)
-        self.assertNotIn("公差が 0", " ".join(m.text for m in r.messages))
+        self.assertTrue(r.db_path.endswith("SIKALOT_圧縮.sqlite3"), r.db_path)     # オフラインは第2が正
+        self.assertNotIn("公差が 0", " ".join(m.text for m in r.messages))          # 公差は第1で補う
         self.assertNotEqual(r.form["Ap"], "0.000")
-        self.assertEqual(r.form["KenH"], "前工程実績17枚")              # 第1の値を第2で上書きしない
+        self.assertEqual(r.form["KenH"], "前工程実績999枚")                        # 第2の値はそのまま
+        paths.set_mode(paths.ONLINE)
+        cache_registry.clear_all()
+        r = self.reflect()
+        self.assertTrue(r.db_path.endswith("/SIKALOT.sqlite3"), r.db_path)         # オンラインは第1が正
+        self.assertEqual(r.form["KenH"], "前工程実績17枚")
 
-    def test_blank_in_first_filled_from_second(self) -> None:
+    def test_online_blank_in_first_filled_from_second(self) -> None:
+        paths.set_mode(paths.ONLINE)
         with sqlite3.connect(self.d / "SIKALOT.sqlite3") as c:
             c.execute('UPDATE "仕掛" SET "BOX実績_枚本数" = \'\' WHERE "ﾛｯﾄ番号" = ?', (LOT,))
         cache_registry.clear_all()
@@ -78,7 +86,7 @@ class LotRowFirstTest(unittest.TestCase):
         row = cask.read_lot_row(LOT)
         self.assertIsNotNone(row)
         self.assertIn("板厚公差_製造_ﾌﾟﾗｽ", row)
-        self.assertEqual(str(row["BOX実績_枚本数"]), "17")
+        self.assertEqual(str(row["BOX実績_枚本数"]), "999")                     # オフラインは第2の値
         # 第1から消えても列は空で足される(「コレクションに見つかりません」で止めない)
         with sqlite3.connect(self.d / "SIKALOT.sqlite3") as c:
             c.execute('DELETE FROM "仕掛" WHERE "ﾛｯﾄ番号" = ?', (LOT,))
@@ -94,7 +102,7 @@ if __name__ == "__main__":
 class LinePcShapeTest(unittest.TestCase):
     """2026-11-25: ライン PC の形。第1 = Read\\【New】仕掛\\台帳(SIKALOT.sqlite3・全列)、
     第2 = 梱包課共有\\仕掛(SIKALOT_圧縮.sqlite3・46 列で公差の列が無い)、フォルダは別。
-    「控え(第2)から読む」が入っていても、第1の公差を使う(前は第1を見ずに公差 0)。"""
+    オンラインは第1が正、オフライン・「控え(第2)から読む」は第2が正。どれでも公差は第1の値(第2に列が無いので補う)。"""
 
     def setUp(self) -> None:
         self._saved = {k: user_settings.get(k, None) for k in (paths.KEY_PATHS, paths.KEY_MODE)}
@@ -128,7 +136,7 @@ class LinePcShapeTest(unittest.TestCase):
         cache_registry.clear_all()
         shutil.rmtree(self.tmp, ignore_errors=True)
 
-    def test_every_mode_and_lot_source_uses_first_tolerance(self) -> None:
+    def test_every_mode_and_lot_source_gets_first_tolerance(self) -> None:
         online = None
         for mode in (paths.ONLINE, paths.OFFLINE):
             for forced in (False, True):
@@ -138,7 +146,8 @@ class LinePcShapeTest(unittest.TestCase):
                     r = lot.acc_reflec(lot.LotScreen(lot=LOT, cb_text=LOT), check_equipment=lambda *a: "可")
                     row = cask.read_lot_row(LOT)
                 why = f"{mode} 控え={forced}"
-                self.assertIn("Read_台帳", r.db_path, why)
+                want = "Read_台帳" if (mode == paths.ONLINE and not forced) else "梱包課共有_仕掛"
+                self.assertIn(want, r.db_path, why)                                  # 正とする側
                 self.assertNotIn("公差が 0", " ".join(m.text for m in r.messages), why)
                 online = online or (r.form["Ap"], r.form["Hp"], r.form["Tp"])
                 self.assertEqual((r.form["Ap"], r.form["Hp"], r.form["Tp"]), online, why)
