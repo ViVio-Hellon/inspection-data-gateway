@@ -489,14 +489,19 @@ def combo_change(book: Book, *, diagonal: Optional[Callable[[float, float], floa
             book.write(zs, 3, 2, vbx.fmt(val("製造板厚"), "0.000"))
             book.write(zs, 3, 4, vbx.fmt(val("製造板幅"), "0.0"))
             book.write(zs, 3, 6, vbx.fmt(val("製造板丈"), "0.0"))
+            zero_keys = []
             for row_no, key, pat in ((2, "板厚", "0.000"), (3, "板幅", "0.0"), (4, "板丈", "0.0")):
                 op, om = val(key + "公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ"), val(key + "公差_ｵｰﾀﾞｰ_ﾏｲﾅｽ")
                 mp, mm = val(key + "公差_製造_ﾌﾟﾗｽ"), val(key + "公差_製造_ﾏｲﾅｽ")
                 op, om = ck.tolerance_pair(op, om, mp, mm)
+                if op == 0 and om == 0:
+                    zero_keys.append(key)
                 book.write(zs, row_no, 15, vbx.fmt(op, pat))
                 book.write(zs, row_no, 13, vbx.fmt(om, pat))
                 book.write_formula(zs, row_no, 19, sh.TOLERANCE_FORMULAS[(row_no, 19)])
                 book.write_formula(zs, row_no, 17, sh.TOLERANCE_FORMULAS[(row_no, 17)])
+            if zero_keys:
+                fx.msg(ck.zero_tolerance_note(row, zero_keys), flow.WARN, "UFMit:680")
             book.write(zs, 1, 12, fv("品質ｸﾞﾚｰﾄﾞ_ﾗﾃﾗﾙﾎﾞｰ"))
             book.write(zs, 1, 13, "")
             book.write(zs, 1, 18, fv("品質ｸﾞﾚｰﾄﾞ_直角度"))

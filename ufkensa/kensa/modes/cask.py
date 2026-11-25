@@ -663,7 +663,22 @@ def read_lot_row(lot: str) -> Optional[dict[str, Any]]:
         if not r.path and not any(lot_mod.read_check(f, 1) for f in (lot_mod.first_lot_file(), paths.db_file("SIKALOTNOW"))):
             raise datasource.DbMissing("DBファイルが見つかりません: " + paths.db_file("SIKALOTNOW"))
         return None
-    return dict(zip(r.cols, r.values))
+    out = dict(zip(r.cols, r.values))
+    out[ROW_INFO] = {"path": r.path, "notes": list(r.notes)}      # 公差 0 のときの理由(列ではない)
+    return out
+
+
+#: read_lot_row の行に付ける「どの台帳を元にしたか」の鍵(列名とぶつからない)
+ROW_INFO = "\x00row_info"
+
+
+def zero_tolerance_note(row: dict[str, Any], keys: list[str]) -> str:
+    """2026-11-25: 公差が 0 になった欄があるとき、読んだ台帳と理由を 1 行で(キャスク・全ヵ所)。"""
+    if not keys:
+        return ""
+    info = row.get(ROW_INFO) or {}
+    return ("・".join(keys) + "の公差が 0 になります(下限と上限が同じ)。読んだ台帳: " + str(info.get("path") or "?")
+            + "".join("。" + n for n in info.get("notes") or []))
 
 
 def tolerance_pair(order_p: float, order_m: float, made_p: float, made_m: float) -> tuple[float, float]:
@@ -717,14 +732,19 @@ def combo_change(book: Book, *, fullwidth_fields_readable: bool = True, null_rai
                 count_select(book, 4)
             book.write(ws, 3, 4, vbx.fmt(val("製造板幅"), "0.0"))
             book.write(ws, 3, 6, vbx.fmt(val("製造板丈"), "0.0"))
+            zero_keys = []
             for row_no, key, pat in ((2, "板厚", "0.000"), (3, "板幅", "0.0"), (4, "板丈", "0.0")):
                 op, om = val(key + "公差_ｵｰﾀﾞｰ_ﾌﾟﾗｽ"), val(key + "公差_ｵｰﾀﾞｰ_ﾏｲﾅｽ")
                 mp, mm = val(key + "公差_製造_ﾌﾟﾗｽ"), val(key + "公差_製造_ﾏｲﾅｽ")
                 op, om = tolerance_pair(op, om, mp, mm)
+                if op == 0 and om == 0:
+                    zero_keys.append(key)
                 book.write(ws, row_no, 15, vbx.fmt(op, pat))
                 book.write(ws, row_no, 13, vbx.fmt(om, pat))
                 book.write_formula(ws, row_no, 19, sh.TOLERANCE_FORMULAS[(row_no, 19)])
                 book.write_formula(ws, row_no, 17, sh.TOLERANCE_FORMULAS[(row_no, 17)])
+            if zero_keys:
+                fx.msg(zero_tolerance_note(row, zero_keys), flow.WARN, "UFCask:470")
         if not no_fl:
             for r, c in ((3, 2), (3, 4), (3, 6), (2, 13), (2, 15), (2, 17), (2, 19), (3, 13), (3, 15), (3, 17),
                          (3, 19), (4, 13), (4, 15), (4, 17), (4, 19)):
