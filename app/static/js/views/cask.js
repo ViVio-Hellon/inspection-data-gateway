@@ -8,6 +8,7 @@
 
 import { mayRefocus } from "../focus_guard.js";
 import { sheetInput } from "../sheet_input.js";
+import { publishJudge } from "../judge_bus.js";
 import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
@@ -236,7 +237,11 @@ function flashWords(f) { return f ? [f.no, f.label].filter(Boolean).join("、") 
 async function receive(t) {
   const r = await op("receive", { text: t });
   const f = r && r.view && r.view.flash;
-  if (f) { lastFlash = f; if (readOn()) say(flashWords(f)); }
+  if (f) {
+    lastFlash = f;
+    if (readOn()) say(flashWords(f));
+    publishJudge({ screen: "cask", no: f.no, label: f.label, mark: f.mark });   // 判定の窓(別窓で大きく)
+  }
 }
 /* 2026-11-26(現場の声「読み上げ ON/OFF が効いているか分からない」):
    ON にしたら「読み上げ オン」と声で返す・使う声の名前と読んでいる最中を出す・読めない PC はそう出す */
@@ -375,6 +380,7 @@ function initDefect() {
 }
 
 function init() {
+  $("judgeWinBtn").addEventListener("click", () => openWindow("/judge-window?screen=cask", "キャスクの判定"));
   initDefect();
   initAppearance();
   pack = packDialog({ imageUrl: "/api/cask/pack_image", send: (name, body) => op(name, body) });

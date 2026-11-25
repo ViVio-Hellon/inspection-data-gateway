@@ -41,7 +41,10 @@
 .cgrid td i { font-style: normal; font-weight: 700; margin-left: 3px; font-size: var(--fs-xs); }
 .cgrid td.ok { background: var(--ok-bg); color: var(--state-ok); }
 .cgrid td.ng { background: var(--warn-bg); color: var(--state-error); font-weight: 700; }
-.cgrid td.off, .cgrid td.lock { background: var(--sunken); color: var(--muted); }
+.cgrid td.off { background: var(--sunken); color: var(--muted); }
+/* 2026-11-26(現場の声「巾丈測定の ON/OFF が表で分かりにくい」): 入れられない欄は VBA と同じく濃い灰色に斜線 */
+.cgrid td.lock { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink) 42%, var(--surface)) 0 6px,
+  color-mix(in srgb, var(--ink) 50%, var(--surface)) 6px 12px); color: var(--surface); cursor: not-allowed; }
 .cgrid td.u { text-decoration: underline; }
 .cgrid td.sel { border-color: var(--focus); background: var(--mark-bg); color: var(--mark-fg); }
 .cgrid tr.cur th.no { color: var(--focus); }

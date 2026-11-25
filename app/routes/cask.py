@@ -46,6 +46,12 @@ def page():
     return render_template("cask.html", **shell_context("cask"))
 
 
+@bp.get("/judge-window")
+def judge_window():
+    """判定を別窓で大きく(キャスク・全ヵ所。VBA の UFcount の代わり。2026-11-26)。中身は画面どうしで渡す。"""
+    return render_template("judge_window.html")
+
+
 @bp.get("/api/cask/state")
 def state():
     return jsonify(cask_session.get().state().to_dict())

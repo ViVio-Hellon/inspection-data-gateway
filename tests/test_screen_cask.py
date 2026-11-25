@@ -155,6 +155,11 @@ class CaskScreenTest(SessionBase):
         d = self.post("new", answers={"cask_new": True})
         self.assertEqual(d["view"]["form"]["lot_box"], "")
 
+    def test_judge_window_page(self) -> None:
+        r = self.c.get("/judge-window?screen=cask", headers=self.h)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("判定板NO", r.get_data(as_text=True))
+
     def test_page_and_state(self) -> None:
         r = self.c.get("/cask", headers=self.h)
         self.assertEqual(r.status_code, 200)

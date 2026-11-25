@@ -92,6 +92,18 @@ class SessionTest(ZenBase):
         self.assertEqual(d["view"]["page"], "P1")
         self.assertEqual(d["view"]["mode"], "一般")
 
+    def test_flash_info_for_judge_window(self) -> None:
+        """2026-11-26: 判定の窓(別窓で大きく)に 板No・位置・○× を渡す。"""
+        self.open_ippan()
+        self.s.resume()
+        d = self.s.receive("DT10002+0000025.012M").to_dict()
+        info = d["view"]["flash_info"]
+        if d["view"]["flash"] in ("OK", "NG"):
+            self.assertEqual((info["no"], info["label"]), ("1", "厚1"))
+            self.assertIn(info["mark"], ("○", "×"))
+        else:
+            self.assertIsNone(info)
+
     def test_measure_refused_without_lot(self) -> None:
         """2026-11-24(現場の声): LotNo・寸法・公差が無いまま測定値が入っていた。ロットが無い間は表に入れない。"""
         self.s.start()

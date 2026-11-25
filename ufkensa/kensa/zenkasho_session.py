@@ -1036,6 +1036,7 @@ class ZenkashoSession(SubInspectionCommon):
             b.activate_sheet(name)
         r, c = self._check_cell(*b.active_cell)
         text = "" if text is None else str(text).rstrip("\r\n")
+        self._last_cell = (r, c)                       # 2026-11-26: 判定の窓に「何枚目・どこ」を出すため
         if r >= SHEET_ROWS[name][0] and text.strip() != "":
             # 2026-11-24(現場の声): LotNo・寸法・公差が無いまま測定値が入っていた → ロットが無い間は表に入れない
             ws = b.ws(name)
@@ -1045,6 +1046,17 @@ class ZenkashoSession(SubInspectionCommon):
         if enter and ENTER_MOVES_DOWN and b.active_name == name and b.active_cell == (r, c) \
                 and r < SHEET_ROWS[name][1]:
             self._call(b.activate, r + 1, c)
+
+    def _flash_info(self, name: str) -> Optional[dict[str, Any]]:
+        """判定の窓(別窓で大きく。2026-11-26)に出す 板No・位置・○×。判定が無ければ None。"""
+        if self.flash not in ("OK", "NG") or not getattr(self, "_last_cell", None):
+            return None
+        r, c = self._last_cell
+        ws = self.book.sheets.get(name) if self.book else None
+        no = ws.get(r, 1) if ws is not None else None
+        label = next((lb for cc, lb, kind, _g in ZEN_COLS + MITSU_COLS if cc == c and kind != "j"), "")
+        no_text = str(int(no)) if isinstance(no, float) and no.is_integer() else str(no if no not in (None, "") else r - 6)
+        return {"mark": "○" if self.flash == "OK" else "×", "no": no_text, "label": label}
 
     def next_empty(self) -> Result:
         return self._run(self._next_empty)
@@ -1197,7 +1209,7 @@ class ZenkashoSession(SubInspectionCommon):
             "header": self._header(ws, name, mode),
             "groups": self._groups(ws, name, mode, cols),
             "columns": [{"c": c, "label": lb, "kind": k, "group": g, "letter": sh.col_letter(c)} for c, lb, k, g in cols],
-            "rows": rows, "active": active, "flash": self.flash, "reports": self.reports, "saved": self.saved,
+            "rows": rows, "active": active, "flash": self.flash, "flash_info": self._flash_info(name), "reports": self.reports, "saved": self.saved,
             "ainput": self.ainput, "pending": self.pending, "errors": self.errors,
             "can_next_empty": self.page == "P1",
             "diag": self.diag,
