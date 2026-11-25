@@ -115,5 +115,5 @@
 /* 巾丈測定の ON/OFF(2026-11-26: はっきり分かるように) */
 .insp { display: flex; flex-direction: column; gap: 6px; }
 .insp-state { display: block; text-align: center; padding: 8px 10px; border-radius: var(--radius-xs); font-size: 1.15rem; font-weight: 800; border: 2px solid; }
-.insp-state--on { background: var(--state-ok); border-color: var(--state-ok); color: #fff; }
+.insp-state--on { background: var(--state-ok); border-color: var(--state-ok); color: var(--on-state); }
 .insp-state--off { background: var(--sunken); border-color: var(--rule); color: var(--muted); }
