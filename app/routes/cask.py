@@ -30,6 +30,7 @@ OPS: dict[str, tuple[str, tuple[str, ...]]] = {
     "save": ("save", ()),
     "new": ("new_sheet", ("answers",)),
     "cancel": ("cancel", ()),
+    "clear": ("clear_cell", ()),                                  # 2026-11-26: キーボードの Delete(選んだ欄を消す)
     "inspection": ("toggle_inspection", ()),
     "resume": ("resume", ()),
     "proofread": ("proofread", ()),

@@ -1179,3 +1179,17 @@ tr[aria-selected="true"] .cell-act--open, tr[aria-selected="true"] .cell-act--pr
 .recv-status__dev { font-weight: 700; }
 .recv-status__why { font-weight: 700; color: var(--state-error); }
 .recv-status:empty { display: none; }
+
+/* キャスク・全ヵ所の表: 選んだセルの上に、打っている文字を出す(sheet_input.js。2026-11-26) */
+.sheet-typing { position: absolute; z-index: 60; box-sizing: border-box; padding: 2px 6px; pointer-events: none;
+  background: var(--raised); color: var(--ink); border: 2px solid var(--focus); border-radius: 2px;
+  font-family: var(--mono); font-weight: 700; white-space: pre; display: flex; align-items: center; }
+.sheet-typing[hidden] { display: none; }
+.sheet-recv .sheet-keys { color: var(--muted); font-weight: 400; line-height: 1.5; }
+/* 測定器から受け取る欄(通常検査と同じ見た目。全ヵ所でも使う) */
+.sheet-recv { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border-radius: var(--radius); border: 2px solid var(--state-error);
+  background: var(--warn-bg); cursor: text; }
+.sheet-recv[data-on="1"] { border-color: var(--state-ok); background: var(--ok-bg); }
+.sheet-recv .recv__state { font-weight: 700; font-size: var(--fs-sm); color: var(--state-error); }
+.sheet-recv[data-on="1"] .recv__state { color: var(--state-ok); }
+.sheet-recv .recv__in { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; }

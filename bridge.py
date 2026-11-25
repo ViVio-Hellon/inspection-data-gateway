@@ -39,6 +39,7 @@ import sys
 # **ツールのフォルダの中に __pycache__ を書かない**(VER4.8.125。下で置き場所を外へ向けるまで書かない)
 sys.dont_write_bytecode = True
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, BinaryIO, Callable, Optional
@@ -64,6 +65,12 @@ _local_pycache()
 # 同時に捌く要求の数。画面は「操作 + 進捗の見張り + 心拍 + 静的ファイル」を
 # 同時に投げる。書く要求はアプリ側の錠が1つずつ通す(`app._WRITE_LOCK`)
 WORKERS = 8
+#: 2026-11-26(現場の声「固まって終了もできない」): 終了・生存確認は別の通り道で答える(ほかの要求で
+#: 8 本が全部ふさがっても、終了だけは届く)
+FAST_PATHS = ("/api/shutdown", "/api/health", "/api/quit")
+FAST_WORKERS = 2
+#: これより長くかかっている要求は、ログに「どこで止まっているか」(全スレッドの呼び出し)を書く
+SLOW_SECONDS = 30.0
 
 # 1件の本文の上限(壊れた見出しで巨大な読み込みをしないため)。
 # 「表を持ってくる」の Access ファイルが数十MBになることがある
@@ -197,6 +204,17 @@ def _protect_stdout() -> BinaryIO:
     return proto
 
 
+def _all_stacks() -> str:
+    """全スレッドのいまの呼び出し(固まったとき、どこで待っているかをログに残す)。"""
+    import traceback
+    names = {t.ident: t.name for t in threading.enumerate()}
+    out = []
+    for ident, frame in sys._current_frames().items():
+        out.append(f"--- {names.get(ident, ident)}")
+        out.extend(line.rstrip() for line in traceback.format_stack(frame)[-12:])
+    return "\n".join(out)
+
+
 def make_server_class():
     """`server.AppServer` を受け継ぐ。**段・準備完了・失敗の伝え方は共通**。
 
@@ -234,14 +252,44 @@ def make_server_class():
             from ufkensa.logging_utils import get_logger
             log = get_logger("bridge")
             pool = ThreadPoolExecutor(max_workers=WORKERS, thread_name_prefix="bridge")
+            fast = ThreadPoolExecutor(max_workers=FAST_WORKERS, thread_name_prefix="bridge-fast")
+            running: dict = {}                    # id → (path, 始めた時刻, スレッド名)
+            running_lock = threading.Lock()
+            watch_stop = threading.Event()
+
+            def watchdog() -> None:
+                told: set = set()
+                while not watch_stop.wait(5.0):
+                    now = time.monotonic()
+                    with running_lock:
+                        slow = [(k, v) for k, v in running.items() if now - v[1] >= SLOW_SECONDS and k not in told]
+                        busy = len(running)
+                    if not slow:
+                        continue
+                    for k, (path, t0, th) in slow:
+                        told.add(k)
+                        log.warning("要求が %.0f 秒たっても終わりません: %s(%s。動いている要求 %d 件)",
+                                    now - t0, path, th, busy)
+                    log.warning("いまの全スレッドの呼び出し(固まった原因を調べるため):\n%s", _all_stacks())
+
+            threading.Thread(target=watchdog, name="bridge-watchdog", daemon=True).start()
 
             def answer(head: dict, body: bytes) -> None:
+                key = head.get("id")
+                with running_lock:
+                    running[key] = (str(head.get("path")), time.monotonic(), threading.current_thread().name)
                 try:
                     status, headers, data = call_wsgi(self.wsgi, head, body)
                 except Exception as exc:          # noqa: BLE001 - 1件の失敗で止めない
                     log.exception("要求を処理できませんでした: %s", head.get("path"))
                     status, headers = 500, [["Content-Type", "text/plain; charset=utf-8"]]
                     data = f"内部エラー: {exc}".encode("utf-8")
+                finally:
+                    with running_lock:
+                        t0 = running.pop(key, ("", time.monotonic(), ""))[1]
+                    took = time.monotonic() - t0
+                    if took >= SLOW_SECONDS:
+                        log.warning("時間のかかった要求: %s %.1f 秒", head.get("path"), took)
                 try:
                     self.writer.write({"id": head.get("id"), "status": status,
                                        "headers": headers}, data)
@@ -275,10 +323,13 @@ def make_server_class():
                     if frame is None:
                         log.info("外枠が閉じました")
                         break
-                    pool.submit(answer, *frame)
+                    path = str(frame[0].get("path") or "")
+                    (fast if path.startswith(FAST_PATHS) else pool).submit(answer, *frame)
             finally:
                 # 子プロセス(cscript・送信アプリ・Edge)は各処理が終わるまで待つ作りなので、ここで止めるものは無い
                 start_app.tidy_children()
+                watch_stop.set()
+                fast.shutdown(wait=True, cancel_futures=False)
                 pool.shutdown(wait=True, cancel_futures=False)
                 self._stop_requested = True
                 self._stopped.set()

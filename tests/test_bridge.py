@@ -337,3 +337,57 @@ class VersionTests(unittest.TestCase):
 
 if __name__ == "__main__":                        # pragma: no cover
     unittest.main()
+
+
+class StarvationTests(unittest.TestCase):
+    """2026-11-26(現場の声「固まって終了もできない」): ふつうの通り道 8 本が全部ふさがっても、
+    終了・生存確認は別の通り道で答える。長くかかる要求はログにどこで止まっているかを書く。"""
+
+    def test_終了と生存確認はふさがっていても答える(self) -> None:
+        import io
+        import os
+        import threading as th
+        import bridge
+        gate = th.Event()
+
+        def app(environ, start_response):
+            if environ["PATH_INFO"] == "/api/slow":
+                gate.wait(10)
+            start_response("200 OK", [("Content-Type", "text/plain")])
+            return [environ["PATH_INFO"].encode()]
+
+        rfd, wfd = os.pipe()
+        reader = os.fdopen(rfd, "rb")
+        feed = os.fdopen(wfd, "wb")
+        out = io.BytesIO()
+        cls = bridge.make_server_class()
+        srv = object.__new__(cls)
+        srv.wsgi, srv.reader, srv.writer = app, reader, bridge.FrameWriter(out)
+        srv._stop_requested, srv._stopped, srv._stop_lock = False, th.Event(), th.Lock()
+        t = th.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+        frame = lambda i, p: (json.dumps({"id": i, "method": "GET", "path": p, "query": "", "headers": [], "len": 0}) + "\n").encode()
+        for i in range(bridge.WORKERS + 2):                 # ふつうの通り道を全部ふさぐ
+            feed.write(frame(i, "/api/slow"))
+        feed.write(frame(100, "/api/health"))
+        feed.write(frame(101, "/api/shutdown"))
+        feed.flush()
+        try:
+            for _ in range(100):
+                text = out.getvalue().decode("utf-8", "replace")
+                if '"id": 100' in text and '"id": 101' in text:
+                    break
+                time.sleep(0.05)
+            text = out.getvalue().decode("utf-8", "replace")
+            self.assertIn('"id": 100', text)
+            self.assertIn('"id": 101', text)
+            self.assertNotIn('"id": 0,', text)                 # ふさいでいる要求はまだ答えていない
+        finally:
+            gate.set()
+            feed.close()
+            t.join(10)
+
+    def test_全スレッドの呼び出しを文字にできる(self) -> None:
+        import bridge
+        s = bridge._all_stacks()
+        self.assertIn("MainThread", s)

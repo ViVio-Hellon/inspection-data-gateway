@@ -241,10 +241,44 @@ def _lock_hi(ws: sh.Sheet, lock: bool) -> None:
         ws.col_width[8], ws.col_width[9] = 8.88, 2.63
 
 
+#: 外観(AB 列)。2026-11-26(現場の声): 巾丈測定の ON/OFF に関係なく、いつも文字を入れられる
+APPEARANCE_COL = 28
+
+
 def _lock_inspection(ws: sh.Sheet, lock: bool) -> None:
     for r in range(7, 707):
-        for c in range(11, 29):
+        for c in range(11, APPEARANCE_COL):                 # 外観は錠をかけない
             (ws.locked.add if lock else ws.locked.discard)((r, c))
+        ws.locked.discard((r, APPEARANCE_COL))
+
+
+#: 判定(○×)を書く列(値の右隣)。Delete で値と一緒に消す
+JUDGE_COLS = frozenset({3, 5, 7, 9, 12, 14, 16, 18, 21})
+
+
+def clear_cell(book: Book) -> Effects:
+    """2026-11-26(現場の声): キーボードの Delete。選んでいる欄の値(と右隣の判定)を消し、その欄を選んだままにする。
+    「Back space」(直前の入力の取り消し・UFCask 取消)は cancel_input のまま。"""
+    fx = book.begin()
+    if not book.has(CASK):
+        return fx
+    book.activate_sheet(CASK)
+    ws = book.ws(CASK)
+    r, c = book.active_cell
+    if r < 7 or c < 2 or not book.user_editable(r, c):
+        return fx
+    book.events_enabled = False
+    try:
+        ws.set(r, c, None)
+        ws.interior[(r, c)] = sh.WHITE
+        if c + 1 in JUDGE_COLS:
+            ws.set(r, c + 1, None)
+            ws.interior[(r, c + 1)] = sh.WHITE
+        book.activate(r, c)
+        ws.interior[(r, c)] = sh.LIGHT_BLUE
+    finally:
+        book.events_enabled = True
+    return fx
 
 
 def numeric_confi(book: Book, n: str) -> bool:
