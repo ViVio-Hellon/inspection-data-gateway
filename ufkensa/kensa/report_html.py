@@ -170,22 +170,53 @@ class PdfError(RuntimeError):
     pass
 
 
+def _edge_profile() -> Path:
+    """PDF 1 回ごとの Edge の置き場(プロファイル)。2026-11-26: 開いている Edge と同じプロファイルだと、
+    ヘッドレスの Edge が仕事を開いている Edge に渡してすぐ終わり(終了コード 0)、PDF ができなかった。"""
+    import tempfile
+    from ..app_config import local_dir
+    base = local_dir("work") / "edge_pdf"
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+        return Path(tempfile.mkdtemp(prefix="p", dir=base))
+    except OSError:
+        return Path(tempfile.mkdtemp(prefix="ufkensa_edge_"))
+
+
 def make_pdf(html_path: Path, pdf_path: Path, edge: str, *, timeout_sec: float = 60.0) -> Path:
-    """Edge のヘッドレス印刷で PDF にする(D7)。Edge の場所は使用パス「Edge(PDF 作成)」。"""
+    """Edge のヘッドレス印刷で PDF にする(D7)。Edge の場所は使用パス「Edge(PDF 作成)」。
+
+    2026-11-26(現場の声「PDF を作れませんでした(終了コード 0)」): 毎回 別のプロファイル(--user-data-dir)で
+    動かし、開いている Edge・同時に作るほかの PDF に仕事を渡さないようにする。終わってからファイルが
+    現れるまで少し待つ。だめなら Edge の言い分(標準エラー)も知らせる。"""
+    import shutil
+    import time
     exe = Path(edge)
     if not exe.is_file():
         raise PdfError(f"Edge が見つかりません: {edge}(設定 → 使用パス で場所を直してください)")
     safe_io.mkdir_reachable(pdf_path.parent)   # 2026-11-08: 届かない共有にフォルダの形を作らない
+    profile = _edge_profile()
     cmd = [str(exe), "--headless", "--disable-gpu", "--no-pdf-header-footer",
+           f"--user-data-dir={profile}", "--no-first-run", "--no-default-browser-check",
+           "--disable-extensions", "--disable-sync",
            f"--print-to-pdf={pdf_path}", html_path.resolve().as_uri()]
     try:
-        proc = subprocess.run(cmd, capture_output=True, timeout=timeout_sec,
-                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    except subprocess.TimeoutExpired:
-        raise PdfError(f"PDF の作成が {timeout_sec:.0f} 秒で終わりませんでした") from None
-    if proc.returncode != 0 or not pdf_path.is_file():
-        raise PdfError(f"PDF を作れませんでした(終了コード {proc.returncode})")
-    return pdf_path
+        try:
+            proc = subprocess.run(cmd, capture_output=True, timeout=timeout_sec,
+                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except subprocess.TimeoutExpired:
+            raise PdfError(f"PDF の作成が {timeout_sec:.0f} 秒で終わりませんでした") from None
+        for _ in range(30):                     # 書き終わるまで最大 3 秒待つ
+            if pdf_path.is_file() and pdf_path.stat().st_size > 0:
+                break
+            time.sleep(0.1)
+        if proc.returncode != 0 or not pdf_path.is_file():
+            err = (proc.stderr or b"").decode("utf-8", "replace").strip().splitlines()
+            tail = " / ".join(x.strip() for x in err[-3:] if x.strip())[:300]
+            raise PdfError(f"PDF を作れませんでした(終了コード {proc.returncode})" + (f": {tail}" if tail else ""))
+        return pdf_path
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
 
 
 def save_html_and_pdf(model: ReportModel, folder: Path, stem: str, edge: Optional[str]) -> dict[str, str]:

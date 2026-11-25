@@ -130,6 +130,18 @@ class CaskScreenTest(SessionBase):
         self.assertIn("巾丈測定", " ".join(self.texts(d)))
         self.assertNotIn("保護されているシート", " ".join(self.texts(d)))
 
+    def test_new_after_aborted_save_still_works(self) -> None:
+        """2026-11-26(現場の声「新規検査を受け付けない」): 保存が必要欄なしで途中で抜けると Tag = "off" が残り、
+        新規が何もしなくなっていた。次の操作の始めで戻す。"""
+        self.ready()
+        self.cs.book.cask.kname = ""
+        d = self.post("save")                                  # 必要欄が無い → 途中で抜ける(Tag が残る)
+        self.assertEqual(self.cs.book.cask.tag, "off")
+        d = self.post("new")
+        self.assertEqual(d["question"]["key"], "cask_new")
+        d = self.post("new", answers={"cask_new": True})
+        self.assertEqual(d["view"]["form"]["lot_box"], "")
+
     def test_page_and_state(self) -> None:
         r = self.c.get("/cask", headers=self.h)
         self.assertEqual(r.status_code, 200)
