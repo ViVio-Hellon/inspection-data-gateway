@@ -52,6 +52,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     ("sakko", "先行データ票"),
     ("kennyu", "薄板の検入枚数"),
     ("instr", "測定機器"),
+    ("zero", "キャスクのゼロ校正の許容値(この範囲の ± なら 0 でなくても校正済みにする)"),
 )
 
 ITEMS: tuple[Item, ...] = (
@@ -76,6 +77,13 @@ ITEMS: tuple[Item, ...] = (
          note="ボタンの文字「検入≦N」「検入≧N+1」もこの値から作る"),
     Item("conb_take", "instr", "L-1 のコンベックス C11/C12 を分ける丈(超え = C11)", 5500.0, "mm", 0, 100000),
     Item("depth_conb", "instr", "デプス/コンベックスを分ける高さ(以下 = デプス)", 300.0, "mm", 0, 100000),
+    # 2026-11-26(現場の声): ゼロ校正の許容値を保守で決める。VBA はマイクロ・ノギス 0 ちょうど、コンベックス ±0.5
+    Item("zero_micro", "zero", "マイクロ ゼロ点の許容値(±)", 0.01, "mm", 0, 1,
+         note="厚 100mm 未満。VBA は 0 ちょうど"),
+    Item("zero_noguisu", "zero", "ノギス ゼロ点の許容値(±)", 0.01, "mm", 0, 1,
+         note="厚 100mm 以上。VBA は 0 ちょうど"),
+    Item("zero_convex", "zero", "コンベックス ゼロ点の許容値(±)", 0.5, "mm", 0, 10,
+         note="VBA と同じ ±0.5"),
 )
 BY_KEY = {i.key: i for i in ITEMS}
 DEFAULTS: dict[str, float] = {i.key: i.default for i in ITEMS}
@@ -269,6 +277,11 @@ def history(days: int = 90, limit: int = 50) -> list[dict[str, Any]]:
 # ------------------------------------------------------------------
 # 使う側の小さな関数
 # ------------------------------------------------------------------
+def zero_tolerance(kind: str) -> float:
+    """キャスクのゼロ校正の許容値(±)。kind = "micro" / "noguisu" / "convex"。"""
+    return get("zero_" + kind)
+
+
 def thin_atu() -> float:
     return get("thin_atu")
 

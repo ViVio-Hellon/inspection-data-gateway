@@ -265,7 +265,26 @@ fn confirm_close(app: AppHandle, bridge: Arc<Bridge>) {
     }
     thread::spawn(move || {
         let json = vec![("Content-Type".to_string(), "application/json".to_string())];
-        let ask = bridge.call("POST", "/api/shutdown", "", json.clone(), b"{}");
+        // 2026-11-26(現場の声「固まって終了もできない」): 前は Python の答えを 10 分待っていた。
+        // 答えが SHUTDOWN_ASK 秒で来なければ、固まっているとみて「強制終了しますか」と訊く
+        let ask = bridge.call_within("POST", "/api/shutdown", "", json.clone(), b"{}", SHUTDOWN_ASK);
+        if let Err(why) = &ask {
+            if why.contains("応答がありません") {
+                let answer = app
+                    .dialog()
+                    .message(STUCK_MESSAGE)
+                    .title(TITLE)
+                    .kind(MessageDialogKind::Warning)
+                    .buttons(MessageDialogButtons::OkCancelCustom(QUIT_YES.into(), QUIT_NO.into()))
+                    .blocking_show_with_result();
+                if chose_quit(&answer) {
+                    exit_soon(app);                  // 終わるとき Python も止める(shutdown)
+                } else {
+                    CONFIRMING.store(false, Ordering::SeqCst);
+                }
+                return;
+            }
+        }
         match ask {
             Ok(reply) if reply.status == 409 => {
                 let message = serde_json::from_slice::<serde_json::Value>(&reply.body)
@@ -293,6 +312,12 @@ fn confirm_close(app: AppHandle, bridge: Arc<Bridge>) {
         }
     });
 }
+
+/// × のとき Python の答えを待つ長さ。これを過ぎたら固まっているとみる
+const SHUTDOWN_ASK: Duration = Duration::from_secs(5);
+const STUCK_MESSAGE: &str = "UF検査判定が応答していません(処理が止まっている可能性があります)。\n\
+    終了しますか? 保存していない入力は失われることがあります。\n\
+    (「やめる」で待ちます。原因を調べるため、終了したらその日のログを送ってください)";
 
 /// × の確かめの窓のボタン。
 const QUIT_YES: &str = "終了する";

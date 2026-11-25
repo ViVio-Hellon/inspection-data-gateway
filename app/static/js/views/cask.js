@@ -7,15 +7,17 @@
 */
 
 import { mayRefocus } from "../focus_guard.js";
+import { sheetInput } from "../sheet_input.js";
 import { openWindow } from "../desktop.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
 import { screenOp } from "../screen_op.js";
 import { packDialog } from "./pack_dialog.js";
 import { startReceiver } from "../recv.js";
-import { canSpeak, readOn, setReadOn, speak } from "../speak.js";
+import { canSpeak, readOn, setReadOn, speak, voiceName } from "../speak.js";
 
 const $ = (id) => document.getElementById(id);
+let sheetIn = null;
 const recent = [];
 let V = null;
 let colSig = "";
@@ -32,8 +34,8 @@ const op = screenOp("cask", {
 function focusInput() {
   if (!V || !V.visible) return;
   if (document.querySelector("dialog[open]") || !mayRefocus()) return;
-  const el = V.focus === "zero" ? $("zeroIn") : $("measIn");
-  el.focus();
+  // 2026-11-26: ゼロ校正も同じ欄で受ける(サーバがゼロ校正へ回す)
+  $("measIn").focus({ preventScroll: true });
 }
 
 function text(el, t) { el.textContent = t ?? ""; }
@@ -231,21 +233,46 @@ function flashWords(f) { return f ? [f.no, f.label].filter(Boolean).join("、") 
 async function receive(t) {
   const r = await op("receive", { text: t });
   const f = r && r.view && r.view.flash;
-  if (f) { lastFlash = f; if (readOn()) speak(flashWords(f)); }
+  if (f) { lastFlash = f; if (readOn()) say(flashWords(f)); }
 }
+/* 2026-11-26(現場の声「読み上げ ON/OFF が効いているか分からない」):
+   ON にしたら「読み上げ オン」と声で返す・使う声の名前と読んでいる最中を出す・読めない PC はそう出す */
+let readState = "";
 function renderRead() {
   const on = readOn();
-  $("readToggle").setAttribute("aria-pressed", String(on));
-  $("readToggle").textContent = on ? "読み上げ ON" : "読み上げ OFF";
-  $("readToggle").disabled = $("readNow").disabled = !canSpeak();
-  if (!canSpeak()) $("readToggle").title = "このブラウザは読み上げに対応していません";
+  const b = $("readToggle");
+  b.setAttribute("aria-pressed", String(on));
+  b.textContent = on ? "読み上げ ON" : "読み上げ OFF";
+  b.classList.toggle("btn--commit", on);
+  b.disabled = $("readNow").disabled = !canSpeak();
+  let note;
+  if (!canSpeak()) note = "この画面では読み上げできません(読み上げの機能がありません)";
+  else if (readState) note = readState;
+  else if (!on) note = "OFF: 測っても読み上げません";
+  else note = voiceName() ? `ON: 測るたびに読み上げます(声 ${voiceName()})` : "ON: 日本語の声が見つかりません。Windows の設定 → 時刻と言語 → 音声 で日本語の声を入れてください";
+  text($("readNote"), note);
 }
-$("readToggle").addEventListener("click", () => { setReadOn(!readOn()); renderRead(); });
-$("readNow").addEventListener("click", () => speak(flashWords(lastFlash)));
+function say(words) {
+  if (!words) return;
+  speak(words, {
+    onstart: () => { readState = `読み上げ中: ${words}`; renderRead(); },
+    onend: (e) => { readState = e && e.error && e.error !== "interrupted" && e.error !== "canceled" ? `読み上げできませんでした(${e.error})` : ""; renderRead(); },
+  });
+}
+$("readToggle").addEventListener("click", () => {
+  const on = !readOn();
+  setReadOn(on);
+  if (on) say("読み上げ オン");
+  else { try { window.speechSynthesis.cancel(); } catch { /* 読めない画面 */ } readState = ""; }
+  renderRead();
+});
+$("readNow").addEventListener("click", () => say(lastFlash ? flashWords(lastFlash) : "まだ測っていません"));
+if ("speechSynthesis" in window) window.speechSynthesis.addEventListener?.("voiceschanged", renderRead);
 renderRead();
 
 function render(v) {
   V = v;
+  queueMicrotask(() => sheetIn && sheetIn.refresh());
   renderTop(v);
   renderGrid(v);
   renderSide(v);
@@ -297,14 +324,12 @@ function remember(line) {
   $("recent").replaceChildren(...recent.map((l) => { const li = document.createElement("li"); li.textContent = l; return li; }));
 }
 
-function onEnter(id, fn) {
-  $(id).addEventListener("keydown", (e) => {
-    if (e.key !== "Enter" && !(e.key === "Tab" && $(id).value)) return;   // Enter でも Tab でも受ける
-    e.preventDefault();
-    const val = $(id).value;
-    $(id).value = "";
-    if (val) fn(val);
-  });
+/* 受け取れるか(測定器の文字はカーソルのある所へ入る)を色で出す。通常検査と同じ */
+function recvShow() {
+  const a = document.activeElement;
+  const on = a === $("measIn");
+  $("recvBox").dataset.on = on ? "1" : "";
+  text($("recvState"), on ? "受信待ち(選んだセルに入ります)" : "ほかの欄に入力中 — 表のセルを押すと測定を受けます");
 }
 
 function initDefect() {
@@ -321,8 +346,22 @@ function initDefect() {
 function init() {
   initDefect();
   pack = packDialog({ imageUrl: "/api/cask/pack_image", send: (name, body) => op(name, body) });
-  onEnter("measIn", (t) => { remember(t); receive(t); });
-  onEnter("zeroIn", (t) => op("zero", { text: t }));
+  $("measIn").addEventListener("focus", recvShow);
+  $("measIn").addEventListener("blur", () => setTimeout(recvShow, 0));
+  // 2026-11-26: 表は Excel の良いところだけ(選んだセルに打つ・矢印・Delete・Back space)。sheet_input.js
+  sheetIn = sheetInput({
+    input: $("measIn"),
+    cell: () => document.querySelector('#caskGrid td[data-sel="1"]') || document.querySelector('#tolTable td[data-sel="1"]'),
+    send: (t) => { remember(t); return receive(t); },
+    backspace: () => op("cancel"),
+    del: () => op("clear"),
+    move: (dr, dc) => {
+      if (!V || !V.next) return null;
+      const row = V.next.row + dr, col = V.next.col + dc;
+      if (row < 1 || col < 2) return null;
+      return op("select", { row, col });
+    },
+  });
   $("lotIn").addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -349,7 +388,6 @@ function init() {
   $("transferBtn").addEventListener("click", () => op("transfer"));
   $("printBtn").addEventListener("click", () => op("print"));
   $("saveBtn").addEventListener("click", () => op("save"));
-  $("backBtn").addEventListener("click", () => op("cancel"));
   $("newBtn").addEventListener("click", () => op("new"));
   $("openBtn").addEventListener("click", () => op("open"));
   $("closeBtn").addEventListener("click", async () => { await op("close", {}, {}, { refocus: false }); location.href = "/kensa"; });

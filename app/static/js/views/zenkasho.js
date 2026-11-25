@@ -11,6 +11,7 @@
 
 import { openWindow } from "../desktop.js";
 import { mayRefocus } from "../focus_guard.js";
+import { sheetInput } from "../sheet_input.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
 import { promptBox } from "../askbox.js";
@@ -223,6 +224,7 @@ function renderRight(v) {
 
 function render(v) {
   V = v;
+  queueMicrotask(() => sheetIn && sheetIn.refresh());
   renderTop(v);
   renderForm(v);
   renderHead(v);
@@ -230,6 +232,14 @@ function render(v) {
   renderRight(v);
   renderFlash(v);
   if (pack) pack.render(v.pack);
+}
+
+let sheetIn = null;
+/* 受け取れるか(測定器の文字はカーソルのある所へ入る)を色で出す。通常検査と同じ */
+function recvShow() {
+  const on = document.activeElement === $("measIn");
+  $("recvBox").dataset.on = on ? "1" : "";
+  $("recvState").textContent = on ? "受信待ち(選んだセルに入ります)" : "ほかの欄に入力中 — 表のセルを押すと測定を受けます";
 }
 
 function remember(line) {
@@ -250,15 +260,22 @@ function init() {
     i.addEventListener("change", () => op("form", { name: i.dataset.name, value: i.value }));
     i.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); i.blur(); } });
   }
-  $("measIn").addEventListener("keydown", async (e) => {
-    if (e.key !== "Enter" && !(e.key === "Tab" && $("measIn").value)) return;   // Enter でも Tab でも受ける
-    e.preventDefault();
-    const t = $("measIn").value;
-    $("measIn").value = "";
-    if (t === "") return;
-    remember(`${V && V.active ? V.active.label : ""} ← ${t}`);
-    await op("receive", { text: t });
-    $("measIn").focus();
+  // 2026-11-26: 表は Excel の良いところだけ(選んだセルに打つ・矢印・Delete / Back space で消す)。sheet_input.js
+  $("measIn").addEventListener("focus", recvShow);
+  $("measIn").addEventListener("blur", () => setTimeout(recvShow, 0));
+  sheetIn = sheetInput({
+    input: $("measIn"),
+    cell: () => document.querySelector("#sheet td.cur, #head .cur"),
+    send: async (t) => {
+      remember(`${V && V.active ? V.active.label : ""} ← ${t}`);
+      await op("receive", { text: t });
+    },
+    backspace: () => op("erase"),
+    del: () => op("erase"),
+    move: (dr, dc) => {
+      if (!V || !V.active) return null;
+      return op("select", { r: V.active.r + dr, c: V.active.c + dc });
+    },
   });
   const pick = (e) => {
     const c = e.target.closest("[data-r][data-c]");
@@ -266,7 +283,6 @@ function init() {
   };
   $("sheet").addEventListener("click", pick);
   $("head").addEventListener("click", pick);
-  $("eraseBtn").addEventListener("click", () => op("erase"));
   $("emptyBtn").addEventListener("click", () => op("next-empty"));
   $("weightBtn").addEventListener("click", () => op("weight"));
   $("transferBtn").addEventListener("click", () => op("transfer"));

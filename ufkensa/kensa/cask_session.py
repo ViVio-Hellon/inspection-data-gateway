@@ -65,6 +65,7 @@ WORK_SAVE = "ｷｬｽｸ作業中保存"                   # VBA の作業中�
 #: VBA の音の手続き(補助:282-358)→ キャスクの出来事(D29。ファイルは 設定 →「音」)
 SOUNDS = snd.by_procedure(snd.CASK_OK, snd.CASK_NG, snd.CASK_DIAG)
 #: 保護中のシートのロックされたセルに打ち込んだときの Excel の警告
+LOCKED_TEXT = "巾丈測定が OFF なので、この欄には入れられません。巾・丈・対角を測るときは「巾丈測定」を ON にしてください"
 PROTECTED_TEXT = ("変更しようとしているセルやグラフは保護されているシート上にあります。"
                   "変更するには、[校閲] タブの [シート保護の解除] をクリックします (パスワードの入力が必要な場合もあります)。")
 NEED_WORKER = "検査員登録をして下さい"            # UF1.KYB_Click (UF1:3233)
@@ -726,14 +727,14 @@ class CaskSession(SubInspectionCommon):
         book.activate_sheet(sh.CASK)
         r, c = book.active_cell
         text = str(text or "")
-        if r >= FIRST_ROW:
+        if r >= FIRST_ROW and text.strip() != "":
             # 2026-11-24(現場の声): ロット(寸法・公差)が無い・ゼロ校正が済んでいない間は、測定値を表に入れない
             ws = book.ws(sh.CASK)
             # LotNo を選んでいて、寸法(B3)がある(仕掛に無いロットの手入力も含む)
             if str(book.cask.lot_box or "").strip() == "" or not sh.is_numeric(ws.get(3, 2)):
                 raise Stop(NO_LOT_TEXT, level=WARN, source="cask_session")
             f = book.cask
-            if f.visible and (f.micro == "" or f.convex == ""):
+            if f.visible and (f.micro == "" or f.convex == "") and c != cask.APPEARANCE_COL:   # 外観は測定値でない
                 kind = sh.maker(text)
                 # 受信機の値は測定の欄に来る → ゼロ校正がまだならゼロ校正へ回す(前はゼロ校正に入らなかった)
                 if (kind == "DT" and f.micro == "") or (kind == "#L" and f.convex == ""):
@@ -742,7 +743,8 @@ class CaskSession(SubInspectionCommon):
                                                 ("ｺﾝﾍﾞｯｸｽゼロ点", f.convex)) if v == "")
                 raise Stop(ZERO_TEXT + f"\r\n(まだ: {need}。測定値は入れていません)", level=WARN, source="Cask:1041")
         if not book.user_editable(r, c):
-            book.fx.messages.append(Message(PROTECTED_TEXT, WARN, title="Microsoft Excel", source="Excel(シート保護)"))
+            # 2026-11-26: Excel の「保護されているシート」の文言ではなく、何をすれば入るかを出す
+            book.fx.messages.append(Message(LOCKED_TEXT, WARN, source="キャスク(巾丈測定 OFF)"))
             return None
         return book.user_edit(r, c, str(text or ""))
 
@@ -793,6 +795,13 @@ class CaskSession(SubInspectionCommon):
             self.saved = None
             self.ainput = False
         return out
+
+    def clear_cell(self) -> Result:
+        return self._run(self._clear_cell)
+
+    def _clear_cell(self) -> sh.Effects:
+        self._need_open()
+        return cask.clear_cell(self.book)
 
     def cancel(self) -> Result:
         return self._run(self._cancel)

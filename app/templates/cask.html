@@ -44,7 +44,6 @@
     <section class="card">
       <header><h3>ゼロ校正</h3><span class="lv" id="zeroLv"></span></header>
       <div class="pad">
-        <div class="inbox"><input class="input" id="zeroIn" autocomplete="off" placeholder="ゼロ点を測ると入ります" aria-label="ゼロ校正(伝送文字列)"></div>
         <dl class="kv-grid" id="zeroKv"></dl>
         <div class="btn-row"><button class="btn btn--sm" type="button" id="proofBtn">校正読み込み</button></div>
       </div>
@@ -85,22 +84,20 @@
       <div class="btn-row read-row">
         <button class="btn btn--sm" type="button" id="readToggle" aria-pressed="true" title="測定のたびに、板No と位置を読み上げます(VBA の 読上げ ON/OFF)">読み上げ ON</button>
         <button class="btn btn--sm" type="button" id="readNow" title="いまの板No と位置をもう一度読み上げます">もう一度読む</button>
+        <small class="read-note" id="readNote" role="status"></small>
       </div>
-      <section class="card">
-        <header><h3>測定値の入力</h3></header>
-        <div class="pad">
-          <div class="inbox"><input class="input" id="measIn" autocomplete="off" placeholder="測定器から自動で入ります" aria-label="測定値(伝送文字列)"></div>
-          <p class="muted small">表のセルを押すとそのセルへ入ります。外観などは文字を入れて Enter。</p>
-          <ul class="log-lines" id="recent"></ul>
-        </div>
-      </section>
+      <!-- 2026-11-26(現場の声): 入力欄は見せない(通常検査と同じ)。表のセルを選んで、そのまま打つ・測る -->
+      <label class="recv sheet-recv" id="recvBox" for="measIn"><span class="recv__state" id="recvState">受信待ち</span>
+        <input class="recv__in" id="measIn" autocomplete="off" aria-label="選んだセルへ入れる(測定器・キーボード)" tabindex="-1">
+        <small class="sheet-keys">セルを押して選ぶ → 測る / 打って Enter ・ 矢印キーで移動 ・ Delete で消す ・ Back space で直前の入力を取り消す</small>
+      </label>
+      <ul class="log-lines" id="recent"></ul>
       <section class="card">
         <header><h3>操作</h3></header>
         <div class="pad">
           <div class="btn-grid">
             <button class="btn btn--commit" type="button" id="printBtn">印刷</button>
             <button class="btn" type="button" id="saveBtn">ｻｰﾊﾞｰ保存</button>
-            <button class="btn" type="button" id="backBtn">Back space</button>
             <button class="btn" type="button" id="newBtn">ｷｬｽｸ用ｼｰﾄ発行</button>
           </div>
           <a class="btn wide" id="reportLink" target="_blank" rel="noopener" hidden>帳票を開く(印刷)</a>

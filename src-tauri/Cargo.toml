@@ -3,7 +3,7 @@
 # 詳しくは docs/デスクトップ版.md
 [package]
 name = "ufkensa-desktop"
-version = "0.3.18"
+version = "0.3.19"
 edition = "2021"
 publish = false
 

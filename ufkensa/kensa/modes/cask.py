@@ -241,19 +241,62 @@ def _lock_hi(ws: sh.Sheet, lock: bool) -> None:
         ws.col_width[8], ws.col_width[9] = 8.88, 2.63
 
 
+#: 外観(AB 列)。2026-11-26(現場の声): 巾丈測定の ON/OFF に関係なく、いつも文字を入れられる
+APPEARANCE_COL = 28
+
+
 def _lock_inspection(ws: sh.Sheet, lock: bool) -> None:
     for r in range(7, 707):
-        for c in range(11, 29):
+        for c in range(11, APPEARANCE_COL):                 # 外観は錠をかけない
             (ws.locked.add if lock else ws.locked.discard)((r, c))
+        ws.locked.discard((r, APPEARANCE_COL))
+
+
+#: 判定(○×)を書く列(値の右隣)。Delete で値と一緒に消す
+JUDGE_COLS = frozenset({3, 5, 7, 9, 12, 14, 16, 18, 21})
+
+
+def clear_cell(book: Book) -> Effects:
+    """2026-11-26(現場の声): キーボードの Delete。選んでいる欄の値(と右隣の判定)を消し、その欄を選んだままにする。
+    「Back space」(直前の入力の取り消し・UFCask 取消)は cancel_input のまま。"""
+    fx = book.begin()
+    if not book.has(CASK):
+        return fx
+    book.activate_sheet(CASK)
+    ws = book.ws(CASK)
+    r, c = book.active_cell
+    if r < 7 or c < 2 or not book.user_editable(r, c):
+        return fx
+    book.events_enabled = False
+    try:
+        ws.set(r, c, None)
+        ws.interior[(r, c)] = sh.WHITE
+        if c + 1 in JUDGE_COLS:
+            ws.set(r, c + 1, None)
+            ws.interior[(r, c + 1)] = sh.WHITE
+        book.activate(r, c)
+        ws.interior[(r, c)] = sh.LIGHT_BLUE
+    finally:
+        book.events_enabled = True
+    return fx
+
+
+_EPS = 1e-9                  # 許容値ちょうどを外にしないための余裕(小数の誤差)
+
+
+def zero_tol(kind: str) -> float:
+    """ゼロ校正の許容値(±)。保守 → 寸法のしきい値 の「ゼロ校正の許容値」(2026-11-26)。"""
+    from .. import size_thresholds
+    return size_thresholds.zero_tolerance(kind)
 
 
 def numeric_confi(book: Book, n: str) -> bool:
-    """Cask.NumericConfi (Cask:1956-1962)。ゼロ点は 0 ちょうどだけ可、コンベックスは ±0.5 以内。"""
-    if n == "M":
-        return not (vbx.val(book.cask.micro) != 0)
+    """Cask.NumericConfi (Cask:1956-1962)。ゼロ点が許容値(±。保守で決める)以内なら可。
+    n = "M"(マイクロ)/ "N"(ノギス)/ "C"(コンベックス)。VBA はマイクロ・ノギス 0 ちょうど、コンベックス ±0.5。"""
+    if n in ("M", "N"):
+        return abs(vbx.val(book.cask.micro)) <= zero_tol("noguisu" if n == "N" else "micro") + _EPS
     if n == "C":
-        v = vbx.val(book.cask.convex)
-        return not (v > 0.5 or v < -0.5)
+        return abs(vbx.val(book.cask.convex)) <= zero_tol("convex") + _EPS
     return True
 
 
@@ -278,20 +321,23 @@ def start_tb_after_update(book: Book, text: str) -> Effects:
         if big:
             f.l1 = "ﾉｷﾞｽｾﾞﾛ点"
             f.micro = vbx.fmt(vbx.val(pr), "0.00")
-            if not numeric_confi(book, "M"):
-                fx.msg("ノギス校正を正しく実行してください！！", flow.WARN, "UFCask:754")
+            if not numeric_confi(book, "N"):
+                fx.msg("ノギス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{zero_tol('noguisu'):g})",
+                       flow.WARN, "UFCask:754")
                 f.micro = ""
         else:
             f.l1 = "ﾏｲｸﾛｾﾞﾛ点"
             f.micro = vbx.fmt(vbx.val(pr), "0.000")
             if not numeric_confi(book, "M"):
-                fx.msg("マイクロ校正を正しく実行してください！！", flow.WARN, "UFCask:761")
+                fx.msg("マイクロ校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{zero_tol('micro'):g})",
+                       flow.WARN, "UFCask:761")
                 f.micro = ""
     elif temp == "#L":
         pr = sh.conv(text)
         f.convex = vbx.fmt(vbx.val(pr), "0.0")
         if not numeric_confi(book, "C"):
-            fx.msg("コンベックス校正を正しく実行してください！！", flow.WARN, "UFCask:769")
+            fx.msg("コンベックス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.convex}。許容 ±{zero_tol('convex'):g})",
+                   flow.WARN, "UFCask:769")
             f.convex = ""
     return fx
 

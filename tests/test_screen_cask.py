@@ -109,6 +109,27 @@ class CaskScreenTest(SessionBase):
         d = self.post("receive", text="DT10002+0000036.000M")
         self.assertEqual(self.cell(d, 7, 2)[:1], ["36"])
 
+    def test_keyboard_delete_and_appearance_text(self) -> None:
+        """2026-11-26(現場の声): Delete で選んだ欄(と判定)を消す。外観は巾丈測定 OFF でも文字が入る。
+        錠のかかった欄は Excel の文言ではなく、何をすれば入るかを出す。"""
+        self.ready()
+        self.post("select", row=7, col=2)
+        d = self.post("receive", text="DT10002+0000036.000M")
+        self.assertEqual(self.cell(d, 7, 2)[:2], ["36", "○"])
+        self.post("select", row=7, col=2)
+        d = self.post("clear")
+        self.assertEqual(self.cell(d, 7, 2)[:2], ["", ""])
+        self.assertEqual((d["view"]["next"]["row"], d["view"]["next"]["col"]), (7, 2))
+        self.assertEqual(d["view"]["form"]["inspection"], "OFF")
+        self.post("select", row=7, col=28)
+        d = self.post("receive", text="キズ")
+        self.assertIsNone(d.get("stop"))
+        self.assertEqual(self.cell(d, 7, 28)[0], "キズ")
+        self.post("select", row=7, col=11)
+        d = self.post("receive", text="DT10002+0001528.000M")
+        self.assertIn("巾丈測定", " ".join(self.texts(d)))
+        self.assertNotIn("保護されているシート", " ".join(self.texts(d)))
+
     def test_page_and_state(self) -> None:
         r = self.c.get("/cask", headers=self.h)
         self.assertEqual(r.status_code, 200)

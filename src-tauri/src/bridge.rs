@@ -351,6 +351,12 @@ impl Bridge {
 
     /// 要求を1件渡して、応答を待つ。
     pub fn call(&self, method: &str, path: &str, query: &str, headers: Vec<(String, String)>, body: &[u8]) -> Result<Reply, String> {
+        self.call_within(method, path, query, headers, body, REPLY_TIMEOUT)
+    }
+
+    /// `call` と同じ。待つ長さを決められる(× の確かめは短く待つ。2026-11-26)。
+    pub fn call_within(&self, method: &str, path: &str, query: &str, headers: Vec<(String, String)>, body: &[u8],
+                       limit: Duration) -> Result<Reply, String> {
         if self.phase() != Phase::Started {
             return Err("Python が動いていません".into());
         }
@@ -382,7 +388,7 @@ impl Bridge {
                 return Err(format!("Python へ渡せませんでした: {e}"));
             }
         }
-        receiver.recv_timeout(REPLY_TIMEOUT).map_err(|_| {
+        receiver.recv_timeout(limit).map_err(|_| {
             self.pending.lock().unwrap().remove(&id);
             "Python から応答がありません".to_string()
         })
