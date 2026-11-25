@@ -518,26 +518,34 @@ def first_lot_file() -> str:
     return paths.join(paths.slot_value(paths.LOT, paths.FIRST), paths.first_name("SIKALOTNOW"))
 
 
-def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
-    """ロットの行を選ぶ(2026-11-23/24/25 現場の声)。
+def second_lot_file() -> str:
+    """第2パスの SIKALOT(2つ目の名前。圧縮版など)。"""
+    return paths.join(paths.slot_value(paths.LOT, paths.SECOND), paths.second_name("SIKALOTNOW"))
 
-    **いつも第1パスの SIKALOT を最初に見る**(モード・DBflag・「控え(第2)から読む」に関係なく)。
-    第1にロットがあれば、その行を元にし、**第1で取れた値は変えない**。第1で空・列が無い所だけ、
-    次の台帳(まず読む側・次に見る側。第2の圧縮版など)の同じロットの行で補う。
-    第1が読めない・第1にロットが無いときは、その理由を notes に入れ、ログにも書く(画面の公差 0 の知らせに出す)。
+
+def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
+    """ロットの行を選ぶ(2026-11-25 現場の決まり。ロット登録・キャスク・全ヵ所で同じ)。
+
+    - オンライン: 第1パスが正。第1にロットがあればその行を元にし、**第1で取れた値は変えない**。
+      第1で空・列が無い所だけ、第2の同じロットで補う(差し替えない)
+    - オフライン(「控え(第2)から読む」・DBflag も同じ): 第2パスが正。SIKALOT の第2は圧縮版で公差などの列が
+      もともと無いので、第2で空・列が無い所だけ、第1の同じロットで補う
+    - 元の側にロットが無ければ、もう一方の行を使う
+    (引当・受注はここではない: オンラインは第1+第2で足りない引当を足す、オフラインは第2だけ = lot_ledger)
     """
     p = lot_ledger.pick("SIKALOTNOW", dbflag, check_explicit=True)
-    second = lot_ledger.other_file("SIKALOTNOW", dbflag) if p.on_primary else ""
-    first = first_lot_file()
+    first, second = first_lot_file(), second_lot_file()
+    base = p.file if p.found else ""
+    on_first = bool(base) and _same_file(base, first)
+    other = second if on_first else first
     notes: list[str] = []
     order: list[str] = []
-    if read_check(first, 1):
-        order.append(first)
-    else:
-        notes.append(f"第1パスの台帳を読めません({first})")
-    for f in (p.file, second):
-        if f and not any(_same_file(f, o) for o in order) and read_check(f, 1):
-            order.append(f)
+    for f in (base, other):
+        if f and not any(_same_file(f, o) for o in order):
+            if read_check(f, 1):
+                order.append(f)
+            else:
+                notes.append(f"{'第1' if _same_file(f, first) else '第2'}パスの台帳を読めません({f})")
     cols: list[str] = []
     values: Optional[list] = None
     path = ""
@@ -546,22 +554,21 @@ def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
         c2, v2 = _select_lot(f, cb_text)
         trail.append(f"{f}: {'あり' if v2 is not None else 'なし'}")
         if v2 is None:
-            if f == first:
-                notes.append(f"第1パスの台帳({first})にこのロットがありません")
+            notes.append(f"{'第1' if _same_file(f, first) else '第2'}パスの台帳({f})にこのロットがありません")
             if values is None:
                 cols = list(c2)
             continue
         if values is None:
             cols, values, path = list(c2), list(v2), f
             continue
-        other = dict(zip(c2, v2))
+        orow = dict(zip(c2, v2))
         for i, c in enumerate(cols):
-            if values[i] in (None, "") and other.get(c) not in (None, ""):
-                values[i] = other[c]
+            if values[i] in (None, "") and orow.get(c) not in (None, ""):
+                values[i] = orow[c]
         for c in c2:                                     # 元の台帳に無い列は足す
             if c not in cols:
                 cols.append(c)
-                values.append(other[c])
+                values.append(orow[c])
     tol = {}
     if values is not None:
         row = dict(zip(cols, values))
