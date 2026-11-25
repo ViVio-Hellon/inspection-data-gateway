@@ -69,11 +69,11 @@ class MatrixTest(_TwoSlots):
     def test_on_online_both_reads_second(self) -> None:
         self.register()
         self.lot_source_on()                                  # いまのロット → すぐ読み直す
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)          # 2026-11-25: 控えを選んでも第1が元(第1にある値は変えない)
         v = self.s.current().view["lot_source"]
         self.assertEqual((v["on"], v["lot"], v["active"]), (True, LOT, True))
         self.reregister()                                     # 同じロットの登録し直しでも控えのまま
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)
         self.assertEqual(self.s.state.lot_source, "second")
 
     def test_off_offline_reads_second(self) -> None:
@@ -86,7 +86,7 @@ class MatrixTest(_TwoSlots):
         paths.set_mode(paths.OFFLINE)
         self.register()
         self.lot_source_on()
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)          # 2026-11-25: 控えを選んでも第1が元(第1にある値は変えない)
 
     def test_mode_switch_keeps_second(self) -> None:
         """オフラインで控えを選んだロットは、オンラインに切り替えても第1で置き換わらない。"""
@@ -95,7 +95,7 @@ class MatrixTest(_TwoSlots):
         self.lot_source_on()
         paths.set_mode(paths.ONLINE)
         self.reregister()
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)          # 2026-11-25: 控えを選んでも第1が元(第1にある値は変えない)
         self.assertEqual(self.s.state.lot_source_lot, LOT)
 
     def test_mode_switch_without_choice_replaces(self) -> None:
@@ -144,7 +144,7 @@ class MatrixTest(_TwoSlots):
     def test_off_rereads_first(self) -> None:
         self.register()
         self.lot_source_on()
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)          # 2026-11-25: 控えを選んでも第1が元(第1にある値は変えない)
         self.s.set_lot_source(False, "", REG)
         self.assertEqual(self.ken_h(), KEN_FIRST)
         self.assertEqual((self.s.state.lot_source, self.s.state.lot_source_lot), ("", ""))
@@ -161,7 +161,7 @@ class LifecycleTest(_TwoSlots):
         self.assertEqual((s2.state.lot, s2.state.lot_source, s2.state.lot_source_lot), (LOT, "second", LOT))
         self.s = s2
         self.reregister()
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)          # 2026-11-25: 控えを選んでも第1が元(第1にある値は変えない)
 
     def test_not_saved_when_off(self) -> None:
         self.register()
@@ -304,7 +304,7 @@ class RouteTest(_TwoSlots):
         self.assertEqual(res.status_code, 200)
         body = res.get_json()
         self.assertTrue(body["view"]["lot_source"]["active"])
-        self.assertEqual(self.ken_h(), KEN_SECOND)
+        self.assertEqual(self.ken_h(), KEN_FIRST)          # 2026-11-25: 控えを選んでも第1が元(第1にある値は変えない)
         page = c.get("/kensa", headers=_web.auth()).get_data(as_text=True)
         self.assertIn('id="lotSrcBtn"', page)
         self.assertIn('id="lotSrcLv"', page)

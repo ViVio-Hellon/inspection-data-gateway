@@ -1,4 +1,34 @@
 {
+ "both|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "both|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
  "both|offline|acc_reflec": {
   "value": {
    "file": "<1>/SIKALOT.sqlite3",
@@ -35,6 +65,36 @@
    "9.5"
   ],
   "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "hiki_extra_first|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "hiki_extra_first|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
  },
  "hiki_extra_first|lot_source|grid.atu_hiki_records": {
   "value": {
@@ -157,6 +217,21 @@
   ],
   "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
  },
+ "hiki_extra_second|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
  "hiki_extra_second|dbflag|quality.hiki_arr_create": {
   "value": [
    [
@@ -177,6 +252,21 @@
    ]
   ],
   "why": "HikiArrCreate は DBflag を見ない(前と同じ)。オンラインの決まり 4(第2にだけある引当を足す)にそろえた"
+ },
+ "hiki_extra_second|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
  },
  "hiki_extra_second|offline|acc_reflec": {
   "value": {
@@ -245,6 +335,36 @@
    ]
   ],
   "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
+ },
+ "hiki_lot_only_first|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "hiki_lot_only_first|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
  },
  "hiki_lot_only_first|lot_source|grid.atu_hiki_records": {
   "value": {
@@ -407,6 +527,36 @@
   ],
   "why": "品質基準の引当(HikiArrCreate)は第1→第2の固定で、足りない引当を足さず、オフラインで第1を見なかった。検査画面の引当(Arrbox)と同じ lot_ledger にそろえた"
  },
+ "hiki_lot_only_second|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "hiki_lot_only_second|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
  "hiki_lot_only_second|offline|acc_reflec": {
   "value": {
    "file": "<1>/SIKALOT.sqlite3",
@@ -489,6 +639,21 @@
    "rows": []
   },
   "why": "ロットがどちらにも無いときの file_path は、まず読む側のファイル(arrbox と同じ)。知らせは同じ"
+ },
+ "lot_only_first|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
  },
  "lot_only_first|lot_source|grid.arrbox.SIKALOTNOW": {
   "value": {
@@ -818,6 +983,36 @@
   },
   "why": "judge の既定(簡易版)も同じ。lot_ledger を通す(オフラインで第2が無いときの DbMissing も無くなる)"
  },
+ "odr_missing_first|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "odr_missing_first|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
  "odr_missing_first|offline|acc_reflec": {
   "value": {
    "file": "<1>/SIKALOT.sqlite3",
@@ -851,6 +1046,36 @@
    "msgs": []
   },
   "why": "MaterialsMsgBox の SIKAODR は第1→第2のファイルの切替だけで、受注が第1に無いとき・オフラインで第2に無いときに注意文を出せなかった。決まり 1・2"
+ },
+ "odr_missing_second|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "odr_missing_second|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
  },
  "odr_missing_second|lot_source|history_save": {
   "value": {
@@ -1234,6 +1459,36 @@
    "50"
   ],
   "why": "SikaAtuCreate は第1(MainPath)→第2(NextPath)の固定で、ファイルを確かめず(第1が無いと DbMissing)、オフラインでも第1を見なかった。決まり 1・2 にそろえた"
+ },
+ "second_missing_columns|dbflag|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
+ },
+ "second_missing_columns|lot_source|acc_reflec": {
+  "value": {
+   "file": "<1>/SIKALOT.sqlite3",
+   "msgs": [],
+   "past_hiki": "80b1e03e7f",
+   "pick": [
+    "H2500K0",
+    "8",
+    "50",
+    "3"
+   ],
+   "status": "ok"
+  },
+  "why": "2026-11-25(現場の声): 第1パスで取れた値は保持し、無いものだけ第2で補う。DBflag・「控え(第2)から読む」でも第1を最初に見る(控えだけ読むと圧縮版で公差の列が無く 0 になっていた)"
  },
  "second_missing_columns|offline|acc_reflec": {
   "value": {

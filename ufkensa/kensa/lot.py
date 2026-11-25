@@ -519,33 +519,32 @@ def first_lot_file() -> str:
 
 
 def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
-    """ロットの行を選ぶ(2026-11-23/24 現場の声)。
+    """ロットの行を選ぶ(2026-11-23/24/25 現場の声)。
 
-    第1パス → まず読む側 → 次に見る側 の順で、最初に見つかった行を元にする。**元の行で取れた値は変えない。**
-    元の行で空・列が無い所だけ、後の台帳の同じロットの行で補う。どれにも無い列は空(列を足すので
-    「コレクションに見つかりません」で止まらない)。DBflag(NextPath だけ)・「控え(第2)から読む」(D28)のときは
-    第1を元にしない。
+    **いつも第1パスの SIKALOT を最初に見る**(モード・DBflag・「控え(第2)から読む」に関係なく)。
+    第1にロットがあれば、その行を元にし、**第1で取れた値は変えない**。第1で空・列が無い所だけ、
+    次の台帳(まず読む側・次に見る側。第2の圧縮版など)の同じロットの行で補う。
+    第1が読めない・第1にロットが無いときは、その理由を notes に入れ、ログにも書く(画面の公差 0 の知らせに出す)。
     """
     p = lot_ledger.pick("SIKALOTNOW", dbflag, check_explicit=True)
     second = lot_ledger.other_file("SIKALOTNOW", dbflag) if p.on_primary else ""
-    first = ""
-    if not lot_ledger.sides(dbflag).explicit and not paths.lot_second_forced():
-        first = first_lot_file()
+    first = first_lot_file()
     notes: list[str] = []
     order: list[str] = []
-    if first:
-        if read_check(first, 1):
-            order.append(first)
-        else:
-            notes.append(f"第1パスの台帳を読めません({first})")
-    for f in (p.file if p.found else "", second):
+    if read_check(first, 1):
+        order.append(first)
+    else:
+        notes.append(f"第1パスの台帳を読めません({first})")
+    for f in (p.file, second):
         if f and not any(_same_file(f, o) for o in order) and read_check(f, 1):
             order.append(f)
     cols: list[str] = []
     values: Optional[list] = None
     path = ""
+    trail: list[str] = []
     for f in order:
         c2, v2 = _select_lot(f, cb_text)
+        trail.append(f"{f}: {'あり' if v2 is not None else 'なし'}")
         if v2 is None:
             if f == first:
                 notes.append(f"第1パスの台帳({first})にこのロットがありません")
@@ -563,7 +562,19 @@ def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
             if c not in cols:
                 cols.append(c)
                 values.append(other[c])
+    tol = {}
+    if values is not None:
+        row = dict(zip(cols, values))
+        tol = {k: row.get(k) for k in ("板厚公差_製造_ﾌﾟﾗｽ", "板厚公差_製造_ﾏｲﾅｽ", "板幅公差_製造_ﾌﾟﾗｽ", "板丈公差_製造_ﾌﾟﾗｽ")}
+    # 2026-11-25: 原因を追えるよう、毎回どの台帳を見て、どれを元にしたかをログに残す
+    _log().info("ロット %s の仕掛台帳: 元=%s / 見た台帳 [%s] / 公差(製造) %s%s", cb_text, path or "(なし)",
+                " | ".join(trail) or "なし", tol, ("/ " + " / ".join(notes)) if notes else "")
     return LotRow(cols, tuple(values) if values is not None else None, path, notes)
+
+
+def _log():
+    from ..logging_utils import get_logger
+    return get_logger(__name__)
 
 
 def acc_reflec_path(dbflag: str) -> str:

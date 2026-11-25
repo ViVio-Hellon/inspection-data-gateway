@@ -234,7 +234,7 @@ def log_environment(mode: str) -> None:
     from ufkensa import app_config
 
     log().info("=" * 60)
-    log().info("起動: mode=%s pid=%s", mode, os.getpid())
+    log().info("起動: mode=%s pid=%s 版=%s", mode, os.getpid(), app_config.version())
     log().info("Python: %s (%s)", sys.version.split()[0], sys.executable)
     log().info("アプリ本体: %s", APP_ROOT)
     log().info("ローカル領域: %s", app_config.local_root())
