@@ -281,13 +281,19 @@ def clear_cell(book: Book) -> Effects:
     return fx
 
 
+#: ゼロ校正の許容値(2026-11-26 現場の決まり)。VBA はマイクロ 0 ちょうど・コンベックス ±0.5 だった。
+#: 0 が出るまで校正し続けることになる(コンベックスには 0 点ボタンが無い)ので、許容値を設ける
+ZERO_TOL_MICRO = 0.01        # マイクロ(ノギスも同じ)
+ZERO_TOL_CONVEX = 0.2        # コンベックス
+_EPS = 1e-9                  # 0.01・0.2 ちょうどを外にしないための余裕(小数の誤差)
+
+
 def numeric_confi(book: Book, n: str) -> bool:
-    """Cask.NumericConfi (Cask:1956-1962)。ゼロ点は 0 ちょうどだけ可、コンベックスは ±0.5 以内。"""
+    """Cask.NumericConfi (Cask:1956-1962)。ゼロ点がマイクロ ±0.01・コンベックス ±0.2 以内なら可(2026-11-26)。"""
     if n == "M":
-        return not (vbx.val(book.cask.micro) != 0)
+        return abs(vbx.val(book.cask.micro)) <= ZERO_TOL_MICRO + _EPS
     if n == "C":
-        v = vbx.val(book.cask.convex)
-        return not (v > 0.5 or v < -0.5)
+        return abs(vbx.val(book.cask.convex)) <= ZERO_TOL_CONVEX + _EPS
     return True
 
 
@@ -313,19 +319,22 @@ def start_tb_after_update(book: Book, text: str) -> Effects:
             f.l1 = "ﾉｷﾞｽｾﾞﾛ点"
             f.micro = vbx.fmt(vbx.val(pr), "0.00")
             if not numeric_confi(book, "M"):
-                fx.msg("ノギス校正を正しく実行してください！！", flow.WARN, "UFCask:754")
+                fx.msg("ノギス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{ZERO_TOL_MICRO})",
+                       flow.WARN, "UFCask:754")
                 f.micro = ""
         else:
             f.l1 = "ﾏｲｸﾛｾﾞﾛ点"
             f.micro = vbx.fmt(vbx.val(pr), "0.000")
             if not numeric_confi(book, "M"):
-                fx.msg("マイクロ校正を正しく実行してください！！", flow.WARN, "UFCask:761")
+                fx.msg("マイクロ校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{ZERO_TOL_MICRO})",
+                       flow.WARN, "UFCask:761")
                 f.micro = ""
     elif temp == "#L":
         pr = sh.conv(text)
         f.convex = vbx.fmt(vbx.val(pr), "0.0")
         if not numeric_confi(book, "C"):
-            fx.msg("コンベックス校正を正しく実行してください！！", flow.WARN, "UFCask:769")
+            fx.msg("コンベックス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.convex}。許容 ±{ZERO_TOL_CONVEX})",
+                   flow.WARN, "UFCask:769")
             f.convex = ""
     return fx
 
