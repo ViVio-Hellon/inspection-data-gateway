@@ -38,7 +38,8 @@
       <div class="pad">
         <div class="count"><b id="countSt">-</b><small>点</small></div>
         <p class="muted small">厚 100mm 未満は 3 点、100mm 以上は 4 点</p>
-        <div class="btn-row"><button class="btn" type="button" id="inspBtn">巾丈測定</button><span class="lv" id="inspLv">OFF</span></div>
+        <div class="insp"><span class="insp-state insp-state--off" id="inspLv" role="status">OFF(厚・外観だけ)</span>
+          <button class="btn" type="button" id="inspBtn" aria-pressed="false">巾丈測定を ON にする</button></div>
       </div>
     </section>
     <section class="card">
@@ -74,11 +75,6 @@
     </section>
 
     <div class="cask__side">
-      <div class="banner" id="eventsBanner" hidden>
-        <b>自動判定が止まっています</b>
-        <small>数でない文字が入ったため(VBA の EnableEvents)。「処理再開」で戻ります。</small>
-        <button class="btn btn--commit" type="button" id="resumeBtn">処理再開</button>
-      </div>
       <div class="next" id="nextBox"><small>次に入力するセル</small><b id="nextName">-</b><small id="nextHint"></small></div>
       <div class="flash" id="flash" hidden><span id="flashMark"></span><small id="flashText"></small></div>
       <div class="btn-row read-row">
@@ -122,6 +118,17 @@
     </div>
   </div>
 </div>
+
+<!-- 外観(2026-11-26 現場の声「外観は押したら別窓で入力」) -->
+<dialog class="capp" id="appDlg" aria-labelledby="appTitle">
+  <h3 id="appTitle">外観</h3>
+  <input class="input capp__in" id="appIn" autocomplete="off" aria-label="外観に入れる文字">
+  <div class="btn-row capp__act">
+    <button class="btn btn--commit" type="button" id="appOk">入れる(Enter)</button>
+    <button class="btn" type="button" id="appClear">消す</button>
+    <button class="btn" type="button" id="appCancel">やめる</button>
+  </div>
+</dialog>
 
 <!-- 不良要因(2026-11-15。通常検査と同じ 不良要因票。キャスクは位置が無いので 1 行「ｷｬｽｸ」に書く) -->
 <dialog class="cdef" id="defDlg" aria-labelledby="defTitle">

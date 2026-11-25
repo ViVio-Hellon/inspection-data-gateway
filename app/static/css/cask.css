@@ -103,3 +103,17 @@
 .cask__zero-alert[hidden] { display: none; }
 .cask__zero-alert strong { font-size: 2rem; line-height: 1.2; color: var(--state-error); }
 .cask__zero-alert span { font-size: 1.2rem; font-weight: 700; }
+
+/* 外観の窓(2026-11-26) */
+.capp { width: min(520px, 94vw); padding: 16px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--raised); color: var(--ink); }
+.capp::backdrop { background: rgb(0 0 0 / 0.35); }
+.capp h3 { margin: 0 0 10px; }
+.capp__in { width: 100%; font-size: 1.3rem; padding: 8px 10px; }
+.capp__picks { margin-top: 8px; flex-wrap: wrap; }
+.capp__act { margin-top: 14px; justify-content: flex-end; }
+
+/* 巾丈測定の ON/OFF(2026-11-26: はっきり分かるように) */
+.insp { display: flex; flex-direction: column; gap: 6px; }
+.insp-state { display: block; text-align: center; padding: 8px 10px; border-radius: var(--radius-xs); font-size: 1.15rem; font-weight: 800; border: 2px solid; }
+.insp-state--on { background: var(--state-ok); border-color: var(--state-ok); color: #fff; }
+.insp-state--off { background: var(--sunken); border-color: var(--rule); color: var(--muted); }

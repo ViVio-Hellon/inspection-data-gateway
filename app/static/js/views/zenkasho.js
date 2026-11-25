@@ -67,7 +67,6 @@ function renderTop(v) {
   $("notice").hidden = !v.notice;
   $("notice").textContent = v.notice;
   $("notice").title = (v.suspect || []).join("\n");
-  $("stopped").hidden = v.events_enabled;
   document.body.dataset.zkMode = v.mode || "";
 }
 
@@ -196,7 +195,7 @@ function renderFlash(v) {
 // --- 右: 次に入力する欄・操作 --------------------------------------------
 function renderRight(v) {
   $("nextName").textContent = v.active ? v.active.label : "-";
-  $("nextHint").textContent = v.open ? (v.events_enabled ? "" : "自動判定が止まっています") : "画面を開いていません";
+  $("nextHint").textContent = v.open ? "" : "画面を開いていません";
   $("emptyBtn").hidden = !v.can_next_empty;
   $("prints").replaceChildren(...v.prints.map((p) => {
     const b = el("button", "btn btn--print", p.label);
@@ -284,12 +283,9 @@ function init() {
   $("sheet").addEventListener("click", pick);
   $("head").addEventListener("click", pick);
   $("emptyBtn").addEventListener("click", () => op("next-empty"));
-  $("weightBtn").addEventListener("click", () => op("weight"));
   $("transferBtn").addEventListener("click", () => op("transfer"));
   $("heightBtn").addEventListener("click", () => op("height"));
   $("newBtn").addEventListener("click", () => op("new"));
-  $("resumeBtn").addEventListener("click", () => op("resume"));
-  $("resumeBtn2").addEventListener("click", () => op("resume"));
   // 入力欄以外を押したら、測定器の入力欄へ戻す(測定器の入力を止めない)
   document.addEventListener("click", (e) => {
     if (!e.target.closest("input, select, textarea, dialog, a")) setTimeout(focusMeas, 0);
