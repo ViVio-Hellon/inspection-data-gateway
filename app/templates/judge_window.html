@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>判定(大きく表示)</title>
+<script>
+  try { var t = localStorage.getItem("ui.theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; } catch (e) { /* OS に従う */ }
+</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+<style>
+  /* VBA の UFcount と同じ並び: 左に 判定板NO・判定位置(黄色)、右に 大きな ○ / × */
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--surface); color: var(--ink); font-family: "Meiryo UI", "Yu Gothic UI", sans-serif;
+         display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; padding: 2vw; box-sizing: border-box; }
+  .left { display: grid; grid-template-rows: 1fr 1fr; gap: 2vw; min-height: 0; }
+  fieldset { margin: 0; border: 1px solid var(--rule); border-radius: 6px; display: flex; flex-direction: column; min-height: 0; }
+  legend { font-size: clamp(18px, 4vw, 48px); padding: 0 .3em; }
+  .val { flex: 1; background: var(--mark-bg); display: flex; align-items: center; justify-content: center;
+         font-size: clamp(32px, 9vw, 160px); font-weight: 800; color: var(--mark-fg); line-height: 1; overflow: hidden; }
+  .mark { border: 1px solid var(--rule); border-radius: 6px; display: flex; align-items: center; justify-content: center;
+          font-size: clamp(120px, 38vw, 520px); font-weight: 900; line-height: 1; }
+  .mark[data-mark="○"] { color: var(--state-ok); }
+  .mark[data-mark="×"] { color: var(--state-error); }
+  .wait { font-size: clamp(16px, 2.5vw, 28px); color: var(--muted); }
+  body.fresh .mark { animation: pop .25s ease-out; }
+  @keyframes pop { from { transform: scale(.85); } to { transform: scale(1); } }
+  @media (max-width: 700px) { body { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div class="left">
+    <fieldset><legend>判定板NO</legend><div class="val" id="no">-</div></fieldset>
+    <fieldset><legend>判定位置</legend><div class="val" id="pos">-</div></fieldset>
+  </div>
+  <div class="mark" id="mark"><span class="wait">測ると、ここに ○ / × を大きく出します</span></div>
+<script type="module">
+  import { onJudge, lastJudge } from "{{ url_for('static', filename='js/judge_bus.js') }}";
+  const want = new URLSearchParams(location.search).get("screen") || "";
+  const show = (m) => {
+    if (!m || (want && m.screen !== want)) return;
+    document.getElementById("no").textContent = m.no || "-";
+    document.getElementById("pos").textContent = m.label || "-";
+    const k = document.getElementById("mark");
+    k.textContent = m.mark || "";
+    k.dataset.mark = m.mark || "";
+    document.body.classList.remove("fresh"); void document.body.offsetWidth; document.body.classList.add("fresh");
+    document.title = `判定 ${m.no || ""} ${m.label || ""} ${m.mark || ""}`;
+  };
+  const last = lastJudge();
+  if (last && Date.now() - last.at < 10 * 60 * 1000) show(last);
+  onJudge(show);
+</script>
+</body>
+</html>

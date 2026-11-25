@@ -12,6 +12,7 @@
 import { openWindow } from "../desktop.js";
 import { mayRefocus } from "../focus_guard.js";
 import { sheetInput } from "../sheet_input.js";
+import { publishJudge } from "../judge_bus.js";
 import { api, tokenUrl } from "../api.js";
 import { toastError } from "../toast.js";
 import { promptBox } from "../askbox.js";
@@ -188,6 +189,7 @@ function renderFlash(v) {
   f.textContent = v.diag ? "対角" : (v.flash === "OK" ? "○" : "×");
   f.dataset.kind = v.diag ? "diag" : v.flash;
   f.hidden = false;
+  if (v.flash_info) publishJudge({ screen: "zenkasho", ...v.flash_info });   // 判定の窓(別窓で大きく)
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => { f.hidden = true; }, v.diag ? 2000 : 700);
 }
@@ -283,6 +285,7 @@ function init() {
   $("sheet").addEventListener("click", pick);
   $("head").addEventListener("click", pick);
   $("emptyBtn").addEventListener("click", () => op("next-empty"));
+  $("judgeWinBtn").addEventListener("click", () => openWindow("/judge-window?screen=zenkasho", "全ヵ所の判定"));
   $("transferBtn").addEventListener("click", () => op("transfer"));
   $("heightBtn").addEventListener("click", () => op("height"));
   $("newBtn").addEventListener("click", () => op("new"));
