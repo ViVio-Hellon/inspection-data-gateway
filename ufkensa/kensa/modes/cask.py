@@ -281,19 +281,22 @@ def clear_cell(book: Book) -> Effects:
     return fx
 
 
-#: ゼロ校正の許容値(2026-11-26 現場の決まり)。VBA はマイクロ 0 ちょうど・コンベックス ±0.5 だった。
-#: 0 が出るまで校正し続けることになる(コンベックスには 0 点ボタンが無い)ので、許容値を設ける
-ZERO_TOL_MICRO = 0.01        # マイクロ(ノギスも同じ)
-ZERO_TOL_CONVEX = 0.2        # コンベックス
-_EPS = 1e-9                  # 0.01・0.2 ちょうどを外にしないための余裕(小数の誤差)
+_EPS = 1e-9                  # 許容値ちょうどを外にしないための余裕(小数の誤差)
+
+
+def zero_tol(kind: str) -> float:
+    """ゼロ校正の許容値(±)。保守 → 寸法のしきい値 の「ゼロ校正の許容値」(2026-11-26)。"""
+    from .. import size_thresholds
+    return size_thresholds.zero_tolerance(kind)
 
 
 def numeric_confi(book: Book, n: str) -> bool:
-    """Cask.NumericConfi (Cask:1956-1962)。ゼロ点がマイクロ ±0.01・コンベックス ±0.2 以内なら可(2026-11-26)。"""
-    if n == "M":
-        return abs(vbx.val(book.cask.micro)) <= ZERO_TOL_MICRO + _EPS
+    """Cask.NumericConfi (Cask:1956-1962)。ゼロ点が許容値(±。保守で決める)以内なら可。
+    n = "M"(マイクロ)/ "N"(ノギス)/ "C"(コンベックス)。VBA はマイクロ・ノギス 0 ちょうど、コンベックス ±0.5。"""
+    if n in ("M", "N"):
+        return abs(vbx.val(book.cask.micro)) <= zero_tol("noguisu" if n == "N" else "micro") + _EPS
     if n == "C":
-        return abs(vbx.val(book.cask.convex)) <= ZERO_TOL_CONVEX + _EPS
+        return abs(vbx.val(book.cask.convex)) <= zero_tol("convex") + _EPS
     return True
 
 
@@ -318,22 +321,22 @@ def start_tb_after_update(book: Book, text: str) -> Effects:
         if big:
             f.l1 = "ﾉｷﾞｽｾﾞﾛ点"
             f.micro = vbx.fmt(vbx.val(pr), "0.00")
-            if not numeric_confi(book, "M"):
-                fx.msg("ノギス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{ZERO_TOL_MICRO})",
+            if not numeric_confi(book, "N"):
+                fx.msg("ノギス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{zero_tol('noguisu'):g})",
                        flow.WARN, "UFCask:754")
                 f.micro = ""
         else:
             f.l1 = "ﾏｲｸﾛｾﾞﾛ点"
             f.micro = vbx.fmt(vbx.val(pr), "0.000")
             if not numeric_confi(book, "M"):
-                fx.msg("マイクロ校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{ZERO_TOL_MICRO})",
+                fx.msg("マイクロ校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.micro}。許容 ±{zero_tol('micro'):g})",
                        flow.WARN, "UFCask:761")
                 f.micro = ""
     elif temp == "#L":
         pr = sh.conv(text)
         f.convex = vbx.fmt(vbx.val(pr), "0.0")
         if not numeric_confi(book, "C"):
-            fx.msg("コンベックス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.convex}。許容 ±{ZERO_TOL_CONVEX})",
+            fx.msg("コンベックス校正を正しく実行してください！！" + f"\r\n(読んだ値 {f.convex}。許容 ±{zero_tol('convex'):g})",
                    flow.WARN, "UFCask:769")
             f.convex = ""
     return fx

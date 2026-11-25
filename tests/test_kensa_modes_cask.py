@@ -121,7 +121,7 @@ class CaskSheetTest(unittest.TestCase):
 
 class CalibrationTest(unittest.TestCase):
     def test_start_tb(self) -> None:                      # UFCask:736-776 / Cask:1956-1962
-        # 2026-11-26(現場の決まり): 許容値 マイクロ ±0.01・コンベックス ±0.2(VBA は 0 ちょうど・±0.5)
+        # 2026-11-26(現場の決まり): 許容値は保守で決める。既定 マイクロ・ノギス ±0.01、コンベックス ±0.5(VBA と同じ)
         b = cask_book(micro="", convex="")
         f = b.cask
         cask.start_tb_after_update(b, "DT10002+0000000.000M")
@@ -135,13 +135,13 @@ class CalibrationTest(unittest.TestCase):
         texts = " ".join(m.text for m in fx.messages)
         self.assertIn("マイクロ校正を正しく実行してください！！", texts)
         self.assertIn("許容 ±0.01", texts)
-        cask.start_tb_after_update(b, "#L0.2")
-        self.assertEqual(f.convex, "0.2")
-        cask.start_tb_after_update(b, "#L-0.2")
-        self.assertEqual(f.convex, "-0.2")
-        cask.start_tb_after_update(b, "#L0.24")              # "0.2" に丸めてから見る → OK
-        self.assertEqual(f.convex, "0.2")
-        fx = cask.start_tb_after_update(b, "#L0.3")
+        cask.start_tb_after_update(b, "#L0.5")
+        self.assertEqual(f.convex, "0.5")
+        cask.start_tb_after_update(b, "#L-0.5")
+        self.assertEqual(f.convex, "-0.5")
+        cask.start_tb_after_update(b, "#L0.54")              # "0.5" に丸めてから見る → OK
+        self.assertEqual(f.convex, "0.5")
+        fx = cask.start_tb_after_update(b, "#L0.6")
         self.assertEqual(f.convex, "")
         self.assertIn("コンベックス校正を正しく実行してください！！", " ".join(m.text for m in fx.messages))
         b.ws(sh.CASK).set(3, 2, 120.0)
@@ -151,6 +151,20 @@ class CalibrationTest(unittest.TestCase):
         self.assertEqual(f.micro, "")
         cask.start_tb_after_update(b, "#L")
         self.assertTrue(f.l2_visible)
+
+    def test_zero_tolerance_from_maint(self) -> None:
+        """保守 → 寸法のしきい値 の「ゼロ校正の許容値」で変えられる。"""
+        from unittest import mock
+        from ufkensa.kensa import size_thresholds
+        vals = dict(size_thresholds.DEFAULTS, zero_convex=0.2, zero_micro=0.0)
+        b = cask_book(micro="", convex="")
+        with mock.patch.object(size_thresholds, "get", lambda k: vals[k]):
+            cask.start_tb_after_update(b, "#L0.3")
+            self.assertEqual(b.cask.convex, "")
+            cask.start_tb_after_update(b, "#L0.2")
+            self.assertEqual(b.cask.convex, "0.2")
+            cask.start_tb_after_update(b, "DT10002+0000000.010M")
+            self.assertEqual(b.cask.micro, "")                   # 0 ちょうどだけ(VBA と同じにもできる)
 
     def test_tolerance_pair(self) -> None:                # UFCask:470
         self.assertEqual(cask.tolerance_pair(0.3, 0.3, 0.2, 0.2), (0.3, 0.3))
