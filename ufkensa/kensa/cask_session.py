@@ -72,6 +72,10 @@ NEED_WORKER = "検査員登録をして下さい"            # UF1.KYB_Click (UF
 #: フォームの入力欄 → KeyPress の制限("alnum" = 英数字だけ・小文字は大文字に)
 FIELDS = {"ken_no": "", "kname": "", "cno": "", "mno": "", "seri_no": "alnum", "min_text": "alnum",
           "max_text": "alnum", "tai": ""}
+#: 入力必須欄を書くセル(UFCask.Initialize が読む所。2026-11-26: 変えたらすぐ書く。前は閉じると消えた)
+FIELD_CELLS = {"ken_no": (2, 25), "kname": (3, 25), "cno": (2, 26), "mno": (3, 26), "seri_no": (4, 26)}
+#: 閉じても残す欄(セルが無い 対角公差 も)。作業中保存(JSON)の "form" に持つ
+KEEP_FIELDS = ("ken_no", "kname", "cno", "mno", "seri_no", "tai")
 #: 画面に並べる列(シートの列番号, 判定の列)。見出しはシートの 6 行目
 COLUMNS: tuple[tuple[int, int], ...] = (
     (2, 3), (4, 5), (6, 7), (8, 9), (11, 12), (13, 14), (15, 16), (17, 18), (19, 0), (20, 0), (21, 0), (22, 0),
@@ -275,6 +279,7 @@ class CaskSession(SubInspectionCommon):
         self._store = store
         self.now = now
         self._uf1 = uf1
+        self._kept_form: dict[str, str] = {}               # 閉じても残す入力必須欄(2026-11-26)
         self.write_logs = write_logs
         self.facility = facility
         self.book: Optional[sh.Book] = None
@@ -351,6 +356,7 @@ class CaskSession(SubInspectionCommon):
                 d = json.loads(row[0])
                 ws = sheet_from_json(sh.CASK, d["sheet"])
                 book.sheets[sh.CASK] = ws
+                self._kept_form = {k: str(v or "") for k, v in (d.get("form") or {}).items() if k in KEEP_FIELDS}
                 ac = d.get("active_cell") or [FIRST_ROW, 2]
                 book.active_cell = (int(ac[0]), int(ac[1]))
                 book.active_name = sh.CASK
@@ -373,7 +379,10 @@ class CaskSession(SubInspectionCommon):
         if book is None or sh.CASK not in book.sheets:
             return
         ws = book.sheets[sh.CASK]
-        content = json.dumps({"sheet": sheet_to_json(ws), "active_cell": list(book.active_cell)}, ensure_ascii=False)
+        if book.cask.visible:                             # 閉じた後(空のフォーム)では上書きしない
+            self._kept_form = {k: getattr(book.cask, k, "") for k in KEEP_FIELDS}
+        content = json.dumps({"sheet": sheet_to_json(ws), "active_cell": list(book.active_cell),
+                              "form": self._kept_form}, ensure_ascii=False)
         rows = []
         for (r, c) in set(ws.values) | set(ws.formulas):
             v = ws.get(r, c)
@@ -675,7 +684,12 @@ class CaskSession(SubInspectionCommon):
         to_time = workers.yea_dayr_check(workers.hhmm(now), now=now, facility=fac, shifts=env.shift_times())
         to_tyo = workers.time_check(workers.hhmmss(now), facility=fac, shifts=env.shift_times())
         book.cask = sh.CaskForm()
-        return cask.open_form(book, uf1.line_name, to_time=to_time, to_tyo=to_tyo)
+        out = cask.open_form(book, uf1.line_name, to_time=to_time, to_tyo=to_tyo)
+        # 2026-11-26: 閉じる前に入れた入力必須欄を戻す(セルから読めなかった欄・対角公差)
+        for k, v in self._kept_form.items():
+            if v and not getattr(book.cask, k, ""):
+                setattr(book.cask, k, v)
+        return out
 
     def _load_hinsho(self) -> None:
         """`品証検証` シート(1000mm 校正値。ProofreadingSearch が読む)。"""
@@ -714,6 +728,11 @@ class CaskSession(SubInspectionCommon):
         if FIELDS[name] == "alnum":
             v = _alnum_upper(v)
         setattr(self.book.cask, name, v)
+        if name in FIELD_CELLS and sh.CASK in self.book.sheets:
+            # 2026-11-26(現場の声「入力必須欄が閉じると消える」): VBA は決まったセルを選んで保存したときだけ書いた。都度書く
+            self.book.ws(sh.CASK).set(*FIELD_CELLS[name], v or None)
+        if name in KEEP_FIELDS:
+            self._kept_form[name] = v
 
     def zero(self, text: str) -> Result:
         return self._run(self._zero, text)

@@ -86,8 +86,12 @@ function renderTop(v) {
   t.replaceChildren(head, ...rows);
 
   text($("countSt"), f.count_st || "-");
-  text($("inspLv"), f.inspection);
-  $("inspLv").className = "lv " + (f.inspection === "ON" ? "lv--ok" : "");
+  // 2026-11-26(現場の声「色が薄くて ON/OFF が分かりにくい」): ON は濃い緑の大きな札とボタン、OFF は灰色
+  const on = f.inspection === "ON";
+  text($("inspLv"), on ? "ON(巾・丈・対角を測る)" : "OFF(厚・外観だけ)");
+  $("inspLv").className = "insp-state " + (on ? "insp-state--on" : "insp-state--off");
+  $("inspBtn").textContent = on ? "巾丈測定を OFF にする" : "巾丈測定を ON にする";
+  $("inspBtn").setAttribute("aria-pressed", String(on));
   const zeroOk = f.micro !== "" && f.convex !== "";
   text($("zeroLv"), zeroOk ? "校正済" : "未");
   $("zeroLv").className = "lv " + (zeroOk ? "lv--ok" : "lv--ng");
@@ -205,7 +209,6 @@ function renderSide(v) {
     text($("flashMark"), v.flash.mark);
     text($("flashText"), [v.flash.no && `No.${v.flash.no}`, v.flash.label].filter(Boolean).join(" "));
   }
-  $("eventsBanner").hidden = v.events || !v.visible;
   $("labels").replaceChildren(...v.form.labels.map((l) => { const li = document.createElement("li"); li.textContent = l; return li; }));
   kv($("mmKv"), v.header.maxmin.map((m) => [m.name, m.max || m.min ? `MAX ${m.max} / MIN ${m.min}` : ""]));
   $("ainLink").hidden = !v.ainput;
@@ -332,6 +335,34 @@ function recvShow() {
   text($("recvState"), on ? "受信待ち(選んだセルに入ります)" : "ほかの欄に入力中 — 表のセルを押すと測定を受けます");
 }
 
+/* ---------- 外観(2026-11-26。押すと窓で入れる) ---------- */
+const APPEARANCE_COL = 28;
+let appRow = 0;
+function openAppearance(row, current) {
+  appRow = row;
+  const no = row - 6;                                       // A 列の板No(7 行目が 1)
+  $("appTitle").textContent = `外観(板No ${no})`;
+  $("appIn").value = current;
+  $("appDlg").showModal();
+  $("appIn").focus();
+  $("appIn").select();
+}
+async function commitAppearance(text) {
+  $("appDlg").close();
+  await op("select", { row: appRow, col: APPEARANCE_COL }, undefined, { refocus: false });
+  if (text === "") await op("clear");
+  else { remember(`外観 ← ${text}`); await op("receive", { text }); }
+}
+function initAppearance() {
+  $("appOk").addEventListener("click", () => commitAppearance($("appIn").value.trim()));
+  $("appClear").addEventListener("click", () => commitAppearance(""));
+  $("appCancel").addEventListener("click", () => { $("appDlg").close(); focusInput(); });
+  $("appIn").addEventListener("keydown", (e) => {
+    if (e.isComposing || e.keyCode === 229) return;          // 日本語の変換の確定では送らない
+    if (e.key === "Enter") { e.preventDefault(); commitAppearance($("appIn").value.trim()); }
+  });
+}
+
 function initDefect() {
   $("defBtn").addEventListener("click", () => { defPreview(); $("defDlg").showModal(); });
   $("defClose").addEventListener("click", () => { $("defDlg").close(); focusInput(); });
@@ -345,6 +376,7 @@ function initDefect() {
 
 function init() {
   initDefect();
+  initAppearance();
   pack = packDialog({ imageUrl: "/api/cask/pack_image", send: (name, body) => op(name, body) });
   $("measIn").addEventListener("focus", recvShow);
   $("measIn").addEventListener("blur", () => setTimeout(recvShow, 0));
@@ -378,13 +410,16 @@ function init() {
     const tr = e.target.closest("[data-row]");
     if (!td) return;
     const row = Number(td.dataset.row || (tr && tr.dataset.row));
-    if (row) op("select", { row, col: Number(td.dataset.col) });
+    const col = Number(td.dataset.col);
+    if (!row) return;
+    // 2026-11-26(現場の声): 外観は押すと別の窓で入れる(表の上に打つより入れやすい)
+    if (col === APPEARANCE_COL && row >= 7) { openAppearance(row, td.textContent.trim()); return; }
+    op("select", { row, col });
   };
   $("caskGrid").addEventListener("click", pick);
   $("tolTable").addEventListener("click", pick);
   $("inspBtn").addEventListener("click", () => op("inspection"));
   $("proofBtn").addEventListener("click", () => op("proofread"));
-  $("resumeBtn").addEventListener("click", () => op("resume"));
   $("transferBtn").addEventListener("click", () => op("transfer"));
   $("printBtn").addEventListener("click", () => op("print"));
   $("saveBtn").addEventListener("click", () => op("save"));

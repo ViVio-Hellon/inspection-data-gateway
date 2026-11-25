@@ -130,6 +130,19 @@ class CaskScreenTest(SessionBase):
         self.assertIn("巾丈測定", " ".join(self.texts(d)))
         self.assertNotIn("保護されているシート", " ".join(self.texts(d)))
 
+    def test_required_fields_survive_close(self) -> None:
+        """2026-11-26(現場の声): 入力必須欄は閉じると消えていた。変えたらすぐ残す(対角公差も)。"""
+        self.ready()
+        for k, v in (("kname", "検査員01"), ("cno", "C11"), ("mno", "M3"), ("seri_no", "ab12"), ("tai", "3.0")):
+            self.post("field", name=k, value=v)
+        self.post("close")
+        d = self.post("open")
+        f = d["view"]["form"]
+        self.assertEqual((f["kname"], f["cno"], f["mno"], f["seri_no"], f["tai"]), ("検査員01", "C11", "M3", "AB12", "3.0"))
+        cs2 = self.cask_session()                                # 起動し直しても残る
+        res = cs2.open()
+        self.assertEqual((res.view["form"]["kname"], res.view["form"]["tai"]), ("検査員01", "3.0"))
+
     def test_new_after_aborted_save_still_works(self) -> None:
         """2026-11-26(現場の声「新規検査を受け付けない」): 保存が必要欄なしで途中で抜けると Tag = "off" が残り、
         新規が何もしなくなっていた。次の操作の始めで戻す。"""

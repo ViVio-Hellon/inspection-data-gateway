@@ -11,10 +11,7 @@
     <span class="zk-line" id="lineName"></span>
     <p class="zk-notice" id="notice" hidden></p>
   </div>
-  <div class="zk-stopped" id="stopped" hidden role="alert">
-    <span>自動判定が止まっています(VBA の EnableEvents = False)。入力しても判定されません。</span>
-    <button class="btn btn--run" type="button" id="resumeBtn2">処理再開</button>
-  </div>
+  <!-- 2026-11-26(現場の声): 「処理再開」は無くした。止まった判定は次の操作の始めに自動で戻る -->
 
   <div class="zk__body">
     <!-- 左: ロット・検査員・MINMAX と検査法・検入高さ・シート発行(VBA のフォーム) -->
@@ -26,7 +23,6 @@
           <label>検査番号<input class="input" id="fKenNo" autocomplete="off"></label>
           <label>用途ｺｰﾄﾞ<input class="input" id="fYouto" autocomplete="off"></label>
           <label>検査員名<input class="input" id="fKname" autocomplete="off"></label>
-          <button class="btn" type="button" id="weightBtn" title="重量からゲージの要否を出す(Frame4 のクリック)">重量の確認</button>
         </div>
       </section>
       <section class="card">
@@ -55,7 +51,6 @@
         <div class="pad">
           <div class="btn-row">
             <button class="btn btn--danger" type="button" id="newBtn">ｼｰﾄ発行(新規)</button>
-            <button class="btn" type="button" id="resumeBtn">処理再開</button>
           </div>
         </div>
       </section>
