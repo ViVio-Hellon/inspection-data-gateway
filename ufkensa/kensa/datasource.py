@@ -72,9 +72,10 @@ def sqlite_uri(path: Union[str, Path], mode: str = "ro") -> str:
 
 def open_ro(db: Union[str, Path]) -> sqlite3.Connection:
     p = resolve(db)
-    if not p.is_file():
+    if not paths.is_copied(p) and not p.is_file():
         raise DbMissing(f"DB ファイルが見つかりません: {p}")
     if paths.is_copied(p):
+        # 2026-11-26: 共有に一時的に届かなくても、前に写した姿があれば読む(lot_copy が決める)
         # D26: 仕掛 DB は共有を直接開かず、手元へ写した写しを読む。写せなければ読まない
         from . import lot_copy
         c = lot_copy.local_copy(str(p))

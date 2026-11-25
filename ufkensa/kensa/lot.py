@@ -545,7 +545,10 @@ def read_lot_row(cb_text: str, dbflag: str = "") -> LotRow:
             if read_check(f, 1):
                 order.append(f)
             else:
-                notes.append(f"{'第1' if _same_file(f, first) else '第2'}パスの台帳を読めません({f})")
+                from . import lot_copy
+                why = lot_copy.last_error(f)
+                notes.append(f"{'第1' if _same_file(f, first) else '第2'}パスの台帳を読めません({f}"
+                             + (f"。理由: {why}" if why else "") + ")")
     cols: list[str] = []
     values: Optional[list] = None
     path = ""

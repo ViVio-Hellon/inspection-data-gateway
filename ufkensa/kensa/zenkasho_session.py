@@ -716,6 +716,11 @@ class ZenkashoSession(SubInspectionCommon):
                 # セルの入力に何も反応しなくなる。操作は 1 つずつ順に来るので、ここで止まっているのは残り物(2026-11-06)
                 logging.getLogger(__name__).warning("イベントが止まったままだったので戻します")
                 b.events_enabled = True
+            if b.mit.tag == "off":
+                # 2026-11-26(現場の声「新規検査を受け付けない」): 印刷・保存・転送が途中で抜けると Tag = "off" が残り、
+                # 新規・転送・印刷が何もしなくなっていた(VBA も同じ)。操作は 1 つずつなので、ここで残っているのは残り物
+                logging.getLogger(__name__).warning("処理中の印(Tag)が残っていたので戻します")
+                b.mit.tag = ""
             self._acc, self._msgs = [], []
             self.flash, self.reports, self.saved, self.ainput, self.pending, self.errors = "", [], [], None, [], []
             self.diag = False

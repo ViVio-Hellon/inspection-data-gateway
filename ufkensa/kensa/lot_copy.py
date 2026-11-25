@@ -80,12 +80,55 @@ def _raw_copy(src: Path, dst: Path) -> None:
     shutil.copyfile(src, dst)
 
 
+#: 最後に写せなかった理由(画面の「第1パスの台帳を読めません」に添える)
+_last_error: dict[str, str] = {}
+_cr.register_dict("lot_copy._last_error", _last_error, _lock)
+
+
+def last_error(path_text: str) -> str:
+    from . import paths
+    with _lock:
+        return _last_error.get(str(paths.to_local(path_text)), "")
+
+
+def _base_name(key: str, src: Path) -> Path:
+    return copy_dir() / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:16] + "_" + src.name)
+
+
+def _newest_on_disk(base: Path) -> Optional[Path]:
+    """前に写した姿(この PC に残っているもの。前の起動のものも)。新しい順で最初の 1 つ。"""
+    try:
+        found = [q for q in base.parent.glob(base.stem + "*" + base.suffix)
+                 if q.is_file() and not q.name.endswith(".part")]
+    except OSError:
+        return None
+    found.sort(key=lambda q: q.stat().st_mtime, reverse=True)
+    return found[0] if found else None
+
+
+def _fallback(key: str, base: Path, why: str) -> Optional[Path]:
+    """2026-11-26(現場の声「第1パスの台帳を読めません」): 元を今は写せない(共有に届かない・上流が作り直し中・
+    前の写しを開いている)とき、前に写せた姿があればそれを使う(少し古いだけで、読めないよりよい)。"""
+    _last_error[key] = why
+    prev = _copies.get(key)
+    old = prev[1] if prev is not None and prev[1].is_file() else _newest_on_disk(base)
+    if old is not None:
+        log.warning("仕掛 DB を今は写せないので、前に写した姿を使います: %s(%s。写し %s)", key, why, old.name)
+        _checked[key] = time.monotonic()
+        if prev is None:
+            _copies[key] = ((-1, -1, -1), old)
+        return old
+    log.warning("仕掛 DB を手元へ写せず、前の写しもありません: %s(%s)", key, why)
+    return None
+
+
 def local_copy(path_text: str) -> Optional[Path]:
-    """仕掛 DB(Windows のパス文字列)を手元へ写した実体。写せなければ None(理由は trace に残す)。"""
+    """仕掛 DB(Windows のパス文字列)を手元へ写した実体。写せなければ前に写した姿、それも無ければ None。"""
     from .. import trace
     from . import paths
     src = paths.to_local(path_text)
     key = str(src)
+    base = _base_name(key, src)
     # 1 回の操作(ロット登録など)で同じ DB を何十回も読む。そのたびに共有フォルダへ「変わったか」を聞くと遅いので、
     # 確かめてから RECHECK_SEC 秒の間は、手元の写しをそのまま使う(2026-11-06 重さの見直し)
     with _lock:
@@ -95,39 +138,78 @@ def local_copy(path_text: str) -> Optional[Path]:
             return known[1]
     try:
         if not src.is_file():
-            return None
+            if src.parent.is_dir():                 # フォルダには届く = 本当に無い(前の写しは使わない)
+                with _lock:
+                    _last_error[key] = "共有のフォルダにファイルがありません"
+                return None
+            with _lock:
+                return _fallback(key, base, "共有のフォルダに届きません")
         stamp = _stamp(src)
-    except OSError:
-        return None
+    except OSError as e:
+        with _lock:
+            return _fallback(key, base, f"共有のファイルを確かめられません: {e}")
     with _lock:
         known = _copies.get(key)
         if known is not None and known[0] == stamp and known[1].is_file():
             _checked[key] = time.monotonic()
+            _last_error.pop(key, None)
             return known[1]
+        tmp = base.with_name(base.name + ".part")
         try:
-            dst = copy_dir() / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:16] + "_" + src.name)
-            tmp = dst.with_name(dst.name + ".part")
             if not _snapshot(src, tmp):
                 _raw_copy(src, tmp)
-            # 2026-11-08: 元を写し終えてから、前の写しの付属ファイルを消す(元を読めずに失敗したとき、
-            # 前の写しを壊さない)
+            after = _stamp(src)
+        except OSError as e:
+            tmp.unlink(missing_ok=True)
+            trace.event("db.copy", f"仕掛 DB を手元へ写せませんでした: {src}({e})", level="WARNING", data={"path": key})
+            return _fallback(key, base, f"写せませんでした: {e}")
+        dst = _place(tmp, base, key)
+        if dst is None:
+            return _fallback(key, base, "手元の写しを置き換えられませんでした(前の写しを開いている)")
+        _copies[key] = (after if after == stamp else stamp, dst)
+        _checked[key] = time.monotonic()
+        _last_error.pop(key, None)
+        trace.note_used(src, "copy")
+        log.info("仕掛 DB を手元へ写しました: %s → %s", src, dst)
+        return dst
+
+
+def _place(tmp: Path, base: Path, key: str) -> Optional[Path]:
+    """写したものを置く。Windows は開いているファイルを置き換えられないので、置き換えられなければ
+    別の名前(base_<番号>)に置く(2026-11-26。前は ここで失敗して「読めません」になっていた)。"""
+    for i in range(0, 20):
+        dst = base if i == 0 else base.with_name(f"{base.stem}_{int(time.time() * 1000)}_{i}{base.suffix}")
+        try:
             for extra in _SIDECARS:
                 Path(str(dst) + extra).unlink(missing_ok=True)
             if Path(str(tmp) + "-wal").exists():
                 Path(str(tmp) + "-wal").replace(Path(str(dst) + "-wal"))
             tmp.replace(dst)
-            after = _stamp(src)
         except OSError as e:
-            trace.event("db.copy", f"仕掛 DB を手元へ写せなかったので読みません: {src}({e})", level="WARNING",
-                        data={"path": key})
-            log.warning("仕掛 DB を手元へ写せませんでした: %s (%s)", src, e)
-            _copies.pop(key, None)
-            return None
-        _copies[key] = (after if after == stamp else stamp, dst)
-        _checked[key] = time.monotonic()
-        trace.note_used(src, "copy")
-        log.info("仕掛 DB を手元へ写しました: %s → %s", src, dst)
+            log.info("手元の写し %s を置き換えられませんでした(%s)。別の名前で置きます", dst.name, e)
+            continue
+        _sweep(base, keep=dst)
         return dst
+    tmp.unlink(missing_ok=True)
+    return None
+
+
+def _sweep(base: Path, keep: Path) -> None:
+    """古い別名の写しを消す(開いていて消せないものは次の機会に)。"""
+    try:
+        for q in base.parent.glob(base.stem + "_*" + base.suffix):
+            if q != keep:
+                try:
+                    q.unlink()
+                except OSError:
+                    pass
+        if keep != base:
+            try:
+                base.unlink()
+            except OSError:
+                pass
+    except OSError:
+        pass
 
 
 def forget() -> None:
@@ -135,3 +217,4 @@ def forget() -> None:
     with _lock:
         _copies.clear()
         _checked.clear()
+        _last_error.clear()

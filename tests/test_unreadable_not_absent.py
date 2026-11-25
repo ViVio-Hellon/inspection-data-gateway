@@ -136,6 +136,53 @@ class ReasonsTest(_Tmp):
 
 
 class LotCopyTest(_Tmp):
+    def test_locked_copy_is_placed_under_another_name(self) -> None:
+        """Windows は開いている写しを置き換えられない → 別の名前に置いて読めるようにする(2026-11-26)。"""
+        src = self.tmp / "share2" / "SIKALOT.sqlite3"
+        src.parent.mkdir()
+        with sqlite3.connect(src) as con:
+            con.execute("CREATE TABLE t (a)")
+        cache = self.tmp / "cache2"
+        cache.mkdir()
+        lot_copy.forget()
+        self.addCleanup(lot_copy.forget)
+        real_replace = Path.replace
+
+        def locked(self_, target):
+            if Path(target).name.endswith("_SIKALOT.sqlite3") and Path(target).exists():
+                raise PermissionError("[WinError 32] 別のプロセスが使用中です")
+            return real_replace(self_, target)
+        with mock.patch.object(lot_copy, "copy_dir", return_value=cache), \
+                mock.patch("ufkensa.kensa.paths.to_local", side_effect=lambda t: Path(t)):
+            first = lot_copy.local_copy(str(src))
+            with sqlite3.connect(src) as con:
+                con.execute("INSERT INTO t VALUES (2)")
+            lot_copy._checked.clear()                          # noqa: SLF001
+            with mock.patch.object(Path, "replace", locked):
+                second = lot_copy.local_copy(str(src))
+            self.assertIsNotNone(second)
+            self.assertNotEqual(second, first)
+            with sqlite3.connect(second) as con:
+                self.assertEqual(con.execute("SELECT COUNT(*) FROM t").fetchone()[0], 1)
+
+    def test_share_unreachable_uses_previous_copy(self) -> None:
+        src = self.tmp / "share3" / "SIKALOT.sqlite3"
+        src.parent.mkdir()
+        with sqlite3.connect(src) as con:
+            con.execute("CREATE TABLE t (a)")
+        cache = self.tmp / "cache3"
+        cache.mkdir()
+        lot_copy.forget()
+        self.addCleanup(lot_copy.forget)
+        with mock.patch.object(lot_copy, "copy_dir", return_value=cache), \
+                mock.patch("ufkensa.kensa.paths.to_local", side_effect=lambda t: Path(t)):
+            dst = lot_copy.local_copy(str(src))
+            lot_copy.forget()                                  # 起動し直したのと同じ(覚えは無い、写しは残る)
+            src.unlink()
+            src.parent.rmdir()                                 # 共有に届かない
+            self.assertEqual(lot_copy.local_copy(str(src)), dst)
+            self.assertIn("届きません", lot_copy.last_error(str(src)))
+
     def test_first_unreadable_keeps_local_copy(self) -> None:
         src = self.tmp / "share" / "SIKALOTNOW.sqlite3"
         src.parent.mkdir()
@@ -157,7 +204,9 @@ class LotCopyTest(_Tmp):
             lot_copy._checked.clear()                          # noqa: SLF001
             with mock.patch.object(lot_copy, "_snapshot", return_value=False), \
                     mock.patch.object(lot_copy, "_raw_copy", side_effect=PermissionError("届かない")):
-                self.assertIsNone(lot_copy.local_copy(str(src)))
+                # 2026-11-26(現場の声「第1パスの台帳を読めません」): 写せないときは前に写した姿を使う
+                self.assertEqual(lot_copy.local_copy(str(src)), dst)
+                self.assertIn("届かない", lot_copy.last_error(str(src)))
             self.assertEqual(dst.read_bytes(), before)         # 前の写しはそのまま
             self.assertTrue(sidecar.exists())                  # 付属ファイルも消していない
 
