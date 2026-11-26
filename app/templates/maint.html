@@ -25,6 +25,7 @@
       <button class="tab" role="tab" type="button" data-tab="qf">QF空冷時間</button>
       <button class="tab" role="tab" type="button" data-tab="outputs">出力の確認</button>
       <button class="tab" role="tab" type="button" data-tab="nippou">日報</button>
+      <button class="tab" role="tab" type="button" data-tab="samples">帳票の見本</button>
       <button class="tab" role="tab" type="button" data-tab="icas">アイカスのライン</button>
       <button class="tab" role="tab" type="button" data-tab="rstop">管理者以外停止</button>
     </div>
@@ -362,6 +363,37 @@
             <div class="out__list" id="oList"></div>
             <div class="out__view" id="oView"><p class="muted">左の一覧からファイルを選ぶと、中身をここに出します。</p></div>
           </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= 帳票の見本(2026-11-26。測定画面と印刷フォーマットをセットで、全部の組み合わせを確かめる) ================= -->
+    <section class="tabpanel tabpanel--scroll" data-panel="samples" id="pSamples" hidden>
+      <section class="card">
+        <header><h3>帳票の見本(測定画面と印刷フォーマット)</h3><span class="lv" id="smpTotal"></span></header>
+        <div class="pad">
+          <p class="muted maint__small">現物のロット無しで、作業・山数・厚2/4ヵ所・検入・ラテラル・直角度・フリー反り の組み合わせごとに、
+            本物の作業選択で測定画面を作り、見本の値(公差の中)を入れて本物の印刷転送で帳票を作ります。
+            使い捨ての場所で作るので、検査・保存・測定DB には何も書きません。</p>
+          <div class="smp__form" id="smpForm">
+            <label>作業<select class="input" id="smpWork"></select></label>
+            <label data-for="thin">山数<select class="input" id="smpYama"></select></label>
+            <label data-for="thin thick">厚<select class="input" id="smpAt"></select></label>
+            <label data-for="thin">検入<select class="input" id="smpInspe"></select></label>
+            <label data-for="small">枚数<select class="input" id="smpSheets"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label>
+            <label class="smp__chk"><input type="checkbox" id="smpLateral"> ラテラルボー有</label>
+            <label class="smp__chk"><input type="checkbox" id="smpRight"> 直角度有</label>
+            <label class="smp__chk"><input type="checkbox" id="smpFree"> フリー反り有</label>
+            <button class="btn btn--commit" type="button" id="smpMake">この組み合わせで作る</button>
+            <button class="btn" type="button" id="smpAll">全部の組み合わせを作って確かめる</button>
+          </div>
+          <p class="out__prob" id="smpProb" hidden></p>
+          <div class="smp__body">
+            <div class="smp__screen"><h4 id="smpLabel">測定画面</h4><div id="smpScreen"><p class="muted">「作る」を押すと、ここに測定画面の欄の並びを出します。</p></div></div>
+            <div class="smp__print"><h4>印刷フォーマット <a class="btn btn--sm" id="smpOpen" hidden>別窓で開く(印刷)</a></h4>
+              <iframe id="smpFrame" title="帳票の見本"></iframe></div>
+          </div>
+          <div id="smpAllBox" hidden><h4 id="smpAllHead"></h4><div class="smp__all" id="smpAllList"></div></div>
         </div>
       </section>
     </section>

@@ -396,3 +396,23 @@
 .out__crumb { border: 0; background: none; padding: 0 2px; font: inherit; color: var(--focus); cursor: pointer; text-decoration: underline; overflow-wrap: anywhere; text-align: left; }
 .out__note { font-size: var(--fs-xs); color: var(--muted); margin: 4px 0 0; }
 .out__subdir span { font-weight: 600; }
+
+/* 帳票の見本(2026-11-26) */
+.smp__form { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; margin: 8px 0; }
+.smp__form label { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); }
+.smp__form label[hidden] { display: none; }
+.smp__form .smp__chk { flex-direction: row; align-items: center; gap: 4px; }
+.smp__body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.smp__screen, .smp__print { min-width: 0; border: 1px solid var(--rule); border-radius: var(--radius-xs); padding: 8px; }
+.smp__screen h4, .smp__print h4 { margin: 0 0 6px; display: flex; gap: 8px; align-items: center; }
+.smp__print iframe { width: 100%; height: 72vh; border: 0; background: var(--surface); }
+.smp__grid { border-collapse: collapse; font-size: var(--fs-xs); font-family: var(--mono); }
+.smp__grid th, .smp__grid td { border: 1px solid var(--rule); padding: 2px 6px; text-align: right; white-space: nowrap; }
+.smp__grid th { background: var(--sunken); }
+.smp__grid td.off { background: var(--sunken); color: var(--muted); }
+.smp__grid td.dis { color: var(--muted); }
+.smp__facts { font-size: var(--fs-sm); margin: 6px 0; }
+.smp__all { display: flex; flex-direction: column; gap: 2px; max-height: 40vh; overflow: auto; }
+.smp__all button { text-align: left; }
+.smp__all button[data-ng="1"] { color: var(--state-error); font-weight: 700; }
+@media (max-width: 900px) { .smp__body { grid-template-columns: 1fr; } }

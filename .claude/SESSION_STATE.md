@@ -8,7 +8,7 @@
 - 本番ではまだ使わない(仕上がるまで)。ユーザーがライン PC で試し、気づいたことを直していく段階。
 
 ## 完了した作業
-- PR #63〜#131 まで main に入れた(0.3.21)。0.3.22 作業中。
+- PR #63〜#132 まで main に入れた(0.3.22)。0.3.23 作業中。
 - 0.3.2: 最小化して放置→「バックエンドに接続できません」から戻らない件(Edge の同じ相手 6 本の通り道が詰まる)。api.js に時間の上限・abortAll、health.js で約1分で読み込み直し。
 - 0.3.3: 測定:公差 80:20/外観は押すだけで複数選択(不良は1つ)/Min/Max が何もしない時に理由を出しタブへ移る/保守 測定機器ID の受信記録で画面が飛ばない/Aインプットを Min/Max 無しでは開けない(Test でも)・上 Auto(情報)/下 Manual(入力)・高さNG で測り直しを促す・「前回」列。
 - 0.3.4: 保守「出力の確認」(Aインプット CSV・hostsend / 検査結果 PDF / 検査結果 CSV / 梱包検査ﾃﾞｰﾀ の最後の行。見るだけ。output_check.py)と「アイカスのライン」(伝送用ファイル 表「アイカスラインコード」。既定 = VBA の LinConv。icas_lines.py)。
@@ -30,6 +30,7 @@
 - 0.3.20: 公差 0 再発(H8083P3、知らせ「第1パスの台帳を読めません」)。受領の第1(ff30e6f7)には H8083P3 と製造公差あり = 写しの段で落ちていた。lot_copy: Windows で開いている写しを置き換えられないときは別名に置く(_place)、共有に届かない・写せないときは前に写した姿を使う(_fallback。フォルダに届いて本当に無いときは使わない)、理由を last_error で知らせに添える。paths.readable・datasource.open_ro も共有の is_file を先に見ない。PDF(終了コード 0・0.39 秒): make_pdf は毎回別の --user-data-dir(開いている Edge に仕事を渡して何も作らず終わっていた)・ファイルが現れるまで 3 秒待つ・Edge の標準エラーを知らせる。キャスク・全ヵ所の新規を受け付けない: 途中で抜けた操作の Tag="off" が残っていた → 操作の始めで戻す。ボタン名「キャスク新規検査」。
 - 0.3.21: キャスク 外観は押すと窓(appDlg)で入れる/入力必須欄は変えたらすぐセル(Y2・Y3・Z2・Z3・Z4)へ、対角公差も含め作業中保存 JSON の form に残し開くときに戻す(_kept_form)/巾丈測定 ON=濃い緑の札・OFF=灰色、ボタンは「ON にする/OFF にする」/全ヵ所 重量の確認・処理再開 を無くした(キャスクの処理再開の帯も。止まった判定は操作の始めに自動で戻る)。
 - 0.3.22: 判定を別窓で大きく(/judge-window?screen=cask|zenkasho、judge_window.html。VBA UFcount と同じ並び 判定板NO・判定位置(黄)・大きな ○×。画面どうしは judge_bus.js = BroadcastChannel+localStorage、サーバへは聞かない。全ヵ所は view.flash_info を足した)。キャスクの表: 巾丈測定 OFF で入れられない欄(td.lock)を濃い灰色の斜線に。
+- 0.3.23: 保守「帳票の見本」(print_samples.py): 作業(H/少枚数/スラブ/耳付/N・L・T 薄板)×山数×厚2/4×検入×ラテラル×直角度×フリー反り の 440 通り。本物の作業選択(SampleHooks で見本の DB)で画面を作り、見本の値を入れて本物の print_transfer → HTML。使い捨ての手元DB。画面: 左に欄の並び、右に帳票、全部作って確かめる一覧。API /api/maint/samples/{options,make,all}。
 - Claude Code の圧縮対策(この SESSION_STATE.md と .claude/hooks/session_state.py、.claude/settings.json の PreCompact / SessionStart hook)。
 
 ## 未完了の作業
