@@ -144,6 +144,7 @@ function showTab(name) {
   if (name === "qf") openQf();
   if (name === "outputs") openOutputs();
   if (name === "nippou") openNippou();
+  if (name === "samples") openSamples();
   if (name === "icas") openIcas();
   if (name === "rstop") openRStop(); else stopRStop();
 }
@@ -1542,6 +1543,128 @@ async function openNippou() {
 }
 $("nReload").addEventListener("click", () => openNippou());
 $("nOpen").addEventListener("click", () => openWindow(tokenUrl(`/maint/nippou/paper?${NP.src}`), "日報"));
+
+/* ---------- 帳票の見本(2026-11-26。測定画面と印刷フォーマットをセットで) ---------- */
+let SMP = null;
+async function openSamples() {
+  if (SMP) return;
+  try {
+    SMP = await api.get("/api/maint/samples/options");
+  } catch (err) { toastError(err); return; }
+  const opt = (sel, items) => sel.replaceChildren(...items.map((x) => {
+    const o = el("option", "", typeof x === "string" ? x : x.label);
+    o.value = typeof x === "string" ? x : x.v;
+    return o;
+  }));
+  opt($("smpWork"), SMP.works);
+  opt($("smpYama"), SMP.yama);
+  opt($("smpAt"), SMP.at);
+  opt($("smpInspe"), SMP.inspe);
+  $("smpTotal").textContent = `組み合わせ ${SMP.total} 通り`;
+  smpFields();
+}
+function smpKind(work) {
+  if (!SMP) return "";
+  if (SMP.thin.includes(work)) return "thin";
+  if (SMP.small.includes(work)) return "small";
+  if (SMP.thick.includes(work)) return "thick";
+  return "";
+}
+function smpFields() {
+  const k = smpKind($("smpWork").value);
+  for (const l of document.querySelectorAll("#smpForm [data-for]")) l.hidden = !l.dataset.for.split(" ").includes(k);
+}
+function smpPattern() {
+  return { work: $("smpWork").value, yama: $("smpYama").value, at: $("smpAt").value, inspe: $("smpInspe").value,
+           sheets: $("smpSheets").value, lateral: $("smpLateral").checked, right: $("smpRight").checked,
+           free: $("smpFree").checked };
+}
+function smpSetForm(p) {
+  $("smpWork").value = p.work; $("smpYama").value = p.yama; $("smpAt").value = p.at; $("smpInspe").value = p.inspe;
+  $("smpSheets").value = String(p.sheets); $("smpLateral").checked = !!p.lateral; $("smpRight").checked = !!p.right;
+  $("smpFree").checked = !!p.free;
+  smpFields();
+}
+function smpScreen(sc) {
+  if (!sc) return el("p", "muted", "測定画面を作れませんでした");
+  const g = sc.grid;
+  const pos = g.positions.filter((p) => p.visible);
+  const t = el("table", "smp__grid");
+  const hr = el("tr");
+  hr.append(el("th", "", ""));
+  for (const p of pos) hr.append(el("th", "", p.label));
+  t.append(hr);
+  for (const r of g.rows.filter((x) => x.visible)) {
+    const tr = el("tr");
+    tr.append(el("th", "", r.label || String(r.no)));
+    for (const p of pos) {
+      const c = r.cells[g.positions.indexOf(p)];
+      const td = el("td", c && c.visible ? (c.enabled === false ? "dis" : "") : "off", c && c.visible ? (c.value || "□") : "");
+      tr.append(td);
+    }
+    t.append(tr);
+  }
+  const extra = (label, list) => {
+    const vis = list.filter((x) => x.visible);
+    if (!vis.length) return;
+    const tr = el("tr");
+    tr.append(el("th", "", label || ""));
+    for (const p of pos) {
+      const c = list.find((x) => x.pos === p.key);
+      tr.append(el("td", c && c.visible ? "" : "off", c && c.visible ? (c.value || "□") : ""));
+    }
+    t.append(tr);
+  };
+  extra(g.diag_label || "対角", g.diag);
+  extra(g.diag_kou_label || "直角度", g.diag_kou);
+  extra(g.lateral_label || "ラテラル", g.lateral);
+  const facts = [
+    `作業 ${sc.work || "-"}`,
+    sc.yama_visible ? `山数 ${sc.yama || "-"}` : "",
+    sc.at_butt.visible ? `ボタン「${sc.at_butt.caption}」` : "",
+    sc.inspe_butt.visible ? `ボタン「${sc.inspe_butt.caption}」` : "",
+    sc.ken_h.length ? `検入高さの欄 ${sc.ken_h.length}` : "",
+    sc.tolerance.flatnes_text, sc.tolerance.additional,
+  ].filter(Boolean).join(" ・ ");
+  return [el("p", "smp__facts", facts), t];
+}
+async function smpMake(pattern) {
+  $("smpProb").hidden = true;
+  try {
+    const d = await api.post("/api/maint/samples/make", pattern || smpPattern());
+    $("smpLabel").textContent = `測定画面 — ${d.label}(見本の値を入れた欄 ${d.filled})`;
+    const sc = smpScreen(d.screen);
+    $("smpScreen").replaceChildren(...(Array.isArray(sc) ? sc : [sc]));
+    $("smpFrame").srcdoc = d.html || "<p>帳票を作れませんでした</p>";
+    $("smpOpen").hidden = !d.html;
+    $("smpOpen").onclick = () => {
+      const w = window.open("", "_blank");
+      if (w) { w.document.write(d.html); w.document.close(); }
+    };
+    if (d.problems.length) { $("smpProb").textContent = d.problems.join(" / "); $("smpProb").hidden = false; }
+  } catch (err) { toastError(err); }
+}
+$("smpWork").addEventListener("change", smpFields);
+$("smpMake").addEventListener("click", () => smpMake());
+$("smpAll").addEventListener("click", async () => {
+  const b = $("smpAll");
+  b.disabled = true;
+  $("smpAllBox").hidden = false;
+  $("smpAllHead").textContent = "作っています…(数十秒かかります)";
+  $("smpAllList").replaceChildren();
+  try {
+    const d = await api.post("/api/maint/samples/all", {});
+    $("smpAllHead").textContent = d.ng ? `作れなかった組み合わせ ${d.ng} 件(赤)・全 ${d.rows.length} 件` : `全 ${d.rows.length} 件 作れました(押すと上に出します)`;
+    $("smpAllList").replaceChildren(...d.rows.map((r) => {
+      const x = el("button", "btn btn--sm", `${r.label}(欄 ${r.filled})${r.problems.length ? " — " + r.problems[0] : ""}`);
+      x.type = "button";
+      x.dataset.ng = r.problems.length ? "1" : "";
+      x.addEventListener("click", () => { smpSetForm(r.pattern); smpMake(r.pattern); window.scrollTo({ top: 0, behavior: "smooth" }); });
+      return x;
+    }));
+  } catch (err) { toastError(err); $("smpAllHead").textContent = "作れませんでした"; }
+  b.disabled = false;
+});
 
 // 2026-11-23: 一番最後で始める(前の保守タブを開き直すとき、後ろで決めた OUT・IC がまだ無くて
 // 「Cannot access 'OUT' before initialization」で止まっていた)

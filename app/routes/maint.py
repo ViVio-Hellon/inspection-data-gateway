@@ -1006,3 +1006,45 @@ def nippou_paper():
     except OSError as e:
         return Response(npr.build_html([], note=f"読めませんでした: {e}"), mimetype="text/html")
     return Response(npr.build_html(pages, generated_at=gen, note=note), mimetype="text/html")
+
+
+# ----------------------------------------------------------------------
+# 帳票の見本(2026-11-26): 測定画面と印刷フォーマットを、全部の組み合わせで確かめる(現物のロット無し)
+# ----------------------------------------------------------------------
+def _sample_screen(v: dict) -> dict:
+    g, h = v["grid"], v["header"]
+    return {"grid": g, "work": h["work"], "yama": h["yama"], "yama_visible": h["yama_visible"],
+            "at_butt": h["at_butt"], "inspe_butt": h["inspe_butt"],
+            "ken_h": [k for k in v["ken_h"] if k.get("visible")],
+            "tolerance": {k: v["tolerance"].get(k, "") for k in ("lateral_text", "flatnes_text", "additional", "taik")}}
+
+
+@bp.get("/api/maint/samples/options")
+def samples_options():
+    from ufkensa.kensa import print_samples as ps
+    return jsonify(ps.options())
+
+
+@bp.post("/api/maint/samples/make")
+def samples_make():
+    from ufkensa.kensa import print_samples as ps
+    try:
+        p = ps.Pattern.from_dict(request.get_json(silent=True) or {})
+    except ValueError as e:
+        return _err("bad_request", str(e))
+    smp = ps.make(p)
+    return jsonify({"label": p.label(), "problems": smp.problems, "filled": smp.filled,
+                    "screen": _sample_screen(smp.screen) if smp.screen else None, "html": smp.html})
+
+
+@bp.post("/api/maint/samples/all")
+def samples_all():
+    """全部の組み合わせを作って、作れたか・測定欄の数だけ返す(帳票の中身は 1 件ずつ make で見る)。"""
+    from dataclasses import asdict
+
+    from ufkensa.kensa import print_samples as ps
+    rows = []
+    for p in ps.all_patterns():
+        smp = ps.make(p)
+        rows.append({"label": p.label(), "pattern": asdict(p), "problems": smp.problems, "filled": smp.filled})
+    return jsonify({"rows": rows, "ng": sum(1 for r in rows if r["problems"])})
